@@ -1,0 +1,9 @@
+# Blockstates
+assets/tharidia_items/blockstates/alchimist_table.json
+
+# Geo model and animations (già presenti)
+assets/tharidia_items/geo/alchimist_table.geo.json
+assets/tharidia_items/animations/alchimist_table.animation.json
+
+# Textures
+assets/tharidia_items/textures/block/tavolo.png
