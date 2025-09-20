@@ -1,5 +1,8 @@
 {
-  "variants": {
-    "": { "model": "tharidia_items:block/alchimist_table_particles" }
-  }
+	"format_version": "1.8.0",
+	"animations": {
+		"animation.model.new": {
+			"loop": true
+		}
+	}
 }

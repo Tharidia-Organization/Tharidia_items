@@ -11,8 +11,6 @@ import software.bernie.geckolib.renderer.layer.AutoGlowingGeoLayer;
 public class AlchimistTableRenderer extends GeoBlockRenderer<AlchimistTableBlockEntity> {
     public AlchimistTableRenderer() {
         super(new AlchimistTableModel());
-        // Disabilitato glow per prevenire possibili side-effect sullo stato di rendering
-        this.addRenderLayer(new AutoGlowingGeoLayer<>(this));
     }
 
     @Override
