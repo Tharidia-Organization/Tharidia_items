@@ -6,7 +6,6 @@ import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.util.Identifier;
 import software.bernie.geckolib.renderer.GeoBlockRenderer;
-import software.bernie.geckolib.renderer.layer.AutoGlowingGeoLayer;
 
 public class AlchimistTableRenderer extends GeoBlockRenderer<AlchimistTableBlockEntity> {
     public AlchimistTableRenderer() {

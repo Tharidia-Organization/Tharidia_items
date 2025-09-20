@@ -12,6 +12,9 @@ import net.minecraft.item.Item;
 import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
 
+import com.example.tharidia_items.screen.AlchimistTableScreen;
+import net.minecraft.client.gui.screen.ingame.HandledScreens;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -27,6 +30,8 @@ public class TharidiaItemsClient implements ClientModInitializer {
     public void onInitializeClient() {
         // Renderer registration is handled via the item's createRenderer/getRenderProvider in GeckoLib 4.
         BlockEntityRendererRegistry.register(TharidiaItemsMod.ALCHIMIST_TABLE_BE, ctx -> new AlchimistTableRenderer());
+
+        HandledScreens.register(TharidiaItemsMod.ALCHIMIST_TABLE_SCREEN_HANDLER, AlchimistTableScreen::new);
 
         // Register Accessories renderers for armor items listed in the provided JSON
         Map<String, List<String>> armorIdsByCategory = readArmorIdsFromResource();

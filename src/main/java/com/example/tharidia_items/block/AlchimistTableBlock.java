@@ -1,6 +1,7 @@
 package com.example.tharidia_items.block;
 
 import com.example.tharidia_items.block.entity.AlchimistTableBlockEntity;
+import com.example.tharidia_items.screen.AlchimistTableScreenHandler;
 import net.fabricmc.fabric.api.object.builder.v1.block.FabricBlockSettings;
 import net.minecraft.block.*;
 import net.minecraft.block.entity.BlockEntity;
@@ -8,11 +9,18 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
+import net.minecraft.screen.NamedScreenHandlerFactory;
+import net.minecraft.screen.ScreenHandlerContext;
+import net.minecraft.screen.SimpleNamedScreenHandlerFactory;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.DirectionProperty;
 import net.minecraft.state.property.EnumProperty;
 import net.minecraft.state.property.Properties;
+import net.minecraft.text.Text;
+import net.minecraft.util.ActionResult;
+import net.minecraft.util.Hand;
 import net.minecraft.util.StringIdentifiable;
+import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.shape.VoxelShape;
@@ -161,6 +169,20 @@ public class AlchimistTableBlock extends BlockWithEntity {
     }
 
     @Override
+    public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+        if (world.isClient) {
+            return ActionResult.SUCCESS;
+        }
+        BlockPos centerPos = getCenterPos(state, pos);
+        NamedScreenHandlerFactory screenHandlerFactory = new SimpleNamedScreenHandlerFactory(
+                (syncId, inventory, p) -> new AlchimistTableScreenHandler(syncId, inventory, ScreenHandlerContext.create(world, centerPos)),
+                Text.literal("Alchemist Table")
+        );
+        player.openHandledScreen(screenHandlerFactory);
+        return ActionResult.CONSUME;
+    }
+
+    @Override
     public VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
         // Forma piena per ogni parte per garantire selezione semplice
         return VoxelShapes.fullCube();
@@ -190,6 +212,28 @@ public class AlchimistTableBlock extends BlockWithEntity {
 
     private static Direction getRightDir(Direction facing) {
         return facing.rotateYClockwise();
+    }
+
+    private static BlockPos getCenterPos(BlockState state, BlockPos pos) {
+        TablePart part = state.get(PART);
+        Direction facing = state.get(FACING);
+        Direction left = getLeftDir(facing);
+        Direction right = getRightDir(facing);
+        switch (part) {
+            case LEFT:
+                return pos.offset(right);
+            case RIGHT:
+                return pos.offset(left);
+            case TOP:
+                return pos.offset(facing.getOpposite());
+            case TOP_LEFT:
+                return pos.offset(facing.getOpposite()).offset(right);
+            case TOP_RIGHT:
+                return pos.offset(facing.getOpposite()).offset(left);
+            case CENTER:
+            default:
+                return pos;
+        }
     }
 
     public enum TablePart implements StringIdentifiable {
