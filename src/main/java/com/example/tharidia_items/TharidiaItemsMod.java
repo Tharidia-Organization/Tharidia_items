@@ -1,5 +1,6 @@
 package com.example.tharidia_items;
 
+import mod.azure.azurelib.AzureLib;
 import com.example.tharidia_items.block.AlchimistTableBlock;
 import com.example.tharidia_items.block.entity.AlchimistTableBlockEntity;
 import com.example.tharidia_items.item.AlchimistTableItem;
@@ -15,7 +16,7 @@ import net.minecraft.util.Identifier;
 import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.screen.ScreenHandlerType;
 import net.minecraft.screen.ScreenHandlerContext;
-import software.bernie.geckolib.GeckoLib;
+
 import net.minecraft.resource.featuretoggle.FeatureFlags;
 
 public class TharidiaItemsMod implements ModInitializer {
@@ -28,8 +29,8 @@ public class TharidiaItemsMod implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        // Inizializza GeckoLib
-        GeckoLib.initialize();
+        // Inizializza AzureLib
+        AzureLib.initialize();
 
         // Registra il blocco e la relativa BlockEntity
         Registry.register(Registries.BLOCK, new Identifier(MOD_ID, "alchimist_table"), ALCHIMIST_TABLE);

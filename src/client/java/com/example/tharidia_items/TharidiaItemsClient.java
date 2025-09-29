@@ -1,19 +1,25 @@
 package com.example.tharidia_items;
 
-import com.example.tharidia_items.client.renderer.AlchimistTableRenderer;
-// removed: import com.example.tharidia_items.compat.accessories.ArmorAccessoryRenderer;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import io.wispforest.accessories.api.client.AccessoriesRendererRegistry;
 import io.wispforest.accessories.api.client.DefaultAccessoryRenderer;
 import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.client.rendering.v1.BlockEntityRendererRegistry;
 import net.minecraft.item.Item;
 import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
 
+import com.example.tharidia_items.block.entity.AlchimistTableRenderer;
 import com.example.tharidia_items.screen.AlchimistTableScreen;
+import net.fabricmc.fabric.api.client.rendering.v1.BuiltinItemRendererRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.BlockEntityRendererRegistry;
+import com.example.tharidia_items.block.entity.AlchimistTableBlockEntity;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ingame.HandledScreens;
+import net.minecraft.client.render.VertexConsumerProvider;
+import net.minecraft.client.render.model.json.ModelTransformationMode;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.util.math.BlockPos;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -28,10 +34,8 @@ import java.util.*;
 public class TharidiaItemsClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
-        // Renderer registration is handled via the item's createRenderer/getRenderProvider in GeckoLib 4.
-        BlockEntityRendererRegistry.register(TharidiaItemsMod.ALCHIMIST_TABLE_BE, ctx -> new AlchimistTableRenderer());
-
         HandledScreens.register(TharidiaItemsMod.ALCHIMIST_TABLE_SCREEN_HANDLER, AlchimistTableScreen::new);
+        BlockEntityRendererRegistry.register(TharidiaItemsMod.ALCHIMIST_TABLE_BE, ctx -> new AlchimistTableRenderer());
 
         // Register Accessories renderers for armor items listed in the provided JSON
         Map<String, List<String>> armorIdsByCategory = readArmorIdsFromResource();
@@ -41,6 +45,11 @@ public class TharidiaItemsClient implements ClientModInitializer {
             registerArmorCategory(armorIdsByCategory.get("leggings"));
             registerArmorCategory(armorIdsByCategory.get("boots"));
         }
+        // Inside onInitializeClient, after existing registrations:
+        BuiltinItemRendererRegistry.INSTANCE.register(TharidiaItemsMod.ALCHIMIST_TABLE.asItem(), (stack, mode, matrices, vertexConsumers, light, overlay) -> {
+            AlchimistTableBlockEntity entity = new AlchimistTableBlockEntity(BlockPos.ORIGIN, TharidiaItemsMod.ALCHIMIST_TABLE.getDefaultState());
+            MinecraftClient.getInstance().getBlockEntityRenderDispatcher().renderEntity(entity, matrices, vertexConsumers, light, overlay);
+        });
     }
 
     private static Map<String, List<String>> readArmorIds(Path path) {

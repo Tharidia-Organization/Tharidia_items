@@ -1,7 +1,7 @@
 package com.example.tharidia_items.block;
 
-import com.example.tharidia_items.block.entity.AlchimistTableBlockEntity;
 import com.example.tharidia_items.screen.AlchimistTableScreenHandler;
+import com.example.tharidia_items.block.entity.AlchimistTableBlockEntity;
 import net.fabricmc.fabric.api.object.builder.v1.block.FabricBlockSettings;
 import net.minecraft.block.*;
 import net.minecraft.block.entity.BlockEntity;
