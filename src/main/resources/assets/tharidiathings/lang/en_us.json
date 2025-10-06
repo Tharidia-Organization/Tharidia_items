@@ -1,7 +1,6 @@
 {
-  "itemGroup.tharidiathings": "Example Mod Tab",
-  "block.tharidiathings.example_block": "Example Block",
-  "item.tharidiathings.example_item": "Example Item",
+  "itemGroup.tharidiathings": "Tharidia Cose",
+  "block.tharidiathings.pietro": "Pietro",
 
   "tharidiathings.configuration.title": "Tharidia Things Configs",
   "tharidiathings.configuration.section.tharidiathings.common.toml": "Tharidia Things Configs",

@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "half=lower": {
+      "model": "tharidiathings:block/animated_pietro"
+    },
+    "half=upper": {
+      "model": "tharidiathings:block/animated_pietro"
+    }
+  }
+}

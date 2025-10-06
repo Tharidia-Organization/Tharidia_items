@@ -1,14 +1,19 @@
 package com.tharidia.tharidia_things;
 
+import com.tharidia.tharidia_things.client.RealmOverlay;
+import com.tharidia.tharidia_things.client.renderer.PietroBlockRenderer;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
+import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
+import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 
 // This class will not load on dedicated servers. Accessing client side code from here is safe.
 @Mod(value = TharidiaThings.MODID, dist = Dist.CLIENT)
@@ -27,5 +32,21 @@ public class TharidiaThingsClient {
         // Some client setup code
         TharidiaThings.LOGGER.info("HELLO FROM CLIENT SETUP");
         TharidiaThings.LOGGER.info("MINECRAFT NAME >> {}", Minecraft.getInstance().getUser().getName());
+
+        // Register AzureLib block entity renderer
+        event.enqueueWork(() -> {
+            BlockEntityRenderers.register(TharidiaThings.PIETRO_BLOCK_ENTITY.get(), context -> new PietroBlockRenderer());
+        });
+    }
+
+    @SubscribeEvent
+    static void onRegisterGuiLayers(RegisterGuiLayersEvent event) {
+        // Register the realm overlay to be rendered above the hotbar
+        event.registerAbove(
+            VanillaGuiLayers.HOTBAR,
+            TharidiaThings.modLoc("realm_overlay"),
+            new RealmOverlay()
+        );
+        TharidiaThings.LOGGER.info("Registered Realm Overlay");
     }
 }
