@@ -64,6 +64,8 @@ public class TharidiaThings {
     public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES = DeferredRegister.create(BuiltInRegistries.BLOCK_ENTITY_TYPE, MODID);
     // Create a Deferred Register to hold CreativeModeTabs which will all be registered under the "tharidiathings" namespace
     public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
+    // Create a Deferred Register to hold MenuTypes which will all be registered under the "tharidiathings" namespace
+    public static final DeferredRegister<net.minecraft.world.inventory.MenuType<?>> MENU_TYPES = DeferredRegister.create(BuiltInRegistries.MENU, MODID);
 
     // Creates a new Block with the id "tharidiathings:pietro", combining the namespace and path
     public static final DeferredBlock<PietroBlock> PIETRO = BLOCKS.register("pietro", () -> new PietroBlock(BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(3.0F, 6.0F).noOcclusion()));
@@ -81,6 +83,10 @@ public class TharidiaThings {
     // Creates a new BlockEntityType for the Claim block
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ClaimBlockEntity>> CLAIM_BLOCK_ENTITY =
         BLOCK_ENTITIES.register("claim", () -> BlockEntityType.Builder.of(ClaimBlockEntity::new, CLAIM.get()).build(null));
+    
+    // Creates a MenuType for the Claim GUI
+    public static final DeferredHolder<net.minecraft.world.inventory.MenuType<?>, net.minecraft.world.inventory.MenuType<com.tharidia.tharidia_things.gui.ClaimMenu>> CLAIM_MENU =
+        MENU_TYPES.register("claim_menu", () -> net.neoforged.neoforge.common.extensions.IMenuTypeExtension.create(com.tharidia.tharidia_things.gui.ClaimMenu::new));
 
     // Creates a creative tab with the id "tharidiathings:tharidia_tab" for the mod items, that is placed after the combat tab
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> THARIDIA_TAB = CREATIVE_MODE_TABS.register("tharidia_tab", () -> CreativeModeTab.builder()
@@ -100,6 +106,10 @@ public class TharidiaThings {
         modEventBus.addListener(this::commonSetup);
         // Register network packets
         modEventBus.addListener(this::registerPayloads);
+        // Register client-side screen handlers (only on client)
+        if (FMLEnvironment.dist == Dist.CLIENT) {
+            modEventBus.addListener(this::registerScreens);
+        }
 
         // Register the Deferred Register to the mod event bus so blocks get registered
         BLOCKS.register(modEventBus);
@@ -109,6 +119,8 @@ public class TharidiaThings {
         BLOCK_ENTITIES.register(modEventBus);
         // Register the Deferred Register to the mod event bus so tabs get registered
         CREATIVE_MODE_TABS.register(modEventBus);
+        // Register the Deferred Register to the mod event bus so menus get registered
+        MENU_TYPES.register(modEventBus);
 
         // Register ourselves for server and other game events we are interested in.
         // Note that this is necessary if and only if we want *this* class (TharidiaThings) to respond directly to events.
@@ -167,6 +179,12 @@ public class TharidiaThings {
         }
         
         LOGGER.info("Network payloads registered successfully");
+    }
+
+    private void registerScreens(net.neoforged.neoforge.client.event.RegisterMenuScreensEvent event) {
+        LOGGER.info("Registering menu screens");
+        event.register(CLAIM_MENU.get(), com.tharidia.tharidia_things.client.gui.ClaimScreen::new);
+        LOGGER.info("Claim menu screen registered");
     }
 
     // You can use SubscribeEvent and let the Event Bus discover methods to call

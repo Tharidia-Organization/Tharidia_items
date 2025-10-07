@@ -122,10 +122,34 @@ public class PietroBlock extends BaseEntityBlock {
         DoubleBlockHalf half = state.getValue(HALF);
         if (direction.getAxis() == Direction.Axis.Y) {
             if (half == DoubleBlockHalf.LOWER && direction == Direction.UP) {
-                return neighborState.is(this) && neighborState.getValue(HALF) == DoubleBlockHalf.UPPER ? state : Blocks.AIR.defaultBlockState();
+                if (!neighborState.is(this) || neighborState.getValue(HALF) != DoubleBlockHalf.UPPER) {
+                    // Check if block is protected before allowing removal
+                    if (level instanceof ServerLevel serverLevel) {
+                        BlockEntity blockEntity = level.getBlockEntity(pos);
+                        if (blockEntity instanceof PietroBlockEntity pietroBlockEntity) {
+                            if (hasClaimsInRealm(serverLevel, pietroBlockEntity)) {
+                                return state; // Keep the block, don't remove it
+                            }
+                        }
+                    }
+                    return Blocks.AIR.defaultBlockState();
+                }
+                return state;
             }
             if (half == DoubleBlockHalf.UPPER && direction == Direction.DOWN) {
-                return neighborState.is(this) && neighborState.getValue(HALF) == DoubleBlockHalf.LOWER ? state : Blocks.AIR.defaultBlockState();
+                if (!neighborState.is(this) || neighborState.getValue(HALF) != DoubleBlockHalf.LOWER) {
+                    // Check if block is protected before allowing removal
+                    if (level instanceof ServerLevel serverLevel) {
+                        BlockEntity blockEntity = level.getBlockEntity(pos.below());
+                        if (blockEntity instanceof PietroBlockEntity pietroBlockEntity) {
+                            if (hasClaimsInRealm(serverLevel, pietroBlockEntity)) {
+                                return state; // Keep the block, don't remove it
+                            }
+                        }
+                    }
+                    return Blocks.AIR.defaultBlockState();
+                }
+                return state;
             }
         }
         return super.updateShape(state, direction, neighborState, level, pos, neighborPos);
@@ -141,15 +165,55 @@ public class PietroBlock extends BaseEntityBlock {
         return Block.box(0.0D, 0.0D, 0.0D, 0.0D, 0.0D, 0.0D);
     }
 
-    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
-        if (!level.isClientSide) {
-            // Send removal notification to all players before the block entity is removed
-            if (level instanceof ServerLevel serverLevel) {
-                BlockPos lowerPos = state.getValue(HALF) == DoubleBlockHalf.UPPER ? pos.below() : pos;
-                BlockEntity blockEntity = level.getBlockEntity(lowerPos);
-                if (blockEntity instanceof PietroBlockEntity pietroBlockEntity) {
-                    notifyRealmRemoval(serverLevel, pietroBlockEntity);
+    @Override
+    public boolean onDestroyedByPlayer(BlockState state, Level level, BlockPos pos, Player player, boolean willHarvest, net.minecraft.world.level.material.FluidState fluid) {
+        if (!level.isClientSide && level instanceof ServerLevel serverLevel) {
+            // Get the lower block position (where the block entity is)
+            BlockPos lowerPos = state.getValue(HALF) == DoubleBlockHalf.UPPER ? pos.below() : pos;
+            
+            // Get the block entity from the lower position
+            BlockEntity blockEntity = level.getBlockEntity(lowerPos);
+            
+            if (blockEntity instanceof PietroBlockEntity pietroBlockEntity) {
+                // Check if there are any claim blocks within the realm
+                if (hasClaimsInRealm(serverLevel, pietroBlockEntity)) {
+                    player.displayClientMessage(
+                        Component.literal("Cannot remove Pietro block while claims exist in its realm!"),
+                        true
+                    );
+                    // Restore both blocks on client side
+                    level.sendBlockUpdated(pos, state, state, 3);
+                    if (state.getValue(HALF) == DoubleBlockHalf.UPPER) {
+                        level.sendBlockUpdated(pos.below(), level.getBlockState(pos.below()), level.getBlockState(pos.below()), 3);
+                    } else {
+                        level.sendBlockUpdated(pos.above(), level.getBlockState(pos.above()), level.getBlockState(pos.above()), 3);
+                    }
+                    return false; // Prevent destruction of both blocks
                 }
+            }
+        }
+        
+        return super.onDestroyedByPlayer(state, level, pos, player, willHarvest, fluid);
+    }
+    
+    @Override
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+        if (!level.isClientSide && level instanceof ServerLevel serverLevel) {
+            // Additional check when player starts destroying
+            BlockPos lowerPos = state.getValue(HALF) == DoubleBlockHalf.UPPER ? pos.below() : pos;
+            BlockEntity blockEntity = level.getBlockEntity(lowerPos);
+            
+            if (blockEntity instanceof PietroBlockEntity pietroBlockEntity) {
+                if (hasClaimsInRealm(serverLevel, pietroBlockEntity)) {
+                    // Block is protected, don't send removal notification
+                    if (player.isCreative()) {
+                        preventDropFromBottomPart(level, pos, state, player);
+                    }
+                    super.playerWillDestroy(level, pos, state, player);
+                    return state;
+                }
+                // Only notify removal if no claims exist
+                notifyRealmRemoval(serverLevel, pietroBlockEntity);
             }
             
             if (player.isCreative()) {
@@ -158,6 +222,34 @@ public class PietroBlock extends BaseEntityBlock {
         }
         super.playerWillDestroy(level, pos, state, player);
         return state;
+    }
+    
+    /**
+     * Checks if there are any claim blocks within the realm boundaries
+     * Optimized to check only loaded chunks and scan for block entities
+     */
+    private boolean hasClaimsInRealm(ServerLevel level, PietroBlockEntity realm) {
+        ChunkPos minChunk = realm.getMinChunk();
+        ChunkPos maxChunk = realm.getMaxChunk();
+        
+        // Iterate through all chunks in the realm
+        for (int chunkX = minChunk.x; chunkX <= maxChunk.x; chunkX++) {
+            for (int chunkZ = minChunk.z; chunkZ <= maxChunk.z; chunkZ++) {
+                // Only check loaded chunks to avoid forcing chunk loads
+                if (level.hasChunk(chunkX, chunkZ)) {
+                    net.minecraft.world.level.chunk.LevelChunk chunk = level.getChunk(chunkX, chunkZ);
+                    
+                    // Check all block entities in this chunk
+                    for (BlockEntity be : chunk.getBlockEntities().values()) {
+                        if (be instanceof com.tharidia.tharidia_things.block.entity.ClaimBlockEntity) {
+                            return true; // Found a claim block
+                        }
+                    }
+                }
+            }
+        }
+        
+        return false; // No claim blocks found
     }
     
     /**

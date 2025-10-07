@@ -31,6 +31,15 @@ public class ClaimProtectionHandler {
             return;
         }
 
+        // Special handling for Pietro blocks - check if claims exist in realm
+        if (level.getBlockState(pos).getBlock() instanceof com.tharidia.tharidia_things.block.PietroBlock) {
+            if (isPietroBlockProtected(serverLevel, pos, player)) {
+                event.setCanceled(true);
+                player.sendSystemMessage(Component.literal("§cCannot remove Pietro block while claims exist in its realm!"));
+            }
+            return;
+        }
+
         // Check if the position is protected by a claim
         ClaimBlockEntity claim = findClaimForPosition(serverLevel, pos);
         if (claim != null && !canPlayerInteract(claim, player)) {
@@ -52,6 +61,11 @@ public class ClaimProtectionHandler {
             return;
         }
 
+        // Pietro blocks handle their own interaction logic (adding potatoes, etc)
+        if (level.getBlockState(pos).getBlock() instanceof com.tharidia.tharidia_things.block.PietroBlock) {
+            return;
+        }
+
         // Check if the position is protected by a claim
         ClaimBlockEntity claim = findClaimForPosition(serverLevel, pos);
         if (claim != null && !canPlayerInteract(claim, player)) {
@@ -70,6 +84,11 @@ public class ClaimProtectionHandler {
         BlockPos pos = event.getPos();
 
         if (level.isClientSide || !(level instanceof ServerLevel serverLevel)) {
+            return;
+        }
+
+        // Pietro blocks are handled in onBlockBreak
+        if (level.getBlockState(pos).getBlock() instanceof com.tharidia.tharidia_things.block.PietroBlock) {
             return;
         }
 
@@ -126,5 +145,56 @@ public class ClaimProtectionHandler {
     private static boolean canPlayerInteract(ClaimBlockEntity claim, Player player) {
         UUID claimOwner = claim.getOwnerUUID();
         return claimOwner != null && claimOwner.equals(player.getUUID());
+    }
+    
+    /**
+     * Checks if a Pietro block is protected by having claims in its realm
+     */
+    private static boolean isPietroBlockProtected(ServerLevel level, BlockPos pos, Player player) {
+        // Get the block state to determine which half we're dealing with
+        net.minecraft.world.level.block.state.BlockState state = level.getBlockState(pos);
+        
+        // Get the lower block position (where the block entity is)
+        BlockPos lowerPos = state.getValue(com.tharidia.tharidia_things.block.PietroBlock.HALF) 
+                == net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER 
+                ? pos.below() 
+                : pos;
+        
+        // Get the block entity from the lower position
+        BlockEntity blockEntity = level.getBlockEntity(lowerPos);
+        
+        if (blockEntity instanceof com.tharidia.tharidia_things.block.entity.PietroBlockEntity pietroBlockEntity) {
+            // Check if there are any claim blocks within the realm
+            return hasClaimsInRealm(level, pietroBlockEntity);
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Checks if there are any claim blocks within the Pietro block's realm boundaries
+     */
+    private static boolean hasClaimsInRealm(ServerLevel level, com.tharidia.tharidia_things.block.entity.PietroBlockEntity realm) {
+        net.minecraft.world.level.ChunkPos minChunk = realm.getMinChunk();
+        net.minecraft.world.level.ChunkPos maxChunk = realm.getMaxChunk();
+        
+        // Iterate through all chunks in the realm
+        for (int chunkX = minChunk.x; chunkX <= maxChunk.x; chunkX++) {
+            for (int chunkZ = minChunk.z; chunkZ <= maxChunk.z; chunkZ++) {
+                // Only check loaded chunks to avoid forcing chunk loads
+                if (level.hasChunk(chunkX, chunkZ)) {
+                    net.minecraft.world.level.chunk.LevelChunk chunk = level.getChunk(chunkX, chunkZ);
+                    
+                    // Check all block entities in this chunk
+                    for (BlockEntity be : chunk.getBlockEntities().values()) {
+                        if (be instanceof ClaimBlockEntity) {
+                            return true; // Found a claim block
+                        }
+                    }
+                }
+            }
+        }
+        
+        return false; // No claim blocks found
     }
 }

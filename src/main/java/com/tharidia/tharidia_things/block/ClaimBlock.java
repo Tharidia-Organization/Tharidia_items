@@ -154,6 +154,18 @@ public class ClaimBlock extends BaseEntityBlock {
     }
 
     @Override
+    protected net.minecraft.world.InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, net.minecraft.world.entity.player.Player player, net.minecraft.world.phys.BlockHitResult hitResult) {
+        if (!level.isClientSide) {
+            BlockEntity blockEntity = level.getBlockEntity(pos);
+            if (blockEntity instanceof ClaimBlockEntity claimEntity) {
+                player.openMenu(claimEntity, buf -> buf.writeBlockPos(pos));
+                return net.minecraft.world.InteractionResult.CONSUME;
+            }
+        }
+        return net.minecraft.world.InteractionResult.SUCCESS;
+    }
+
+    @Override
     public RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
     }
