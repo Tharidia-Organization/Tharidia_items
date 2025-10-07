@@ -85,7 +85,35 @@ public class PietroBlock extends BaseEntityBlock {
             BlockEntity blockEntity = level.getBlockEntity(pos);
             if (blockEntity instanceof PietroBlockEntity pietroBlockEntity) {
                 pietroBlockEntity.setOwner(player.getName().getString());
+                
+                // Sync the new realm to all online players
+                if (level instanceof ServerLevel serverLevel) {
+                    syncNewRealmToAllPlayers(serverLevel, pietroBlockEntity);
+                }
             }
+        }
+    }
+    
+    /**
+     * Syncs a newly placed realm to all online players
+     */
+    private void syncNewRealmToAllPlayers(ServerLevel serverLevel, PietroBlockEntity realm) {
+        // Create realm data for this new realm
+        com.tharidia.tharidia_things.network.RealmSyncPacket.RealmData data = 
+            new com.tharidia.tharidia_things.network.RealmSyncPacket.RealmData(
+                realm.getBlockPos(),
+                realm.getRealmSize(),
+                realm.getOwnerName(),
+                realm.getCenterChunk().x,
+                realm.getCenterChunk().z
+            );
+        
+        // Send incremental update to all players in the dimension
+        com.tharidia.tharidia_things.network.RealmSyncPacket packet = 
+            new com.tharidia.tharidia_things.network.RealmSyncPacket(java.util.List.of(data), false);
+        
+        for (net.minecraft.server.level.ServerPlayer player : serverLevel.players()) {
+            net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, packet);
         }
     }
 
@@ -115,12 +143,56 @@ public class PietroBlock extends BaseEntityBlock {
 
     public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         if (!level.isClientSide) {
+            // Send removal notification to all players before the block entity is removed
+            if (level instanceof ServerLevel serverLevel) {
+                BlockPos lowerPos = state.getValue(HALF) == DoubleBlockHalf.UPPER ? pos.below() : pos;
+                BlockEntity blockEntity = level.getBlockEntity(lowerPos);
+                if (blockEntity instanceof PietroBlockEntity pietroBlockEntity) {
+                    notifyRealmRemoval(serverLevel, pietroBlockEntity);
+                }
+            }
+            
             if (player.isCreative()) {
                 preventDropFromBottomPart(level, pos, state, player);
             }
         }
         super.playerWillDestroy(level, pos, state, player);
         return state;
+    }
+    
+    /**
+     * Notifies all online players that a realm has been removed
+     */
+    private void notifyRealmRemoval(ServerLevel serverLevel, PietroBlockEntity realm) {
+        // Send a full sync to refresh all clients' realm lists
+        // This ensures the removed realm is cleared from client memory
+        java.util.List<PietroBlockEntity> remainingRealms = RealmManager.getRealms(serverLevel);
+        java.util.List<com.tharidia.tharidia_things.network.RealmSyncPacket.RealmData> realmDataList = new java.util.ArrayList<>();
+        
+        for (PietroBlockEntity r : remainingRealms) {
+            // Skip the realm being removed
+            if (r.getBlockPos().equals(realm.getBlockPos())) {
+                continue;
+            }
+            
+            com.tharidia.tharidia_things.network.RealmSyncPacket.RealmData data = 
+                new com.tharidia.tharidia_things.network.RealmSyncPacket.RealmData(
+                    r.getBlockPos(),
+                    r.getRealmSize(),
+                    r.getOwnerName(),
+                    r.getCenterChunk().x,
+                    r.getCenterChunk().z
+                );
+            realmDataList.add(data);
+        }
+        
+        // Send full sync (clears and replaces all realm data on clients)
+        com.tharidia.tharidia_things.network.RealmSyncPacket packet = 
+            new com.tharidia.tharidia_things.network.RealmSyncPacket(realmDataList, true);
+        
+        for (net.minecraft.server.level.ServerPlayer player : serverLevel.players()) {
+            net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, packet);
+        }
     }
 
     protected static void preventDropFromBottomPart(Level level, BlockPos pos, BlockState state, Player player) {

@@ -1,11 +1,13 @@
 package com.tharidia.tharidia_things.client;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.tharidia.tharidia_things.TharidiaThings;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.LayeredDraw;
+import net.minecraft.world.entity.player.Player;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
@@ -14,12 +16,15 @@ public class RealmOverlay implements LayeredDraw.Layer {
 
     @Override
     public void render(GuiGraphics guiGraphics, DeltaTracker deltaTracker) {
+        Minecraft mc = Minecraft.getInstance();
+        Player player = mc.player;
+
+
         // Only render if player is in a realm
         if (!RealmClientHandler.isPlayerInRealm()) {
             return;
         }
 
-        Minecraft mc = Minecraft.getInstance();
         Font font = mc.font;
 
         // Get screen dimensions

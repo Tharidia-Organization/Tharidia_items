@@ -2,8 +2,10 @@ package com.tharidia.tharidia_things.client;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
+import com.mojang.logging.LogUtils;
 import com.tharidia.tharidia_things.TharidiaThings;
 import com.tharidia.tharidia_things.block.entity.PietroBlockEntity;
+import com.tharidia.tharidia_things.client.ClientPacketHandler;
 import com.tharidia.tharidia_things.realm.RealmManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
@@ -15,15 +17,19 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import org.joml.Matrix4f;
+import org.slf4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @EventBusSubscriber(modid = TharidiaThings.MODID, value = Dist.CLIENT)
 public class RealmBoundaryRenderer {
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static List<PietroBlockEntity> nearbyRealms = new ArrayList<>();
     private static long lastUpdate = 0;
     private static final long UPDATE_INTERVAL = 1000; // Update every second
+    private static long lastLogTime = 0;
+    private static final long LOG_INTERVAL = 5000; // Log every 5 seconds
 
     /**
      * Updates the list of nearby realms
@@ -57,8 +63,23 @@ public class RealmBoundaryRenderer {
                     }
                 }
             }
+        } else {
+            // For multiplayer, use synced data
+            if (currentTime - lastLogTime > LOG_INTERVAL) {
+                LOGGER.info("Multiplayer mode: {} synced realms available", ClientPacketHandler.syncedRealms.size());
+                lastLogTime = currentTime;
+            }
+            Vec3 playerPos = mc.player.position();
+            for (PietroBlockEntity realm : ClientPacketHandler.syncedRealms) {
+                double distance = Math.sqrt(realm.getBlockPos().distToCenterSqr(playerPos));
+                if (distance < 256) { // 16 chunks * 16 blocks
+                    nearbyRealms.add(realm);
+                }
+            }
+            if (currentTime - lastLogTime > LOG_INTERVAL) {
+                LOGGER.info("Found {} nearby realms in multiplayer", nearbyRealms.size());
+            }
         }
-        // For multiplayer, we would need packet synchronization
     }
 
     @SubscribeEvent
@@ -67,14 +88,20 @@ public class RealmBoundaryRenderer {
             return;
         }
 
-        updateNearbyRealms();
-
-        if (nearbyRealms.isEmpty()) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) {
             return;
         }
 
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null) {
+        // Check if player is holding monocolo in either hand
+        if (!mc.player.getMainHandItem().is(TharidiaThings.MONOCOLO.get()) &&
+            !mc.player.getOffhandItem().is(TharidiaThings.MONOCOLO.get())) {
+            return;
+        }
+
+        updateNearbyRealms();
+
+        if (nearbyRealms.isEmpty()) {
             return;
         }
 

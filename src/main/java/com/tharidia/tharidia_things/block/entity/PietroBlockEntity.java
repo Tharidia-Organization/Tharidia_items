@@ -33,7 +33,7 @@ public class PietroBlockEntity extends BlockEntity implements GeoBlockEntity {
     private static final int BASE_POTATO_COST = 64; // Base cost for first expansion (1 stack)
 
     private int realmSize = DEFAULT_REALM_SIZE; // Size in chunks (e.g., 3 means 3x3 chunks)
-    private ChunkPos centerChunk;
+    public ChunkPos centerChunk;
     private String ownerName = ""; // Name of the player who placed this block
     private int storedPotatoes = 0; // Current potatoes stored for next expansion
 
@@ -135,8 +135,36 @@ public class PietroBlockEntity extends BlockEntity implements GeoBlockEntity {
         setChanged();
         if (level != null && !level.isClientSide) {
             level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+            
+            // Sync the updated realm data to all nearby players
+            if (level instanceof ServerLevel serverLevel) {
+                syncRealmToNearbyPlayers(serverLevel);
+            }
         }
         return true;
+    }
+    
+    /**
+     * Syncs this realm's data to all nearby players
+     */
+    private void syncRealmToNearbyPlayers(ServerLevel serverLevel) {
+        // Create realm data for this realm
+        com.tharidia.tharidia_things.network.RealmSyncPacket.RealmData data = 
+            new com.tharidia.tharidia_things.network.RealmSyncPacket.RealmData(
+                getBlockPos(),
+                getRealmSize(),
+                getOwnerName(),
+                getCenterChunk().x,
+                getCenterChunk().z
+            );
+        
+        // Send to all players in the dimension
+        com.tharidia.tharidia_things.network.RealmSyncPacket packet = 
+            new com.tharidia.tharidia_things.network.RealmSyncPacket(java.util.List.of(data));
+        
+        for (net.minecraft.server.level.ServerPlayer player : serverLevel.players()) {
+            net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, packet);
+        }
     }
 
     /**

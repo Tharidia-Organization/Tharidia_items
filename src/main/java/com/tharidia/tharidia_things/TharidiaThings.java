@@ -1,15 +1,24 @@
 package com.tharidia.tharidia_things;
 
 import org.slf4j.Logger;
-
 import com.mojang.logging.LogUtils;
 import com.tharidia.tharidia_things.block.PietroBlock;
+import com.tharidia.tharidia_things.block.ClaimBlock;
 import com.tharidia.tharidia_things.block.entity.PietroBlockEntity;
+import com.tharidia.tharidia_things.block.entity.ClaimBlockEntity;
+import com.tharidia.tharidia_things.client.ClientPacketHandler;
+import com.tharidia.tharidia_things.event.ClaimProtectionHandler;
+import com.tharidia.tharidia_things.network.ClaimOwnerSyncPacket;
+import com.tharidia.tharidia_things.network.RealmSyncPacket;
+import com.tharidia.tharidia_things.realm.RealmManager;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.fml.loading.FMLEnvironment;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTab;
@@ -20,7 +29,6 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
-import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.Mod;
@@ -28,12 +36,18 @@ import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
+import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
+
+import java.util.ArrayList;
+import java.util.List;
 
 // The value here should match an entry in the META-INF/neoforge.mods.toml file
 @Mod(TharidiaThings.MODID)
@@ -55,9 +69,18 @@ public class TharidiaThings {
     public static final DeferredBlock<PietroBlock> PIETRO = BLOCKS.register("pietro", () -> new PietroBlock(BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(3.0F, 6.0F).noOcclusion()));
     // Creates a new BlockItem with the id "tharidiathings:pietro", combining the namespace and path
     public static final DeferredItem<BlockItem> PIETRO_ITEM = ITEMS.registerSimpleBlockItem("pietro", PIETRO);
+    // Creates a new Item with the id "tharidiathings:monocolo"
+    public static final DeferredItem<Item> MONOCOLO = ITEMS.registerSimpleItem("monocolo", new Item.Properties());
+    // Creates a new Block with the id "tharidiathings:claim"
+    public static final DeferredBlock<ClaimBlock> CLAIM = BLOCKS.register("claim", () -> new ClaimBlock(BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(3.0F, 6.0F)));
+    // Creates a new BlockItem with the id "tharidiathings:claim"
+    public static final DeferredItem<BlockItem> CLAIM_ITEM = ITEMS.registerSimpleBlockItem("claim", CLAIM);
     // Creates a new BlockEntityType for the Pietro block
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<PietroBlockEntity>> PIETRO_BLOCK_ENTITY =
         BLOCK_ENTITIES.register("pietro", () -> BlockEntityType.Builder.of(PietroBlockEntity::new, PIETRO.get()).build(null));
+    // Creates a new BlockEntityType for the Claim block
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ClaimBlockEntity>> CLAIM_BLOCK_ENTITY =
+        BLOCK_ENTITIES.register("claim", () -> BlockEntityType.Builder.of(ClaimBlockEntity::new, CLAIM.get()).build(null));
 
     // Creates a creative tab with the id "tharidiathings:tharidia_tab" for the mod items, that is placed after the combat tab
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> THARIDIA_TAB = CREATIVE_MODE_TABS.register("tharidia_tab", () -> CreativeModeTab.builder()
@@ -66,6 +89,8 @@ public class TharidiaThings {
             .icon(() -> PIETRO_ITEM.get().getDefaultInstance())
             .displayItems((parameters, output) -> {
                 output.accept(PIETRO_ITEM.get());
+                output.accept(CLAIM_ITEM.get());
+                output.accept(MONOCOLO.get());
             }).build());
 
     // The constructor for the mod class is the first code that is run when your mod is loaded.
@@ -73,6 +98,8 @@ public class TharidiaThings {
     public TharidiaThings(IEventBus modEventBus, ModContainer modContainer) {
         // Register the commonSetup method for modloading
         modEventBus.addListener(this::commonSetup);
+        // Register network packets
+        modEventBus.addListener(this::registerPayloads);
 
         // Register the Deferred Register to the mod event bus so blocks get registered
         BLOCKS.register(modEventBus);
@@ -87,6 +114,8 @@ public class TharidiaThings {
         // Note that this is necessary if and only if we want *this* class (TharidiaThings) to respond directly to events.
         // Do not add this line if there are no @SubscribeEvent-annotated functions in this class, like onServerStarting() below.
         NeoForge.EVENT_BUS.register(this);
+        // Register the claim protection handler
+        NeoForge.EVENT_BUS.register(ClaimProtectionHandler.class);
 
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
@@ -105,7 +134,94 @@ public class TharidiaThings {
         Config.ITEM_STRINGS.get().forEach((item) -> LOGGER.info("ITEM >> {}", item));
     }
 
+    private void registerPayloads(RegisterPayloadHandlersEvent event) {
+        PayloadRegistrar registrar = event.registrar("1");
+        LOGGER.info("Registering network payloads (dist: {})", FMLEnvironment.dist);
+        
+        // Register client-bound packets
+        if (FMLEnvironment.dist.isClient()) {
+            registrar.playToClient(
+                ClaimOwnerSyncPacket.TYPE,
+                ClaimOwnerSyncPacket.STREAM_CODEC,
+                ClientPacketHandler::handleClaimOwnerSync
+            );
+            registrar.playToClient(
+                RealmSyncPacket.TYPE,
+                RealmSyncPacket.STREAM_CODEC,
+                ClientPacketHandler::handleRealmSync
+            );
+            LOGGER.info("Client packet handlers registered");
+        } else {
+            // On server, register dummy handlers (packets won't be received here anyway)
+            registrar.playToClient(
+                ClaimOwnerSyncPacket.TYPE,
+                ClaimOwnerSyncPacket.STREAM_CODEC,
+                (packet, context) -> {}
+            );
+            registrar.playToClient(
+                RealmSyncPacket.TYPE,
+                RealmSyncPacket.STREAM_CODEC,
+                (packet, context) -> {}
+            );
+            LOGGER.info("Server-side packet registration completed (dummy handlers)");
+        }
+        
+        LOGGER.info("Network payloads registered successfully");
+    }
+
     // You can use SubscribeEvent and let the Event Bus discover methods to call
+    @SubscribeEvent
+    public void onPlayerLoggedIn(PlayerLoggedInEvent event) {
+        LOGGER.info("Player logged in: {}", event.getEntity().getName().getString());
+        if (event.getEntity().level() instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+            // Send a full sync on login - this will clear and replace all client-side realm data
+            syncAllRealmsToPlayer((ServerPlayer) event.getEntity(), serverLevel);
+        } else {
+            LOGGER.warn("Player logged in but level is not ServerLevel: {}", event.getEntity().level());
+        }
+    }
+    
+    /**
+     * Sends all realm data to a specific player (full sync)
+     */
+    private void syncAllRealmsToPlayer(ServerPlayer player, net.minecraft.server.level.ServerLevel serverLevel) {
+        LOGGER.info("syncAllRealmsToPlayer called for player {} in dimension {}", 
+            player.getName().getString(), serverLevel.dimension().location());
+        
+        List<RealmSyncPacket.RealmData> realmDataList = new ArrayList<>();
+        List<PietroBlockEntity> allRealms = RealmManager.getRealms(serverLevel);
+        LOGGER.info("RealmManager.getRealms returned {} realms for player {}", 
+            allRealms.size(), player.getName().getString());
+        
+        if (allRealms.isEmpty()) {
+            LOGGER.warn("No realms found in dimension {}! This might be expected if no Pietro blocks have been placed yet.", 
+                serverLevel.dimension().location());
+        }
+        
+        for (PietroBlockEntity realm : allRealms) {
+            LOGGER.info("Processing realm at {} owned by {} with size {}", 
+                realm.getBlockPos(), realm.getOwnerName(), realm.getRealmSize());
+            
+            RealmSyncPacket.RealmData data = new RealmSyncPacket.RealmData(
+                realm.getBlockPos(),
+                realm.getRealmSize(),
+                realm.getOwnerName(),
+                realm.getCenterChunk().x,
+                realm.getCenterChunk().z
+            );
+            realmDataList.add(data);
+            LOGGER.info("Added realm data: pos={}, size={}, center=({}, {})", 
+                realm.getBlockPos(), realm.getRealmSize(), 
+                realm.getCenterChunk().x, realm.getCenterChunk().z);
+        }
+        
+        RealmSyncPacket packet = new RealmSyncPacket(realmDataList, true); // true = full sync
+        LOGGER.info("Sending full RealmSyncPacket with {} realms to player {}", 
+            realmDataList.size(), player.getName().getString());
+        PacketDistributor.sendToPlayer(player, packet);
+        LOGGER.info("RealmSyncPacket sent successfully to {}", player.getName().getString());
+    }
+
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
         // Do something when the server starts
