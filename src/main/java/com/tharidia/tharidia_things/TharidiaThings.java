@@ -128,6 +128,8 @@ public class TharidiaThings {
         NeoForge.EVENT_BUS.register(this);
         // Register the claim protection handler
         NeoForge.EVENT_BUS.register(ClaimProtectionHandler.class);
+        // Register the realm placement handler
+        NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.RealmPlacementHandler.class);
 
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);

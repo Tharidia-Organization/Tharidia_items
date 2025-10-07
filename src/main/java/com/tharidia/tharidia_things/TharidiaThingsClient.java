@@ -1,5 +1,8 @@
 package com.tharidia.tharidia_things;
 
+import com.tharidia.tharidia_things.client.ClaimBoundaryRenderer;
+import com.tharidia.tharidia_things.client.RealmBoundaryRenderer;
+import com.tharidia.tharidia_things.client.RealmClientHandler;
 import com.tharidia.tharidia_things.client.RealmOverlay;
 import com.tharidia.tharidia_things.client.renderer.PietroBlockRenderer;
 import net.minecraft.client.Minecraft;
@@ -14,6 +17,7 @@ import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
+import net.neoforged.neoforge.common.NeoForge;
 
 // This class will not load on dedicated servers. Accessing client side code from here is safe.
 @Mod(value = TharidiaThings.MODID, dist = Dist.CLIENT)
@@ -25,6 +29,11 @@ public class TharidiaThingsClient {
         // The config screen is accessed by going to the Mods screen > clicking on your mod > clicking on config.
         // Do not forget to add translations for your config options to the en_us.json file.
         container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
+        
+        // Register client-side event handlers to the NeoForge event bus
+        NeoForge.EVENT_BUS.register(RealmBoundaryRenderer.class);
+        NeoForge.EVENT_BUS.register(ClaimBoundaryRenderer.class);
+        NeoForge.EVENT_BUS.register(RealmClientHandler.class);
     }
 
     @SubscribeEvent

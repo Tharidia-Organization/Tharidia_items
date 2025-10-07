@@ -8,13 +8,10 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
-import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import org.slf4j.Logger;
 
-@EventBusSubscriber(modid = TharidiaThings.MODID, value = Dist.CLIENT)
 public class RealmClientHandler {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static boolean wasInRealm = false;

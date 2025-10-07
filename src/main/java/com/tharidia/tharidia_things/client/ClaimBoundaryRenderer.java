@@ -10,9 +10,7 @@ import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import org.joml.Matrix4f;
 import org.slf4j.Logger;
@@ -20,7 +18,6 @@ import org.slf4j.Logger;
 import java.util.ArrayList;
 import java.util.List;
 
-@EventBusSubscriber(modid = TharidiaThings.MODID, value = Dist.CLIENT)
 public class ClaimBoundaryRenderer {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static List<ClaimData> nearbyClaims = new ArrayList<>();
