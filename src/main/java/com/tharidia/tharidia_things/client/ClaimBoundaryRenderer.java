@@ -23,8 +23,34 @@ public class ClaimBoundaryRenderer {
     private static List<ClaimData> nearbyClaims = new ArrayList<>();
     private static long lastUpdate = 0;
     private static final long UPDATE_INTERVAL = 1000; // Update every second
+    
+    // Toggle state for claim boundaries visibility
+    private static boolean boundariesVisible = false;
 
     private record ClaimData(BlockPos claimPos, int minX, int minZ, int maxX, int maxZ, int minY, int maxY) {}
+    
+    /**
+     * Toggles the visibility of claim boundaries
+     */
+    public static void toggleBoundaries() {
+        boundariesVisible = !boundariesVisible;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player != null) {
+            String status = boundariesVisible ? "§aON" : "§cOFF";
+            mc.player.displayClientMessage(
+                net.minecraft.network.chat.Component.literal("§6Boundaries: " + status),
+                true // Show in action bar
+            );
+        }
+        LOGGER.info("Boundaries visibility toggled: {}", boundariesVisible);
+    }
+    
+    /**
+     * Returns the current visibility state
+     */
+    public static boolean areBoundariesVisible() {
+        return boundariesVisible;
+    }
 
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent event) {
@@ -37,9 +63,8 @@ public class ClaimBoundaryRenderer {
             return;
         }
 
-        // Check if player is holding monocolo
-        if (!mc.player.getMainHandItem().is(TharidiaThings.MONOCOLO.get()) &&
-            !mc.player.getOffhandItem().is(TharidiaThings.MONOCOLO.get())) {
+        // Check if boundaries are toggled on
+        if (!boundariesVisible) {
             return;
         }
 

@@ -29,11 +29,21 @@ public class RealmBoundaryRenderer {
     private static final long LOG_INTERVAL = 5000; // Log every 5 seconds
     
     // Color randomization
-    private static boolean wasHoldingMonocolo = false;
     private static float colorSeedR = 0.9f;
     private static float colorSeedG = 0.5f;
     private static float colorSeedB = 0.8f;
     private static java.util.Random colorRandom = new java.util.Random();
+
+    private static boolean boundariesVisible = false;
+
+    public static void toggleBoundaries() {
+        boolean wasVisible = boundariesVisible;
+        boundariesVisible = !boundariesVisible;
+        // Randomize colors when turning visibility on
+        if (boundariesVisible && !wasVisible) {
+            randomizeColors();
+        }
+    }
 
     /**
      * Randomizes the color palette for the realm boundaries
@@ -109,20 +119,11 @@ public class RealmBoundaryRenderer {
             return;
         }
 
-        // Check if player is holding monocolo in either hand
-        boolean holdingMonocolo = mc.player.getMainHandItem().is(TharidiaThings.MONOCOLO.get()) ||
-                                   mc.player.getOffhandItem().is(TharidiaThings.MONOCOLO.get());
-        
-        if (!holdingMonocolo) {
-            wasHoldingMonocolo = false;
+        if (!boundariesVisible) {
             return;
         }
-        
-        // Randomize colors when first picking up monocolo
-        if (!wasHoldingMonocolo) {
-            wasHoldingMonocolo = true;
-            randomizeColors();
-        }
+
+        // Monocolo is no longer required to render realm boundaries
 
         updateNearbyRealms();
 

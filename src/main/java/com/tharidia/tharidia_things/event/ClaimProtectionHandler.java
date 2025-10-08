@@ -9,6 +9,8 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.entity.monster.EnderMan;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -146,9 +148,11 @@ public class ClaimProtectionHandler {
                     isOwner = sourceUuid != null && sourceUuid.equals(claim.getOwnerUUID());
                 }
                 
-                // ALWAYS protect blocks in claims, even from the owner
-                iterator.remove();
-                protectedCount++;
+                // Only protect if explosions are NOT allowed
+                if (!claim.getAllowExplosions()) {
+                    iterator.remove();
+                    protectedCount++;
+                }
             }
         }
 
@@ -157,13 +161,6 @@ public class ClaimProtectionHandler {
             String sourceName = source != null ? source.getName().getString() : "Unknown";
             LOGGER.info("Explosion blocked in claim - Source: {}, Is Owner: {}, Center: {}, Protected Blocks: {}",
                 sourceName, isOwner, explosionCenter, protectedCount);
-
-            if (source instanceof Player player) {
-                player.displayClientMessage(
-                    Component.literal("§cExplosions cannot destroy blocks in claimed areas! (" + protectedCount + " blocks protected)"),
-                    true
-                );
-            }
         }
     }
 
@@ -174,6 +171,103 @@ public class ClaimProtectionHandler {
     public static void onExplosionStart(ExplosionEvent.Start event) {
         // Explosion protection is handled in the Detonate event
         // This event is kept for potential future use
+    }
+
+    // TODO: PvP protection - requires finding correct NeoForge 1.21.1 damage event
+    // The API for damage events has changed in this version
+
+    /**
+     * Prevents crop trampling in claimed areas
+     */
+    @SubscribeEvent
+    public static void onFarmlandTrample(BlockEvent.FarmlandTrampleEvent event) {
+        if (!(event.getLevel() instanceof ServerLevel serverLevel)) {
+            return;
+        }
+
+        BlockPos pos = event.getPos();
+        ClaimBlockEntity claim = findClaimForPosition(serverLevel, pos);
+
+        if (claim != null) {
+            // Always prevent trampling in claims
+            event.setCanceled(true);
+        }
+    }
+
+    /**
+     * Prevents fire spread in claimed areas (unless allowed by claim flag)
+     * Intercepts fire placement events to stop spread
+     */
+    @SubscribeEvent(priority = EventPriority.HIGH)
+    public static void onFirePlace(BlockEvent.EntityPlaceEvent event) {
+        if (!(event.getLevel() instanceof ServerLevel serverLevel)) {
+            return;
+        }
+
+        // Check if fire is being placed
+        if (event.getPlacedBlock().getBlock() == Blocks.FIRE) {
+            BlockPos pos = event.getPos();
+            ClaimBlockEntity claim = findClaimForPosition(serverLevel, pos);
+            
+            // If in a claim and fire spread is not allowed, cancel the placement
+            if (claim != null && !claim.getAllowFireSpread()) {
+                // Only block natural fire spread (no entity)
+                // Allow players to place fire if they have permission
+                if (event.getEntity() == null || !(event.getEntity() instanceof Player)) {
+                    event.setCanceled(true);
+                }
+            }
+        }
+    }
+
+    /**
+     * Additional fire protection - removes existing fire in claims where it's not allowed
+     * This catches fire that bypasses the placement event
+     */
+    @SubscribeEvent
+    public static void onNeighborNotify(BlockEvent.NeighborNotifyEvent event) {
+        if (!(event.getLevel() instanceof ServerLevel serverLevel)) {
+            return;
+        }
+
+        BlockPos pos = event.getPos();
+        
+        // Check if this is fire trying to spread
+        if (serverLevel.getBlockState(pos).getBlock() == Blocks.FIRE) {
+            ClaimBlockEntity claim = findClaimForPosition(serverLevel, pos);
+            
+            if (claim != null && !claim.getAllowFireSpread()) {
+                // Remove fire block from claims
+                serverLevel.removeBlock(pos, false);
+            }
+        }
+    }
+
+    /**
+     * Prevents enderman from picking up blocks in claimed areas
+     */
+    @SubscribeEvent
+    public static void onEndermanPickup(BlockEvent.BreakEvent event) {
+        Level level = (Level) event.getLevel();
+        if (level.isClientSide || !(level instanceof ServerLevel serverLevel)) {
+            return;
+        }
+
+        // Check if an enderman is breaking the block
+        if (event.getPlayer() == null) {
+            // No player = could be enderman or other entity
+            BlockPos pos = event.getPos();
+            ClaimBlockEntity claim = findClaimForPosition(serverLevel, pos);
+
+            if (claim != null) {
+                // Check nearby for enderman
+                List<EnderMan> endermen = serverLevel.getEntitiesOfClass(EnderMan.class,
+                        new net.minecraft.world.phys.AABB(pos).inflate(10));
+                if (!endermen.isEmpty()) {
+                    event.setCanceled(true);
+                }
+            }
+        }
     }
 
     /**
@@ -217,10 +311,10 @@ public class ClaimProtectionHandler {
 
     /**
      * Checks if a player can interact with blocks in a claimed area
+     * Now includes trusted players
      */
     private static boolean canPlayerInteract(ClaimBlockEntity claim, Player player) {
-        UUID claimOwner = claim.getOwnerUUID();
-        return claimOwner != null && claimOwner.equals(player.getUUID());
+        return claim.isTrusted(player.getUUID());
     }
     
     /**

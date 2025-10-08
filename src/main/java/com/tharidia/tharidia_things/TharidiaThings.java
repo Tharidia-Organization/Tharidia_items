@@ -7,6 +7,7 @@ import com.tharidia.tharidia_things.block.ClaimBlock;
 import com.tharidia.tharidia_things.block.entity.PietroBlockEntity;
 import com.tharidia.tharidia_things.block.entity.ClaimBlockEntity;
 import com.tharidia.tharidia_things.client.ClientPacketHandler;
+import com.tharidia.tharidia_things.command.ClaimCommands;
 import com.tharidia.tharidia_things.event.ClaimProtectionHandler;
 import com.tharidia.tharidia_things.network.ClaimOwnerSyncPacket;
 import com.tharidia.tharidia_things.network.RealmSyncPacket;
@@ -36,6 +37,7 @@ import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -87,6 +89,10 @@ public class TharidiaThings {
     // Creates a MenuType for the Claim GUI
     public static final DeferredHolder<net.minecraft.world.inventory.MenuType<?>, net.minecraft.world.inventory.MenuType<com.tharidia.tharidia_things.gui.ClaimMenu>> CLAIM_MENU =
         MENU_TYPES.register("claim_menu", () -> net.neoforged.neoforge.common.extensions.IMenuTypeExtension.create(com.tharidia.tharidia_things.gui.ClaimMenu::new));
+    
+    // Creates a MenuType for the Pietro GUI
+    public static final DeferredHolder<net.minecraft.world.inventory.MenuType<?>, net.minecraft.world.inventory.MenuType<com.tharidia.tharidia_things.gui.PietroMenu>> PIETRO_MENU =
+        MENU_TYPES.register("pietro_menu", () -> net.neoforged.neoforge.common.extensions.IMenuTypeExtension.create(com.tharidia.tharidia_things.gui.PietroMenu::new));
 
     // Creates a creative tab with the id "tharidiathings:tharidia_tab" for the mod items, that is placed after the combat tab
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> THARIDIA_TAB = CREATIVE_MODE_TABS.register("tharidia_tab", () -> CreativeModeTab.builder()
@@ -128,6 +134,8 @@ public class TharidiaThings {
         NeoForge.EVENT_BUS.register(this);
         // Register the claim protection handler
         NeoForge.EVENT_BUS.register(ClaimProtectionHandler.class);
+        // Register the claim expiration handler
+        NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.ClaimExpirationHandler.class);
         // Register the realm placement handler
         NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.RealmPlacementHandler.class);
 
@@ -186,7 +194,8 @@ public class TharidiaThings {
     private void registerScreens(net.neoforged.neoforge.client.event.RegisterMenuScreensEvent event) {
         LOGGER.info("Registering menu screens");
         event.register(CLAIM_MENU.get(), com.tharidia.tharidia_things.client.gui.ClaimScreen::new);
-        LOGGER.info("Claim menu screen registered");
+        event.register(PIETRO_MENU.get(), com.tharidia.tharidia_things.client.gui.PietroScreen::new);
+        LOGGER.info("Menu screens registered successfully");
     }
 
     // You can use SubscribeEvent and let the Event Bus discover methods to call
@@ -246,6 +255,14 @@ public class TharidiaThings {
     public void onServerStarting(ServerStartingEvent event) {
         // Do something when the server starts
         LOGGER.info("HELLO from server starting");
+    }
+
+    @SubscribeEvent
+    public void onRegisterCommands(RegisterCommandsEvent event) {
+        LOGGER.info("Registering claim commands");
+        ClaimCommands.register(event.getDispatcher());
+        com.tharidia.tharidia_things.command.ClaimAdminCommands.register(event.getDispatcher());
+        LOGGER.info("Claim commands registered successfully");
     }
 
     /**

@@ -300,86 +300,14 @@ public class PietroBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hitResult) {
-        if (!level.isClientSide) {
-            // If upper half, redirect to lower half
-            BlockPos lowerPos = state.getValue(HALF) == DoubleBlockHalf.UPPER ? pos.below() : pos;
-            BlockEntity blockEntity = level.getBlockEntity(lowerPos);
-            if (blockEntity instanceof PietroBlockEntity pietroBlockEntity) {
-                // Check if player is holding potatoes
-                if (stack.is(Items.POTATO)) {
-                    int currentSize = pietroBlockEntity.getRealmSize();
-
-                    // Check if already at max size
-                    if (currentSize >= 15) {
-                        player.sendSystemMessage(Component.literal("§cRealm is already at maximum size (15x15 chunks)!"));
-                        return ItemInteractionResult.FAIL;
-                    }
-
-                    // Get potato info
-                    int potatoAmount = stack.getCount();
-                    int currentStored = pietroBlockEntity.getStoredPotatoes();
-                    int required = pietroBlockEntity.getPotatoCostForNextLevel();
-                    int remaining = pietroBlockEntity.getRemainingPotatoesNeeded();
-
-                    // Calculate how many potatoes to consume
-                    int toConsume = Math.min(potatoAmount, remaining);
-
-                    // Add potatoes and check if expansion occurred
-                    boolean expanded = pietroBlockEntity.addPotatoes(toConsume);
-
-                    // Consume the potatoes from player's hand
-                    if (!player.isCreative()) {
-                        stack.shrink(toConsume);
-                    }
-
-                    if (expanded) {
-                        // Expansion occurred!
-                        player.sendSystemMessage(Component.literal("§a✓ Regno espanso a " + pietroBlockEntity.getRealmSize() + "x" + pietroBlockEntity.getRealmSize() + " chunks!"));
-
-                        // Show info for next level if not at max
-                        if (pietroBlockEntity.getRealmSize() < 10) {
-                            int nextRequired = pietroBlockEntity.getPotatoCostForNextLevel();
-                            int nextStored = pietroBlockEntity.getStoredPotatoes();
-                            int nextRemaining = pietroBlockEntity.getRemainingPotatoesNeeded();
-                            player.sendSystemMessage(Component.literal("§7Prossimo livello: §e" + nextStored + "§7/§e" + nextRequired + " §7patate (§6" + nextRemaining + " §7necessarie)"));
-                        }
-                    } else {
-                        // Show progress
-                        int newStored = pietroBlockEntity.getStoredPotatoes();
-                        int newRemaining = pietroBlockEntity.getRemainingPotatoesNeeded();
-                        player.sendSystemMessage(Component.literal("§e+" + toConsume + " patate §7aggiunte!"));
-                        player.sendSystemMessage(Component.literal("§7Progresso: §e" + newStored + "§7/§e" + required + " §7(§6" + newRemaining + " §7necessarie per espandere)"));
-                    }
-
-                    return ItemInteractionResult.SUCCESS;
-                }
-            }
-        }
-        return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
-    }
-
-    @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
         if (!level.isClientSide) {
             // If upper half, redirect to lower half
             BlockPos lowerPos = state.getValue(HALF) == DoubleBlockHalf.UPPER ? pos.below() : pos;
             BlockEntity blockEntity = level.getBlockEntity(lowerPos);
             if (blockEntity instanceof PietroBlockEntity pietroBlockEntity) {
-                // Show current progress when clicked without item
-                int currentSize = pietroBlockEntity.getRealmSize();
-
-                if (currentSize >= 10) {
-                    player.sendSystemMessage(Component.literal("§6Regno al massimo livello (10x10 chunks)!"));
-                } else {
-                    int stored = pietroBlockEntity.getStoredPotatoes();
-                    int required = pietroBlockEntity.getPotatoCostForNextLevel();
-                    int remaining = pietroBlockEntity.getRemainingPotatoesNeeded();
-
-                    player.sendSystemMessage(Component.literal("§6Regno: §e" + currentSize + "x" + currentSize + " chunks"));
-                    player.sendSystemMessage(Component.literal("§7Patate: §e" + stored + "§7/§e" + required + " §7(§6" + remaining + " §7necessarie)"));
-                }
-
+                // Open GUI
+                player.openMenu(pietroBlockEntity, buf -> buf.writeBlockPos(lowerPos));
                 return InteractionResult.SUCCESS;
             }
         }

@@ -11,18 +11,25 @@ import mod.azure.azurelib.common.internal.common.util.AzureLibUtil;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.neoforged.neoforge.items.ItemStackHandler;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-public class PietroBlockEntity extends BlockEntity implements GeoBlockEntity {
+public class PietroBlockEntity extends BlockEntity implements GeoBlockEntity, MenuProvider {
     private final AnimatableInstanceCache cache = AzureLibUtil.createInstanceCache(this);
 
     // Animation controller
@@ -36,11 +43,87 @@ public class PietroBlockEntity extends BlockEntity implements GeoBlockEntity {
     public ChunkPos centerChunk;
     private String ownerName = ""; // Name of the player who placed this block
     private int storedPotatoes = 0; // Current potatoes stored for next expansion
+    
+    // Potato inventory (1 slot for potatoes)
+    private final ItemStackHandler potatoInventory = new ItemStackHandler(1) {
+        @Override
+        protected void onContentsChanged(int slot) {
+            setChanged();
+            // Process potatoes when contents change (server-side only)
+            if (level != null && !level.isClientSide) {
+                processPotatoes();
+            }
+        }
+    };
+
+    // Container data for syncing to client
+    private final net.minecraft.world.inventory.ContainerData containerData = new net.minecraft.world.inventory.ContainerData() {
+        @Override
+        public int get(int index) {
+            return switch (index) {
+                case 0 -> realmSize;
+                case 1 -> storedPotatoes;
+                default -> 0;
+            };
+        }
+
+        @Override
+        public void set(int index, int value) {
+            switch (index) {
+                case 0 -> realmSize = value;
+                case 1 -> storedPotatoes = value;
+            }
+        }
+
+        @Override
+        public int getCount() {
+            return 2;
+        }
+    };
 
     public PietroBlockEntity(BlockPos pos, BlockState blockState) {
         super(TharidiaThings.PIETRO_BLOCK_ENTITY.get(), pos, blockState);
         // Calculate the chunk position where this block is located
         this.centerChunk = new ChunkPos(pos);
+    }
+    
+    public ItemStackHandler getPotatoInventory() {
+        return potatoInventory;
+    }
+    
+    public net.minecraft.world.inventory.ContainerData getContainerData() {
+        return containerData;
+    }
+    
+    /**
+     * Process potatoes from the inventory slot
+     * Called each tick when GUI is open
+     */
+    public void processPotatoes() {
+        ItemStack stack = potatoInventory.getStackInSlot(0);
+        
+        if (!stack.isEmpty() && stack.is(net.minecraft.world.item.Items.POTATO)) {
+            int amount = stack.getCount();
+            
+            // Add potatoes and check for expansion
+            boolean expanded = addPotatoes(amount);
+            
+            // Remove potatoes from slot
+            potatoInventory.setStackInSlot(0, ItemStack.EMPTY);
+            
+            // Notify player through GUI update
+            setChanged();
+            
+            if (expanded && level instanceof ServerLevel serverLevel) {
+                // Broadcast expansion to nearby players
+                for (Player nearbyPlayer : level.players()) {
+                    if (nearbyPlayer.distanceToSqr(worldPosition.getX(), worldPosition.getY(), worldPosition.getZ()) < 256) {
+                        nearbyPlayer.sendSystemMessage(Component.literal("§a✓ Regno espanso a " + 
+                            getRealmSize() + "x" + getRealmSize() + " chunks!"));
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -260,6 +343,7 @@ public class PietroBlockEntity extends BlockEntity implements GeoBlockEntity {
         tag.putInt("CenterChunkZ", centerChunk.z);
         tag.putString("OwnerName", ownerName);
         tag.putInt("StoredPotatoes", storedPotatoes);
+        tag.put("PotatoInventory", potatoInventory.serializeNBT(registries));
     }
     
     @Override
@@ -275,6 +359,20 @@ public class PietroBlockEntity extends BlockEntity implements GeoBlockEntity {
 
         ownerName = tag.getString("OwnerName");
         storedPotatoes = tag.getInt("StoredPotatoes");
+        if (tag.contains("PotatoInventory")) {
+            potatoInventory.deserializeNBT(registries, tag.getCompound("PotatoInventory"));
+        }
+    }
+    
+    @Override
+    public Component getDisplayName() {
+        return Component.translatable("container.tharidiathings.pietro");
+    }
+
+    @Nullable
+    @Override
+    public AbstractContainerMenu createMenu(int containerId, Inventory playerInventory, Player player) {
+        return new com.tharidia.tharidia_things.gui.PietroMenu(containerId, playerInventory, this);
     }
 
     @Override

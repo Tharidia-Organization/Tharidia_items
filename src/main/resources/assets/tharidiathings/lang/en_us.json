@@ -5,6 +5,10 @@
   "item.tharidiathings.monocolo": "Monocolo",
 
   "container.tharidiathings.claim": "Claim",
+  "container.tharidiathings.pietro": "Pietro - Gestione Regno",
+
+  "key.categories.tharidiathings": "Tharidia Things",
+  "key.tharidiathings.toggle_claim_boundaries": "Toggle Claim Boundaries",
 
   "tharidiathings.configuration.title": "Tharidia Things Configs",
   "tharidiathings.configuration.section.tharidiathings.common.toml": "Tharidia Things Configs",

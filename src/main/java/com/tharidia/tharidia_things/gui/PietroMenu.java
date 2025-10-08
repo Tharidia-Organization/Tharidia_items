@@ -1,7 +1,7 @@
 package com.tharidia.tharidia_things.gui;
 
 import com.tharidia.tharidia_things.TharidiaThings;
-import com.tharidia.tharidia_things.block.entity.ClaimBlockEntity;
+import com.tharidia.tharidia_things.block.entity.PietroBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
@@ -11,80 +11,66 @@ import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.neoforged.neoforge.items.SlotItemHandler;
 
-public class ClaimMenu extends AbstractContainerMenu {
-    private final ClaimBlockEntity blockEntity;
+public class PietroMenu extends AbstractContainerMenu {
+    private final PietroBlockEntity blockEntity;
     private final BlockPos pos;
     private final ContainerData data;
-    private final String ownerName; // Store owner name for client
 
     // Constructor for server-side
-    public ClaimMenu(int containerId, Inventory playerInventory, ClaimBlockEntity blockEntity) {
-        super(TharidiaThings.CLAIM_MENU.get(), containerId);
+    public PietroMenu(int containerId, Inventory playerInventory, PietroBlockEntity blockEntity) {
+        super(TharidiaThings.PIETRO_MENU.get(), containerId);
         this.blockEntity = blockEntity;
         this.pos = blockEntity.getBlockPos();
         this.data = blockEntity.getContainerData();
-        this.ownerName = blockEntity.getClaimName() != null ? blockEntity.getClaimName() : "Unknown's Claim";
         
         layoutSlots(playerInventory);
         addDataSlots(this.data);
     }
 
     // Constructor for client-side (receives data from server)
-    public ClaimMenu(int containerId, Inventory playerInventory, FriendlyByteBuf extraData) {
-        super(TharidiaThings.CLAIM_MENU.get(), containerId);
+    public PietroMenu(int containerId, Inventory playerInventory, FriendlyByteBuf extraData) {
+        super(TharidiaThings.PIETRO_MENU.get(), containerId);
         this.pos = extraData.readBlockPos();
-        this.ownerName = extraData.readUtf(); // Read owner name from packet
-        
         BlockEntity be = playerInventory.player.level().getBlockEntity(pos);
-        if (be instanceof ClaimBlockEntity claimEntity) {
-            this.blockEntity = claimEntity;
-            this.data = claimEntity.getContainerData();
+        if (be instanceof PietroBlockEntity pietroEntity) {
+            this.blockEntity = pietroEntity;
+            this.data = pietroEntity.getContainerData();
         } else {
             this.blockEntity = null;
-            this.data = new SimpleContainerData(5); // Match ClaimBlockEntity's 5 slots
+            this.data = new SimpleContainerData(2);
         }
         
         layoutSlots(playerInventory);
         addDataSlots(this.data);
     }
     
-    public long getExpirationTime() {
-        // Data slots are ints, so we need to reconstruct the long from two ints
-        long high = ((long) data.get(0)) << 32;
-        long low = data.get(1) & 0xFFFFFFFFL;
-        return high | low;
+    public int getRealmSize() {
+        return data.get(0);
     }
     
-    public boolean isRented() {
-        return data.get(2) == 1;
-    }
-    
-    public int getExpansionLevel() {
-        return data.get(3);
-    }
-    
-    public int getProtectionRadius() {
-        return data.get(4);
-    }
-    
-    public String getOwnerName() {
-        return ownerName; // Use the synced owner name
+    public int getStoredPotatoes() {
+        return data.get(1);
     }
     
     private void layoutSlots(Inventory playerInventory) {
         // GUI is 250x300 pixels
-        // Center slot horizontally: (250 / 2) - 9 = 116
+        // Potato slot positioned next to info text (right side)
         if (blockEntity != null) {
-            this.addSlot(new SlotItemHandler(blockEntity.getInventory(), 0, 116, 35));
+            this.addSlot(new SlotItemHandler(blockEntity.getPotatoInventory(), 0, 200, 35) {
+                @Override
+                public boolean mayPlace(ItemStack stack) {
+                    return stack.is(Items.POTATO);
+                }
+            });
         }
         
         // Add player inventory slots at the bottom
-        // Center the 9-slot width (162 pixels) horizontally: (250 - 162) / 2 = 44
         int invStartX = 44;
-        int invStartY = 184; // Positioned in lower area with margin
+        int invStartY = 184;
         
         // Player inventory (9-35)
         for (int row = 0; row < 3; ++row) {
@@ -116,7 +102,7 @@ public class ClaimMenu extends AbstractContainerMenu {
             ItemStack slotStack = slot.getItem();
             itemstack = slotStack.copy();
             
-            // If shift-clicking from the claim slot (index 0)
+            // If shift-clicking from the pietro slot (index 0)
             if (index == 0) {
                 // Try to move to player inventory
                 if (!this.moveItemStackTo(slotStack, 1, 37, true)) {
@@ -125,8 +111,12 @@ public class ClaimMenu extends AbstractContainerMenu {
             }
             // If shift-clicking from player inventory
             else {
-                // Try to move to claim slot
-                if (!this.moveItemStackTo(slotStack, 0, 1, false)) {
+                // Only move potatoes to pietro slot
+                if (slotStack.is(Items.POTATO)) {
+                    if (!this.moveItemStackTo(slotStack, 0, 1, false)) {
+                        return ItemStack.EMPTY;
+                    }
+                } else {
                     return ItemStack.EMPTY;
                 }
             }
@@ -147,7 +137,7 @@ public class ClaimMenu extends AbstractContainerMenu {
         return itemstack;
     }
 
-    public ClaimBlockEntity getBlockEntity() {
+    public PietroBlockEntity getBlockEntity() {
         return blockEntity;
     }
 
