@@ -44,7 +44,7 @@ public class ClaimMenu extends AbstractContainerMenu {
             this.data = claimEntity.getContainerData();
         } else {
             this.blockEntity = null;
-            this.data = new SimpleContainerData(5); // Match ClaimBlockEntity's 5 slots
+            this.data = new SimpleContainerData(4); // Match ClaimBlockEntity's 4 slots
         }
         
         layoutSlots(playerInventory);
@@ -62,12 +62,8 @@ public class ClaimMenu extends AbstractContainerMenu {
         return data.get(2) == 1;
     }
     
-    public int getExpansionLevel() {
-        return data.get(3);
-    }
-    
     public int getProtectionRadius() {
-        return data.get(4);
+        return data.get(3);
     }
     
     public String getOwnerName() {

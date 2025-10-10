@@ -19,6 +19,10 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
+
+import static com.tharidia.tharidia_things.claim.ClaimRegistry.*;
+
 public class ClaimBlock extends BaseEntityBlock {
     public static final MapCodec<ClaimBlock> CODEC = simpleCodec(ClaimBlock::new);
     protected static final VoxelShape SHAPE = Block.box(0.0D, 0.0D, 0.0D, 16.0D, 16.0D, 16.0D);
@@ -59,37 +63,25 @@ public class ClaimBlock extends BaseEntityBlock {
                 if (player != null && !player.getUUID().equals(existingClaim.getOwnerUUID())) {
                     player.sendSystemMessage(Component.literal("§cQuesta chunk è già occupata da un altro claim!"));
                     return null;
-                } else {
-                    player.sendSystemMessage(Component.literal("§cPuò essere piazzato solo un Claim per chunk!"));
-                    return null;
                 }
+                player.sendSystemMessage(Component.literal("§cPuò essere piazzato solo un Claim per chunk!"));
+                return null;
             }
             
             // Check for adjacent player claims (for expansion)
             if (player != null) {
                 ClaimBlockEntity adjacentClaim = findAdjacentPlayerClaim(serverLevel, pos, player);
-                
-                if (adjacentClaim != null) {
-                    // This is an expansion - allow it and increase expansion level
-                    if (adjacentClaim.getExpansionLevel() >= 3) {
-                        player.sendSystemMessage(Component.literal("§cIl claim adiacente ha già raggiunto il livello massimo di espansione (3)!"));
-                        return null;
-                    }
-                    // Expansion will be handled in setPlacedBy
-                } else {
-                    // Not adjacent to existing claim - check player's total claim count (max 4)
-                    // Ops/admins can place unlimited claims
-                    if (!player.hasPermissions(2)) { // Permission level 2 = operator
-                        int playerClaimCount = getPlayerTotalClaims(serverLevel, player);
-                        if (playerClaimCount >= 4) {
-                            player.sendSystemMessage(Component.literal("§cHai raggiunto il limite massimo di 4 claims!"));
-                            return null;
+                if (adjacentClaim == null && hasPlayerClaimInRealm(serverLevel, realm, player)) {
+                    player.sendSystemMessage(Component.literal("§cPer espandere il claim, piazzalo adiacente al tuo claim esistente!"));
+                    return null;
+                } else if (adjacentClaim != null) {
+                    int claimCount = getPlayerClaimCount(player.getUUID());
+                    if (claimCount > 3) {
+                        if (player.hasPermissions(2)) {
+                            player.sendSystemMessage(Component.literal("§cClaim Extra"));
+                            return this.defaultBlockState();
                         }
-                    }
-                    
-                    // Check if player already has a claim in this realm
-                    if (hasPlayerClaimInRealm(serverLevel, realm, player)) {
-                        player.sendSystemMessage(Component.literal("§cPer espandere il claim, piazzalo adiacente al tuo claim esistente!"));
+                        player.sendSystemMessage(Component.literal("§cHai raggiunto il massimo di claim!"));
                         return null;
                     }
                 }
@@ -248,33 +240,21 @@ public class ClaimBlock extends BaseEntityBlock {
         targetClaim.setAllowMobSpawning(sourceClaim.getAllowMobSpawning());
         targetClaim.setAllowFireSpread(sourceClaim.getAllowFireSpread());
 
-        // Note: expansion level and protection radius will be set by updateExpansionLevelBasedOnClaimCount
+        // Note: protection radius is calculated dynamically from claim count, no expansion level to set
     }
 
     /**
-     * Updates the expansion level and protection radius based on the total number of claims owned by the player
-     * 1 claim -> expansion level 0, 2 claims -> expansion level 1, 3 claims -> expansion level 2, 4 claims -> expansion level 3
+     * Updates protection radius display for the player based on total claims owned
+     * No longer sets expansion level on individual claims since it's calculated dynamically
      */
     private void updateExpansionLevelBasedOnClaimCount(ClaimBlockEntity claimEntity, ServerLevel level, Player player) {
-        int totalClaims = getPlayerTotalClaims(level, player);
+        int claimCount = getPlayerClaimCount(player.getUUID());
+        int protectionRadius = 8 + (claimCount * 8); // Calculate protection radius
 
-        // Calculate expansion level: 1 claim = level 0, 4 claims = level 3
-        int expansionLevel = Math.min(totalClaims - 1, 3); // Max level 3
-        claimEntity.setExpansionLevel(expansionLevel);
-
-        // Show updated info to player
-        int protectionRadius = claimEntity.getProtectionRadius();
-        player.sendSystemMessage(Component.literal("§6Livello di espansione: §f" + expansionLevel + "/3"));
+        player.sendSystemMessage(Component.literal("§7Possiedi: §f" + claimCount + " Territori"));
         player.sendSystemMessage(Component.literal("§eRaggio di protezione: §f" + protectionRadius + " blocchi"));
-        player.sendSystemMessage(Component.literal("§7Claims totali: §f" + totalClaims + "/4"));
     }
 
-    /**
-     * Gets the total number of claims owned by a player across all realms.
-     */
-    private int getPlayerTotalClaims(ServerLevel level, Player player) {
-        return com.tharidia.tharidia_things.claim.ClaimRegistry.getPlayerClaims(player.getUUID()).size();
-    }
 
     @Nullable
     @Override
@@ -302,6 +282,7 @@ public class ClaimBlock extends BaseEntityBlock {
     @Override
     public RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
+
     }
 
     @Override

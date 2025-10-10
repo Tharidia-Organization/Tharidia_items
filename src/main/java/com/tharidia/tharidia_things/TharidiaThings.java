@@ -73,8 +73,6 @@ public class TharidiaThings {
     public static final DeferredBlock<PietroBlock> PIETRO = BLOCKS.register("pietro", () -> new PietroBlock(BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(3.0F, 6.0F).noOcclusion()));
     // Creates a new BlockItem with the id "tharidiathings:pietro", combining the namespace and path
     public static final DeferredItem<BlockItem> PIETRO_ITEM = ITEMS.registerSimpleBlockItem("pietro", PIETRO);
-    // Creates a new Item with the id "tharidiathings:monocolo"
-    public static final DeferredItem<Item> MONOCOLO = ITEMS.registerSimpleItem("monocolo", new Item.Properties());
     // Creates a new Block with the id "tharidiathings:claim"
     public static final DeferredBlock<ClaimBlock> CLAIM = BLOCKS.register("claim", () -> new ClaimBlock(BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(3.0F, 6.0F)));
     // Creates a new BlockItem with the id "tharidiathings:claim"
@@ -102,7 +100,6 @@ public class TharidiaThings {
             .displayItems((parameters, output) -> {
                 output.accept(PIETRO_ITEM.get());
                 output.accept(CLAIM_ITEM.get());
-                output.accept(MONOCOLO.get());
             }).build());
 
     // The constructor for the mod class is the first code that is run when your mod is loaded.
@@ -255,6 +252,15 @@ public class TharidiaThings {
     public void onServerStarting(ServerStartingEvent event) {
         // Do something when the server starts
         LOGGER.info("HELLO from server starting");
+        
+        // Load claim registry from persistent storage
+        net.minecraft.server.level.ServerLevel overworld = event.getServer().getLevel(net.minecraft.world.level.Level.OVERWORLD);
+        if (overworld != null) {
+            com.tharidia.tharidia_things.claim.ClaimRegistry.loadFromPersistentStorage(overworld);
+            LOGGER.info("Claim registry loaded from persistent storage");
+        } else {
+            LOGGER.error("Could not load claim registry: overworld is null");
+        }
     }
 
     @SubscribeEvent

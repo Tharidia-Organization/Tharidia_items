@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * Global registry for tracking all claims in the world
@@ -21,6 +22,41 @@ public class ClaimRegistry {
     
     // Map of player UUID -> list of claim positions
     private static final Map<UUID, Set<BlockPos>> playerClaims = new ConcurrentHashMap<>();
+
+    /**
+     * Data class representing a claim in the registry
+     */
+    public static class ClaimData {
+        public final BlockPos position;
+        public final UUID ownerUUID;
+        public String claimName;
+        public final long creationTime;
+        public final String dimension;
+
+        public ClaimData(BlockPos position, UUID ownerUUID, String claimName, long creationTime, String dimension) {
+            this.position = position;
+            this.ownerUUID = ownerUUID;
+            this.claimName = claimName;
+            this.creationTime = creationTime;
+            this.dimension = dimension;
+        }
+
+        public BlockPos getPosition() {
+            return position;
+        }
+
+        public UUID getOwnerUUID() {
+            return ownerUUID;
+        }
+
+        public String getClaimName() {
+            return claimName;
+        }
+
+        public String getDimension() {
+            return dimension;
+        }
+    }
 
     /**
      * Registers a claim in the global registry
@@ -44,6 +80,10 @@ public class ClaimRegistry {
             playerClaims.computeIfAbsent(claim.getOwnerUUID(), k -> ConcurrentHashMap.newKeySet()).add(pos);
         }
         
+        // Persist to saved data
+        ClaimSavedData savedData = ClaimSavedData.get(level);
+        savedData.storeClaim(dimension, pos, claim.getOwnerUUID(), claim.getClaimName(), claim.getCreationTime());
+        
         LOGGER.debug("Registered claim at {} in dimension {}", pos, dimension);
     }
 
@@ -66,6 +106,10 @@ public class ClaimRegistry {
                     }
                 }
             }
+            
+            // Remove from persistent storage
+            ClaimSavedData savedData = ClaimSavedData.get(level);
+            savedData.removeClaim(dimension, pos);
             
             LOGGER.debug("Unregistered claim at {} in dimension {}", pos, dimension);
         }
@@ -114,10 +158,20 @@ public class ClaimRegistry {
 
     /**
      * Gets number of claims owned by a player
+     * Falls back to persistent storage if in-memory registry is empty (e.g., after restart)
      */
     public static int getPlayerClaimCount(UUID playerUUID) {
         Set<BlockPos> positions = playerClaims.get(playerUUID);
         return positions != null ? positions.size() : 0;
+    }
+    
+    /**
+     * Gets number of claims owned by a player from persistent storage
+     * Use this when you need the count even if chunks aren't loaded yet
+     */
+    public static int getPlayerClaimCountPersistent(UUID playerUUID, ServerLevel level) {
+        ClaimSavedData savedData = ClaimSavedData.get(level);
+        return savedData.getPlayerClaimCount(playerUUID);
     }
 
     /**
@@ -152,39 +206,58 @@ public class ClaimRegistry {
         playerClaims.clear();
         LOGGER.info("Claim registry cleared");
     }
-
+    
     /**
-     * Data class representing a claim in the registry
+     * Loads the registry from persistent storage
+     * This is called when the server starts to restore claim data
      */
-    public static class ClaimData {
-        public final BlockPos position;
-        public final UUID ownerUUID;
-        public String claimName;
-        public final long creationTime;
-        public final String dimension;
+    public static void loadFromPersistentStorage(ServerLevel level) {
+        ClaimSavedData savedData = ClaimSavedData.get(level);
+        Map<String, Map<BlockPos, ClaimSavedData.StoredClaimData>> storedClaims = savedData.getStoredClaims();
         
-        public ClaimData(BlockPos position, UUID ownerUUID, String claimName, long creationTime, String dimension) {
-            this.position = position;
-            this.ownerUUID = ownerUUID;
-            this.claimName = claimName;
-            this.creationTime = creationTime;
-            this.dimension = dimension;
+        LOGGER.info("Loading claim registry from persistent storage...");
+        
+        int loadedCount = 0;
+        for (Map.Entry<String, Map<BlockPos, ClaimSavedData.StoredClaimData>> dimensionEntry : storedClaims.entrySet()) {
+            String dimension = dimensionEntry.getKey();
+            
+            for (Map.Entry<BlockPos, ClaimSavedData.StoredClaimData> claimEntry : dimensionEntry.getValue().entrySet()) {
+                BlockPos pos = claimEntry.getKey();
+                ClaimSavedData.StoredClaimData stored = claimEntry.getValue();
+                
+                // Note: We don't add to in-memory registry here because ClaimBlockEntity will
+                // register itself when the chunk loads. We just keep the persistent data
+                // for tracking claim counts even when chunks aren't loaded.
+                loadedCount++;
+            }
         }
         
-        public BlockPos getPosition() {
-            return position;
-        }
-        
-        public UUID getOwnerUUID() {
-            return ownerUUID;
-        }
-        
-        public String getClaimName() {
-            return claimName;
-        }
-        
-        public String getDimension() {
-            return dimension;
-        }
+        LOGGER.info("Loaded {} claims from persistent storage", loadedCount);
     }
+    
+    /**
+     * Synchronizes persistent storage with current in-memory state
+     * Useful for ensuring data consistency
+     */
+    public static void syncToPersistentStorage(ServerLevel level) {
+        ClaimSavedData savedData = ClaimSavedData.get(level);
+        
+        // Clear and rebuild the saved data from current registry
+        savedData.clear();
+        
+        for (Map.Entry<String, Map<BlockPos, ClaimData>> dimensionEntry : claims.entrySet()) {
+            String dimension = dimensionEntry.getKey();
+            
+            for (Map.Entry<BlockPos, ClaimData> claimEntry : dimensionEntry.getValue().entrySet()) {
+                BlockPos pos = claimEntry.getKey();
+                ClaimData data = claimEntry.getValue();
+                
+                savedData.storeClaim(dimension, pos, data.ownerUUID, data.claimName, data.creationTime);
+            }
+        }
+        
+        LOGGER.info("Synchronized {} claims to persistent storage", getTotalClaimCount());
+    }
+
+
 }

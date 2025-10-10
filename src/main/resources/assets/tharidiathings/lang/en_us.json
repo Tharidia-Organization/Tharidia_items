@@ -1,11 +1,10 @@
 {
   "itemGroup.tharidiathings": "Tharidia Cose",
-  "block.tharidiathings.pietro": "Pietro",
+  "block.tharidiathings.pietro": "Realm",
   "block.tharidiathings.claim": "Claim",
-  "item.tharidiathings.monocolo": "Monocolo",
 
   "container.tharidiathings.claim": "Claim",
-  "container.tharidiathings.pietro": "Pietro - Gestione Regno",
+  "container.tharidiathings.pietro": "Le cose di Tharidia",
 
   "key.categories.tharidiathings": "Tharidia Things",
   "key.tharidiathings.toggle_claim_boundaries": "Toggle Claim Boundaries",

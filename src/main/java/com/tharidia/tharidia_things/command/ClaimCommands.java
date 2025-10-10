@@ -117,8 +117,7 @@ public class ClaimCommands {
             
             // Protection radius
             player.sendSystemMessage(Component.literal("§eProtection Radius: §f" + claim.getProtectionRadius() + " blocks"));
-            player.sendSystemMessage(Component.literal("§eExpansion Level: §f" + claim.getExpansionLevel() + "/3"));
-            
+
             // Flags
             player.sendSystemMessage(Component.literal("§6§l=== Claim Flags ==="));
             player.sendSystemMessage(Component.literal("§eExplosions: " + (claim.getAllowExplosions() ? "§aAllowed" : "§cDenied")));

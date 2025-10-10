@@ -62,12 +62,6 @@ public class ClaimScreen extends AbstractContainerScreen<ClaimMenu> {
             10, yPos, color, false);
         yPos += 12;
         
-        // Use synced expansion level
-        int expansionLevel = this.menu.getExpansionLevel();
-        guiGraphics.drawString(this.font, "§6Expansion Level: §f" + expansionLevel + "/3", 
-            10, yPos, color, false);
-        yPos += 12;
-        
         // Render expiration info - use synced data from menu
         long expirationTime = this.menu.getExpirationTime();
         boolean isRented = this.menu.isRented();

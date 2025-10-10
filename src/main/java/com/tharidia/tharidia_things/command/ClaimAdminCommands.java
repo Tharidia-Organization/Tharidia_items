@@ -105,8 +105,7 @@ public class ClaimAdminCommands {
             }
             
             source.sendSuccess(() -> Component.literal("§eProtection Radius: §f" + claim.getProtectionRadius() + " blocks"), false);
-            source.sendSuccess(() -> Component.literal("§eExpansion Level: §f" + claim.getExpansionLevel() + "/3"), false);
-            
+
             source.sendSuccess(() -> Component.literal("§6§l=== Flags ==="), false);
             source.sendSuccess(() -> Component.literal("§eExplosions: " + (claim.getAllowExplosions() ? "§aAllowed" : "§cDenied")), false);
             source.sendSuccess(() -> Component.literal("§ePvP: " + (claim.getAllowPvP() ? "§aAllowed" : "§cDenied")), false);

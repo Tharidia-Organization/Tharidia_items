@@ -34,7 +34,8 @@ public class ClaimBlockEntity extends BlockEntity implements MenuProvider {
     private int rentalDays = 0;
     private double rentalCost = 0.0;
     private List<BlockPos> mergedClaims = new ArrayList<>();
-    private int expansionLevel = 0; // 0 = base, max 3 expansions
+    // Removed expansionLevel field - no longer stored per claim
+    private int claimCountWhenPlaced = 0; // Stores claim count when this claim was placed
     
     // Claim flags
     private boolean allowExplosions = false;
@@ -58,8 +59,7 @@ public class ClaimBlockEntity extends BlockEntity implements MenuProvider {
                 case 0 -> (int) (expirationTime >> 32); // High 32 bits
                 case 1 -> (int) (expirationTime & 0xFFFFFFFF); // Low 32 bits
                 case 2 -> isRented ? 1 : 0;
-                case 3 -> expansionLevel;
-                case 4 -> getProtectionRadius(); // Calculated from expansion level
+                case 3 -> getProtectionRadius(); // Calculated from claim count, not stored
                 default -> 0;
             };
         }
@@ -70,14 +70,13 @@ public class ClaimBlockEntity extends BlockEntity implements MenuProvider {
                 case 0 -> expirationTime = (expirationTime & 0xFFFFFFFFL) | ((long) value << 32);
                 case 1 -> expirationTime = (expirationTime & 0xFFFFFFFF00000000L) | (value & 0xFFFFFFFFL);
                 case 2 -> isRented = value == 1;
-                case 3 -> expansionLevel = value;
-                case 4 -> {} // Protection radius is calculated, no need to set
+                case 3 -> {} // Protection radius is calculated, no need to set
             }
         }
 
         @Override
         public int getCount() {
-            return 5;
+            return 4; // Reduced from 5 since we removed expansion level
         }
     };
 
@@ -100,7 +99,13 @@ public class ClaimBlockEntity extends BlockEntity implements MenuProvider {
     public void setOwnerUUID(UUID ownerUUID) {
         this.ownerUUID = ownerUUID;
         this.creationTime = System.currentTimeMillis();
-        
+
+        // Store current claim count for this player when claim is placed
+        // Use persistent count to ensure accuracy even after server restart
+        if (level instanceof ServerLevel serverLevel) {
+            this.claimCountWhenPlaced = com.tharidia.tharidia_things.claim.ClaimRegistry.getPlayerClaimCountPersistent(ownerUUID, serverLevel);
+        }
+
         // Automatically set claim name to owner's name
         if (level instanceof ServerLevel serverLevel) {
             net.minecraft.server.level.ServerPlayer player = serverLevel.getServer().getPlayerList().getPlayer(ownerUUID);
@@ -108,9 +113,9 @@ public class ClaimBlockEntity extends BlockEntity implements MenuProvider {
                 this.claimName = player.getName().getString() + "'s Claim";
             }
         }
-        
+
         setChanged();
-        
+
         // Register in claim registry
         if (level instanceof ServerLevel serverLevel) {
             ClaimRegistry.registerClaim(serverLevel, worldPosition, this);
@@ -204,15 +209,8 @@ public class ClaimBlockEntity extends BlockEntity implements MenuProvider {
         setChanged();
     }
 
-    public int getExpansionLevel() {
-        return expansionLevel;
-    }
-
-    public void setExpansionLevel(int level) {
-        this.expansionLevel = Math.min(3, level);
-        setChanged();
-    }
-
+    // Removed getExpansionLevel() and setExpansionLevel() methods - expansion level no longer stored per claim
+    
     public boolean getAllowExplosions() {
         return allowExplosions;
     }
@@ -250,8 +248,22 @@ public class ClaimBlockEntity extends BlockEntity implements MenuProvider {
     }
 
     public int getProtectionRadius() {
-        // Base chunk (16x16) + expansions
-        return 8 + (expansionLevel * 8); // 8, 16, 24, 32 block radius
+        // Calculate from claim count instead of stored expansion level
+        if (level instanceof ServerLevel serverLevel && ownerUUID != null) {
+            // Try to get current claim count from registry first
+            int currentClaimCount = com.tharidia.tharidia_things.claim.ClaimRegistry.getPlayerClaimCount(ownerUUID);
+
+            // If registry is empty (server restart), use persistent count
+            if (currentClaimCount == 0) {
+                currentClaimCount = com.tharidia.tharidia_things.claim.ClaimRegistry.getPlayerClaimCountPersistent(ownerUUID, serverLevel);
+            }
+            
+            // If still no count, fall back to stored count from when this claim was placed
+            int effectiveClaimCount = currentClaimCount > 0 ? currentClaimCount : claimCountWhenPlaced;
+
+            return 8 + (effectiveClaimCount * 8); // 8, 16, 24, 32 block radius based on total claims
+        }
+        return 8; // Default to base radius if no owner or level
     }
 
     @Override
@@ -279,7 +291,8 @@ public class ClaimBlockEntity extends BlockEntity implements MenuProvider {
         tag.putBoolean("IsRented", isRented);
         tag.putInt("RentalDays", rentalDays);
         tag.putDouble("RentalCost", rentalCost);
-        tag.putInt("ExpansionLevel", expansionLevel);
+        // Removed expansionLevel from save - no longer stored per claim
+        tag.putInt("ClaimCountWhenPlaced", claimCountWhenPlaced);
         
         // Save flags
         tag.putBoolean("AllowExplosions", allowExplosions);
@@ -326,7 +339,7 @@ public class ClaimBlockEntity extends BlockEntity implements MenuProvider {
         isRented = tag.getBoolean("IsRented");
         rentalDays = tag.getInt("RentalDays");
         rentalCost = tag.getDouble("RentalCost");
-        expansionLevel = tag.getInt("ExpansionLevel");
+        claimCountWhenPlaced = tag.getInt("ClaimCountWhenPlaced");
         
         // Load flags
         allowExplosions = tag.getBoolean("AllowExplosions");
