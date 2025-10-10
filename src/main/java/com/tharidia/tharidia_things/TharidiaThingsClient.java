@@ -57,5 +57,13 @@ public class TharidiaThingsClient {
             new RealmOverlay()
         );
         TharidiaThings.LOGGER.info("Registered Realm Overlay");
+        
+        // Register the weight HUD overlay in the lower left corner
+        event.registerAbove(
+            VanillaGuiLayers.HOTBAR,
+            TharidiaThings.modLoc("weight_overlay"),
+            new com.tharidia.tharidia_things.client.WeightHudOverlay()
+        );
+        TharidiaThings.LOGGER.info("Registered Weight HUD Overlay");
     }
 }

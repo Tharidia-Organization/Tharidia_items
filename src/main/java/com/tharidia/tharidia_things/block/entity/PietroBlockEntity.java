@@ -43,6 +43,7 @@ public class PietroBlockEntity extends BlockEntity implements GeoBlockEntity, Me
     public ChunkPos centerChunk;
     private String ownerName = ""; // Name of the player who placed this block
     private int storedPotatoes = 0; // Current potatoes stored for next expansion
+    private int totalClaimPotatoes = 0; // Total potatoes received from claims in this realm
     
     // Potato inventory (1 slot for potatoes)
     private final ItemStackHandler potatoInventory = new ItemStackHandler(1) {
@@ -63,6 +64,7 @@ public class PietroBlockEntity extends BlockEntity implements GeoBlockEntity, Me
             return switch (index) {
                 case 0 -> realmSize;
                 case 1 -> storedPotatoes;
+                case 2 -> totalClaimPotatoes;
                 default -> 0;
             };
         }
@@ -72,12 +74,13 @@ public class PietroBlockEntity extends BlockEntity implements GeoBlockEntity, Me
             switch (index) {
                 case 0 -> realmSize = value;
                 case 1 -> storedPotatoes = value;
+                case 2 -> totalClaimPotatoes = value;
             }
         }
 
         @Override
         public int getCount() {
-            return 2;
+            return 3;
         }
     };
 
@@ -196,6 +199,23 @@ public class PietroBlockEntity extends BlockEntity implements GeoBlockEntity, Me
      */
     public String getOwnerName() {
         return ownerName;
+    }
+    
+    /**
+     * Adds potato payment from a claim to this realm's total
+     */
+    public void addClaimPotatoPayment(int amount) {
+        totalClaimPotatoes += amount;
+        setChanged();
+        if (level != null && !level.isClientSide) {
+            level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+        }
+        TharidiaThings.LOGGER.info("Realm at {} received {} potatoes from claim. Total: {}", 
+            getBlockPos(), amount, totalClaimPotatoes);
+    }
+    
+    public int getTotalClaimPotatoes() {
+        return totalClaimPotatoes;
     }
     
     /**
@@ -343,6 +363,7 @@ public class PietroBlockEntity extends BlockEntity implements GeoBlockEntity, Me
         tag.putInt("CenterChunkZ", centerChunk.z);
         tag.putString("OwnerName", ownerName);
         tag.putInt("StoredPotatoes", storedPotatoes);
+        tag.putInt("TotalClaimPotatoes", totalClaimPotatoes);
         tag.put("PotatoInventory", potatoInventory.serializeNBT(registries));
     }
     
@@ -359,6 +380,7 @@ public class PietroBlockEntity extends BlockEntity implements GeoBlockEntity, Me
 
         ownerName = tag.getString("OwnerName");
         storedPotatoes = tag.getInt("StoredPotatoes");
+        totalClaimPotatoes = tag.getInt("TotalClaimPotatoes");
         if (tag.contains("PotatoInventory")) {
             potatoInventory.deserializeNBT(registries, tag.getCompound("PotatoInventory"));
         }

@@ -36,6 +36,8 @@ public class ClaimBlockEntity extends BlockEntity implements MenuProvider {
     private List<BlockPos> mergedClaims = new ArrayList<>();
     // Removed expansionLevel field - no longer stored per claim
     private int claimCountWhenPlaced = 0; // Stores claim count when this claim was placed
+    private BlockPos linkedRealmPos = null; // Position of the Pietro block (realm) this claim belongs to
+    private int totalPotatoesPaid = 0; // Total potatoes paid to this claim over time
     
     // Claim flags
     private boolean allowExplosions = false;
@@ -48,6 +50,14 @@ public class ClaimBlockEntity extends BlockEntity implements MenuProvider {
         @Override
         protected void onContentsChanged(int slot) {
             setChanged();
+            // Process potato payment when items are added
+            processPotatoPayment(slot);
+        }
+        
+        @Override
+        public boolean isItemValid(int slot, ItemStack stack) {
+            // Only accept potatoes as payment
+            return stack.is(net.minecraft.world.item.Items.POTATO);
         }
     };
     
@@ -119,6 +129,8 @@ public class ClaimBlockEntity extends BlockEntity implements MenuProvider {
         // Register in claim registry
         if (level instanceof ServerLevel serverLevel) {
             ClaimRegistry.registerClaim(serverLevel, worldPosition, this);
+            // Try to link to a nearby realm
+            findAndLinkToRealm(serverLevel);
         }
     }
 
@@ -265,6 +277,183 @@ public class ClaimBlockEntity extends BlockEntity implements MenuProvider {
         }
         return 8; // Default to base radius if no owner or level
     }
+    
+    /**
+     * Process potato payment to extend claim time
+     * 1 potato = 1 hour of additional time
+     * Also syncs time to all merged claims and adjacent claims of the same owner
+     */
+    private void processPotatoPayment(int slot) {
+        // Only process on server side
+        if (level == null || level.isClientSide) {
+            return;
+        }
+        
+        ItemStack stack = inventory.getStackInSlot(slot);
+        if (stack.isEmpty() || !stack.is(net.minecraft.world.item.Items.POTATO)) {
+            return;
+        }
+        
+        // Calculate time to add (1 potato = 1 hour in milliseconds)
+        int potatoCount = stack.getCount();
+        long hoursInMillis = potatoCount * 60L * 60L * 1000L; // hours to milliseconds
+        
+        // If claim doesn't have expiration time yet, start from current time
+        if (expirationTime <= 0 || expirationTime < System.currentTimeMillis()) {
+            expirationTime = System.currentTimeMillis() + hoursInMillis;
+            isRented = true;
+        } else {
+            // Add time to existing expiration
+            expirationTime += hoursInMillis;
+        }
+        
+        // Track total potatoes paid
+        totalPotatoesPaid += potatoCount;
+        
+        // Log the payment
+        TharidiaThings.LOGGER.info("Claim at {} received {} potatoes, added {} hours. New expiration: {}. Total paid: {}", 
+            worldPosition, potatoCount, potatoCount, new java.util.Date(expirationTime), totalPotatoesPaid);
+        
+        // Notify linked realm about potato payment
+        if (linkedRealmPos != null) {
+            notifyRealmOfPayment((ServerLevel) level, potatoCount);
+        }
+        
+        // Sync time to all connected claims (merged + adjacent)
+        syncTimeToConnectedClaims((ServerLevel) level, expirationTime);
+        
+        // Consume the potatoes
+        inventory.setStackInSlot(slot, ItemStack.EMPTY);
+        
+        setChanged();
+        
+        // Sync to client
+        if (level instanceof ServerLevel) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+        }
+    }
+    
+    /**
+     * Syncs expiration time to all connected claims (merged + adjacent same-owner claims)
+     */
+    private void syncTimeToConnectedClaims(ServerLevel level, long newExpirationTime) {
+        if (ownerUUID == null) {
+            return;
+        }
+        
+        List<ClaimBlockEntity> connectedClaims = new ArrayList<>();
+        
+        // Add explicitly merged claims
+        for (BlockPos mergedPos : mergedClaims) {
+            BlockEntity be = level.getBlockEntity(mergedPos);
+            if (be instanceof ClaimBlockEntity mergedClaim && ownerUUID.equals(mergedClaim.getOwnerUUID())) {
+                connectedClaims.add(mergedClaim);
+            }
+        }
+        
+        // Find adjacent claims (claims in neighboring chunks with same owner)
+        connectedClaims.addAll(findAdjacentClaims(level));
+        
+        // Update expiration time for all connected claims
+        for (ClaimBlockEntity claim : connectedClaims) {
+            claim.expirationTime = newExpirationTime;
+            claim.isRented = true;
+            claim.setChanged();
+            level.sendBlockUpdated(claim.getBlockPos(), claim.getBlockState(), claim.getBlockState(), 3);
+            
+            TharidiaThings.LOGGER.info("Synced time to connected claim at {}", claim.getBlockPos());
+        }
+    }
+    
+    /**
+     * Finds all adjacent claims (in neighboring chunks) owned by the same player
+     */
+    private List<ClaimBlockEntity> findAdjacentClaims(ServerLevel level) {
+        List<ClaimBlockEntity> adjacentClaims = new ArrayList<>();
+        
+        if (ownerUUID == null) {
+            return adjacentClaims;
+        }
+        
+        int chunkX = worldPosition.getX() >> 4;
+        int chunkZ = worldPosition.getZ() >> 4;
+        
+        // Check all 8 adjacent chunks plus diagonals
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                if (dx == 0 && dz == 0) continue; // Skip current chunk
+                
+                int adjacentChunkX = chunkX + dx;
+                int adjacentChunkZ = chunkZ + dz;
+                
+                if (level.hasChunk(adjacentChunkX, adjacentChunkZ)) {
+                    net.minecraft.world.level.chunk.LevelChunk chunk = level.getChunk(adjacentChunkX, adjacentChunkZ);
+                    
+                    // Check all block entities in the adjacent chunk
+                    for (BlockEntity be : chunk.getBlockEntities().values()) {
+                        if (be instanceof ClaimBlockEntity adjacentClaim) {
+                            // Only include claims with the same owner
+                            if (ownerUUID.equals(adjacentClaim.getOwnerUUID()) && 
+                                !adjacentClaim.getBlockPos().equals(worldPosition)) {
+                                adjacentClaims.add(adjacentClaim);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        return adjacentClaims;
+    }
+    
+    /**
+     * Notifies the linked realm about potato payment
+     */
+    private void notifyRealmOfPayment(ServerLevel level, int potatoCount) {
+        if (linkedRealmPos == null) {
+            return;
+        }
+        
+        BlockEntity be = level.getBlockEntity(linkedRealmPos);
+        if (be instanceof com.tharidia.tharidia_things.block.entity.PietroBlockEntity pietroBlock) {
+            pietroBlock.addClaimPotatoPayment(potatoCount);
+            TharidiaThings.LOGGER.info("Notified realm at {} of {} potato payment from claim at {}", 
+                linkedRealmPos, potatoCount, worldPosition);
+        }
+    }
+    
+    /**
+     * Attempts to find and link to a nearby Pietro block (realm)
+     * Called when claim is placed
+     * Uses optimized RealmManager instead of brute-force block scanning
+     */
+    public void findAndLinkToRealm(ServerLevel level) {
+        // Use RealmManager for optimized lookup - O(n) where n = number of realms, not blocks
+        com.tharidia.tharidia_things.block.entity.PietroBlockEntity realm = 
+            com.tharidia.tharidia_things.realm.RealmManager.getRealmAt(level, worldPosition);
+        
+        if (realm != null) {
+            linkedRealmPos = realm.getBlockPos();
+            setChanged();
+            TharidiaThings.LOGGER.info("Claim at {} linked to realm at {} (owner: {})", 
+                worldPosition, linkedRealmPos, realm.getOwnerName());
+        } else {
+            TharidiaThings.LOGGER.info("Claim at {} is not within any realm boundaries", worldPosition);
+        }
+    }
+    
+    public BlockPos getLinkedRealmPos() {
+        return linkedRealmPos;
+    }
+    
+    public void setLinkedRealmPos(BlockPos pos) {
+        this.linkedRealmPos = pos;
+        setChanged();
+    }
+    
+    public int getTotalPotatoesPaid() {
+        return totalPotatoesPaid;
+    }
 
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
@@ -293,6 +482,10 @@ public class ClaimBlockEntity extends BlockEntity implements MenuProvider {
         tag.putDouble("RentalCost", rentalCost);
         // Removed expansionLevel from save - no longer stored per claim
         tag.putInt("ClaimCountWhenPlaced", claimCountWhenPlaced);
+        tag.putInt("TotalPotatoesPaid", totalPotatoesPaid);
+        if (linkedRealmPos != null) {
+            tag.putLong("LinkedRealmPos", linkedRealmPos.asLong());
+        }
         
         // Save flags
         tag.putBoolean("AllowExplosions", allowExplosions);
@@ -340,6 +533,10 @@ public class ClaimBlockEntity extends BlockEntity implements MenuProvider {
         rentalDays = tag.getInt("RentalDays");
         rentalCost = tag.getDouble("RentalCost");
         claimCountWhenPlaced = tag.getInt("ClaimCountWhenPlaced");
+        totalPotatoesPaid = tag.getInt("TotalPotatoesPaid");
+        if (tag.contains("LinkedRealmPos")) {
+            linkedRealmPos = BlockPos.of(tag.getLong("LinkedRealmPos"));
+        }
         
         // Load flags
         allowExplosions = tag.getBoolean("AllowExplosions");

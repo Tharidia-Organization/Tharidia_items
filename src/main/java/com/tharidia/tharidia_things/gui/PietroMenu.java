@@ -41,7 +41,7 @@ public class PietroMenu extends AbstractContainerMenu {
             this.data = pietroEntity.getContainerData();
         } else {
             this.blockEntity = null;
-            this.data = new SimpleContainerData(2);
+            this.data = new SimpleContainerData(3);
         }
         
         layoutSlots(playerInventory);
@@ -54,6 +54,10 @@ public class PietroMenu extends AbstractContainerMenu {
     
     public int getStoredPotatoes() {
         return data.get(1);
+    }
+    
+    public int getTotalClaimPotatoes() {
+        return data.get(2);
     }
     
     private void layoutSlots(Inventory playerInventory) {

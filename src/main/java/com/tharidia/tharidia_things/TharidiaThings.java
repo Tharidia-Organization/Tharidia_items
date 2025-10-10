@@ -135,6 +135,8 @@ public class TharidiaThings {
         NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.ClaimExpirationHandler.class);
         // Register the realm placement handler
         NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.RealmPlacementHandler.class);
+        // Register the weight debuff handler
+        NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.WeightDebuffHandler.class);
 
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
@@ -261,6 +263,16 @@ public class TharidiaThings {
         } else {
             LOGGER.error("Could not load claim registry: overworld is null");
         }
+        
+        // Register weight data loader
+        event.getServer().getResourceManager();
+        LOGGER.info("Weight system initialized");
+    }
+    
+    @SubscribeEvent
+    public void onAddReloadListeners(net.neoforged.neoforge.event.AddReloadListenerEvent event) {
+        event.addListener(new com.tharidia.tharidia_things.weight.WeightDataLoader());
+        LOGGER.info("Weight data loader registered");
     }
 
     @SubscribeEvent

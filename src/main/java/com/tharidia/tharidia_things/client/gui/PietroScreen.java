@@ -3,6 +3,7 @@ package com.tharidia.tharidia_things.client.gui;
 import com.tharidia.tharidia_things.block.entity.PietroBlockEntity;
 import com.tharidia.tharidia_things.gui.PietroMenu;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -11,11 +12,55 @@ import net.minecraft.world.entity.player.Inventory;
 public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
     private static final ResourceLocation TEXTURE = 
         ResourceLocation.fromNamespaceAndPath("tharidiathings", "textures/gui/pietro_gui.png");
+    
+    private static final int TAB_EXPANSION = 0;
+    private static final int TAB_CLAIMS = 1;
+    
+    private int currentTab = TAB_EXPANSION;
+    private Button expansionTabButton;
+    private Button claimsTabButton;
 
     public PietroScreen(PietroMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
         this.imageWidth = 250;
         this.imageHeight = 300;
+    }
+    
+    @Override
+    protected void init() {
+        super.init();
+        
+        int tabX = this.leftPos + 10;
+        int tabY = this.topPos + 15;
+        int tabWidth = 70;
+        int tabHeight = 20;
+        
+        // Expansion tab button
+        expansionTabButton = Button.builder(
+            Component.literal("Espansione"),
+            button -> switchTab(TAB_EXPANSION)
+        ).bounds(tabX, tabY, tabWidth, tabHeight).build();
+        
+        // Claims tab button
+        claimsTabButton = Button.builder(
+            Component.literal("Rivendicazioni"),
+            button -> switchTab(TAB_CLAIMS)
+        ).bounds(tabX + tabWidth + 5, tabY, tabWidth + 30, tabHeight).build();
+        
+        this.addRenderableWidget(expansionTabButton);
+        this.addRenderableWidget(claimsTabButton);
+        
+        updateTabButtons();
+    }
+    
+    private void switchTab(int tab) {
+        currentTab = tab;
+        updateTabButtons();
+    }
+    
+    private void updateTabButtons() {
+        expansionTabButton.active = currentTab != TAB_EXPANSION;
+        claimsTabButton.active = currentTab != TAB_CLAIMS;
     }
 
     @Override
@@ -39,10 +84,18 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
         int titleX = (this.imageWidth - this.font.width(this.title)) / 2;
         guiGraphics.drawString(this.font, this.title, titleX, 6, 4210752, false);
         
-        // Render Pietro information
+        // Render content based on current tab
+        if (currentTab == TAB_EXPANSION) {
+            renderExpansionTab(guiGraphics);
+        } else if (currentTab == TAB_CLAIMS) {
+            renderClaimsTab(guiGraphics);
+        }
+    }
+    
+    private void renderExpansionTab(GuiGraphics guiGraphics) {
         PietroBlockEntity pietroEntity = this.menu.getBlockEntity();
         if (pietroEntity != null) {
-            int yPos = 25; // Start below title
+            int yPos = 45; // Start below tabs
             int color = 0x404040; // Dark gray
             
             // Owner
@@ -100,6 +153,36 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
             yPos += 10;
             guiGraphics.drawString(this.font, "§7per espandere il regno", 10, yPos, color, false);
         }
+    }
+    
+    private void renderClaimsTab(GuiGraphics guiGraphics) {
+        int yPos = 45; // Start below tabs
+        int color = 0x404040; // Dark gray
+        
+        // Title
+        guiGraphics.drawString(this.font, "§6§lRivendicazioni", 10, yPos, color, false);
+        yPos += 20;
+        
+        // Total potatoes from claims
+        int totalPotatoes = this.menu.getTotalClaimPotatoes();
+        
+        guiGraphics.drawString(this.font, "§6Monete totali ricevute", 10, yPos, color, false);
+        guiGraphics.drawString(this.font, "§6dai tuoi territori:", 10, yPos + 10, color, false);
+        yPos += 30;
+        
+        // Big number display
+        String potatoText = String.valueOf(totalPotatoes);
+        int textWidth = this.font.width(potatoText);
+        int centerX = (this.imageWidth - textWidth) / 2;
+        
+        // Draw shadow
+        guiGraphics.drawString(this.font, potatoText, centerX + 2, yPos + 2, 0x804400, false);
+        // Draw main text (larger scale would require matrix transformations)
+        guiGraphics.drawString(this.font, "§e§l" + potatoText, centerX, yPos, color, false);
+        yPos += 20;
+        
+        // Potato icon/emoji
+        guiGraphics.drawString(this.font, "§6🥔🥔🥔", centerX + textWidth/2 - 10, yPos, color, false);
     }
     
     // Removed containerTick - processing moved to server side

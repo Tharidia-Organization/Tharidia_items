@@ -273,12 +273,55 @@ public class ClaimProtectionHandler {
     /**
      * Finds a claim block that protects the given position
      * Protection area: entire chunk, 20 blocks below to 40 blocks above the claim block
+     * Also checks merged claims for unified protection
      */
     public static ClaimBlockEntity findClaimForPosition(ServerLevel level, BlockPos pos) {
-        // Get chunk coordinates
+        // First check the current chunk
+        ClaimBlockEntity claim = findClaimInChunk(level, pos);
+        if (claim != null) {
+            return claim;
+        }
+        
+        // Check adjacent chunks for merged claims
+        // This allows merged claims to act as one larger unified protection area
         int chunkX = pos.getX() >> 4;
         int chunkZ = pos.getZ() >> 4;
+        
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                if (dx == 0 && dz == 0) continue; // Already checked above
+                
+                int adjacentChunkX = chunkX + dx;
+                int adjacentChunkZ = chunkZ + dz;
+                
+                if (level.hasChunk(adjacentChunkX, adjacentChunkZ)) {
+                    ClaimBlockEntity adjacentClaim = findClaimInSpecificChunk(level, adjacentChunkX, adjacentChunkZ, pos);
+                    if (adjacentClaim != null) {
+                        // Check if this adjacent claim has merged claims that include the target position's chunk
+                        if (isPositionInMergedClaimArea(adjacentClaim, pos)) {
+                            return adjacentClaim;
+                        }
+                    }
+                }
+            }
+        }
 
+        return null;
+    }
+    
+    /**
+     * Finds a claim in the chunk containing the given position
+     */
+    private static ClaimBlockEntity findClaimInChunk(ServerLevel level, BlockPos pos) {
+        int chunkX = pos.getX() >> 4;
+        int chunkZ = pos.getZ() >> 4;
+        return findClaimInSpecificChunk(level, chunkX, chunkZ, pos);
+    }
+    
+    /**
+     * Finds a claim in a specific chunk that protects the given position
+     */
+    private static ClaimBlockEntity findClaimInSpecificChunk(ServerLevel level, int chunkX, int chunkZ, BlockPos pos) {
         // Calculate chunk bounds
         int minX = chunkX << 4;
         int minZ = chunkZ << 4;
@@ -307,6 +350,33 @@ public class ClaimProtectionHandler {
         }
 
         return null;
+    }
+    
+    /**
+     * Checks if a position is within a claim's merged area
+     * This makes merged claims act as one unified protection zone
+     */
+    private static boolean isPositionInMergedClaimArea(ClaimBlockEntity claim, BlockPos pos) {
+        // Check if the position's chunk is one of the merged claims
+        int posChunkX = pos.getX() >> 4;
+        int posChunkZ = pos.getZ() >> 4;
+        
+        for (BlockPos mergedPos : claim.getMergedClaims()) {
+            int mergedChunkX = mergedPos.getX() >> 4;
+            int mergedChunkZ = mergedPos.getZ() >> 4;
+            
+            if (posChunkX == mergedChunkX && posChunkZ == mergedChunkZ) {
+                // Position is in a merged claim's chunk - verify Y level
+                int minY = mergedPos.getY() - 20;
+                int maxY = mergedPos.getY() + 40;
+                
+                if (pos.getY() >= minY && pos.getY() <= maxY) {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
     }
 
     /**

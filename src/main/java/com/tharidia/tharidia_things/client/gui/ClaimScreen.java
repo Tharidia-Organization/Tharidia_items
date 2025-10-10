@@ -56,12 +56,6 @@ public class ClaimScreen extends AbstractContainerScreen<ClaimMenu> {
         guiGraphics.drawString(this.font, "§6Owner: §f" + ownerName, 10, yPos, color, false);
         yPos += 12;
         
-        // Use synced protection radius
-        int protectionRadius = this.menu.getProtectionRadius();
-        guiGraphics.drawString(this.font, "§6Protection Radius: §f" + protectionRadius + " blocks", 
-            10, yPos, color, false);
-        yPos += 12;
-        
         // Render expiration info - use synced data from menu
         long expirationTime = this.menu.getExpirationTime();
         boolean isRented = this.menu.isRented();
@@ -73,22 +67,16 @@ public class ClaimScreen extends AbstractContainerScreen<ClaimMenu> {
             if (timeLeft <= 0) {
                 guiGraphics.drawString(this.font, "§cStatus: EXPIRED", 10, yPos, color, false);
             } else {
-                // Calculate time components
-                long totalMinutes = timeLeft / (60 * 1000);
-                long hours = totalMinutes / 60;
-                long minutes = totalMinutes % 60;
-                long seconds = (timeLeft / 1000) % 60;
+                // Calculate time components - always show hours, minutes, and seconds
+                long totalSeconds = timeLeft / 1000;
+                long hours = totalSeconds / 3600;
+                long minutes = (totalSeconds % 3600) / 60;
+                long seconds = totalSeconds % 60;
                 
-                if (hours > 0) {
-                    guiGraphics.drawString(this.font, "§6Tempo rimanente: §f" + hours + "h " + minutes + "m", 
-                        10, yPos, color, false);
-                } else if (minutes > 0) {
-                    guiGraphics.drawString(this.font, "§6Tempo rimanente: §f" + minutes + "m " + seconds + "s", 
-                        10, yPos, color, false);
-                } else {
-                    guiGraphics.drawString(this.font, "§cTempo rimanente: §f" + seconds + "s", 
-                        10, yPos, color, false);
-                }
+                // Always show all components with seconds
+                String timeText = String.format("%dh %dm %ds", hours, minutes, seconds);
+                guiGraphics.drawString(this.font, "§6Tempo rimanente: §f" + timeText, 
+                    10, yPos, color, false);
                 yPos += 12;
                 
                 String expiresDate = DATE_FORMAT.format(new Date(expirationTime));
