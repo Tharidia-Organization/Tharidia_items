@@ -10,7 +10,9 @@ import com.tharidia.tharidia_things.client.ClientPacketHandler;
 import com.tharidia.tharidia_things.command.ClaimCommands;
 import com.tharidia.tharidia_things.event.ClaimProtectionHandler;
 import com.tharidia.tharidia_things.network.ClaimOwnerSyncPacket;
+import com.tharidia.tharidia_things.network.HierarchySyncPacket;
 import com.tharidia.tharidia_things.network.RealmSyncPacket;
+import com.tharidia.tharidia_things.network.UpdateHierarchyPacket;
 import com.tharidia.tharidia_things.realm.RealmManager;
 
 import net.neoforged.api.distmarker.Dist;
@@ -171,6 +173,11 @@ public class TharidiaThings {
                 RealmSyncPacket.STREAM_CODEC,
                 ClientPacketHandler::handleRealmSync
             );
+            registrar.playToClient(
+                HierarchySyncPacket.TYPE,
+                HierarchySyncPacket.STREAM_CODEC,
+                ClientPacketHandler::handleHierarchySync
+            );
             LOGGER.info("Client packet handlers registered");
         } else {
             // On server, register dummy handlers (packets won't be received here anyway)
@@ -184,8 +191,20 @@ public class TharidiaThings {
                 RealmSyncPacket.STREAM_CODEC,
                 (packet, context) -> {}
             );
+            registrar.playToClient(
+                HierarchySyncPacket.TYPE,
+                HierarchySyncPacket.STREAM_CODEC,
+                (packet, context) -> {}
+            );
             LOGGER.info("Server-side packet registration completed (dummy handlers)");
         }
+        
+        // Register server-bound packets (works on both sides)
+        registrar.playToServer(
+            UpdateHierarchyPacket.TYPE,
+            UpdateHierarchyPacket.STREAM_CODEC,
+            UpdateHierarchyPacket::handle
+        );
         
         LOGGER.info("Network payloads registered successfully");
     }

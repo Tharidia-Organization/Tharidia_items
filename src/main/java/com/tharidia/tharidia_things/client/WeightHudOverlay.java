@@ -1,6 +1,5 @@
 package com.tharidia.tharidia_things.client;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.tharidia.tharidia_things.weight.WeightData;
 import com.tharidia.tharidia_things.weight.WeightManager;
 import com.tharidia.tharidia_things.weight.WeightRegistry;
@@ -15,11 +14,11 @@ import net.minecraft.world.entity.player.Player;
  * Shows on the left side near the health bar with color-coded indicator
  */
 public class WeightHudOverlay implements LayeredDraw.Layer {
-    private static final int INDICATOR_WIDTH = 30;
-    private static final int INDICATOR_HEIGHT = 50;
+    private static final int INDICATOR_WIDTH = 25;
+    private static final int INDICATOR_HEIGHT = 35;
     private static final int HOTBAR_WIDTH = 182; // Minecraft hotbar width
     private static final int OFFSET_FROM_HOTBAR = 5; // Distance from left edge of hotbar
-    private static final int MARGIN_Y = 2;
+    private static final int MARGIN_Y = 3;
     
     @Override
     public void render(GuiGraphics guiGraphics, DeltaTracker deltaTracker) {
@@ -43,7 +42,8 @@ public class WeightHudOverlay implements LayeredDraw.Layer {
         int hotbarLeft = (screenWidth / 2) - (HOTBAR_WIDTH / 2);
         
         // Position indicator to the left of the hotbar
-        int x = hotbarLeft - INDICATOR_WIDTH - OFFSET_FROM_HOTBAR;
+        //int x = hotbarLeft - INDICATOR_WIDTH - OFFSET_FROM_HOTBAR;
+        int x = 3;
         int y = screenHeight - INDICATOR_HEIGHT - MARGIN_Y;
         
         // Draw background box

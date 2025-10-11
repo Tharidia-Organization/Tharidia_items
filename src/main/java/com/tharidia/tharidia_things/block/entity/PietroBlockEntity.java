@@ -1,6 +1,8 @@
 package com.tharidia.tharidia_things.block.entity;
 
 import com.tharidia.tharidia_things.TharidiaThings;
+import com.tharidia.tharidia_things.claim.ClaimRegistry;
+import com.tharidia.tharidia_things.realm.HierarchyRank;
 import com.tharidia.tharidia_things.realm.RealmManager;
 import mod.azure.azurelib.common.api.common.animatable.GeoBlockEntity;
 import mod.azure.azurelib.core.animatable.instance.AnimatableInstanceCache;
@@ -27,7 +29,12 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 public class PietroBlockEntity extends BlockEntity implements GeoBlockEntity, MenuProvider {
     private final AnimatableInstanceCache cache = AzureLibUtil.createInstanceCache(this);
@@ -42,8 +49,12 @@ public class PietroBlockEntity extends BlockEntity implements GeoBlockEntity, Me
     private int realmSize = DEFAULT_REALM_SIZE; // Size in chunks (e.g., 3 means 3x3 chunks)
     public ChunkPos centerChunk;
     private String ownerName = ""; // Name of the player who placed this block
+    private UUID ownerUUID; // UUID of the realm owner
     private int storedPotatoes = 0; // Current potatoes stored for next expansion
     private int totalClaimPotatoes = 0; // Total potatoes received from claims in this realm
+    
+    // Player hierarchy system - maps player UUID to their hierarchy rank
+    private Map<UUID, HierarchyRank> playerHierarchy = new HashMap<>();
     
     // Potato inventory (1 slot for potatoes)
     private final ItemStackHandler potatoInventory = new ItemStackHandler(1) {
@@ -189,8 +200,9 @@ public class PietroBlockEntity extends BlockEntity implements GeoBlockEntity, Me
     /**
      * Sets the owner of this realm
      */
-    public void setOwner(String playerName) {
+    public void setOwner(String playerName, UUID playerUUID) {
         this.ownerName = playerName;
+        this.ownerUUID = playerUUID;
         setChanged();
     }
 
@@ -199,6 +211,125 @@ public class PietroBlockEntity extends BlockEntity implements GeoBlockEntity, Me
      */
     public String getOwnerName() {
         return ownerName;
+    }
+    
+    /**
+     * Gets the owner UUID of this realm
+     */
+    public UUID getOwnerUUID() {
+        return ownerUUID;
+    }
+    
+    /**
+     * Gets all players who have claims in this realm
+     * Returns a set of UUIDs
+     */
+    public Set<UUID> getPlayersWithClaimsInRealm() {
+        Set<UUID> players = new HashSet<>();
+        
+        if (level == null || level.isClientSide) {
+            // On client, return cached hierarchy players
+            return new HashSet<>(playerHierarchy.keySet());
+        }
+        
+        if (level instanceof ServerLevel serverLevel) {
+            String dimension = serverLevel.dimension().location().toString();
+            List<ClaimRegistry.ClaimData> allClaims = ClaimRegistry.getClaimsInDimension(dimension);
+            
+            // Check each claim to see if it's in this realm
+            for (ClaimRegistry.ClaimData claimData : allClaims) {
+                if (isPositionInRealm(claimData.getPosition())) {
+                    players.add(claimData.getOwnerUUID());
+                }
+            }
+        }
+        
+        return players;
+    }
+    
+    /**
+     * Updates the player hierarchy when a claim is placed/removed in the realm
+     */
+    public void updatePlayerHierarchy() {
+        if (level == null || level.isClientSide) {
+            return;
+        }
+        
+        Set<UUID> currentPlayers = getPlayersWithClaimsInRealm();
+        
+        // Add new players with default rank
+        for (UUID playerUUID : currentPlayers) {
+            if (!playerUUID.equals(ownerUUID) && !playerHierarchy.containsKey(playerUUID)) {
+                playerHierarchy.put(playerUUID, HierarchyRank.COLONO);
+                TharidiaThings.LOGGER.info("Added player {} to realm hierarchy with rank COLONO", playerUUID);
+            }
+        }
+        
+        // Remove players who no longer have claims
+        Set<UUID> toRemove = new HashSet<>();
+        for (UUID uuid : playerHierarchy.keySet()) {
+            if (!currentPlayers.contains(uuid) && !uuid.equals(ownerUUID)) {
+                toRemove.add(uuid);
+            }
+        }
+        
+        for (UUID uuid : toRemove) {
+            playerHierarchy.remove(uuid);
+            TharidiaThings.LOGGER.info("Removed player {} from realm hierarchy (no longer has claims)", uuid);
+        }
+        
+        setChanged();
+        
+        // Sync to all players who might have the GUI open
+        if (level instanceof ServerLevel serverLevel) {
+            level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+        }
+    }
+    
+    /**
+     * Sets the hierarchy rank for a player
+     * Only the realm owner should be able to do this
+     */
+    public void setPlayerHierarchy(UUID playerUUID, HierarchyRank rank) {
+        if (playerUUID.equals(ownerUUID)) {
+            return; // Owner's rank cannot be changed
+        }
+        
+        playerHierarchy.put(playerUUID, rank);
+        setChanged();
+        
+        if (level != null && !level.isClientSide && level instanceof ServerLevel serverLevel) {
+            level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+            
+            // Send hierarchy update to all nearby players
+            com.tharidia.tharidia_things.network.HierarchySyncPacket packet = 
+                com.tharidia.tharidia_things.network.HierarchySyncPacket.fromPietroBlock(this);
+            
+            for (net.minecraft.server.level.ServerPlayer player : serverLevel.players()) {
+                if (player.distanceToSqr(worldPosition.getX(), worldPosition.getY(), worldPosition.getZ()) < 256) {
+                    net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, packet);
+                }
+            }
+            
+            TharidiaThings.LOGGER.info("Updated hierarchy for player {} to rank {}", playerUUID, rank.getDisplayName());
+        }
+    }
+    
+    /**
+     * Gets the hierarchy rank for a player
+     */
+    public HierarchyRank getPlayerHierarchy(UUID playerUUID) {
+        if (playerUUID.equals(ownerUUID)) {
+            return HierarchyRank.LORD; // Owner is always Lord
+        }
+        return playerHierarchy.getOrDefault(playerUUID, HierarchyRank.COLONO);
+    }
+    
+    /**
+     * Gets all player hierarchies
+     */
+    public Map<UUID, HierarchyRank> getAllPlayerHierarchies() {
+        return new HashMap<>(playerHierarchy);
     }
     
     /**
@@ -362,9 +493,23 @@ public class PietroBlockEntity extends BlockEntity implements GeoBlockEntity, Me
         tag.putInt("CenterChunkX", centerChunk.x);
         tag.putInt("CenterChunkZ", centerChunk.z);
         tag.putString("OwnerName", ownerName);
+        if (ownerUUID != null) {
+            tag.putUUID("OwnerUUID", ownerUUID);
+        }
         tag.putInt("StoredPotatoes", storedPotatoes);
         tag.putInt("TotalClaimPotatoes", totalClaimPotatoes);
         tag.put("PotatoInventory", potatoInventory.serializeNBT(registries));
+        
+        // Save player hierarchy
+        CompoundTag hierarchyTag = new CompoundTag();
+        int i = 0;
+        for (Map.Entry<UUID, HierarchyRank> entry : playerHierarchy.entrySet()) {
+            hierarchyTag.putUUID("Player" + i, entry.getKey());
+            hierarchyTag.putInt("Rank" + i, entry.getValue().getLevel());
+            i++;
+        }
+        hierarchyTag.putInt("Count", i);
+        tag.put("PlayerHierarchy", hierarchyTag);
     }
     
     @Override
@@ -379,10 +524,27 @@ public class PietroBlockEntity extends BlockEntity implements GeoBlockEntity, Me
         centerChunk = new ChunkPos(centerX, centerZ);
 
         ownerName = tag.getString("OwnerName");
+        if (tag.hasUUID("OwnerUUID")) {
+            ownerUUID = tag.getUUID("OwnerUUID");
+        }
         storedPotatoes = tag.getInt("StoredPotatoes");
         totalClaimPotatoes = tag.getInt("TotalClaimPotatoes");
         if (tag.contains("PotatoInventory")) {
             potatoInventory.deserializeNBT(registries, tag.getCompound("PotatoInventory"));
+        }
+        
+        // Load player hierarchy
+        if (tag.contains("PlayerHierarchy")) {
+            CompoundTag hierarchyTag = tag.getCompound("PlayerHierarchy");
+            int count = hierarchyTag.getInt("Count");
+            playerHierarchy.clear();
+            for (int i = 0; i < count; i++) {
+                if (hierarchyTag.hasUUID("Player" + i)) {
+                    UUID playerUUID = hierarchyTag.getUUID("Player" + i);
+                    int rankLevel = hierarchyTag.getInt("Rank" + i);
+                    playerHierarchy.put(playerUUID, HierarchyRank.fromLevel(rankLevel));
+                }
+            }
         }
     }
     

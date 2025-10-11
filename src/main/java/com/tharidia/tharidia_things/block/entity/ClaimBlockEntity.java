@@ -437,6 +437,9 @@ public class ClaimBlockEntity extends BlockEntity implements MenuProvider {
             setChanged();
             TharidiaThings.LOGGER.info("Claim at {} linked to realm at {} (owner: {})", 
                 worldPosition, linkedRealmPos, realm.getOwnerName());
+            
+            // Update the realm's player hierarchy
+            realm.updatePlayerHierarchy();
         } else {
             TharidiaThings.LOGGER.info("Claim at {} is not within any realm boundaries", worldPosition);
         }
@@ -568,6 +571,14 @@ public class ClaimBlockEntity extends BlockEntity implements MenuProvider {
         // Unregister from claim registry
         if (level instanceof ServerLevel serverLevel) {
             ClaimRegistry.unregisterClaim(serverLevel, worldPosition);
+            
+            // Update linked realm's hierarchy when claim is removed
+            if (linkedRealmPos != null) {
+                BlockEntity be = serverLevel.getBlockEntity(linkedRealmPos);
+                if (be instanceof com.tharidia.tharidia_things.block.entity.PietroBlockEntity realm) {
+                    realm.updatePlayerHierarchy();
+                }
+            }
         }
     }
 

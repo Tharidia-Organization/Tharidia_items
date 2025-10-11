@@ -3,6 +3,7 @@ package com.tharidia.tharidia_things.client;
 import com.mojang.logging.LogUtils;
 import com.tharidia.tharidia_things.block.entity.PietroBlockEntity;
 import com.tharidia.tharidia_things.network.ClaimOwnerSyncPacket;
+import com.tharidia.tharidia_things.network.HierarchySyncPacket;
 import com.tharidia.tharidia_things.network.RealmSyncPacket;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -12,12 +13,19 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.slf4j.Logger;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 public class ClientPacketHandler {
     private static final Logger LOGGER = LogUtils.getLogger();
 
     public static List<PietroBlockEntity> syncedRealms = new ArrayList<>();
+    // Stores hierarchy data: Map of player UUID to rank level
+    private static Map<UUID, Integer> cachedHierarchyData = new HashMap<>();
+    private static UUID cachedOwnerUUID = null;
+    private static String cachedOwnerName = "";
 
     public static void handleClaimOwnerSync(ClaimOwnerSyncPacket packet, IPayloadContext context) {
         context.enqueueWork(() -> {
@@ -135,5 +143,35 @@ public class ClientPacketHandler {
             }
             LOGGER.info("RealmSync completed. Total synced realms: {}", syncedRealms.size());
         });
+    }
+    
+    public static void handleHierarchySync(HierarchySyncPacket packet, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            LOGGER.info("Received HierarchySyncPacket with {} players", packet.hierarchyData().size());
+            
+            cachedHierarchyData = new HashMap<>(packet.hierarchyData());
+            cachedOwnerUUID = packet.ownerUUID();
+            cachedOwnerName = packet.ownerName();
+            
+            LOGGER.info("Hierarchy data cached. Owner: {} ({})", cachedOwnerName, cachedOwnerUUID);
+        });
+    }
+    
+    public static Map<UUID, Integer> getCachedHierarchyData() {
+        return new HashMap<>(cachedHierarchyData);
+    }
+    
+    public static UUID getCachedOwnerUUID() {
+        return cachedOwnerUUID;
+    }
+    
+    public static String getCachedOwnerName() {
+        return cachedOwnerName;
+    }
+    
+    public static void clearHierarchyCache() {
+        cachedHierarchyData.clear();
+        cachedOwnerUUID = null;
+        cachedOwnerName = "";
     }
 }

@@ -29,6 +29,13 @@ public class PietroMenu extends AbstractContainerMenu {
         
         layoutSlots(playerInventory);
         addDataSlots(this.data);
+        
+        // Send hierarchy data to client when menu is opened
+        if (!playerInventory.player.level().isClientSide && playerInventory.player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
+            com.tharidia.tharidia_things.network.HierarchySyncPacket hierarchyPacket = 
+                com.tharidia.tharidia_things.network.HierarchySyncPacket.fromPietroBlock(blockEntity);
+            net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(serverPlayer, hierarchyPacket);
+        }
     }
 
     // Constructor for client-side (receives data from server)
