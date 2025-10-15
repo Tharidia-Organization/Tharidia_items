@@ -573,11 +573,19 @@ public class ClaimBlockEntity extends BlockEntity implements MenuProvider {
             ClaimRegistry.unregisterClaim(serverLevel, worldPosition);
             
             // Update linked realm's hierarchy when claim is removed
+            // CRITICAL: Only do this if the chunk is already loaded to avoid deadlock during unload
             if (linkedRealmPos != null) {
-                BlockEntity be = serverLevel.getBlockEntity(linkedRealmPos);
-                if (be instanceof com.tharidia.tharidia_things.block.entity.PietroBlockEntity realm) {
-                    realm.updatePlayerHierarchy();
+                net.minecraft.world.level.ChunkPos realmChunkPos = new net.minecraft.world.level.ChunkPos(linkedRealmPos);
+                
+                // Check if the realm's chunk is loaded WITHOUT forcing chunk load
+                if (serverLevel.hasChunk(realmChunkPos.x, realmChunkPos.z)) {
+                    // Safe to access - chunk is already loaded
+                    BlockEntity be = serverLevel.getBlockEntity(linkedRealmPos);
+                    if (be instanceof com.tharidia.tharidia_things.block.entity.PietroBlockEntity realm) {
+                        realm.updatePlayerHierarchy();
+                    }
                 }
+                // If chunk isn't loaded, skip the update - realm will recalculate on next access
             }
         }
     }

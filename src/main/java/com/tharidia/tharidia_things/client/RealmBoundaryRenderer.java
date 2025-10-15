@@ -9,6 +9,9 @@ import com.tharidia.tharidia_things.client.ClientPacketHandler;
 import com.tharidia.tharidia_things.realm.RealmManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderStateShard;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.phys.Vec3;
@@ -33,6 +36,52 @@ public class RealmBoundaryRenderer {
     private static float colorSeedG = 0.5f;
     private static float colorSeedB = 0.8f;
     private static java.util.Random colorRandom = new java.util.Random();
+    
+    // Custom RenderTypes for Sodium compatibility
+    private static final RenderType REALM_BOUNDARY_TRANSLUCENT = createRealmBoundaryRenderType();
+    private static final RenderType REALM_BOUNDARY_LINES = createRealmLinesRenderType();
+    
+    /**
+     * Creates a custom RenderType for realm boundaries that is Sodium-compatible
+     */
+    private static RenderType createRealmBoundaryRenderType() {
+        return RenderType.create(
+            "realm_boundary_translucent",
+            DefaultVertexFormat.POSITION_COLOR,
+            VertexFormat.Mode.QUADS,
+            1536,
+            false,
+            true,
+            RenderType.CompositeState.builder()
+                .setShaderState(RenderStateShard.POSITION_COLOR_SHADER)
+                .setTransparencyState(RenderStateShard.TRANSLUCENT_TRANSPARENCY)
+                .setDepthTestState(RenderStateShard.LEQUAL_DEPTH_TEST)
+                .setCullState(RenderStateShard.NO_CULL)
+                .setWriteMaskState(RenderStateShard.COLOR_WRITE)
+                .createCompositeState(false)
+        );
+    }
+    
+    /**
+     * Creates a custom RenderType for realm boundary lines that is Sodium-compatible
+     */
+    private static RenderType createRealmLinesRenderType() {
+        return RenderType.create(
+            "realm_boundary_lines",
+            DefaultVertexFormat.POSITION_COLOR,
+            VertexFormat.Mode.QUADS,
+            1536,
+            false,
+            true,
+            RenderType.CompositeState.builder()
+                .setShaderState(RenderStateShard.POSITION_COLOR_SHADER)
+                .setTransparencyState(RenderStateShard.TRANSLUCENT_TRANSPARENCY)
+                .setDepthTestState(RenderStateShard.LEQUAL_DEPTH_TEST)
+                .setCullState(RenderStateShard.NO_CULL)
+                .setWriteMaskState(RenderStateShard.COLOR_DEPTH_WRITE)
+                .createCompositeState(false)
+        );
+    }
 
     private static boolean boundariesVisible = false;
 
@@ -43,6 +92,23 @@ public class RealmBoundaryRenderer {
         if (boundariesVisible && !wasVisible) {
             randomizeColors();
         }
+    }
+    
+    /**
+     * Gets the current boundary visibility state
+     */
+    public static boolean areBoundariesVisible() {
+        return boundariesVisible;
+    }
+    
+    /**
+     * Sets the boundary visibility state (used when syncing data)
+     */
+    public static void setBoundariesVisible(boolean visible) {
+        if (visible && !boundariesVisible) {
+            randomizeColors();
+        }
+        boundariesVisible = visible;
     }
 
     /**
@@ -123,8 +189,6 @@ public class RealmBoundaryRenderer {
             return;
         }
 
-        // Monocolo is no longer required to render realm boundaries
-
         updateNearbyRealms();
 
         if (nearbyRealms.isEmpty()) {
@@ -133,46 +197,26 @@ public class RealmBoundaryRenderer {
 
         PoseStack poseStack = event.getPoseStack();
         Vec3 cameraPos = event.getCamera().getPosition();
-
-        // Setup rendering
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
-        RenderSystem.disableCull();
-        RenderSystem.enableDepthTest();
-        RenderSystem.depthMask(false);
-        RenderSystem.setShader(GameRenderer::getPositionColorShader);
-
-        BufferBuilder bufferBuilder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
+        
+        // Use MultiBufferSource for Sodium compatibility
+        MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
 
         poseStack.pushPose();
 
         for (PietroBlockEntity realm : nearbyRealms) {
-            renderRealmBoundary(realm, poseStack, bufferBuilder, cameraPos);
+            renderRealmBoundary(realm, poseStack, bufferSource, cameraPos);
         }
 
-        BufferUploader.drawWithShader(bufferBuilder.buildOrThrow());
-
         poseStack.popPose();
-
-        // Restore render state
-        RenderSystem.depthMask(true);
-        RenderSystem.enableCull();
-        RenderSystem.disableBlend();
+        
+        // Flush the buffers to ensure everything is drawn
+        bufferSource.endBatch();
     }
 
-    private static void renderRealmBoundary(PietroBlockEntity realm, PoseStack poseStack, BufferBuilder bufferBuilder, Vec3 cameraPos) {
+    private static void renderRealmBoundary(PietroBlockEntity realm, PoseStack poseStack, MultiBufferSource bufferSource, Vec3 cameraPos) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) return;
         
-        ChunkPos minChunk = realm.getMinChunk();
-        ChunkPos maxChunk = realm.getMaxChunk();
-
-        // Convert chunk coordinates to block coordinates
-        int minX = minChunk.getMinBlockX();
-        int minZ = minChunk.getMinBlockZ();
-        int maxX = maxChunk.getMaxBlockX() + 1;
-        int maxZ = maxChunk.getMaxBlockZ() + 1;
-
         // Get Y coordinates (from bedrock to build limit)
         int minY = mc.level.getMinBuildHeight();
         int maxY = mc.level.getMaxBuildHeight();
@@ -192,38 +236,181 @@ public class RealmBoundaryRenderer {
         float baseB = colorSeedB * shimmer;
 
         Matrix4f matrix = poseStack.last().pose();
+        
+        // Get buffers for different render layers (Sodium-compatible)
+        VertexConsumer translucentBuffer = bufferSource.getBuffer(REALM_BOUNDARY_TRANSLUCENT);
+        VertexConsumer linesBuffer = bufferSource.getBuffer(REALM_BOUNDARY_LINES);
+
+        // Render main realm boundary
+        ChunkPos minChunk = realm.getMinChunk();
+        ChunkPos maxChunk = realm.getMaxChunk();
+
+        // Convert chunk coordinates to block coordinates
+        int minX = minChunk.getMinBlockX();
+        int minZ = minChunk.getMinBlockZ();
+        int maxX = maxChunk.getMaxBlockX() + 1;
+        int maxZ = maxChunk.getMaxBlockZ() + 1;
 
         // Render the four vertical walls with enhanced effects
-        renderEnhancedWall(bufferBuilder, matrix, mc.level,
+        renderEnhancedWall(translucentBuffer, matrix, mc.level,
                 minX, minZ, maxX, minZ, minY, maxY, // North wall
                 offsetX, offsetY, offsetZ, baseR, baseG, baseB, time);
 
-        renderEnhancedWall(bufferBuilder, matrix, mc.level,
+        renderEnhancedWall(translucentBuffer, matrix, mc.level,
                 minX, maxZ, maxX, maxZ, minY, maxY, // South wall
                 offsetX, offsetY, offsetZ, baseR, baseG, baseB, time);
 
-        renderEnhancedWall(bufferBuilder, matrix, mc.level,
+        renderEnhancedWall(translucentBuffer, matrix, mc.level,
                 minX, minZ, minX, maxZ, minY, maxY, // West wall
                 offsetX, offsetY, offsetZ, baseR, baseG, baseB, time);
 
-        renderEnhancedWall(bufferBuilder, matrix, mc.level,
+        renderEnhancedWall(translucentBuffer, matrix, mc.level,
                 maxX, minZ, maxX, maxZ, minY, maxY, // East wall
                 offsetX, offsetY, offsetZ, baseR, baseG, baseB, time);
         
         // Add bubble-like particles rising from wall surfaces
-        renderBubbleParticles(bufferBuilder, matrix, minX, minZ, maxX, maxZ, minY, maxY,
+        renderBubbleParticles(translucentBuffer, matrix, minX, minZ, maxX, maxZ, minY, maxY,
                 offsetX, offsetY, offsetZ, time, baseR, baseG, baseB);
         
         // Render clear ground contact lines
-        renderGroundLines(bufferBuilder, matrix, minX, minZ, maxX, maxZ, minY,
+        renderGroundLines(linesBuffer, matrix, minX, minZ, maxX, maxZ, minY,
                 offsetX, offsetY, offsetZ, baseR, baseG, baseB);
         
         // Render bright vertical edges at corners
-        renderVerticalEdges(bufferBuilder, matrix, minX, minZ, maxX, maxZ, minY, maxY,
+        renderVerticalEdges(linesBuffer, matrix, minX, minZ, maxX, maxZ, minY, maxY,
                 offsetX, offsetY, offsetZ, baseR, baseG, baseB);
+        
+        // Render outer layer boundary (simpler style)
+        renderOuterLayerBoundary(realm, translucentBuffer, linesBuffer, matrix, mc.level, minY, maxY,
+                offsetX, offsetY, offsetZ, baseR, baseG, baseB, time);
     }
     
-    private static void renderEnhancedWall(BufferBuilder bufferBuilder, Matrix4f matrix, net.minecraft.world.level.Level level,
+    /**
+     * Renders the outer layer boundary with a simpler style
+     */
+    private static void renderOuterLayerBoundary(PietroBlockEntity realm, VertexConsumer translucentBuffer, VertexConsumer linesBuffer,
+            Matrix4f matrix, net.minecraft.world.level.Level level, int minY, int maxY,
+            double offsetX, double offsetY, double offsetZ, 
+            float baseR, float baseG, float baseB, float time) {
+        
+        ChunkPos outerMinChunk = realm.getOuterLayerMinChunk();
+        ChunkPos outerMaxChunk = realm.getOuterLayerMaxChunk();
+
+        // Convert chunk coordinates to block coordinates
+        int outerMinX = outerMinChunk.getMinBlockX();
+        int outerMinZ = outerMinChunk.getMinBlockZ();
+        int outerMaxX = outerMaxChunk.getMaxBlockX() + 1;
+        int outerMaxZ = outerMaxChunk.getMaxBlockZ() + 1;
+        
+        // Use a dimmer, more subtle color for the outer layer
+        float outerR = baseR * 0.5f;
+        float outerG = baseG * 0.5f;
+        float outerB = baseB * 0.5f;
+        float outerAlpha = 0.35f;  // Increased from 0.2 to 0.35 for better visibility
+        
+        // Render simpler walls for outer layer (no fancy effects, just basic lines)
+        renderSimpleWall(translucentBuffer, matrix, level,
+                outerMinX, outerMinZ, outerMaxX, outerMinZ, minY, maxY, // North wall
+                offsetX, offsetY, offsetZ, outerR, outerG, outerB, outerAlpha);
+
+        renderSimpleWall(translucentBuffer, matrix, level,
+                outerMinX, outerMaxZ, outerMaxX, outerMaxZ, minY, maxY, // South wall
+                offsetX, offsetY, offsetZ, outerR, outerG, outerB, outerAlpha);
+
+        renderSimpleWall(translucentBuffer, matrix, level,
+                outerMinX, outerMinZ, outerMinX, outerMaxZ, minY, maxY, // West wall
+                offsetX, offsetY, offsetZ, outerR, outerG, outerB, outerAlpha);
+
+        renderSimpleWall(translucentBuffer, matrix, level,
+                outerMaxX, outerMinZ, outerMaxX, outerMaxZ, minY, maxY, // East wall
+                offsetX, offsetY, offsetZ, outerR, outerG, outerB, outerAlpha);
+        
+        // Render simple ground lines for outer layer
+        renderSimpleGroundLines(linesBuffer, matrix, outerMinX, outerMinZ, outerMaxX, outerMaxZ, minY,
+                offsetX, offsetY, offsetZ, outerR, outerG, outerB);
+    }
+    
+    /**
+     * Renders a simple wall for the outer layer
+     */
+    private static void renderSimpleWall(VertexConsumer buffer, Matrix4f matrix, net.minecraft.world.level.Level level,
+            int x1, int z1, int x2, int z2, int minY, int maxY,
+            double offsetX, double offsetY, double offsetZ,
+            float r, float g, float b, float alpha) {
+        
+        // Simple vertical wall with no fancy effects
+        int segments = 8; // Fewer segments for simpler look
+        float heightPerSegment = (maxY - minY) / (float) segments;
+        
+        for (int i = 0; i < segments; i++) {
+            float y1 = minY + i * heightPerSegment;
+            float y2 = minY + (i + 1) * heightPerSegment;
+            
+            // Simple quad
+            buffer.addVertex(matrix, (float) (x1 + offsetX), (float) (y1 + offsetY), (float) (z1 + offsetZ))
+                    .setColor(r, g, b, alpha);
+            buffer.addVertex(matrix, (float) (x2 + offsetX), (float) (y1 + offsetY), (float) (z2 + offsetZ))
+                    .setColor(r, g, b, alpha);
+            buffer.addVertex(matrix, (float) (x2 + offsetX), (float) (y2 + offsetY), (float) (z2 + offsetZ))
+                    .setColor(r, g, b, alpha * 0.5f);
+            buffer.addVertex(matrix, (float) (x1 + offsetX), (float) (y2 + offsetY), (float) (z1 + offsetZ))
+                    .setColor(r, g, b, alpha * 0.5f);
+        }
+    }
+    
+    /**
+     * Renders simple ground lines for the outer layer
+     */
+    private static void renderSimpleGroundLines(VertexConsumer buffer, Matrix4f matrix,
+            int minX, int minZ, int maxX, int maxZ, int groundY,
+            double offsetX, double offsetY, double offsetZ,
+            float r, float g, float b) {
+        
+        float lineThickness = 0.1f;
+        float alpha = 0.6f;
+        
+        // North line
+        buffer.addVertex(matrix, (float) (minX + offsetX), (float) (groundY + offsetY), (float) (minZ + offsetZ))
+                .setColor(r, g, b, alpha);
+        buffer.addVertex(matrix, (float) (maxX + offsetX), (float) (groundY + offsetY), (float) (minZ + offsetZ))
+                .setColor(r, g, b, alpha);
+        buffer.addVertex(matrix, (float) (maxX + offsetX), (float) (groundY + lineThickness + offsetY), (float) (minZ + offsetZ))
+                .setColor(r, g, b, alpha);
+        buffer.addVertex(matrix, (float) (minX + offsetX), (float) (groundY + lineThickness + offsetY), (float) (minZ + offsetZ))
+                .setColor(r, g, b, alpha);
+        
+        // South line
+        buffer.addVertex(matrix, (float) (minX + offsetX), (float) (groundY + offsetY), (float) (maxZ + offsetZ))
+                .setColor(r, g, b, alpha);
+        buffer.addVertex(matrix, (float) (maxX + offsetX), (float) (groundY + offsetY), (float) (maxZ + offsetZ))
+                .setColor(r, g, b, alpha);
+        buffer.addVertex(matrix, (float) (maxX + offsetX), (float) (groundY + lineThickness + offsetY), (float) (maxZ + offsetZ))
+                .setColor(r, g, b, alpha);
+        buffer.addVertex(matrix, (float) (minX + offsetX), (float) (groundY + lineThickness + offsetY), (float) (maxZ + offsetZ))
+                .setColor(r, g, b, alpha);
+        
+        // West line
+        buffer.addVertex(matrix, (float) (minX + offsetX), (float) (groundY + offsetY), (float) (minZ + offsetZ))
+                .setColor(r, g, b, alpha);
+        buffer.addVertex(matrix, (float) (minX + offsetX), (float) (groundY + offsetY), (float) (maxZ + offsetZ))
+                .setColor(r, g, b, alpha);
+        buffer.addVertex(matrix, (float) (minX + offsetX), (float) (groundY + lineThickness + offsetY), (float) (maxZ + offsetZ))
+                .setColor(r, g, b, alpha);
+        buffer.addVertex(matrix, (float) (minX + offsetX), (float) (groundY + lineThickness + offsetY), (float) (minZ + offsetZ))
+                .setColor(r, g, b, alpha);
+        
+        // East line
+        buffer.addVertex(matrix, (float) (maxX + offsetX), (float) (groundY + offsetY), (float) (minZ + offsetZ))
+                .setColor(r, g, b, alpha);
+        buffer.addVertex(matrix, (float) (maxX + offsetX), (float) (groundY + offsetY), (float) (maxZ + offsetZ))
+                .setColor(r, g, b, alpha);
+        buffer.addVertex(matrix, (float) (maxX + offsetX), (float) (groundY + lineThickness + offsetY), (float) (maxZ + offsetZ))
+                .setColor(r, g, b, alpha);
+        buffer.addVertex(matrix, (float) (maxX + offsetX), (float) (groundY + lineThickness + offsetY), (float) (minZ + offsetZ))
+                .setColor(r, g, b, alpha);
+    }
+    
+    private static void renderEnhancedWall(VertexConsumer buffer, Matrix4f matrix, net.minecraft.world.level.Level level,
                                            double x1, double z1, double x2, double z2,
                                            int minY, int maxY,
                                            double offsetX, double offsetY, double offsetZ,
@@ -249,13 +436,13 @@ public class RealmBoundaryRenderer {
             alpha2 = Math.max(0.0f, Math.min(1.0f, alpha2 + wave));
             
             // Add the quad segment
-            bufferBuilder.addVertex(matrix, (float) (x1 + offsetX), (float) (y1 + offsetY), (float) (z1 + offsetZ))
+            buffer.addVertex(matrix, (float) (x1 + offsetX), (float) (y1 + offsetY), (float) (z1 + offsetZ))
                     .setColor(baseR, baseG, baseB, alpha1);
-            bufferBuilder.addVertex(matrix, (float) (x2 + offsetX), (float) (y1 + offsetY), (float) (z2 + offsetZ))
+            buffer.addVertex(matrix, (float) (x2 + offsetX), (float) (y1 + offsetY), (float) (z2 + offsetZ))
                     .setColor(baseR, baseG, baseB, alpha1);
-            bufferBuilder.addVertex(matrix, (float) (x2 + offsetX), (float) (y2 + offsetY), (float) (z2 + offsetZ))
+            buffer.addVertex(matrix, (float) (x2 + offsetX), (float) (y2 + offsetY), (float) (z2 + offsetZ))
                     .setColor(baseR, baseG, baseB, alpha2);
-            bufferBuilder.addVertex(matrix, (float) (x1 + offsetX), (float) (y2 + offsetY), (float) (z1 + offsetZ))
+            buffer.addVertex(matrix, (float) (x1 + offsetX), (float) (y2 + offsetY), (float) (z1 + offsetZ))
                     .setColor(baseR, baseG, baseB, alpha2);
         }
     }
@@ -290,7 +477,7 @@ public class RealmBoundaryRenderer {
         return baseAlpha;
     }
     
-    private static void renderBubbleParticles(BufferBuilder bufferBuilder, Matrix4f matrix,
+    private static void renderBubbleParticles(VertexConsumer buffer, Matrix4f matrix,
                                               double minX, double minZ, double maxX, double maxZ,
                                               int minY, int maxY,
                                               double offsetX, double offsetY, double offsetZ,
@@ -299,23 +486,23 @@ public class RealmBoundaryRenderer {
         int particlesPerWall = 80;
         
         // North wall (minZ)
-        renderWallBubbles(bufferBuilder, matrix, minX, minZ, maxX, minZ, minY, maxY,
+        renderWallBubbles(buffer, matrix, minX, minZ, maxX, minZ, minY, maxY,
                 offsetX, offsetY, offsetZ, time, baseR, baseG, baseB, particlesPerWall, 0);
         
         // South wall (maxZ)
-        renderWallBubbles(bufferBuilder, matrix, minX, maxZ, maxX, maxZ, minY, maxY,
+        renderWallBubbles(buffer, matrix, minX, maxZ, maxX, maxZ, minY, maxY,
                 offsetX, offsetY, offsetZ, time, baseR, baseG, baseB, particlesPerWall, 1000);
         
         // West wall (minX)
-        renderWallBubbles(bufferBuilder, matrix, minX, minZ, minX, maxZ, minY, maxY,
+        renderWallBubbles(buffer, matrix, minX, minZ, minX, maxZ, minY, maxY,
                 offsetX, offsetY, offsetZ, time, baseR, baseG, baseB, particlesPerWall, 2000);
         
         // East wall (maxX)
-        renderWallBubbles(bufferBuilder, matrix, maxX, minZ, maxX, maxZ, minY, maxY,
+        renderWallBubbles(buffer, matrix, maxX, minZ, maxX, maxZ, minY, maxY,
                 offsetX, offsetY, offsetZ, time, baseR, baseG, baseB, particlesPerWall, 3000);
     }
     
-    private static void renderWallBubbles(BufferBuilder bufferBuilder, Matrix4f matrix,
+    private static void renderWallBubbles(VertexConsumer buffer, Matrix4f matrix,
                                           double x1, double z1, double x2, double z2,
                                           int minY, int maxY,
                                           double offsetX, double offsetY, double offsetZ,
@@ -375,12 +562,12 @@ public class RealmBoundaryRenderer {
             float g = baseG * pulse * 1.2f;
             float b = baseB * pulse * 1.2f;
             
-            addSparkle(bufferBuilder, matrix, x + offsetX, y + offsetY, z + offsetZ,
+            addSparkle(buffer, matrix, x + offsetX, y + offsetY, z + offsetZ,
                     particleSize, r, g, b, alpha);
         }
     }
     
-    private static void renderGroundLines(BufferBuilder bufferBuilder, Matrix4f matrix,
+    private static void renderGroundLines(VertexConsumer buffer, Matrix4f matrix,
                                           double minX, double minZ, double maxX, double maxZ,
                                           int minY,
                                           double offsetX, double offsetY, double offsetZ,
@@ -395,39 +582,39 @@ public class RealmBoundaryRenderer {
         float b = Math.min(1.0f, baseB * 1.5f);
         
         // North line
-        addGroundLine(bufferBuilder, matrix, minX, minZ, maxX, minZ, minY, lineHeight,
+        addGroundLine(buffer, matrix, minX, minZ, maxX, minZ, minY, lineHeight,
                 offsetX, offsetY, offsetZ, r, g, b, lineAlpha);
         
         // South line
-        addGroundLine(bufferBuilder, matrix, minX, maxZ, maxX, maxZ, minY, lineHeight,
+        addGroundLine(buffer, matrix, minX, maxZ, maxX, maxZ, minY, lineHeight,
                 offsetX, offsetY, offsetZ, r, g, b, lineAlpha);
         
         // West line
-        addGroundLine(bufferBuilder, matrix, minX, minZ, minX, maxZ, minY, lineHeight,
+        addGroundLine(buffer, matrix, minX, minZ, minX, maxZ, minY, lineHeight,
                 offsetX, offsetY, offsetZ, r, g, b, lineAlpha);
         
         // East line
-        addGroundLine(bufferBuilder, matrix, maxX, minZ, maxX, maxZ, minY, lineHeight,
+        addGroundLine(buffer, matrix, maxX, minZ, maxX, maxZ, minY, lineHeight,
                 offsetX, offsetY, offsetZ, r, g, b, lineAlpha);
     }
     
-    private static void addGroundLine(BufferBuilder bufferBuilder, Matrix4f matrix,
+    private static void addGroundLine(VertexConsumer buffer, Matrix4f matrix,
                                       double x1, double z1, double x2, double z2,
                                       int y, float height,
                                       double offsetX, double offsetY, double offsetZ,
                                       float r, float g, float b, float a) {
         // Create a bright line at ground level
-        bufferBuilder.addVertex(matrix, (float) (x1 + offsetX), (float) (y + offsetY), (float) (z1 + offsetZ))
+        buffer.addVertex(matrix, (float) (x1 + offsetX), (float) (y + offsetY), (float) (z1 + offsetZ))
                 .setColor(r, g, b, a);
-        bufferBuilder.addVertex(matrix, (float) (x2 + offsetX), (float) (y + offsetY), (float) (z2 + offsetZ))
+        buffer.addVertex(matrix, (float) (x2 + offsetX), (float) (y + offsetY), (float) (z2 + offsetZ))
                 .setColor(r, g, b, a);
-        bufferBuilder.addVertex(matrix, (float) (x2 + offsetX), (float) (y + height + offsetY), (float) (z2 + offsetZ))
+        buffer.addVertex(matrix, (float) (x2 + offsetX), (float) (y + height + offsetY), (float) (z2 + offsetZ))
                 .setColor(r, g, b, a * 0.3f);
-        bufferBuilder.addVertex(matrix, (float) (x1 + offsetX), (float) (y + height + offsetY), (float) (z1 + offsetZ))
+        buffer.addVertex(matrix, (float) (x1 + offsetX), (float) (y + height + offsetY), (float) (z1 + offsetZ))
                 .setColor(r, g, b, a * 0.3f);
     }
     
-    private static void renderVerticalEdges(BufferBuilder bufferBuilder, Matrix4f matrix,
+    private static void renderVerticalEdges(VertexConsumer buffer, Matrix4f matrix,
                                             double minX, double minZ, double maxX, double maxZ,
                                             int minY, int maxY,
                                             double offsetX, double offsetY, double offsetZ,
@@ -441,45 +628,45 @@ public class RealmBoundaryRenderer {
         
         // Render 4 vertical edge lines at corners
         // NW corner
-        renderVerticalEdge(bufferBuilder, matrix, minX, minZ, minY, maxY, edgeWidth,
+        renderVerticalEdge(buffer, matrix, minX, minZ, minY, maxY, edgeWidth,
                 offsetX, offsetY, offsetZ, r, g, b, alpha);
         
         // NE corner
-        renderVerticalEdge(bufferBuilder, matrix, maxX, minZ, minY, maxY, edgeWidth,
+        renderVerticalEdge(buffer, matrix, maxX, minZ, minY, maxY, edgeWidth,
                 offsetX, offsetY, offsetZ, r, g, b, alpha);
         
         // SW corner
-        renderVerticalEdge(bufferBuilder, matrix, minX, maxZ, minY, maxY, edgeWidth,
+        renderVerticalEdge(buffer, matrix, minX, maxZ, minY, maxY, edgeWidth,
                 offsetX, offsetY, offsetZ, r, g, b, alpha);
         
         // SE corner
-        renderVerticalEdge(bufferBuilder, matrix, maxX, maxZ, minY, maxY, edgeWidth,
+        renderVerticalEdge(buffer, matrix, maxX, maxZ, minY, maxY, edgeWidth,
                 offsetX, offsetY, offsetZ, r, g, b, alpha);
     }
     
-    private static void renderVerticalEdge(BufferBuilder bufferBuilder, Matrix4f matrix,
+    private static void renderVerticalEdge(VertexConsumer buffer, Matrix4f matrix,
                                            double x, double z, int minY, int maxY, float width,
                                            double offsetX, double offsetY, double offsetZ,
                                            float r, float g, float b, float a) {
         // Vertical edge line as a thin quad
-        bufferBuilder.addVertex(matrix, (float) (x - width + offsetX), (float) (minY + offsetY), (float) (z + offsetZ))
+        buffer.addVertex(matrix, (float) (x - width + offsetX), (float) (minY + offsetY), (float) (z + offsetZ))
                 .setColor(r, g, b, a);
-        bufferBuilder.addVertex(matrix, (float) (x + width + offsetX), (float) (minY + offsetY), (float) (z + offsetZ))
+        buffer.addVertex(matrix, (float) (x + width + offsetX), (float) (minY + offsetY), (float) (z + offsetZ))
                 .setColor(r, g, b, a);
-        bufferBuilder.addVertex(matrix, (float) (x + width + offsetX), (float) (maxY + offsetY), (float) (z + offsetZ))
+        buffer.addVertex(matrix, (float) (x + width + offsetX), (float) (maxY + offsetY), (float) (z + offsetZ))
                 .setColor(r, g, b, a);
-        bufferBuilder.addVertex(matrix, (float) (x - width + offsetX), (float) (maxY + offsetY), (float) (z + offsetZ))
+        buffer.addVertex(matrix, (float) (x - width + offsetX), (float) (maxY + offsetY), (float) (z + offsetZ))
                 .setColor(r, g, b, a);
     }
     
-    private static void addSparkle(BufferBuilder bufferBuilder, Matrix4f matrix,
+    private static void addSparkle(VertexConsumer buffer, Matrix4f matrix,
                                    double x, double y, double z, float size,
                                    float r, float g, float b, float a) {
         // Create a small quad for sparkle (billboard-like effect)
-        bufferBuilder.addVertex(matrix, (float) (x - size), (float) (y - size), (float) z).setColor(r, g, b, a);
-        bufferBuilder.addVertex(matrix, (float) (x + size), (float) (y - size), (float) z).setColor(r, g, b, a);
-        bufferBuilder.addVertex(matrix, (float) (x + size), (float) (y + size), (float) z).setColor(r, g, b, a);
-        bufferBuilder.addVertex(matrix, (float) (x - size), (float) (y + size), (float) z).setColor(r, g, b, a);
+        buffer.addVertex(matrix, (float) (x - size), (float) (y - size), (float) z).setColor(r, g, b, a);
+        buffer.addVertex(matrix, (float) (x + size), (float) (y - size), (float) z).setColor(r, g, b, a);
+        buffer.addVertex(matrix, (float) (x + size), (float) (y + size), (float) z).setColor(r, g, b, a);
+        buffer.addVertex(matrix, (float) (x - size), (float) (y + size), (float) z).setColor(r, g, b, a);
     }
 
     private static void addQuad(BufferBuilder bufferBuilder, Matrix4f matrix,

@@ -1,6 +1,7 @@
 package com.tharidia.tharidia_things;
 
 import com.tharidia.tharidia_things.client.ClaimBoundaryRenderer;
+import com.tharidia.tharidia_things.client.ClientConnectionHandler;
 import com.tharidia.tharidia_things.client.RealmBoundaryRenderer;
 import com.tharidia.tharidia_things.client.RealmClientHandler;
 import com.tharidia.tharidia_things.client.RealmOverlay;
@@ -34,6 +35,7 @@ public class TharidiaThingsClient {
         NeoForge.EVENT_BUS.register(RealmBoundaryRenderer.class);
         NeoForge.EVENT_BUS.register(ClaimBoundaryRenderer.class);
         NeoForge.EVENT_BUS.register(RealmClientHandler.class);
+        NeoForge.EVENT_BUS.register(ClientConnectionHandler.class);
     }
 
     @SubscribeEvent

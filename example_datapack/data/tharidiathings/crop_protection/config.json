@@ -1,0 +1,37 @@
+{
+  "_comment": "This is an example crop protection configuration",
+  "_comment2": "Copy this datapack to your world's datapacks folder to customize crop protection",
+  "_comment3": "Tags automatically detect ALL crops from mods - recommended for modpacks!",
+  "_comment4": "Block IDs are for specific blocks you want to protect",
+  
+  "protected_crop_tags": [
+    "minecraft:crops",
+    "minecraft:saplings",
+    "forge:crops"
+  ],
+  
+  "protected_crops": [
+    "minecraft:wheat",
+    "minecraft:carrots",
+    "minecraft:potatoes",
+    "minecraft:beetroots",
+    "minecraft:melon_stem",
+    "minecraft:pumpkin_stem",
+    "minecraft:attached_melon_stem",
+    "minecraft:attached_pumpkin_stem",
+    "minecraft:sweet_berry_bush",
+    "minecraft:nether_wart",
+    "minecraft:cocoa",
+    "minecraft:torchflower_crop",
+    "minecraft:pitcher_crop"
+  ],
+  
+  "protected_farmland_tags": [
+    "forge:farmland"
+  ],
+  
+  "protected_farmland": [
+    "minecraft:farmland",
+    "minecraft:soul_soil"
+  ]
+}

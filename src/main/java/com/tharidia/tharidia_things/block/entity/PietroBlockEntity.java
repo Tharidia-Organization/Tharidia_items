@@ -44,6 +44,7 @@ public class PietroBlockEntity extends BlockEntity implements GeoBlockEntity, Me
     private static final int MIN_REALM_SIZE = 3;
     private static final int MAX_REALM_SIZE = 15;
     private static final int DEFAULT_REALM_SIZE = 3;
+    private static final int OUTER_LAYER_OFFSET = 6; // 6 chunks outer layer around the realm
     private static final int BASE_POTATO_COST = 64; // Base cost for first expansion (1 stack)
 
     private int realmSize = DEFAULT_REALM_SIZE; // Size in chunks (e.g., 3 means 3x3 chunks)
@@ -471,6 +472,71 @@ public class PietroBlockEntity extends BlockEntity implements GeoBlockEntity, Me
     }
     
     /**
+     * Checks if a given block position is within the outer layer area
+     * The outer layer is always 6 chunks beyond the main realm border
+     */
+    public boolean isPositionInOuterLayer(BlockPos pos) {
+        ChunkPos posChunk = new ChunkPos(pos);
+        return isChunkInOuterLayer(posChunk);
+    }
+    
+    /**
+     * Checks if a given chunk is within the outer layer area
+     * The outer layer expands with the realm, always maintaining 6 chunks from the realm border
+     */
+    public boolean isChunkInOuterLayer(ChunkPos chunk) {
+        // Check if chunk is outside main realm but within outer layer
+        if (isChunkInRealm(chunk)) {
+            return false; // It's in the main realm, not outer layer
+        }
+        
+        int outerRadius = (realmSize / 2) + OUTER_LAYER_OFFSET;
+        int dx = Math.abs(chunk.x - centerChunk.x);
+        int dz = Math.abs(chunk.z - centerChunk.z);
+        
+        return dx <= outerRadius && dz <= outerRadius;
+    }
+    
+    /**
+     * Checks if a block position is a crop or farmland that needs protection in the outer layer
+     */
+    public boolean isProtectedCrop(BlockPos pos, net.minecraft.world.level.Level level) {
+        if (!isPositionInOuterLayer(pos)) {
+            return false;
+        }
+        
+        net.minecraft.world.level.block.state.BlockState state = level.getBlockState(pos);
+        net.minecraft.world.level.block.Block block = state.getBlock();
+        
+        // Check if the block is a protected crop or farmland using the config
+        return com.tharidia.tharidia_things.config.CropProtectionConfig.isProtectedCrop(block) ||
+               com.tharidia.tharidia_things.config.CropProtectionConfig.isProtectedFarmland(block);
+    }
+    
+    /**
+     * Gets the minimum chunk position (corner) of the outer layer
+     */
+    public ChunkPos getOuterLayerMinChunk() {
+        int outerRadius = (realmSize / 2) + OUTER_LAYER_OFFSET;
+        return new ChunkPos(centerChunk.x - outerRadius, centerChunk.z - outerRadius);
+    }
+    
+    /**
+     * Gets the maximum chunk position (corner) of the outer layer
+     */
+    public ChunkPos getOuterLayerMaxChunk() {
+        int outerRadius = (realmSize / 2) + OUTER_LAYER_OFFSET;
+        return new ChunkPos(centerChunk.x + outerRadius, centerChunk.z + outerRadius);
+    }
+    
+    /**
+     * Gets all realms in the given server level
+     */
+    public static List<PietroBlockEntity> getRealms(ServerLevel level) {
+        return RealmManager.getRealms(level);
+    }
+    
+    /**
      * Gets the minimum chunk position (corner) of the realm
      */
     public ChunkPos getMinChunk() {
@@ -572,6 +638,8 @@ public class PietroBlockEntity extends BlockEntity implements GeoBlockEntity, Me
     public void setRemoved() {
         super.setRemoved();
         // Unregister this realm when it's removed
+        // NOTE: This might be called after notifyRealmRemoval already unregistered it
+        // RealmManager.unregisterRealm handles duplicate unregistration safely
         if (level != null && !level.isClientSide && level instanceof ServerLevel serverLevel) {
             RealmManager.unregisterRealm(serverLevel, this);
         }

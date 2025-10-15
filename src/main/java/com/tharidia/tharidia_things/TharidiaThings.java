@@ -139,29 +139,20 @@ public class TharidiaThings {
         NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.RealmPlacementHandler.class);
         // Register the weight debuff handler
         NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.WeightDebuffHandler.class);
-
+        
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
-        // Some common setup code
+        // Common setup
         LOGGER.info("HELLO FROM COMMON SETUP");
-
-        if (Config.LOG_DIRT_BLOCK.getAsBoolean()) {
-            LOGGER.info("DIRT BLOCK >> {}", BuiltInRegistries.BLOCK.getKey(Blocks.DIRT));
-        }
-
-        LOGGER.info("{}{}", Config.MAGIC_NUMBER_INTRODUCTION.get(), Config.MAGIC_NUMBER.getAsInt());
-
-        Config.ITEM_STRINGS.get().forEach((item) -> LOGGER.info("ITEM >> {}", item));
     }
 
     private void registerPayloads(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar("1");
         LOGGER.info("Registering network payloads (dist: {})", FMLEnvironment.dist);
-        
-        // Register client-bound packets
+
         if (FMLEnvironment.dist.isClient()) {
             registrar.playToClient(
                 ClaimOwnerSyncPacket.TYPE,
@@ -292,6 +283,8 @@ public class TharidiaThings {
     public void onAddReloadListeners(net.neoforged.neoforge.event.AddReloadListenerEvent event) {
         event.addListener(new com.tharidia.tharidia_things.weight.WeightDataLoader());
         LOGGER.info("Weight data loader registered");
+        event.addListener(new com.tharidia.tharidia_things.config.CropProtectionConfig());
+        LOGGER.info("Crop protection config loader registered");
     }
 
     @SubscribeEvent

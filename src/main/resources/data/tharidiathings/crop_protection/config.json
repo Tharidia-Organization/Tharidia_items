@@ -1,0 +1,33 @@
+{
+  "_comment": "Crop protection configuration for realm outer layers",
+  "_comment2": "Tags automatically detect modded crops - any crop with these tags will be protected",
+  "_comment3": "Block IDs are for specific blocks you want to protect",
+  
+  "protected_crop_tags": [
+    "minecraft:crops",
+    "minecraft:saplings"
+  ],
+  
+  "protected_crops": [
+    "minecraft:wheat",
+    "minecraft:carrots",
+    "minecraft:potatoes",
+    "minecraft:beetroots",
+    "minecraft:melon_stem",
+    "minecraft:pumpkin_stem",
+    "minecraft:attached_melon_stem",
+    "minecraft:attached_pumpkin_stem",
+    "minecraft:sweet_berry_bush",
+    "minecraft:nether_wart",
+    "minecraft:cocoa",
+    "minecraft:torchflower_crop",
+    "minecraft:pitcher_crop"
+  ],
+  
+  "protected_farmland_tags": [],
+  
+  "protected_farmland": [
+    "minecraft:farmland",
+    "minecraft:soul_soil"
+  ]
+}

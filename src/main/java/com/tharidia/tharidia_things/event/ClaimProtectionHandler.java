@@ -2,6 +2,8 @@ package com.tharidia.tharidia_things.event;
 
 import com.tharidia.tharidia_things.block.ClaimBlock;
 import com.tharidia.tharidia_things.block.entity.ClaimBlockEntity;
+import com.tharidia.tharidia_things.block.entity.PietroBlockEntity;
+import com.tharidia.tharidia_things.realm.RealmManager;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -27,6 +29,12 @@ import java.util.UUID;
 
 public class ClaimProtectionHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger(ClaimProtectionHandler.class);
+    
+    // Cache for outer layer realm lookups (prevents repeated searches for same chunk)
+    private static final java.util.Map<net.minecraft.world.level.ChunkPos, PietroBlockEntity> outerLayerCache = 
+        new java.util.concurrent.ConcurrentHashMap<>();
+    private static long lastCacheClear = System.currentTimeMillis();
+    private static final long CACHE_CLEAR_INTERVAL = 5000; // Clear cache every 5 seconds
 
     /**
      * Prevents block breaking in claimed areas
@@ -47,6 +55,22 @@ public class ClaimProtectionHandler {
                 event.setCanceled(true);
                 player.sendSystemMessage(Component.literal("§cCannot remove Pietro block while claims exist in its realm!"));
             }
+            return;
+        }
+
+        // Check for outer layer crop protection
+        PietroBlockEntity realm = findRealmForPosition(serverLevel, pos);
+        if (realm != null && realm.isPositionInOuterLayer(pos)) {
+            // Check if it's a protected crop in the outer layer
+            if (realm.isProtectedCrop(pos, level)) {
+                // Only allow breaking crops if the player has a claim in the realm
+                if (!hasClaimInRealm(player.getUUID(), realm, serverLevel)) {
+                    event.setCanceled(true);
+                    player.sendSystemMessage(Component.literal("§cPuoi interagire con i raccolti solo se hai un claim in questo regno!"));
+                    return;
+                }
+            }
+            // Allow breaking other blocks in the outer layer
             return;
         }
 
@@ -73,6 +97,22 @@ public class ClaimProtectionHandler {
 
         // Pietro blocks handle their own interaction logic (adding potatoes, etc)
         if (level.getBlockState(pos).getBlock() instanceof com.tharidia.tharidia_things.block.PietroBlock) {
+            return;
+        }
+
+        // Check for outer layer crop protection
+        PietroBlockEntity realm = findRealmForPosition(serverLevel, pos);
+        if (realm != null && realm.isPositionInOuterLayer(pos)) {
+            // Check if it's a protected crop in the outer layer
+            if (realm.isProtectedCrop(pos, level)) {
+                // Only allow interacting with crops if the player has a claim in the realm
+                if (!hasClaimInRealm(player.getUUID(), realm, serverLevel)) {
+                    event.setCanceled(true);
+                    player.sendSystemMessage(Component.literal("§cPuoi interagire con i raccolti solo se hai un claim in questo regno!"));
+                    return;
+                }
+            }
+            // Allow interacting with other blocks in the outer layer
             return;
         }
 
@@ -186,6 +226,24 @@ public class ClaimProtectionHandler {
         }
 
         BlockPos pos = event.getPos();
+        
+        // Check for outer layer protection first
+        PietroBlockEntity realm = findRealmForPosition(serverLevel, pos);
+        if (realm != null && realm.isPositionInOuterLayer(pos)) {
+            // Check if trampling entity is a player
+            if (event.getEntity() instanceof Player player) {
+                // Only allow trampling if the player has a claim in the realm
+                if (!hasClaimInRealm(player.getUUID(), realm, serverLevel)) {
+                    event.setCanceled(true);
+                    return;
+                }
+            } else {
+                // Always prevent non-player trampling in outer layer
+                event.setCanceled(true);
+                return;
+            }
+        }
+        
         ClaimBlockEntity claim = findClaimForPosition(serverLevel, pos);
 
         if (claim != null) {
@@ -436,5 +494,79 @@ public class ClaimProtectionHandler {
         }
         
         return false; // No claim blocks found
+    }
+    
+    /**
+     * Finds a realm that contains the given position's OUTER LAYER only
+     * Optimized: Only checks outer layer, not inner realm (which is handled by claims)
+     * Uses caching to prevent repeated lookups for the same chunk
+     */
+    @org.jetbrains.annotations.Nullable
+    private static PietroBlockEntity findRealmForPosition(ServerLevel level, BlockPos pos) {
+        // Clear cache periodically to avoid stale data
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastCacheClear > CACHE_CLEAR_INTERVAL) {
+            outerLayerCache.clear();
+            lastCacheClear = currentTime;
+        }
+        
+        // Use chunk-based lookup for better performance
+        net.minecraft.world.level.ChunkPos chunkPos = new net.minecraft.world.level.ChunkPos(pos);
+        
+        // Check cache first
+        PietroBlockEntity cached = outerLayerCache.get(chunkPos);
+        if (cached != null) {
+            return cached;
+        }
+        
+        // Cache miss - search through realms
+        List<PietroBlockEntity> allRealms = RealmManager.getRealms(level);
+        
+        for (PietroBlockEntity realm : allRealms) {
+            // Only check outer layer (inner realm is protected by claims)
+            if (realm.isChunkInOuterLayer(chunkPos)) {
+                outerLayerCache.put(chunkPos, realm);
+                return realm;
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * Checks if a player has a claim in the specified realm
+     * Optimized: Uses ClaimRegistry for O(1) lookup instead of iterating through chunks
+     */
+    private static boolean hasClaimInRealm(UUID playerUuid, PietroBlockEntity realm, ServerLevel level) {
+        // Use ClaimRegistry for efficient lookup
+        List<com.tharidia.tharidia_things.claim.ClaimRegistry.ClaimData> playerClaims = 
+            com.tharidia.tharidia_things.claim.ClaimRegistry.getPlayerClaims(playerUuid);
+        
+        if (playerClaims.isEmpty()) {
+            return false;
+        }
+        
+        // Get dimension string for filtering
+        String currentDimension = level.dimension().location().toString();
+        
+        // Check if any of the player's claims are in this realm
+        net.minecraft.world.level.ChunkPos minChunk = realm.getMinChunk();
+        net.minecraft.world.level.ChunkPos maxChunk = realm.getMaxChunk();
+        
+        for (com.tharidia.tharidia_things.claim.ClaimRegistry.ClaimData claim : playerClaims) {
+            // Skip claims from other dimensions
+            if (!claim.getDimension().equals(currentDimension)) {
+                continue;
+            }
+            
+            net.minecraft.world.level.ChunkPos claimChunk = new net.minecraft.world.level.ChunkPos(claim.getPosition());
+            
+            // Check if claim chunk is within realm bounds
+            if (claimChunk.x >= minChunk.x && claimChunk.x <= maxChunk.x &&
+                claimChunk.z >= minChunk.z && claimChunk.z <= maxChunk.z) {
+                return true;
+            }
+        }
+        
+        return false;
     }
 }

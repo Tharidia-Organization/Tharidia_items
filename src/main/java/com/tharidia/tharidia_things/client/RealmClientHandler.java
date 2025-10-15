@@ -66,11 +66,17 @@ public class RealmClientHandler {
             // Single player - we can access server data
             ServerLevel serverLevel = mc.getSingleplayerServer().getLevel(player.level().dimension());
             if (serverLevel != null) {
-                currentRealm = RealmManager.getRealmAt(serverLevel, player.blockPosition());
-                isInRealm = currentRealm != null;
-
-                if (isInRealm && currentRealm != null) {
-                    currentRealmOwner = currentRealm.getOwnerName();
+                // Check if player is in any realm's OUTER LAYER (not just main realm)
+                for (PietroBlockEntity realm : RealmManager.getRealms(serverLevel)) {
+                    if (realm.isPositionInRealm(player.blockPosition()) || realm.isPositionInOuterLayer(player.blockPosition())) {
+                        currentRealm = realm;
+                        isInRealm = true;
+                        currentRealmOwner = realm.getOwnerName();
+                        break;
+                    }
+                }
+                if (currentRealm == null) {
+                    isInRealm = false;
                 }
             } else {
                 isInRealm = false;
@@ -119,7 +125,8 @@ public class RealmClientHandler {
     }
     
     /**
-     * Checks if a player is within the bounds of a realm
+     * Checks if a player is within the bounds of a realm (including outer layer)
+     * Now checks the OUTER LAYER (6 chunks beyond the main realm) instead of inner realm
      */
     private static boolean isPlayerInRealmBounds(LocalPlayer player, PietroBlockEntity realm) {
         if (realm == null || realm.getCenterChunk() == null) {
@@ -130,11 +137,11 @@ public class RealmClientHandler {
         int playerChunkX = player.chunkPosition().x;
         int playerChunkZ = player.chunkPosition().z;
         
-        // Get realm bounds
-        net.minecraft.world.level.ChunkPos minChunk = realm.getMinChunk();
-        net.minecraft.world.level.ChunkPos maxChunk = realm.getMaxChunk();
+        // Get outer layer bounds (6 chunks beyond the main realm)
+        net.minecraft.world.level.ChunkPos minChunk = realm.getOuterLayerMinChunk();
+        net.minecraft.world.level.ChunkPos maxChunk = realm.getOuterLayerMaxChunk();
         
-        // Check if player is within bounds
+        // Check if player is within outer layer bounds
         return playerChunkX >= minChunk.x && playerChunkX <= maxChunk.x &&
                playerChunkZ >= minChunk.z && playerChunkZ <= maxChunk.z;
     }

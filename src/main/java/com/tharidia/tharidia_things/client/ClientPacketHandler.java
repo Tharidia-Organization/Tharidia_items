@@ -42,19 +42,26 @@ public class ClientPacketHandler {
 
     public static void handleRealmSync(RealmSyncPacket packet, IPayloadContext context) {
         context.enqueueWork(() -> {
-            LOGGER.info("Received RealmSyncPacket with {} realms (fullSync: {})", 
+            LOGGER.info("[REALM SYNC] Received RealmSyncPacket with {} realms (fullSync: {})", 
                 packet.realms().size(), packet.fullSync());
+            if (com.tharidia.tharidia_things.Config.DEBUG_REALM_SYNC.get()) {
+                LOGGER.info("[DEBUG] Current syncedRealms size before processing: {}", syncedRealms.size());
+            }
             
             // If this is a full sync, clear the list first
             if (packet.fullSync()) {
-                LOGGER.info("Full sync - clearing all existing realm data");
+                if (com.tharidia.tharidia_things.Config.DEBUG_REALM_SYNC.get()) {
+                    LOGGER.info("[DEBUG] Full sync - clearing {} existing realms", syncedRealms.size());
+                }
                 syncedRealms.clear();
             }
             
             // Process each realm in the packet
             for (RealmSyncPacket.RealmData data : packet.realms()) {
-                LOGGER.info("Syncing realm at {} with size {} and center chunk ({}, {})", 
-                    data.pos(), data.realmSize(), data.centerChunkX(), data.centerChunkZ());
+                if (com.tharidia.tharidia_things.Config.DEBUG_REALM_SYNC.get()) {
+                    LOGGER.info("[DEBUG] Syncing realm at {} with size {} and center chunk ({}, {})", 
+                        data.pos(), data.realmSize(), data.centerChunkX(), data.centerChunkZ());
+                }
                 
                 try {
                     // Get the actual block state from the world (if available) or create a default one
@@ -109,6 +116,24 @@ public class ClientPacketHandler {
                                 syncedCenterChunk.z + radius
                             );
                         }
+                        
+                        @Override
+                        public net.minecraft.world.level.ChunkPos getOuterLayerMinChunk() {
+                            int outerRadius = (syncedRealmSize / 2) + 6; // OUTER_LAYER_OFFSET = 6
+                            return new net.minecraft.world.level.ChunkPos(
+                                syncedCenterChunk.x - outerRadius,
+                                syncedCenterChunk.z - outerRadius
+                            );
+                        }
+                        
+                        @Override
+                        public net.minecraft.world.level.ChunkPos getOuterLayerMaxChunk() {
+                            int outerRadius = (syncedRealmSize / 2) + 6; // OUTER_LAYER_OFFSET = 6
+                            return new net.minecraft.world.level.ChunkPos(
+                                syncedCenterChunk.x + outerRadius,
+                                syncedCenterChunk.z + outerRadius
+                            );
+                        }
                     };
                     // Set the center chunk on the parent class as well
                     dummy.centerChunk = new net.minecraft.world.level.ChunkPos(data.centerChunkX(), data.centerChunkZ());
@@ -116,7 +141,9 @@ public class ClientPacketHandler {
                     if (packet.fullSync()) {
                         // For full sync, just add all realms (list was already cleared)
                         syncedRealms.add(dummy);
-                        LOGGER.info("Added realm at {} with size {}", data.pos(), data.realmSize());
+                        if (com.tharidia.tharidia_things.Config.DEBUG_REALM_SYNC.get()) {
+                            LOGGER.info("[DEBUG] Added realm at {} with size {}", data.pos(), data.realmSize());
+                        }
                     } else {
                         // For incremental update, check if this realm already exists (by position)
                         boolean updated = false;
@@ -134,14 +161,31 @@ public class ClientPacketHandler {
                         if (!updated) {
                             // Add new realm
                             syncedRealms.add(dummy);
-                            LOGGER.info("Added new synced realm at {} with size {}", data.pos(), data.realmSize());
+                            if (com.tharidia.tharidia_things.Config.DEBUG_REALM_SYNC.get()) {
+                                LOGGER.info("[DEBUG] Added new synced realm at {} with size {}", data.pos(), data.realmSize());
+                            }
                         }
                     }
                 } catch (Exception e) {
                     LOGGER.error("Failed to sync realm at {}: {}", data.pos(), e.getMessage(), e);
                 }
             }
-            LOGGER.info("RealmSync completed. Total synced realms: {}", syncedRealms.size());
+            LOGGER.info("[REALM SYNC] Sync completed. Total synced realms: {}", syncedRealms.size());
+            if (com.tharidia.tharidia_things.Config.DEBUG_REALM_SYNC.get()) {
+                LOGGER.info("[DEBUG] Checking visibility restoration: fullSync={}, boundariesWereVisible={}, syncedRealms.isEmpty()={}", 
+                    packet.fullSync(), ClientConnectionHandler.boundariesWereVisible, syncedRealms.isEmpty());
+            }
+            
+            // Restore boundary visibility after full sync (e.g., after login)
+            if (packet.fullSync() && ClientConnectionHandler.boundariesWereVisible && !syncedRealms.isEmpty()) {
+                RealmBoundaryRenderer.setBoundariesVisible(true);
+                LOGGER.info("[REALM SYNC] ✅ Restored boundary visibility after full sync - {} realms loaded", syncedRealms.size());
+                // Reset the flag so we don't keep re-enabling on subsequent syncs
+                ClientConnectionHandler.boundariesWereVisible = false;
+            } else if (packet.fullSync()) {
+                LOGGER.info("[REALM SYNC] ❌ NOT restoring visibility: boundariesWereVisible={}, syncedRealms.isEmpty()={}", 
+                    ClientConnectionHandler.boundariesWereVisible, syncedRealms.isEmpty());
+            }
         });
     }
     

@@ -1,8 +1,10 @@
 package com.tharidia.tharidia_things.block;
 
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.MapCodec;
 import com.tharidia.tharidia_things.block.entity.PietroBlockEntity;
 import com.tharidia.tharidia_things.realm.RealmManager;
+import org.slf4j.Logger;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -37,6 +39,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 
 public class PietroBlock extends BaseEntityBlock {
+    private static final Logger LOGGER = LogUtils.getLogger();
     public static final MapCodec<PietroBlock> CODEC = simpleCodec(PietroBlock::new);
     public static final EnumProperty<DoubleBlockHalf> HALF = BlockStateProperties.DOUBLE_BLOCK_HALF;
     // Minimum distance is 9 chunks (2 * max_radius where max_radius = 5)
@@ -256,17 +259,21 @@ public class PietroBlock extends BaseEntityBlock {
      * Notifies all online players that a realm has been removed
      */
     private void notifyRealmRemoval(ServerLevel serverLevel, PietroBlockEntity realm) {
+        // IMPORTANT: Unregister the realm FIRST before syncing
+        // This ensures it's not in the list when we send the sync
+        BlockPos realmPos = realm.getBlockPos();
+        RealmManager.unregisterRealm(serverLevel, realm);
+        
+        if (com.tharidia.tharidia_things.Config.DEBUG_REALM_SYNC.get()) {
+            LOGGER.info("[DEBUG] Realm removed at {}, sending sync to all players", realmPos);
+        }
+        
         // Send a full sync to refresh all clients' realm lists
         // This ensures the removed realm is cleared from client memory
         java.util.List<PietroBlockEntity> remainingRealms = RealmManager.getRealms(serverLevel);
         java.util.List<com.tharidia.tharidia_things.network.RealmSyncPacket.RealmData> realmDataList = new java.util.ArrayList<>();
         
         for (PietroBlockEntity r : remainingRealms) {
-            // Skip the realm being removed
-            if (r.getBlockPos().equals(realm.getBlockPos())) {
-                continue;
-            }
-            
             com.tharidia.tharidia_things.network.RealmSyncPacket.RealmData data = 
                 new com.tharidia.tharidia_things.network.RealmSyncPacket.RealmData(
                     r.getBlockPos(),
@@ -278,12 +285,19 @@ public class PietroBlock extends BaseEntityBlock {
             realmDataList.add(data);
         }
         
+        if (com.tharidia.tharidia_things.Config.DEBUG_REALM_SYNC.get()) {
+            LOGGER.info("[DEBUG] Sending sync with {} remaining realms after removal", realmDataList.size());
+        }
+        
         // Send full sync (clears and replaces all realm data on clients)
         com.tharidia.tharidia_things.network.RealmSyncPacket packet = 
             new com.tharidia.tharidia_things.network.RealmSyncPacket(realmDataList, true);
         
         for (net.minecraft.server.level.ServerPlayer player : serverLevel.players()) {
             net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, packet);
+            if (com.tharidia.tharidia_things.Config.DEBUG_REALM_SYNC.get()) {
+                LOGGER.info("[DEBUG] Sent realm removal sync to player: {}", player.getName().getString());
+            }
         }
     }
 
