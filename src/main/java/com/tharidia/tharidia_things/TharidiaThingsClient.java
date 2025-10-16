@@ -6,6 +6,7 @@ import com.tharidia.tharidia_things.client.RealmBoundaryRenderer;
 import com.tharidia.tharidia_things.client.RealmClientHandler;
 import com.tharidia.tharidia_things.client.RealmOverlay;
 import com.tharidia.tharidia_things.client.renderer.PietroBlockRenderer;
+import com.tharidia.tharidia_things.client.renderer.HotIronAnvilRenderer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
 import net.neoforged.api.distmarker.Dist;
@@ -44,9 +45,10 @@ public class TharidiaThingsClient {
         TharidiaThings.LOGGER.info("HELLO FROM CLIENT SETUP");
         TharidiaThings.LOGGER.info("MINECRAFT NAME >> {}", Minecraft.getInstance().getUser().getName());
 
-        // Register AzureLib block entity renderer
+        // Register block entity renderers
         event.enqueueWork(() -> {
             BlockEntityRenderers.register(TharidiaThings.PIETRO_BLOCK_ENTITY.get(), context -> new PietroBlockRenderer());
+            BlockEntityRenderers.register(TharidiaThings.HOT_IRON_ANVIL_ENTITY.get(), HotIronAnvilRenderer::new);
         });
     }
 

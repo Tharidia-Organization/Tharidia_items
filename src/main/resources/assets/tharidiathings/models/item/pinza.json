@@ -1,0 +1,20 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "tharidiathings:item/pinza"
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "custom_model_data": 1
+      },
+      "model": "tharidiathings:item/pinza_hot_iron"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 2
+      },
+      "model": "tharidiathings:item/pinza_component"
+    }
+  ]
+}

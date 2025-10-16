@@ -4,8 +4,14 @@ import org.slf4j.Logger;
 import com.mojang.logging.LogUtils;
 import com.tharidia.tharidia_things.block.PietroBlock;
 import com.tharidia.tharidia_things.block.ClaimBlock;
+import com.tharidia.tharidia_things.block.HotIronMarkerBlock;
 import com.tharidia.tharidia_things.block.entity.PietroBlockEntity;
 import com.tharidia.tharidia_things.block.entity.ClaimBlockEntity;
+import com.tharidia.tharidia_things.block.entity.HotIronAnvilEntity;
+import com.tharidia.tharidia_things.item.HotIronItem;
+import com.tharidia.tharidia_things.item.PinzaItem;
+import com.tharidia.tharidia_things.item.LamaLungaItem;
+import com.tharidia.tharidia_things.item.LamaCortaItem;
 import com.tharidia.tharidia_things.client.ClientPacketHandler;
 import com.tharidia.tharidia_things.command.ClaimCommands;
 import com.tharidia.tharidia_things.event.ClaimProtectionHandler;
@@ -13,6 +19,7 @@ import com.tharidia.tharidia_things.network.ClaimOwnerSyncPacket;
 import com.tharidia.tharidia_things.network.HierarchySyncPacket;
 import com.tharidia.tharidia_things.network.RealmSyncPacket;
 import com.tharidia.tharidia_things.network.UpdateHierarchyPacket;
+import com.tharidia.tharidia_things.network.SelectComponentPacket;
 import com.tharidia.tharidia_things.realm.RealmManager;
 
 import net.neoforged.api.distmarker.Dist;
@@ -27,6 +34,7 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Rarity;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -79,12 +87,18 @@ public class TharidiaThings {
     public static final DeferredBlock<ClaimBlock> CLAIM = BLOCKS.register("claim", () -> new ClaimBlock(BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(3.0F, 6.0F)));
     // Creates a new BlockItem with the id "tharidiathings:claim"
     public static final DeferredItem<BlockItem> CLAIM_ITEM = ITEMS.registerSimpleBlockItem("claim", CLAIM);
+    // Hot Iron Marker Block (invisible, used for hot iron on anvil)
+    public static final DeferredBlock<HotIronMarkerBlock> HOT_IRON_MARKER = BLOCKS.register("hot_iron_marker", () -> new HotIronMarkerBlock());
+    
     // Creates a new BlockEntityType for the Pietro block
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<PietroBlockEntity>> PIETRO_BLOCK_ENTITY =
         BLOCK_ENTITIES.register("pietro", () -> BlockEntityType.Builder.of(PietroBlockEntity::new, PIETRO.get()).build(null));
     // Creates a new BlockEntityType for the Claim block
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ClaimBlockEntity>> CLAIM_BLOCK_ENTITY =
         BLOCK_ENTITIES.register("claim", () -> BlockEntityType.Builder.of(ClaimBlockEntity::new, CLAIM.get()).build(null));
+    // Creates a new BlockEntityType for the Hot Iron on Anvil
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<HotIronAnvilEntity>> HOT_IRON_ANVIL_ENTITY =
+        BLOCK_ENTITIES.register("hot_iron_anvil", () -> BlockEntityType.Builder.of(HotIronAnvilEntity::new, HOT_IRON_MARKER.get()).build(null));
     
     // Creates a MenuType for the Claim GUI
     public static final DeferredHolder<net.minecraft.world.inventory.MenuType<?>, net.minecraft.world.inventory.MenuType<com.tharidia.tharidia_things.gui.ClaimMenu>> CLAIM_MENU =
@@ -93,6 +107,16 @@ public class TharidiaThings {
     // Creates a MenuType for the Pietro GUI
     public static final DeferredHolder<net.minecraft.world.inventory.MenuType<?>, net.minecraft.world.inventory.MenuType<com.tharidia.tharidia_things.gui.PietroMenu>> PIETRO_MENU =
         MENU_TYPES.register("pietro_menu", () -> net.neoforged.neoforge.common.extensions.IMenuTypeExtension.create(com.tharidia.tharidia_things.gui.PietroMenu::new));
+    
+    // Creates a MenuType for the Component Selection GUI
+    public static final DeferredHolder<net.minecraft.world.inventory.MenuType<?>, net.minecraft.world.inventory.MenuType<com.tharidia.tharidia_things.gui.ComponentSelectionMenu>> COMPONENT_SELECTION_MENU =
+        MENU_TYPES.register("component_selection_menu", () -> net.neoforged.neoforge.common.extensions.IMenuTypeExtension.create(com.tharidia.tharidia_things.gui.ComponentSelectionMenu::new));
+    
+    // Smithing items
+    public static final DeferredItem<Item> HOT_IRON = ITEMS.register("hot_iron", () -> new HotIronItem(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)));
+    public static final DeferredItem<Item> PINZA = ITEMS.register("pinza", () -> new PinzaItem(new Item.Properties().stacksTo(1)));
+    public static final DeferredItem<Item> LAMA_LUNGA = ITEMS.register("lama_lunga", () -> new LamaLungaItem(new Item.Properties()));
+    public static final DeferredItem<Item> LAMA_CORTA = ITEMS.register("lama_corta", () -> new LamaCortaItem(new Item.Properties()));
 
     // Creates a creative tab with the id "tharidiathings:tharidia_tab" for the mod items, that is placed after the combat tab
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> THARIDIA_TAB = CREATIVE_MODE_TABS.register("tharidia_tab", () -> CreativeModeTab.builder()
@@ -102,6 +126,10 @@ public class TharidiaThings {
             .displayItems((parameters, output) -> {
                 output.accept(PIETRO_ITEM.get());
                 output.accept(CLAIM_ITEM.get());
+                output.accept(HOT_IRON.get());
+                output.accept(PINZA.get());
+                output.accept(LAMA_LUNGA.get());
+                output.accept(LAMA_CORTA.get());
             }).build());
 
     // The constructor for the mod class is the first code that is run when your mod is loaded.
@@ -139,6 +167,8 @@ public class TharidiaThings {
         NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.RealmPlacementHandler.class);
         // Register the weight debuff handler
         NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.WeightDebuffHandler.class);
+        // Register the smithing handler
+        NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.SmithingHandler.class);
         
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
@@ -196,6 +226,11 @@ public class TharidiaThings {
             UpdateHierarchyPacket.STREAM_CODEC,
             UpdateHierarchyPacket::handle
         );
+        registrar.playToServer(
+            SelectComponentPacket.TYPE,
+            SelectComponentPacket.STREAM_CODEC,
+            SelectComponentPacket::handle
+        );
         
         LOGGER.info("Network payloads registered successfully");
     }
@@ -204,6 +239,7 @@ public class TharidiaThings {
         LOGGER.info("Registering menu screens");
         event.register(CLAIM_MENU.get(), com.tharidia.tharidia_things.client.gui.ClaimScreen::new);
         event.register(PIETRO_MENU.get(), com.tharidia.tharidia_things.client.gui.PietroScreen::new);
+        event.register(COMPONENT_SELECTION_MENU.get(), com.tharidia.tharidia_things.client.gui.ComponentSelectionScreen::new);
         LOGGER.info("Menu screens registered successfully");
     }
 
