@@ -15,15 +15,16 @@ import net.neoforged.neoforge.client.model.data.ModelData;
 
 /**
  * Renders the hot gold parallelepiped on top of the anvil
+ * Progressive model changes based on hammer strikes
  */
 public class HotGoldAnvilRenderer implements BlockEntityRenderer<HotGoldAnvilEntity> {
     
     private final BlockRenderDispatcher blockRenderer;
-    private BakedModel hotGoldModel;
+    private BakedModel[] hotGoldModels;
     
     public HotGoldAnvilRenderer(BlockEntityRendererProvider.Context context) {
         this.blockRenderer = context.getBlockRenderDispatcher();
-        this.hotGoldModel = null;
+        this.hotGoldModels = new BakedModel[5]; // 0-4 strikes
     }
     
     @Override
@@ -40,25 +41,28 @@ public class HotGoldAnvilRenderer implements BlockEntityRenderer<HotGoldAnvilEnt
     public void render(HotGoldAnvilEntity entity, float partialTick, PoseStack poseStack, 
                       MultiBufferSource buffer, int combinedLight, int combinedOverlay) {
         
-        // Load 3D block model once (explicitly, not from item)
-        if (hotGoldModel == null) {
+        // Get the current hammer strikes (0-4)
+        int strikes = Math.min(entity.getHammerStrikes(), 4);
+        
+        // Lazy load models as needed
+        if (hotGoldModels[strikes] == null) {
             var modelManager = Minecraft.getInstance().getModelManager();
             var modelLocation = ModelResourceLocation.standalone(
-                ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/hot_gold_anvil")
+                ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/hot_gold_anvil_" + strikes)
             );
-            hotGoldModel = modelManager.getModel(modelLocation);
+            hotGoldModels[strikes] = modelManager.getModel(modelLocation);
         }
         
         poseStack.pushPose();
         
-        // Render the 3D model
+        // Render the appropriate progressive model
         var vertexConsumer = buffer.getBuffer(RenderType.cutout());
         
         blockRenderer.getModelRenderer().renderModel(
             poseStack.last(),
             vertexConsumer,
             null,
-            hotGoldModel,
+            hotGoldModels[strikes],
             1.0f, 1.0f, 1.0f,
             combinedLight,
             combinedOverlay,

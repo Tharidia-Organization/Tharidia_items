@@ -60,23 +60,29 @@ public class TharidiaThingsClient {
 
     @SubscribeEvent
     static void onRegisterAdditionalModels(ModelEvent.RegisterAdditional event) {
-        // Register the hot iron 3D model for use in the anvil renderer
-        event.register(net.minecraft.client.resources.model.ModelResourceLocation.standalone(
-            ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/hot_iron_anvil")
-        ));
-        TharidiaThings.LOGGER.info("Registered hot iron 3D model for anvil renderer");
+        // Register progressive hot iron 3D models for anvil renderer (0-4 strikes)
+        for (int i = 0; i <= 4; i++) {
+            event.register(net.minecraft.client.resources.model.ModelResourceLocation.standalone(
+                ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/hot_iron_anvil_" + i)
+            ));
+        }
+        TharidiaThings.LOGGER.info("Registered hot iron progressive 3D models (0-4 strikes) for anvil renderer");
         
-        // Register the hot gold 3D model for use in the anvil renderer
-        event.register(net.minecraft.client.resources.model.ModelResourceLocation.standalone(
-            ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/hot_gold_anvil")
-        ));
-        TharidiaThings.LOGGER.info("Registered hot gold 3D model for anvil renderer");
+        // Register progressive hot gold 3D models for anvil renderer (0-4 strikes)
+        for (int i = 0; i <= 4; i++) {
+            event.register(net.minecraft.client.resources.model.ModelResourceLocation.standalone(
+                ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/hot_gold_anvil_" + i)
+            ));
+        }
+        TharidiaThings.LOGGER.info("Registered hot gold progressive 3D models (0-4 strikes) for anvil renderer");
         
-        // Register the hot copper 3D model for use in the anvil renderer
-        event.register(net.minecraft.client.resources.model.ModelResourceLocation.standalone(
-            ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/hot_copper_anvil")
-        ));
-        TharidiaThings.LOGGER.info("Registered hot copper 3D model for anvil renderer");
+        // Register progressive hot copper 3D models for anvil renderer (0-4 strikes)
+        for (int i = 0; i <= 4; i++) {
+            event.register(net.minecraft.client.resources.model.ModelResourceLocation.standalone(
+                ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/hot_copper_anvil_" + i)
+            ));
+        }
+        TharidiaThings.LOGGER.info("Registered hot copper progressive 3D models (0-4 strikes) for anvil renderer");
     }
 
     @SubscribeEvent

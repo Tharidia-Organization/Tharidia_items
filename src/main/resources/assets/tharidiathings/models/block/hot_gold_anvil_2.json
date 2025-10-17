@@ -1,0 +1,22 @@
+{
+	"credit": "Made with Blockbench",
+	"textures": {
+		"0": "tharidiathings:block/hot_gold",
+		"particle": "tharidiathings:block/hot_gold"
+	},
+	"elements": [
+		{
+			"name": "strike_2",
+			"from": [6.5, 0, 4],
+			"to": [9.5, 1.2, 12],
+			"faces": {
+				"north": {"uv": [0, 0, 3, 1.2], "texture": "#0"},
+				"east": {"uv": [0, 0, 8, 1.2], "texture": "#0"},
+				"south": {"uv": [0, 0, 3, 1.2], "texture": "#0"},
+				"west": {"uv": [0, 0, 8, 1.2], "texture": "#0"},
+				"up": {"uv": [0, 0, 3, 8], "texture": "#0"},
+				"down": {"uv": [0, 0, 3, 8], "texture": "#0"}
+			}
+		}
+	]
+}

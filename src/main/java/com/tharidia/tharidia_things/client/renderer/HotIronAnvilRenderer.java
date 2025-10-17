@@ -15,15 +15,16 @@ import net.neoforged.neoforge.client.model.data.ModelData;
 
 /**
  * Renders the hot iron parallelepiped on top of the anvil
+ * Progressive model changes based on hammer strikes
  */
 public class HotIronAnvilRenderer implements BlockEntityRenderer<HotIronAnvilEntity> {
     
     private final BlockRenderDispatcher blockRenderer;
-    private BakedModel hotIronModel;
+    private BakedModel[] hotIronModels;
     
     public HotIronAnvilRenderer(BlockEntityRendererProvider.Context context) {
         this.blockRenderer = context.getBlockRenderDispatcher();
-        this.hotIronModel = null;
+        this.hotIronModels = new BakedModel[5]; // 0-4 strikes
     }
     
     @Override
@@ -40,25 +41,28 @@ public class HotIronAnvilRenderer implements BlockEntityRenderer<HotIronAnvilEnt
     public void render(HotIronAnvilEntity entity, float partialTick, PoseStack poseStack, 
                       MultiBufferSource buffer, int combinedLight, int combinedOverlay) {
         
-        // Load 3D block model once (explicitly, not from item)
-        if (hotIronModel == null) {
+        // Get the current hammer strikes (0-4)
+        int strikes = Math.min(entity.getHammerStrikes(), 4);
+        
+        // Lazy load models as needed
+        if (hotIronModels[strikes] == null) {
             var modelManager = Minecraft.getInstance().getModelManager();
             var modelLocation = ModelResourceLocation.standalone(
-                ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/hot_iron_anvil")
+                ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/hot_iron_anvil_" + strikes)
             );
-            hotIronModel = modelManager.getModel(modelLocation);
+            hotIronModels[strikes] = modelManager.getModel(modelLocation);
         }
         
         poseStack.pushPose();
         
-        // Render the 3D model
+        // Render the appropriate progressive model
         var vertexConsumer = buffer.getBuffer(RenderType.cutout());
         
         blockRenderer.getModelRenderer().renderModel(
             poseStack.last(),
             vertexConsumer,
             null,
-            hotIronModel,
+            hotIronModels[strikes],
             1.0f, 1.0f, 1.0f,
             combinedLight,
             combinedOverlay,

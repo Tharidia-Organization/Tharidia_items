@@ -15,15 +15,16 @@ import net.neoforged.neoforge.client.model.data.ModelData;
 
 /**
  * Renderer for hot copper on the anvil
+ * Progressive model changes based on hammer strikes
  */
 public class HotCopperAnvilRenderer implements BlockEntityRenderer<HotCopperAnvilEntity> {
     
     private final BlockRenderDispatcher blockRenderer;
-    private BakedModel hotCopperModel;
+    private BakedModel[] hotCopperModels;
     
     public HotCopperAnvilRenderer(BlockEntityRendererProvider.Context context) {
         this.blockRenderer = context.getBlockRenderDispatcher();
-        this.hotCopperModel = null;
+        this.hotCopperModels = new BakedModel[5]; // 0-4 strikes
     }
     
     @Override
@@ -40,25 +41,28 @@ public class HotCopperAnvilRenderer implements BlockEntityRenderer<HotCopperAnvi
     public void render(HotCopperAnvilEntity entity, float partialTick, PoseStack poseStack, 
                       MultiBufferSource buffer, int combinedLight, int combinedOverlay) {
         
-        // Lazy load the model on first render
-        if (hotCopperModel == null) {
+        // Get the current hammer strikes (0-4)
+        int strikes = Math.min(entity.getHammerStrikes(), 4);
+        
+        // Lazy load models as needed
+        if (hotCopperModels[strikes] == null) {
             var modelManager = Minecraft.getInstance().getModelManager();
             var modelLocation = ModelResourceLocation.standalone(
-                ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/hot_copper_anvil")
+                ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/hot_copper_anvil_" + strikes)
             );
-            hotCopperModel = modelManager.getModel(modelLocation);
+            hotCopperModels[strikes] = modelManager.getModel(modelLocation);
         }
         
         poseStack.pushPose();
         
-        // Render the hot copper model
+        // Render the appropriate progressive model
         var vertexConsumer = buffer.getBuffer(RenderType.cutout());
         
         blockRenderer.getModelRenderer().renderModel(
             poseStack.last(),
             vertexConsumer,
             null,
-            hotCopperModel,
+            hotCopperModels[strikes],
             1.0f, 1.0f, 1.0f,
             combinedLight,
             combinedOverlay,
