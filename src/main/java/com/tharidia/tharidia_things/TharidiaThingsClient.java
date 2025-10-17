@@ -7,6 +7,7 @@ import com.tharidia.tharidia_things.client.RealmClientHandler;
 import com.tharidia.tharidia_things.client.RealmOverlay;
 import com.tharidia.tharidia_things.client.renderer.PietroBlockRenderer;
 import com.tharidia.tharidia_things.client.renderer.HotIronAnvilRenderer;
+import com.tharidia.tharidia_things.client.renderer.HotGoldAnvilRenderer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
 import net.minecraft.resources.ResourceLocation;
@@ -51,6 +52,7 @@ public class TharidiaThingsClient {
         event.enqueueWork(() -> {
             BlockEntityRenderers.register(TharidiaThings.PIETRO_BLOCK_ENTITY.get(), context -> new PietroBlockRenderer());
             BlockEntityRenderers.register(TharidiaThings.HOT_IRON_ANVIL_ENTITY.get(), HotIronAnvilRenderer::new);
+            BlockEntityRenderers.register(TharidiaThings.HOT_GOLD_ANVIL_ENTITY.get(), HotGoldAnvilRenderer::new);
         });
     }
 
@@ -61,6 +63,12 @@ public class TharidiaThingsClient {
             ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/hot_iron_anvil")
         ));
         TharidiaThings.LOGGER.info("Registered hot iron 3D model for anvil renderer");
+        
+        // Register the hot gold 3D model for use in the anvil renderer
+        event.register(net.minecraft.client.resources.model.ModelResourceLocation.standalone(
+            ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/hot_gold_anvil")
+        ));
+        TharidiaThings.LOGGER.info("Registered hot gold 3D model for anvil renderer");
     }
 
     @SubscribeEvent

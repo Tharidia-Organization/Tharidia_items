@@ -1,7 +1,7 @@
 package com.tharidia.tharidia_things.gui;
 
 import com.tharidia.tharidia_things.TharidiaThings;
-import com.tharidia.tharidia_things.block.entity.HotIronAnvilEntity;
+import com.tharidia.tharidia_things.block.entity.IHotMetalAnvilEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
@@ -9,10 +9,9 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.Blocks;
 
 /**
- * Menu for selecting which component to smith from the hot iron
+ * Menu for selecting which component to smith from any hot metal
  */
 public class ComponentSelectionMenu extends AbstractContainerMenu {
     
@@ -35,7 +34,7 @@ public class ComponentSelectionMenu extends AbstractContainerMenu {
     
     public void selectComponent(String componentId) {
         access.execute((level, blockPos) -> {
-            if (level.getBlockEntity(blockPos) instanceof HotIronAnvilEntity entity) {
+            if (level.getBlockEntity(blockPos) instanceof IHotMetalAnvilEntity entity) {
                 entity.setSelectedComponent(componentId);
             }
         });
@@ -48,6 +47,12 @@ public class ComponentSelectionMenu extends AbstractContainerMenu {
     
     @Override
     public boolean stillValid(Player player) {
-        return stillValid(access, player, TharidiaThings.HOT_IRON_MARKER.get());
+        // Check if either hot iron or hot gold marker block is present
+        return access.evaluate((level, blockPos) -> {
+            var state = level.getBlockState(blockPos);
+            return (state.is(TharidiaThings.HOT_IRON_MARKER.get()) || 
+                    state.is(TharidiaThings.HOT_GOLD_MARKER.get())) &&
+                   player.distanceToSqr(blockPos.getX() + 0.5, blockPos.getY() + 0.5, blockPos.getZ() + 0.5) <= 64.0;
+        }, true);
     }
 }

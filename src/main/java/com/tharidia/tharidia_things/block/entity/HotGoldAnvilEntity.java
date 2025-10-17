@@ -15,22 +15,22 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Block entity for hot iron placed on top of an anvil.
+ * Block entity for hot gold placed on top of an anvil.
  * Tracks hammer strikes and the selected component type.
  */
-public class HotIronAnvilEntity extends BlockEntity implements IHotMetalAnvilEntity {
+public class HotGoldAnvilEntity extends BlockEntity implements IHotMetalAnvilEntity {
     
     private int hammerStrikes = 0;
     private String selectedComponent = "lama_lunga"; // Default selection
     private boolean finished = false;
     private boolean guiOpened = false; // Track if GUI has been opened
     
-    public HotIronAnvilEntity(BlockPos pos, BlockState state) {
-        super(TharidiaThings.HOT_IRON_ANVIL_ENTITY.get(), pos, state);
+    public HotGoldAnvilEntity(BlockPos pos, BlockState state) {
+        super(TharidiaThings.HOT_GOLD_ANVIL_ENTITY.get(), pos, state);
     }
     
     // Constructor for when creating without BlockState
-    public HotIronAnvilEntity(BlockPos pos, Level level) {
+    public HotGoldAnvilEntity(BlockPos pos, Level level) {
         this(pos, level.getBlockState(pos));
     }
     
@@ -49,7 +49,7 @@ public class HotIronAnvilEntity extends BlockEntity implements IHotMetalAnvilEnt
             if (hammerStrikes >= 4) {
                 finished = true;
                 if (player != null) {
-                    TharidiaThings.LOGGER.info(player.getName().getString() + " forged a piece");
+                    TharidiaThings.LOGGER.info(player.getName().getString() + " forged a gold piece");
                 }
                 level.playSound(null, worldPosition, SoundEvents.ANVIL_LAND, SoundSource.BLOCKS, 0.5F, 1.5F);
             }
@@ -101,7 +101,7 @@ public class HotIronAnvilEntity extends BlockEntity implements IHotMetalAnvilEnt
     
     @Override
     public String getMaterialType() {
-        return "iron";
+        return "gold";
     }
     
     @Override

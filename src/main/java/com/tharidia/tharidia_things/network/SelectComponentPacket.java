@@ -1,7 +1,7 @@
 package com.tharidia.tharidia_things.network;
 
 import com.tharidia.tharidia_things.TharidiaThings;
-import com.tharidia.tharidia_things.block.entity.HotIronAnvilEntity;
+import com.tharidia.tharidia_things.block.entity.IHotMetalAnvilEntity;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -12,7 +12,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /**
- * Packet sent from client to server to select a component type
+ * Packet sent from client to server to select a component type for any hot metal
  */
 public record SelectComponentPacket(BlockPos pos, String componentId) implements CustomPacketPayload {
     
@@ -35,7 +35,7 @@ public record SelectComponentPacket(BlockPos pos, String componentId) implements
     public static void handle(SelectComponentPacket packet, IPayloadContext context) {
         context.enqueueWork(() -> {
             if (context.player() instanceof ServerPlayer serverPlayer) {
-                if (serverPlayer.level().getBlockEntity(packet.pos) instanceof HotIronAnvilEntity entity) {
+                if (serverPlayer.level().getBlockEntity(packet.pos) instanceof IHotMetalAnvilEntity entity) {
                     entity.setSelectedComponent(packet.componentId);
                 }
             }

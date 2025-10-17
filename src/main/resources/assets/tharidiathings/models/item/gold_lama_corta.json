@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "tharidiathings:item/gold_lama_corta"
+  }
+}

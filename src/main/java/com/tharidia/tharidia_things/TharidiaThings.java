@@ -5,13 +5,18 @@ import com.mojang.logging.LogUtils;
 import com.tharidia.tharidia_things.block.PietroBlock;
 import com.tharidia.tharidia_things.block.ClaimBlock;
 import com.tharidia.tharidia_things.block.HotIronMarkerBlock;
+import com.tharidia.tharidia_things.block.HotGoldMarkerBlock;
 import com.tharidia.tharidia_things.block.entity.PietroBlockEntity;
 import com.tharidia.tharidia_things.block.entity.ClaimBlockEntity;
 import com.tharidia.tharidia_things.block.entity.HotIronAnvilEntity;
+import com.tharidia.tharidia_things.block.entity.HotGoldAnvilEntity;
 import com.tharidia.tharidia_things.item.HotIronItem;
+import com.tharidia.tharidia_things.item.HotGoldItem;
 import com.tharidia.tharidia_things.item.PinzaItem;
 import com.tharidia.tharidia_things.item.LamaLungaItem;
 import com.tharidia.tharidia_things.item.LamaCortaItem;
+import com.tharidia.tharidia_things.item.GoldLamaLungaItem;
+import com.tharidia.tharidia_things.item.GoldLamaCortaItem;
 import com.tharidia.tharidia_things.client.ClientPacketHandler;
 import com.tharidia.tharidia_things.command.ClaimCommands;
 import com.tharidia.tharidia_things.event.ClaimProtectionHandler;
@@ -89,6 +94,8 @@ public class TharidiaThings {
     public static final DeferredItem<BlockItem> CLAIM_ITEM = ITEMS.registerSimpleBlockItem("claim", CLAIM);
     // Hot Iron Marker Block (invisible, used for hot iron on anvil)
     public static final DeferredBlock<HotIronMarkerBlock> HOT_IRON_MARKER = BLOCKS.register("hot_iron_marker", () -> new HotIronMarkerBlock());
+    // Hot Gold Marker Block (invisible, used for hot gold on anvil)
+    public static final DeferredBlock<HotGoldMarkerBlock> HOT_GOLD_MARKER = BLOCKS.register("hot_gold_marker", () -> new HotGoldMarkerBlock());
     
     // Creates a new BlockEntityType for the Pietro block
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<PietroBlockEntity>> PIETRO_BLOCK_ENTITY =
@@ -99,6 +106,9 @@ public class TharidiaThings {
     // Creates a new BlockEntityType for the Hot Iron on Anvil
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<HotIronAnvilEntity>> HOT_IRON_ANVIL_ENTITY =
         BLOCK_ENTITIES.register("hot_iron_anvil", () -> BlockEntityType.Builder.of(HotIronAnvilEntity::new, HOT_IRON_MARKER.get()).build(null));
+    // Creates a new BlockEntityType for the Hot Gold on Anvil
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<HotGoldAnvilEntity>> HOT_GOLD_ANVIL_ENTITY =
+        BLOCK_ENTITIES.register("hot_gold_anvil", () -> BlockEntityType.Builder.of(HotGoldAnvilEntity::new, HOT_GOLD_MARKER.get()).build(null));
     
     // Creates a MenuType for the Claim GUI
     public static final DeferredHolder<net.minecraft.world.inventory.MenuType<?>, net.minecraft.world.inventory.MenuType<com.tharidia.tharidia_things.gui.ClaimMenu>> CLAIM_MENU =
@@ -114,9 +124,12 @@ public class TharidiaThings {
     
     // Smithing items
     public static final DeferredItem<Item> HOT_IRON = ITEMS.register("hot_iron", () -> new HotIronItem(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)));
+    public static final DeferredItem<Item> HOT_GOLD = ITEMS.register("hot_gold", () -> new HotGoldItem(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)));
     public static final DeferredItem<Item> PINZA = ITEMS.register("pinza", () -> new PinzaItem(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<Item> LAMA_LUNGA = ITEMS.register("lama_lunga", () -> new LamaLungaItem(new Item.Properties()));
     public static final DeferredItem<Item> LAMA_CORTA = ITEMS.register("lama_corta", () -> new LamaCortaItem(new Item.Properties()));
+    public static final DeferredItem<Item> GOLD_LAMA_LUNGA = ITEMS.register("gold_lama_lunga", () -> new GoldLamaLungaItem(new Item.Properties()));
+    public static final DeferredItem<Item> GOLD_LAMA_CORTA = ITEMS.register("gold_lama_corta", () -> new GoldLamaCortaItem(new Item.Properties()));
 
     // Creates a creative tab with the id "tharidiathings:tharidia_tab" for the mod items, that is placed after the combat tab
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> THARIDIA_TAB = CREATIVE_MODE_TABS.register("tharidia_tab", () -> CreativeModeTab.builder()
@@ -127,9 +140,12 @@ public class TharidiaThings {
                 output.accept(PIETRO_ITEM.get());
                 output.accept(CLAIM_ITEM.get());
                 output.accept(HOT_IRON.get());
+                output.accept(HOT_GOLD.get());
                 output.accept(PINZA.get());
                 output.accept(LAMA_LUNGA.get());
                 output.accept(LAMA_CORTA.get());
+                output.accept(GOLD_LAMA_LUNGA.get());
+                output.accept(GOLD_LAMA_CORTA.get());
             }).build());
 
     // The constructor for the mod class is the first code that is run when your mod is loaded.

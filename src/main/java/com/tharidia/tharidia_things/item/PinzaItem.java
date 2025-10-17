@@ -1,7 +1,7 @@
 package com.tharidia.tharidia_things.item;
 
 import com.tharidia.tharidia_things.TharidiaThings;
-import com.tharidia.tharidia_things.block.entity.HotIronAnvilEntity;
+import com.tharidia.tharidia_things.block.entity.IHotMetalAnvilEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponents;
@@ -35,10 +35,12 @@ public class PinzaItem extends Item {
     private static final int MAX_DURABILITY = 300;
     private static final String TAG_HOLDING = "HoldingItem";
     private static final String TAG_HOLDING_TYPE = "HoldingType";
+    private static final String TAG_MATERIAL = "Material";
     
     public enum HoldingType {
         NONE,
         HOT_IRON,
+        HOT_GOLD,
         COMPONENT
     }
     
@@ -74,9 +76,9 @@ public class PinzaItem extends Item {
             }
         }
         
-        // Check if clicking on top of anvil with hot iron
-        if (holdingType == HoldingType.HOT_IRON && state.is(Blocks.ANVIL) && context.getClickedFace() == Direction.UP) {
-            if (placeHotIronOnAnvil(level, pos, player, stack)) {
+        // Check if clicking on top of anvil with hot iron or hot gold
+        if ((holdingType == HoldingType.HOT_IRON || holdingType == HoldingType.HOT_GOLD) && state.is(Blocks.ANVIL) && context.getClickedFace() == Direction.UP) {
+            if (placeHotMetalOnAnvil(level, pos, player, stack, holdingType)) {
                 return InteractionResult.SUCCESS;
             }
         }
@@ -99,13 +101,14 @@ public class PinzaItem extends Item {
             checkPos = pos.above();
         }
         
-        if (holdingType == HoldingType.NONE && level.getBlockEntity(checkPos) instanceof HotIronAnvilEntity hotIronEntity) {
-            if (hotIronEntity.isFinished()) {
-                if (pickupComponent(level, checkPos, player, stack, hotIronEntity)) {
+        BlockEntity checkEntity = level.getBlockEntity(checkPos);
+        if (holdingType == HoldingType.NONE && checkEntity instanceof IHotMetalAnvilEntity hotMetalEntity) {
+            if (hotMetalEntity.isFinished()) {
+                if (pickupComponent(level, checkPos, player, stack, hotMetalEntity)) {
                     return InteractionResult.SUCCESS;
                 }
             } else {
-                // Hot iron not finished yet
+                // Hot metal not finished yet
                 if (!level.isClientSide) {
                     player.displayClientMessage(
                         Component.translatable("item.tharidiathings.pinza.not_finished"), 
@@ -175,7 +178,7 @@ public class PinzaItem extends Item {
         return false;
     }
     
-    private boolean placeHotIronOnAnvil(Level level, BlockPos pos, Player player, ItemStack pinzaStack) {
+    private boolean placeHotMetalOnAnvil(Level level, BlockPos pos, Player player, ItemStack pinzaStack, HoldingType holdingType) {
         BlockPos above = pos.above();
         
         if (!level.getBlockState(above).isAir()) {
@@ -187,8 +190,12 @@ public class PinzaItem extends Item {
             clearHolding(pinzaStack);
             damagePinza(pinzaStack, player);
             
-            // Place the hot iron marker block entity at the position above the anvil
-            level.setBlock(above, TharidiaThings.HOT_IRON_MARKER.get().defaultBlockState(), 3);
+            // Place the appropriate marker block entity at the position above the anvil
+            if (holdingType == HoldingType.HOT_IRON) {
+                level.setBlock(above, TharidiaThings.HOT_IRON_MARKER.get().defaultBlockState(), 3);
+            } else if (holdingType == HoldingType.HOT_GOLD) {
+                level.setBlock(above, TharidiaThings.HOT_GOLD_MARKER.get().defaultBlockState(), 3);
+            }
             
             level.playSound(null, above, SoundEvents.ANVIL_PLACE, SoundSource.BLOCKS, 1.0F, 1.0F);
             player.displayClientMessage(Component.translatable("item.tharidiathings.pinza.placed_on_anvil"), true);
@@ -197,11 +204,12 @@ public class PinzaItem extends Item {
         return true;
     }
     
-    private boolean pickupComponent(Level level, BlockPos pos, Player player, ItemStack pinzaStack, HotIronAnvilEntity entity) {
+    private boolean pickupComponent(Level level, BlockPos pos, Player player, ItemStack pinzaStack, IHotMetalAnvilEntity entity) {
         String componentType = entity.getSelectedComponent();
+        String materialType = entity.getMaterialType();
         
         if (!level.isClientSide) {
-            setHolding(pinzaStack, HoldingType.COMPONENT, componentType);
+            setHoldingWithMaterial(pinzaStack, HoldingType.COMPONENT, componentType, materialType);
             damagePinza(pinzaStack, player);
             
             // Remove the entity and block
@@ -216,6 +224,7 @@ public class PinzaItem extends Item {
     
     private boolean coolComponent(Level level, BlockPos pos, Player player, ItemStack pinzaStack) {
         String componentId = getHoldingItem(pinzaStack);
+        String materialType = getMaterialType(pinzaStack);
         
         if (!level.isClientSide) {
             // Create particles
@@ -243,8 +252,8 @@ public class PinzaItem extends Item {
             clearHolding(pinzaStack);
             damagePinza(pinzaStack, player);
             
-            // Drop the appropriate component
-            ItemStack componentStack = getComponentStack(componentId);
+            // Drop the appropriate component based on material
+            ItemStack componentStack = getComponentStack(componentId, materialType);
             if (!componentStack.isEmpty()) {
                 ItemEntity itemEntity = new ItemEntity(level, player.getX(), player.getY(), player.getZ(), componentStack);
                 level.addFreshEntity(itemEntity);
@@ -256,10 +265,18 @@ public class PinzaItem extends Item {
         return true;
     }
     
-    private ItemStack getComponentStack(String componentId) {
-        return switch (componentId) {
-            case "lama_lunga" -> new ItemStack(TharidiaThings.LAMA_LUNGA.get());
-            case "lama_corta" -> new ItemStack(TharidiaThings.LAMA_CORTA.get());
+    private ItemStack getComponentStack(String componentId, String materialType) {
+        return switch (materialType) {
+            case "iron" -> switch (componentId) {
+                case "lama_lunga" -> new ItemStack(TharidiaThings.LAMA_LUNGA.get());
+                case "lama_corta" -> new ItemStack(TharidiaThings.LAMA_CORTA.get());
+                default -> ItemStack.EMPTY;
+            };
+            case "gold" -> switch (componentId) {
+                case "lama_lunga" -> new ItemStack(TharidiaThings.GOLD_LAMA_LUNGA.get());
+                case "lama_corta" -> new ItemStack(TharidiaThings.GOLD_LAMA_CORTA.get());
+                default -> ItemStack.EMPTY;
+            };
             default -> ItemStack.EMPTY;
         };
     }
@@ -269,16 +286,23 @@ public class PinzaItem extends Item {
     }
     
     public static void setHolding(ItemStack stack, HoldingType type, String itemId) {
+        setHoldingWithMaterial(stack, type, itemId, "iron"); // Default to iron for backward compatibility
+    }
+    
+    public static void setHoldingWithMaterial(ItemStack stack, HoldingType type, String itemId, String materialType) {
         CustomData customData = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY);
         customData = customData.update(tag -> {
             tag.putString(TAG_HOLDING_TYPE, type.name());
             tag.putString(TAG_HOLDING, itemId);
+            tag.putString(TAG_MATERIAL, materialType);
         });
         stack.set(DataComponents.CUSTOM_DATA, customData);
         
         // Set custom model data for visual representation
         if (type == HoldingType.HOT_IRON) {
             stack.set(DataComponents.CUSTOM_MODEL_DATA, new net.minecraft.world.item.component.CustomModelData(1));
+        } else if (type == HoldingType.HOT_GOLD) {
+            stack.set(DataComponents.CUSTOM_MODEL_DATA, new net.minecraft.world.item.component.CustomModelData(3));
         } else if (type == HoldingType.COMPONENT) {
             stack.set(DataComponents.CUSTOM_MODEL_DATA, new net.minecraft.world.item.component.CustomModelData(2));
         }
@@ -289,6 +313,7 @@ public class PinzaItem extends Item {
         customData = customData.update(tag -> {
             tag.remove(TAG_HOLDING_TYPE);
             tag.remove(TAG_HOLDING);
+            tag.remove(TAG_MATERIAL);
         });
         stack.set(DataComponents.CUSTOM_DATA, customData);
         stack.remove(DataComponents.CUSTOM_MODEL_DATA);
@@ -312,6 +337,14 @@ public class PinzaItem extends Item {
             return "";
         }
         return customData.copyTag().getString(TAG_HOLDING);
+    }
+    
+    public static String getMaterialType(ItemStack stack) {
+        CustomData customData = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY);
+        if (!customData.contains(TAG_MATERIAL)) {
+            return "iron"; // Default to iron
+        }
+        return customData.copyTag().getString(TAG_MATERIAL);
     }
     
     @Override
