@@ -45,14 +45,16 @@ public class SmithingHandler {
         BlockPos checkPos = pos;
         boolean isIronMarker = level.getBlockState(pos).is(TharidiaThings.HOT_IRON_MARKER.get());
         boolean isGoldMarker = level.getBlockState(pos).is(TharidiaThings.HOT_GOLD_MARKER.get());
-        boolean isMarkerBlock = isIronMarker || isGoldMarker;
+        boolean isCopperMarker = level.getBlockState(pos).is(TharidiaThings.HOT_COPPER_MARKER.get());
+        boolean isMarkerBlock = isIronMarker || isGoldMarker || isCopperMarker;
         
         // If clicking anvil, check above for marker block
         if (!isMarkerBlock && level.getBlockState(pos).getBlock() instanceof net.minecraft.world.level.block.AnvilBlock) {
             checkPos = pos.above();
             isIronMarker = level.getBlockState(checkPos).is(TharidiaThings.HOT_IRON_MARKER.get());
             isGoldMarker = level.getBlockState(checkPos).is(TharidiaThings.HOT_GOLD_MARKER.get());
-            isMarkerBlock = isIronMarker || isGoldMarker;
+            isCopperMarker = level.getBlockState(checkPos).is(TharidiaThings.HOT_COPPER_MARKER.get());
+            isMarkerBlock = isIronMarker || isGoldMarker || isCopperMarker;
             TharidiaThings.LOGGER.debug("Clicked anvil, checking above: " + checkPos);
         }
         
@@ -123,6 +125,7 @@ public class SmithingHandler {
             boolean hasHotMetal = false;
             boolean isIron = false;
             boolean isGold = false;
+            boolean isCopper = false;
             for (int i = 0; i < container.getContainerSize(); i++) {
                 ItemStack slotItem = container.getItem(i);
                 if (!slotItem.isEmpty()){
@@ -133,6 +136,10 @@ public class SmithingHandler {
                     } else if (slotItem.is(TharidiaThings.HOT_GOLD.get())) {
                         hasHotMetal = true;
                         isGold = true;
+                        break;
+                    } else if (slotItem.is(TharidiaThings.HOT_COPPER.get())) {
+                        hasHotMetal = true;
+                        isCopper = true;
                         break;
                     }
                 }
@@ -159,6 +166,9 @@ public class SmithingHandler {
                             } else if (isGold) {
                                 TharidiaThings.LOGGER.info("CALLING grabHotGoldWithPinza");
                                 grabHotGoldWithPinza(container, pos, level, event.getEntity(), heldItem);
+                            } else if (isCopper) {
+                                TharidiaThings.LOGGER.info("CALLING grabHotCopperWithPinza");
+                                grabHotCopperWithPinza(container, pos, level, event.getEntity(), heldItem);
                             }
                         }
                         return;
@@ -199,6 +209,19 @@ public class SmithingHandler {
             if (event.getEntity() != null && !event.getEntity().level().isClientSide) {
                 event.getEntity().displayClientMessage(
                     Component.translatable("item.tharidiathings.hot_gold.too_hot"),
+                    true
+                );
+            }
+        }
+        
+        // Prevent hot copper from being obtained through any crafting/smelting
+        if (event.getCrafting().is(TharidiaThings.HOT_COPPER.get())) {
+            // Remove the hot copper from the result
+            event.getCrafting().shrink(event.getCrafting().getCount());
+            
+            if (event.getEntity() != null && !event.getEntity().level().isClientSide) {
+                event.getEntity().displayClientMessage(
+                    Component.translatable("item.tharidiathings.hot_copper.too_hot"),
                     true
                 );
             }
@@ -269,19 +292,52 @@ public class SmithingHandler {
         player.displayClientMessage(Component.translatable("item.tharidiathings.pinza.grabbed_hot_gold"), true);
     }
     
+    private static void grabHotCopperWithPinza(net.minecraft.world.Container container, BlockPos pos, 
+                                               Level level, Player player, ItemStack pinzaStack) {
+        // Find and remove hot copper from container
+        int hotCopperSlot = -1;
+        for (int i = 0; i < container.getContainerSize(); i++) {
+            ItemStack slotStack = container.getItem(i);
+            if (slotStack.is(TharidiaThings.HOT_COPPER.get())) {
+                hotCopperSlot = i;
+                break;
+            }
+        }
+        
+        if (hotCopperSlot == -1) {
+            player.displayClientMessage(Component.translatable("item.tharidiathings.pinza.no_hot_copper"), true);
+            return;
+        }
+        
+        // Remove the hot copper from the table
+        container.setItem(hotCopperSlot, ItemStack.EMPTY);
+        container.setChanged();
+        
+        // Update the Pinza to hold hot copper
+        PinzaItem.setHolding(pinzaStack, PinzaItem.HoldingType.HOT_COPPER, "hot_copper");
+        
+        // Damage the Pinza
+        pinzaStack.hurtAndBreak(1, player, net.minecraft.world.entity.EquipmentSlot.MAINHAND);
+        
+        // Play sound and show message
+        level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 1.0F, 1.0F);
+        player.displayClientMessage(Component.translatable("item.tharidiathings.pinza.grabbed_hot_copper"), true);
+    }
+    
     
     @SubscribeEvent(priority = EventPriority.HIGHEST)  
     public static void onPlayerTick(net.neoforged.neoforge.event.tick.PlayerTickEvent.Pre event) {
         if (!(event.getEntity() instanceof Player player)) return;
         if (player.level().isClientSide) return;
         
-        // Check if player has hot iron or hot gold in inventory while holding Pinza
+        // Check if player has hot iron, hot gold, or hot copper in inventory while holding Pinza
         for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
             ItemStack stack = player.getInventory().getItem(i);
             boolean isHotIron = stack.is(TharidiaThings.HOT_IRON.get());
             boolean isHotGold = stack.is(TharidiaThings.HOT_GOLD.get());
+            boolean isHotCopper = stack.is(TharidiaThings.HOT_COPPER.get());
             
-            if (isHotIron || isHotGold) {
+            if (isHotIron || isHotGold || isHotCopper) {
                 // Check if player is holding Pinza
                 ItemStack mainHand = player.getMainHandItem();
                 ItemStack offHand = player.getOffhandItem();
@@ -300,6 +356,9 @@ public class SmithingHandler {
                         } else if (isHotGold) {
                             PinzaItem.setHolding(mainHand, PinzaItem.HoldingType.HOT_GOLD, "hot_gold");
                             player.displayClientMessage(Component.translatable("item.tharidiathings.pinza.grabbed_hot_gold"), true);
+                        } else if (isHotCopper) {
+                            PinzaItem.setHolding(mainHand, PinzaItem.HoldingType.HOT_COPPER, "hot_copper");
+                            player.displayClientMessage(Component.translatable("item.tharidiathings.pinza.grabbed_hot_copper"), true);
                         }
                         
                         // Damage Pinza
@@ -321,6 +380,9 @@ public class SmithingHandler {
                         } else if (isHotGold) {
                             PinzaItem.setHolding(offHand, PinzaItem.HoldingType.HOT_GOLD, "hot_gold");
                             player.displayClientMessage(Component.translatable("item.tharidiathings.pinza.grabbed_hot_gold"), true);
+                        } else if (isHotCopper) {
+                            PinzaItem.setHolding(offHand, PinzaItem.HoldingType.HOT_COPPER, "hot_copper");
+                            player.displayClientMessage(Component.translatable("item.tharidiathings.pinza.grabbed_hot_copper"), true);
                         }
                         
                         // Damage Pinza
@@ -337,13 +399,14 @@ public class SmithingHandler {
     
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onEntityJoinWorld(EntityJoinLevelEvent event) {
-        // Prevent hot iron and hot gold item entities from spawning in the world
+        // Prevent hot iron, hot gold, and hot copper item entities from spawning in the world
         if (event.getEntity() instanceof ItemEntity itemEntity) {
             ItemStack stack = itemEntity.getItem();
             boolean isHotIron = stack.is(TharidiaThings.HOT_IRON.get());
             boolean isHotGold = stack.is(TharidiaThings.HOT_GOLD.get());
+            boolean isHotCopper = stack.is(TharidiaThings.HOT_COPPER.get());
             
-            if (isHotIron || isHotGold) {
+            if (isHotIron || isHotGold || isHotCopper) {
                 TharidiaThings.LOGGER.warn("HOT METAL ITEM ENTITY SPAWNING! Canceling.");
                 
                 // Try to find nearest player with empty Pinza
@@ -373,6 +436,12 @@ public class SmithingHandler {
                                         Component.translatable("item.tharidiathings.pinza.grabbed_hot_gold"), 
                                         true
                                     );
+                                } else if (isHotCopper) {
+                                    PinzaItem.setHolding(mainHand, PinzaItem.HoldingType.HOT_COPPER, "hot_copper");
+                                    nearestPlayer.displayClientMessage(
+                                        Component.translatable("item.tharidiathings.pinza.grabbed_hot_copper"), 
+                                        true
+                                    );
                                 }
                                 mainHand.hurtAndBreak(1, nearestPlayer, net.minecraft.world.entity.EquipmentSlot.MAINHAND);
                                 event.setCanceled(true);
@@ -397,6 +466,12 @@ public class SmithingHandler {
                                         Component.translatable("item.tharidiathings.pinza.grabbed_hot_gold"), 
                                         true
                                     );
+                                } else if (isHotCopper) {
+                                    PinzaItem.setHolding(offHand, PinzaItem.HoldingType.HOT_COPPER, "hot_copper");
+                                    nearestPlayer.displayClientMessage(
+                                        Component.translatable("item.tharidiathings.pinza.grabbed_hot_copper"), 
+                                        true
+                                    );
                                 }
                                 offHand.hurtAndBreak(1, nearestPlayer, net.minecraft.world.entity.EquipmentSlot.OFFHAND);
                                 event.setCanceled(true);
@@ -412,9 +487,9 @@ public class SmithingHandler {
                     }
                 }
                 
-                // Cancel the spawn to prevent hot iron from being on ground
+                // Cancel the spawn to prevent hot metal from being on ground
                 event.setCanceled(true);
-                TharidiaThings.LOGGER.info("Hot iron item entity spawn canceled.");
+                TharidiaThings.LOGGER.info("Hot metal item entity spawn canceled.");
             }
         }
     }

@@ -41,6 +41,7 @@ public class PinzaItem extends Item {
         NONE,
         HOT_IRON,
         HOT_GOLD,
+        HOT_COPPER,
         COMPONENT
     }
     
@@ -76,8 +77,8 @@ public class PinzaItem extends Item {
             }
         }
         
-        // Check if clicking on top of anvil with hot iron or hot gold
-        if ((holdingType == HoldingType.HOT_IRON || holdingType == HoldingType.HOT_GOLD) && state.is(Blocks.ANVIL) && context.getClickedFace() == Direction.UP) {
+        // Check if clicking on top of anvil with hot iron, hot gold, or hot copper
+        if ((holdingType == HoldingType.HOT_IRON || holdingType == HoldingType.HOT_GOLD || holdingType == HoldingType.HOT_COPPER) && state.is(Blocks.ANVIL) && context.getClickedFace() == Direction.UP) {
             if (placeHotMetalOnAnvil(level, pos, player, stack, holdingType)) {
                 return InteractionResult.SUCCESS;
             }
@@ -195,6 +196,8 @@ public class PinzaItem extends Item {
                 level.setBlock(above, TharidiaThings.HOT_IRON_MARKER.get().defaultBlockState(), 3);
             } else if (holdingType == HoldingType.HOT_GOLD) {
                 level.setBlock(above, TharidiaThings.HOT_GOLD_MARKER.get().defaultBlockState(), 3);
+            } else if (holdingType == HoldingType.HOT_COPPER) {
+                level.setBlock(above, TharidiaThings.HOT_COPPER_MARKER.get().defaultBlockState(), 3);
             }
             
             level.playSound(null, above, SoundEvents.ANVIL_PLACE, SoundSource.BLOCKS, 1.0F, 1.0F);
@@ -277,6 +280,11 @@ public class PinzaItem extends Item {
                 case "lama_corta" -> new ItemStack(TharidiaThings.GOLD_LAMA_CORTA.get());
                 default -> ItemStack.EMPTY;
             };
+            case "copper" -> switch (componentId) {
+                case "lama_lunga" -> new ItemStack(TharidiaThings.COPPER_LAMA_LUNGA.get());
+                case "lama_corta" -> new ItemStack(TharidiaThings.COPPER_LAMA_CORTA.get());
+                default -> ItemStack.EMPTY;
+            };
             default -> ItemStack.EMPTY;
         };
     }
@@ -303,6 +311,8 @@ public class PinzaItem extends Item {
             stack.set(DataComponents.CUSTOM_MODEL_DATA, new net.minecraft.world.item.component.CustomModelData(1));
         } else if (type == HoldingType.HOT_GOLD) {
             stack.set(DataComponents.CUSTOM_MODEL_DATA, new net.minecraft.world.item.component.CustomModelData(3));
+        } else if (type == HoldingType.HOT_COPPER) {
+            stack.set(DataComponents.CUSTOM_MODEL_DATA, new net.minecraft.world.item.component.CustomModelData(4));
         } else if (type == HoldingType.COMPONENT) {
             stack.set(DataComponents.CUSTOM_MODEL_DATA, new net.minecraft.world.item.component.CustomModelData(2));
         }

@@ -47,11 +47,12 @@ public class ComponentSelectionMenu extends AbstractContainerMenu {
     
     @Override
     public boolean stillValid(Player player) {
-        // Check if either hot iron or hot gold marker block is present
+        // Check if either hot iron, hot gold, or hot copper marker block is present
         return access.evaluate((level, blockPos) -> {
             var state = level.getBlockState(blockPos);
             return (state.is(TharidiaThings.HOT_IRON_MARKER.get()) || 
-                    state.is(TharidiaThings.HOT_GOLD_MARKER.get())) &&
+                    state.is(TharidiaThings.HOT_GOLD_MARKER.get()) ||
+                    state.is(TharidiaThings.HOT_COPPER_MARKER.get())) &&
                    player.distanceToSqr(blockPos.getX() + 0.5, blockPos.getY() + 0.5, blockPos.getZ() + 0.5) <= 64.0;
         }, true);
     }

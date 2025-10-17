@@ -21,6 +21,12 @@
         "custom_model_data": 3
       },
       "model": "tharidiathings:item/pinza_hot_gold"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 4
+      },
+      "model": "tharidiathings:item/pinza_hot_copper"
     }
   ]
 }

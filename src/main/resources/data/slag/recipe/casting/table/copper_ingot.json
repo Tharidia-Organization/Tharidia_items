@@ -1,0 +1,12 @@
+{
+  "type": "slag:table_casting",
+  "cast": "slag:cast/ingots",
+  "ingredient": {
+    "amount": 72,
+    "id": "slag:molten_copper"
+  },
+  "result": {
+    "count": 1,
+    "id": "tharidiathings:hot_copper"
+  }
+}
