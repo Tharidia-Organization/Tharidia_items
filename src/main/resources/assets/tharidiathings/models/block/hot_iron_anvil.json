@@ -1,13 +1,13 @@
 {
 	"credit": "Made with Blockbench",
 	"textures": {
-		"0": "minecraft:block/netherite_block",
-		"particle": "minecraft:block/netherite_block"
+		"0": "tharidiathings:block/hot_iron",
+		"particle": "tharidiathings:block/hot_iron"
 	},
 	"elements": [
 		{
-			"from": [5, 16, 6],
-			"to": [11, 18, 10],
+			"from": [5, 0, 6],
+			"to": [11, 2, 10],
 			"faces": {
 				"north": {"uv": [0, 0, 6, 2], "texture": "#0"},
 				"east": {"uv": [0, 0, 4, 2], "texture": "#0"},
@@ -46,7 +46,8 @@
 			"scale": [0.625, 0.625, 0.625]
 		},
 		"fixed": {
-			"scale": [0.5, 0.5, 0.5]
+			"translation": [0, 0, 0],
+			"scale": [1, 1, 1]
 		}
 	}
 }

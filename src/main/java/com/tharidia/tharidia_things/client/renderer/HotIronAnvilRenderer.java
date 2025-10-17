@@ -11,21 +11,19 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.resources.ResourceLocation;
+import net.neoforged.neoforge.client.model.data.ModelData;
 
 /**
  * Renders the hot iron parallelepiped on top of the anvil
  */
 public class HotIronAnvilRenderer implements BlockEntityRenderer<HotIronAnvilEntity> {
     
-    // Don't use ModelResourceLocation for block entity rendering - just use direct item rendering
-    private static final ResourceLocation HOT_IRON_ITEM = ResourceLocation.fromNamespaceAndPath(
-        "tharidiathings", "hot_iron"
-    );
-    
     private final BlockRenderDispatcher blockRenderer;
+    private BakedModel hotIronModel;
     
     public HotIronAnvilRenderer(BlockEntityRendererProvider.Context context) {
         this.blockRenderer = context.getBlockRenderDispatcher();
+        this.hotIronModel = null;
     }
     
     @Override
@@ -42,24 +40,30 @@ public class HotIronAnvilRenderer implements BlockEntityRenderer<HotIronAnvilEnt
     public void render(HotIronAnvilEntity entity, float partialTick, PoseStack poseStack, 
                       MultiBufferSource buffer, int combinedLight, int combinedOverlay) {
         
+        // Load 3D block model once (explicitly, not from item)
+        if (hotIronModel == null) {
+            var modelManager = Minecraft.getInstance().getModelManager();
+            var modelLocation = ModelResourceLocation.standalone(
+                ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/hot_iron_anvil")
+            );
+            hotIronModel = modelManager.getModel(modelLocation);
+        }
+        
         poseStack.pushPose();
         
-        // Position above the anvil (entity is at marker block position)
-        poseStack.translate(0.5, 0, 0.5);
+        // Render the 3D model
+        var vertexConsumer = buffer.getBuffer(RenderType.cutout());
         
-        // Render the hot iron item as a 3D model
-        var itemRenderer = Minecraft.getInstance().getItemRenderer();
-        var hotIronStack = new net.minecraft.world.item.ItemStack(com.tharidia.tharidia_things.TharidiaThings.HOT_IRON.get());
-        
-        itemRenderer.renderStatic(
-            hotIronStack,
-            net.minecraft.world.item.ItemDisplayContext.GROUND,
+        blockRenderer.getModelRenderer().renderModel(
+            poseStack.last(),
+            vertexConsumer,
+            null,
+            hotIronModel,
+            1.0f, 1.0f, 1.0f,
             combinedLight,
             combinedOverlay,
-            poseStack,
-            buffer,
-            entity.getLevel(),
-            0
+            ModelData.EMPTY,
+            null
         );
         
         poseStack.popPose();

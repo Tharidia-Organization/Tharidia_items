@@ -9,12 +9,14 @@ import com.tharidia.tharidia_things.client.renderer.PietroBlockRenderer;
 import com.tharidia.tharidia_things.client.renderer.HotIronAnvilRenderer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
+import net.minecraft.resources.ResourceLocation;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
+import net.neoforged.neoforge.client.event.ModelEvent;
 import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
@@ -50,6 +52,15 @@ public class TharidiaThingsClient {
             BlockEntityRenderers.register(TharidiaThings.PIETRO_BLOCK_ENTITY.get(), context -> new PietroBlockRenderer());
             BlockEntityRenderers.register(TharidiaThings.HOT_IRON_ANVIL_ENTITY.get(), HotIronAnvilRenderer::new);
         });
+    }
+
+    @SubscribeEvent
+    static void onRegisterAdditionalModels(ModelEvent.RegisterAdditional event) {
+        // Register the hot iron 3D model for use in the anvil renderer
+        event.register(net.minecraft.client.resources.model.ModelResourceLocation.standalone(
+            ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/hot_iron_anvil")
+        ));
+        TharidiaThings.LOGGER.info("Registered hot iron 3D model for anvil renderer");
     }
 
     @SubscribeEvent
