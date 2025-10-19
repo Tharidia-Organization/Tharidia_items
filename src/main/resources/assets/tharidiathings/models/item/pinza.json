@@ -321,6 +321,24 @@
 				"custom_model_data": 4
 			},
 			"model": "tharidiathings:item/pinza_hot_copper"
+		},
+		{
+			"predicate": {
+				"custom_model_data": 5
+			},
+			"model": "tharidiathings:item/pinza_component_lama_lunga"
+		},
+		{
+			"predicate": {
+				"custom_model_data": 6
+			},
+			"model": "tharidiathings:item/pinza_component_lama_corta"
+		},
+		{
+			"predicate": {
+				"custom_model_data": 7
+			},
+			"model": "tharidiathings:item/pinza_component_elsa"
 		}
 	]
 }

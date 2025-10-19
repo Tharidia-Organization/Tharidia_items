@@ -21,11 +21,12 @@ public class ComponentSelectionScreen extends AbstractContainerScreen<ComponentS
     private int ticksOpen = 0;
     private Button lamaLungaButton;
     private Button lamaCortaButton;
+    private Button elsaButton;
     
     public ComponentSelectionScreen(ComponentSelectionMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
         this.imageWidth = 176;
-        this.imageHeight = 140;
+        this.imageHeight = 170; // Increased height for 3 buttons
     }
     
     @Override
@@ -38,6 +39,8 @@ public class ComponentSelectionScreen extends AbstractContainerScreen<ComponentS
         int buttonWidth = 136;
         int buttonHeight = 24;
         int spacing = 30;
+        
+        boolean isGoldAnvil = menu.isGoldAnvil();
         
         // Button for Lama Lunga
         lamaLungaButton = Button.builder(
@@ -54,6 +57,16 @@ public class ComponentSelectionScreen extends AbstractContainerScreen<ComponentS
         ).bounds(buttonX, buttonY + spacing, buttonWidth, buttonHeight).build();
         lamaCortaButton.active = false; // Disabled initially
         this.addRenderableWidget(lamaCortaButton);
+        
+        // Button for Elsa (not available for gold)
+        if (!isGoldAnvil) {
+            elsaButton = Button.builder(
+                Component.translatable("gui.tharidiathings.component.elsa"),
+                button -> selectComponent("elsa")
+            ).bounds(buttonX, buttonY + spacing * 2, buttonWidth, buttonHeight).build();
+            elsaButton.active = false; // Disabled initially
+            this.addRenderableWidget(elsaButton);
+        }
     }
     
     @Override
@@ -65,6 +78,8 @@ public class ComponentSelectionScreen extends AbstractContainerScreen<ComponentS
         if (ticksOpen >= INTERACTION_DELAY_TICKS) {
             if (lamaLungaButton != null) lamaLungaButton.active = true;
             if (lamaCortaButton != null) lamaCortaButton.active = true;
+            // elsaButton can be null if this is a gold anvil
+            if (elsaButton != null) elsaButton.active = true;
         }
     }
     

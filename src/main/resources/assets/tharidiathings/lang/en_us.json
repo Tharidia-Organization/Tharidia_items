@@ -55,6 +55,14 @@
   "gui.tharidiathings.component_selection": "Select Component",
   "gui.tharidiathings.component.lama_lunga": "Lama Lunga (Long Blade)",
   "gui.tharidiathings.component.lama_corta": "Lama Corta (Short Blade)",
+  "gui.tharidiathings.component.elsa": "Elsa (Hilt)",
   
-  "gui.tharidiathings.name_selection": "Choose Your Name"
+  "gui.tharidiathings.name_selection": "Choose Your Name",
+  
+  "message.tharidiathings.must_rest": "You must rest to recover your energy!",
+  "message.tharidiathings.resting_for_fatigue": "Resting to recover energy...",
+  "message.tharidiathings.fully_rested": "Fully rested! Energy restored.",
+  "message.tharidiathings.cant_sleep_day_use_proximity": "Too tired to sleep now. Rest near a bed to recover energy.",
+  "message.tharidiathings.stay_near_bed": "Stay near the bed to rest (%s seconds remaining)",
+  "message.tharidiathings.rest_interrupted": "Rest interrupted! You moved too far from the bed."
 }

@@ -1,0 +1,55 @@
+{
+  "_comment": "Fatigue System Configuration",
+  "_comment2": "Copy this datapack to your world's datapacks folder to customize fatigue settings",
+  "_comment3": "All time values are converted automatically (minutes/seconds to ticks)",
+
+  "_section_fatigue_settings": "=== FATIGUE SYSTEM SETTINGS ===",
+  "max_fatigue_minutes": 40,
+  "_max_fatigue_comment": "Maximum fatigue duration in minutes (default: 40 minutes)",
+
+  "bed_rest_time_seconds": 20,
+  "_bed_rest_time_comment": "Time required to rest in bed for full recovery in seconds (default: 60 seconds = 1 minute)",
+
+  "bed_proximity_range": 20.0,
+  "_bed_proximity_range_comment": "Distance in blocks from a bed to get passive recovery (default: 20 blocks)",
+
+  "proximity_recovery_interval_seconds": 10,
+  "_proximity_recovery_interval_comment": "How often proximity recovery happens in seconds (default: 10 seconds)",
+
+  "proximity_recovery_amount_seconds": 60,
+  "_proximity_recovery_amount_comment": "Amount of fatigue recovered per interval in seconds of fatigue (default: 60 seconds = 1 minute of fatigue)",
+
+  "_section_performance": "=== PERFORMANCE SETTINGS ===",
+  "movement_check_interval": 5,
+  "_movement_check_interval_comment": "How often to check player movement in ticks (default: 5 ticks). Lower = more accurate but higher server load",
+
+  "bed_check_interval": 20,
+  "_bed_check_interval_comment": "How often to check bed proximity in ticks (default: 20 ticks = 1 second). Lower = more responsive but higher server load",
+
+  "player_batch_size": 5,
+  "_player_batch_size_comment": "Process 1/Nth of players per tick to distribute load (default: 5 = process 20% of players per tick). Lower = less responsive but distributes load better on large servers",
+
+  "_section_warnings": "=== WARNING SETTINGS ===",
+  "warning_threshold_5_minutes": 5,
+  "_warning_threshold_5_comment": "First warning threshold in minutes (default: 5 minutes remaining)",
+
+  "warning_threshold_1_minute": 1,
+  "_warning_threshold_1_comment": "Final warning threshold in minutes (default: 1 minute remaining)",
+
+  "_section_exhaustion": "=== EXHAUSTION EFFECTS ===",
+  "exhaustion_slowness_level": 3,
+  "_exhaustion_slowness_comment": "Slowness effect level when exhausted (default: 3 = -60% speed). 0=no slowness, 1=-15%, 2=-30%, 3=-60%, 4=-75%",
+
+  "exhaustion_effect_duration": 40,
+  "_exhaustion_effect_duration_comment": "Duration of exhaustion effects in ticks (default: 40 ticks = 2 seconds). Effects are reapplied every 20 ticks",
+
+  "apply_nausea_effect": true,
+  "_apply_nausea_comment": "Whether to apply nausea/confusion effect when exhausted (default: true)",
+
+  "_section_day_night": "=== DAY/NIGHT CYCLE SETTINGS ===",
+  "day_cycle_length": 518400,
+  "_day_cycle_length_comment": "Full day/night cycle length in ticks (vanilla = 24000, for 48000 tick days use 48000)",
+
+  "day_end_time": 269004,
+  "_day_end_time_comment": "When day ends and night starts in ticks (vanilla = 12541). For 48000 tick cycle, use 25082 (double of vanilla)"
+}

@@ -3,6 +3,7 @@ package com.tharidia.tharidia_things.command;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
+import com.tharidia.tharidia_things.config.FatigueConfig;
 import com.tharidia.tharidia_things.fatigue.FatigueAttachments;
 import com.tharidia.tharidia_things.fatigue.FatigueData;
 import net.minecraft.commands.CommandSourceStack;
@@ -19,22 +20,26 @@ import java.util.Collection;
 public class FatigueCommands {
     
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
-        dispatcher.register(Commands.literal("fatigue")
+        dispatcher.register(Commands.literal("tharidia")
             .requires(source -> source.hasPermission(2)) // OP level 2
-            .then(Commands.literal("check")
-                .then(Commands.argument("player", EntityArgument.player())
-                    .executes(FatigueCommands::checkFatigue)))
-            .then(Commands.literal("checkall")
-                .executes(FatigueCommands::checkAllFatigue))
-            .then(Commands.literal("set")
-                .then(Commands.argument("player", EntityArgument.player())
-                    .then(Commands.argument("minutes", IntegerArgumentType.integer(0, 40))
-                        .executes(FatigueCommands::setFatigue))))
-            .then(Commands.literal("reset")
-                .then(Commands.argument("player", EntityArgument.player())
-                    .executes(FatigueCommands::resetFatigue)))
-            .then(Commands.literal("resetall")
-                .executes(FatigueCommands::resetAllFatigue))
+            .then(Commands.literal("fatigue")
+                .then(Commands.literal("check")
+                    .then(Commands.argument("player", EntityArgument.player())
+                        .executes(FatigueCommands::checkFatigue)))
+                .then(Commands.literal("checkall")
+                    .executes(FatigueCommands::checkAllFatigue))
+                .then(Commands.literal("config")
+                    .executes(FatigueCommands::checkConfig))
+                .then(Commands.literal("set")
+                    .then(Commands.argument("player", EntityArgument.player())
+                        .then(Commands.argument("minutes", IntegerArgumentType.integer(0, 40))
+                            .executes(FatigueCommands::setFatigue))))
+                .then(Commands.literal("reset")
+                    .then(Commands.argument("player", EntityArgument.player())
+                        .executes(FatigueCommands::resetFatigue)))
+                .then(Commands.literal("resetall")
+                    .executes(FatigueCommands::resetAllFatigue))
+            )
         );
     }
     
@@ -47,7 +52,7 @@ public class FatigueCommands {
             FatigueData data = target.getData(FatigueAttachments.FATIGUE_DATA);
             
             int currentTicks = data.getFatigueTicks();
-            int maxTicks = FatigueData.MAX_FATIGUE_TICKS;
+            int maxTicks = FatigueConfig.getMaxFatigueTicks();
             float percentage = data.getFatiguePercentage();
             
             // Convert to readable time
@@ -237,5 +242,25 @@ public class FatigueCommands {
         bar.append("§7]");
         
         return bar.toString();
+    }
+    
+    /**
+     * Shows current fatigue config values
+     */
+    private static int checkConfig(CommandContext<CommandSourceStack> context) {
+        CommandSourceStack source = context.getSource();
+        
+        source.sendSuccess(() -> Component.literal("§6=== Fatigue Configuration ==="), false);
+        source.sendSuccess(() -> Component.literal("§eMax Fatigue: §f" + (FatigueConfig.getMaxFatigueTicks() / 20 / 60) + " minutes (" + FatigueConfig.getMaxFatigueTicks() + " ticks)"), false);
+        source.sendSuccess(() -> Component.literal("§eBed Rest Time: §f" + (FatigueConfig.getBedRestTime() / 20) + " seconds (" + FatigueConfig.getBedRestTime() + " ticks)"), false);
+        source.sendSuccess(() -> Component.literal("§eBed Proximity Range: §f" + FatigueConfig.getBedProximityRange() + " blocks"), false);
+        source.sendSuccess(() -> Component.literal("§eProximity Recovery Interval: §f" + (FatigueConfig.getProximityRecoveryInterval() / 20) + " seconds"), false);
+        source.sendSuccess(() -> Component.literal("§eProximity Recovery Amount: §f" + (FatigueConfig.getProximityRecoveryAmount() / 20) + " seconds of fatigue"), false);
+        source.sendSuccess(() -> Component.literal("§eMovement Check Interval: §f" + FatigueConfig.getMovementCheckInterval() + " ticks"), false);
+        source.sendSuccess(() -> Component.literal("§eBed Check Interval: §f" + FatigueConfig.getBedCheckInterval() + " ticks"), false);
+        source.sendSuccess(() -> Component.literal("§eDay Cycle Length: §f" + FatigueConfig.getDayCycleLength() + " ticks"), false);
+        source.sendSuccess(() -> Component.literal("§eDay End Time: §f" + FatigueConfig.getDayEndTime() + " ticks"), false);
+        
+        return 1;
     }
 }

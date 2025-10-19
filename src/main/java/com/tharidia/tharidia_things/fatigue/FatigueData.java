@@ -1,5 +1,7 @@
 package com.tharidia.tharidia_things.fatigue;
 
+import com.tharidia.tharidia_things.config.FatigueConfig;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.neoforged.neoforge.common.util.INBTSerializable;
@@ -8,12 +10,6 @@ import net.neoforged.neoforge.common.util.INBTSerializable;
  * Stores fatigue data for a player
  */
 public class FatigueData implements INBTSerializable<CompoundTag> {
-    // Constants
-    public static final int MAX_FATIGUE_TICKS = 40 * 60 * 20; // 40 minutes in ticks (20 ticks per second)
-    public static final int BED_REST_TIME = 60 * 20; // 1 minute in ticks
-    public static final int PROXIMITY_RECOVERY_INTERVAL = 10 * 20; // 10 seconds in ticks
-    public static final int PROXIMITY_RECOVERY_AMOUNT = 60 * 20; // 1 second of fatigue
-    public static final double BED_PROXIMITY_RANGE = 20.0; // 20 blocks
     
     private int fatigueTicks; // Current fatigue level (starts at MAX_FATIGUE_TICKS)
     private int bedRestTicks; // Ticks spent resting in bed
@@ -29,8 +25,11 @@ public class FatigueData implements INBTSerializable<CompoundTag> {
     private transient double cachedCheckPosX = Double.MAX_VALUE;
     private transient double cachedCheckPosZ = Double.MAX_VALUE;
     
+    // Last bed position for forcing player back to bed
+    private BlockPos lastBedPosition = null;
+    
     public FatigueData() {
-        this.fatigueTicks = MAX_FATIGUE_TICKS;
+        this.fatigueTicks = FatigueConfig.getMaxFatigueTicks();
         this.bedRestTicks = 0;
         this.proximityTicks = 0;
         this.lastPosX = 0;
@@ -51,7 +50,7 @@ public class FatigueData implements INBTSerializable<CompoundTag> {
      * Sets the fatigue level
      */
     public void setFatigueTicks(int ticks) {
-        this.fatigueTicks = Math.max(0, Math.min(MAX_FATIGUE_TICKS, ticks));
+        this.fatigueTicks = Math.max(0, Math.min(FatigueConfig.getMaxFatigueTicks(), ticks));
     }
     
     /**
@@ -114,7 +113,7 @@ public class FatigueData implements INBTSerializable<CompoundTag> {
      * Increases fatigue (recovery)
      */
     public void increaseFatigue(int amount) {
-        fatigueTicks = Math.min(MAX_FATIGUE_TICKS, fatigueTicks + amount);
+        fatigueTicks = Math.min(FatigueConfig.getMaxFatigueTicks(), fatigueTicks + amount);
     }
     
     /**
@@ -128,7 +127,7 @@ public class FatigueData implements INBTSerializable<CompoundTag> {
      * Gets the fatigue percentage (0.0 to 1.0)
      */
     public float getFatiguePercentage() {
-        return (float) fatigueTicks / MAX_FATIGUE_TICKS;
+        return (float) fatigueTicks / FatigueConfig.getMaxFatigueTicks();
     }
     
     /**
@@ -156,7 +155,7 @@ public class FatigueData implements INBTSerializable<CompoundTag> {
      * Checks if the player has rested enough in bed
      */
     public boolean hasRestedEnough() {
-        return bedRestTicks >= BED_REST_TIME;
+        return bedRestTicks >= FatigueConfig.getBedRestTime();
     }
     
     /**
@@ -227,13 +226,28 @@ public class FatigueData implements INBTSerializable<CompoundTag> {
     }
     
     /**
+     * Gets the last bed position
+     */
+    public BlockPos getLastBedPosition() {
+        return lastBedPosition;
+    }
+    
+    /**
+     * Sets the last bed position
+     */
+    public void setLastBedPosition(BlockPos pos) {
+        this.lastBedPosition = pos;
+    }
+    
+    /**
      * Fully restores fatigue
      */
     public void fullyRestore() {
-        fatigueTicks = MAX_FATIGUE_TICKS;
+        fatigueTicks = FatigueConfig.getMaxFatigueTicks();
         bedRestTicks = 0;
         proximityTicks = 0;
         cachedNearBed = null; // Invalidate cache
+        lastBedPosition = null; // Clear bed position
     }
     
     @Override
@@ -247,6 +261,14 @@ public class FatigueData implements INBTSerializable<CompoundTag> {
         tag.putDouble("LastPosZ", lastPosZ);
         tag.putLong("LastMovementTime", lastMovementTime);
         tag.putBoolean("WasMoving", wasMoving);
+        
+        // Save last bed position if present
+        if (lastBedPosition != null) {
+            tag.putInt("BedPosX", lastBedPosition.getX());
+            tag.putInt("BedPosY", lastBedPosition.getY());
+            tag.putInt("BedPosZ", lastBedPosition.getZ());
+        }
+        
         return tag;
     }
     
@@ -260,5 +282,16 @@ public class FatigueData implements INBTSerializable<CompoundTag> {
         lastPosZ = tag.getDouble("LastPosZ");
         lastMovementTime = tag.contains("LastMovementTime") ? tag.getLong("LastMovementTime") : System.currentTimeMillis();
         wasMoving = tag.contains("WasMoving") ? tag.getBoolean("WasMoving") : false;
+        
+        // Load last bed position if present
+        if (tag.contains("BedPosX") && tag.contains("BedPosY") && tag.contains("BedPosZ")) {
+            lastBedPosition = new BlockPos(
+                tag.getInt("BedPosX"),
+                tag.getInt("BedPosY"),
+                tag.getInt("BedPosZ")
+            );
+        } else {
+            lastBedPosition = null;
+        }
     }
 }

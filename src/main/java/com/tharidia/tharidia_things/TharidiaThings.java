@@ -18,10 +18,12 @@ import com.tharidia.tharidia_things.item.HotCopperItem;
 import com.tharidia.tharidia_things.item.PinzaItem;
 import com.tharidia.tharidia_things.item.LamaLungaItem;
 import com.tharidia.tharidia_things.item.LamaCortaItem;
+import com.tharidia.tharidia_things.item.ElsaItem;
 import com.tharidia.tharidia_things.item.GoldLamaLungaItem;
 import com.tharidia.tharidia_things.item.GoldLamaCortaItem;
 import com.tharidia.tharidia_things.item.CopperLamaLungaItem;
 import com.tharidia.tharidia_things.item.CopperLamaCortaItem;
+import com.tharidia.tharidia_things.item.CopperElsaItem;
 import com.tharidia.tharidia_things.client.ClientPacketHandler;
 import com.tharidia.tharidia_things.command.ClaimCommands;
 import com.tharidia.tharidia_things.command.FatigueCommands;
@@ -147,10 +149,12 @@ public class TharidiaThings {
     public static final DeferredItem<Item> PINZA = ITEMS.register("pinza", () -> new PinzaItem(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<Item> LAMA_LUNGA = ITEMS.register("lama_lunga", () -> new LamaLungaItem(new Item.Properties()));
     public static final DeferredItem<Item> LAMA_CORTA = ITEMS.register("lama_corta", () -> new LamaCortaItem(new Item.Properties()));
+    public static final DeferredItem<Item> ELSA = ITEMS.register("elsa", () -> new ElsaItem(new Item.Properties()));
     public static final DeferredItem<Item> GOLD_LAMA_LUNGA = ITEMS.register("gold_lama_lunga", () -> new GoldLamaLungaItem(new Item.Properties()));
     public static final DeferredItem<Item> GOLD_LAMA_CORTA = ITEMS.register("gold_lama_corta", () -> new GoldLamaCortaItem(new Item.Properties()));
     public static final DeferredItem<Item> COPPER_LAMA_LUNGA = ITEMS.register("copper_lama_lunga", () -> new CopperLamaLungaItem(new Item.Properties()));
     public static final DeferredItem<Item> COPPER_LAMA_CORTA = ITEMS.register("copper_lama_corta", () -> new CopperLamaCortaItem(new Item.Properties()));
+    public static final DeferredItem<Item> COPPER_ELSA = ITEMS.register("copper_elsa", () -> new CopperElsaItem(new Item.Properties()));
 
     // Creates a creative tab with the id "tharidiathings:tharidia_tab" for the mod items, that is placed after the combat tab
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> THARIDIA_TAB = CREATIVE_MODE_TABS.register("tharidia_tab", () -> CreativeModeTab.builder()
@@ -166,10 +170,12 @@ public class TharidiaThings {
                 output.accept(PINZA.get());
                 output.accept(LAMA_LUNGA.get());
                 output.accept(LAMA_CORTA.get());
+                output.accept(ELSA.get());
                 output.accept(GOLD_LAMA_LUNGA.get());
                 output.accept(GOLD_LAMA_CORTA.get());
                 output.accept(COPPER_LAMA_LUNGA.get());
                 output.accept(COPPER_LAMA_CORTA.get());
+                output.accept(COPPER_ELSA.get());
             }).build());
 
     // The constructor for the mod class is the first code that is run when your mod is loaded.
@@ -215,6 +221,12 @@ public class TharidiaThings {
         NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.NameSelectionHandler.class);
         // Register the fatigue handler
         NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.FatigueHandler.class);
+        
+        // Log version for debugging
+        LOGGER.info("=================================================");
+        LOGGER.info("TharidiaThings v1.0.8 - NEW REST SYSTEM LOADED");
+        LOGGER.info("Features: Rest Near Bed, No Force-Back, Time Skip Block");
+        LOGGER.info("=================================================");
         
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
@@ -393,6 +405,8 @@ public class TharidiaThings {
         LOGGER.info("Weight data loader registered");
         event.addListener(new com.tharidia.tharidia_things.config.CropProtectionConfig());
         LOGGER.info("Crop protection config loader registered");
+        event.addListener(new com.tharidia.tharidia_things.config.FatigueConfig());
+        LOGGER.info("Fatigue config loader registered");
     }
 
     @SubscribeEvent

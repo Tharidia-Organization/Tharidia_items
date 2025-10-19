@@ -1,0 +1,68 @@
+{
+  "itemGroup.tharidiathings": "Tharidia Cose",
+  "block.tharidiathings.pietro": "Reame",
+  "block.tharidiathings.claim": "Rivendicazione",
+
+  "container.tharidiathings.claim": "Rivendicazione",
+  "container.tharidiathings.pietro": "Le cose di Tharidia",
+
+  "key.categories.tharidiathings": "Tharidia Things",
+  "key.tharidiathings.toggle_claim_boundaries": "Attiva/Disattiva Confini Rivendicazione",
+
+  "tharidiathings.configuration.title": "Configurazioni Tharidia Things",
+  "tharidiathings.configuration.section.tharidiathings.common.toml": "Configurazioni Tharidia Things",
+  "tharidiathings.configuration.section.tharidiathings.common.toml.title": "Configurazioni Tharidia Things",
+  "tharidiathings.configuration.items": "Lista Oggetti",
+  "tharidiathings.configuration.logDirtBlock": "Registra Blocco Terra",
+  "tharidiathings.configuration.magicNumberIntroduction": "Testo Numero Magico",
+  "tharidiathings.configuration.magicNumber": "Numero Magico",
+
+  "item.tharidiathings.hot_iron": "Ferro Caldo",
+  "item.tharidiathings.hot_gold": "Oro Caldo",
+  "item.tharidiathings.hot_copper": "Rame Caldo",
+  "item.tharidiathings.pinza": "Pinza",
+  "item.tharidiathings.lama_lunga": "Lama Lunga (Ferro)",
+  "item.tharidiathings.lama_corta": "Lama Corta (Ferro)",
+  "item.tharidiathings.gold_lama_lunga": "Lama Lunga (Oro)",
+  "item.tharidiathings.gold_lama_corta": "Lama Corta (Oro)",
+  "item.tharidiathings.copper_lama_lunga": "Lama Lunga (Rame)",
+  "item.tharidiathings.copper_lama_corta": "Lama Corta (Rame)",
+
+  "item.tharidiathings.pinza.holding.hot_iron": "Tenendo: Ferro Caldo",
+  "item.tharidiathings.pinza.holding.hot_gold": "Tenendo: Oro Caldo",
+  "item.tharidiathings.pinza.holding.hot_copper": "Tenendo: Rame Caldo",
+  "item.tharidiathings.pinza.holding.lama_lunga": "Tenendo: Lama Lunga",
+  "item.tharidiathings.pinza.holding.lama_corta": "Tenendo: Lama Corta",
+
+  "item.tharidiathings.pinza.grabbed_hot_iron": "Afferrato ferro caldo dallo stampo",
+  "item.tharidiathings.pinza.grabbed_hot_gold": "Afferrato oro caldo dallo stampo",
+  "item.tharidiathings.pinza.grabbed_hot_copper": "Afferrato rame caldo dallo stampo",
+  "item.tharidiathings.pinza.placed_on_anvil": "Posizionato metallo caldo sull'incudine",
+  "item.tharidiathings.pinza.picked_component": "Raccolto componente",
+  "item.tharidiathings.pinza.cooled": "Componente raffreddato in acqua",
+  "item.tharidiathings.pinza.no_hot_iron": "Nessun ferro caldo in questo tavolo",
+  "item.tharidiathings.pinza.no_hot_gold": "Nessun oro caldo in questo tavolo",
+  "item.tharidiathings.pinza.no_hot_copper": "Nessun rame caldo in questo tavolo",
+  "item.tharidiathings.pinza.not_finished": "Il metallo caldo non è ancora finito! Continua a martellare.",
+  "item.tharidiathings.hot_iron.need_pinza": "Hai bisogno delle pinze per maneggiare il metallo caldo!",
+  "item.tharidiathings.hot_iron.too_hot": "Troppo caldo da maneggiare! Usa la Pinza facendo click destro sul tavolo.",
+  "item.tharidiathings.hot_iron.burned_hands": "OUCH! Il ferro caldo ti ha bruciato le mani!",
+  "item.tharidiathings.hot_gold.too_hot": "Troppo caldo da maneggiare! Usa la Pinza facendo click destro sul tavolo.",
+  "item.tharidiathings.hot_gold.burned_hands": "OUCH! L'oro caldo ti ha bruciato le mani!",
+  "item.tharidiathings.hot_copper.too_hot": "Troppo caldo da maneggiare! Usa la Pinza facendo click destro sul tavolo.",
+  "item.tharidiathings.hot_copper.burned_hands": "OUCH! Il rame caldo ti ha bruciato le mani!",
+
+  "gui.tharidiathings.component_selection": "Seleziona Componente",
+  "gui.tharidiathings.component.lama_lunga": "Lama Lunga",
+  "gui.tharidiathings.component.lama_corta": "Lama Corta",
+  "gui.tharidiathings.component.elsa": "Elsa",
+  
+  "gui.tharidiathings.name_selection": "Scegli il Tuo Nome",
+  
+  "message.tharidiathings.must_rest": "Devi riposare per recuperare le energie!",
+  "message.tharidiathings.resting_for_fatigue": "Riposo per recuperare energie...",
+  "message.tharidiathings.fully_rested": "Completamente riposato! Energie ripristinate.",
+  "message.tharidiathings.cant_sleep_day_use_proximity": "Troppo stanco per dormire ora. Riposa vicino a un letto per recuperare energie.",
+  "message.tharidiathings.stay_near_bed": "Rimani vicino al letto per riposare (%s secondi rimanenti)",
+  "message.tharidiathings.rest_interrupted": "Riposo interrotto! Ti sei allontanato troppo dal letto."
+}

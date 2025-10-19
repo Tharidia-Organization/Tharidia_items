@@ -1,13 +1,19 @@
 package com.tharidia.tharidia_things.event;
 
 import com.tharidia.tharidia_things.TharidiaThings;
+import com.tharidia.tharidia_things.config.FatigueConfig;
 import com.tharidia.tharidia_things.fatigue.FatigueAttachments;
 import com.tharidia.tharidia_things.fatigue.FatigueData;
 import com.tharidia.tharidia_things.network.FatigueSyncPacket;
 import com.tharidia.tharidia_things.network.FatigueWarningPacket;
+import com.mojang.datafixers.util.Either;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -15,9 +21,14 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BedPart;
+import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerWakeUpEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -37,22 +48,12 @@ public class FatigueHandler {
     private static final ResourceLocation FATIGUE_SPEED_MODIFIER_ID = 
         ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, "fatigue_speed_penalty");
     
-    // Performance optimization: Check movement every 5 ticks instead of every tick
-    private static final int MOVEMENT_CHECK_INTERVAL = 5;
-    // Performance optimization: Check bed proximity every second instead of every tick
-    private static final int BED_CHECK_INTERVAL = 20;
-    
-    // LARGE SERVER OPTIMIZATION: Stagger player processing to distribute load
-    // Process only 1/5th of players per tick (each player processed every 5 ticks)
-    private static final int PLAYER_BATCH_SIZE = 5;
-    
-    // Warning thresholds in minutes
-    private static final int WARNING_THRESHOLD_5_MIN = 5 * 60 * 20; // 5 minutes in ticks
-    private static final int WARNING_THRESHOLD_1_MIN = 1 * 60 * 20; // 1 minute in ticks
-    
     // Track which players have been warned to avoid spam
     private static final Map<UUID, Boolean> warningsSent5Min = new HashMap<>();
     private static final Map<UUID, Boolean> warningsSent1Min = new HashMap<>();
+    
+    // Track players who are resting (to prevent time skip)
+    private static final Map<UUID, Boolean> playersResting = new HashMap<>();
     
     /**
      * Main tick handler for fatigue system
@@ -70,34 +71,90 @@ public class FatigueHandler {
             return;
         }
         
-        // LARGE SERVER OPTIMIZATION: Process players in staggered batches
-        // Each player is processed every PLAYER_BATCH_SIZE ticks based on their UUID
-        // This distributes the load evenly: 150 players / 5 = 30 players per tick
-        int playerBatch = Math.abs(player.getUUID().hashCode() % PLAYER_BATCH_SIZE);
-        if (player.tickCount % PLAYER_BATCH_SIZE != playerBatch) {
-            return; // Not this player's turn this tick
-        }
-        
         FatigueData data = player.getData(FatigueAttachments.FATIGUE_DATA);
         
-        // Check if player is sleeping in bed (every tick for accurate rest tracking)
+        // CRITICAL: Check if player is sleeping BEFORE batching
+        // Bed rest must be tracked every single tick for accurate rest time
         if (player.isSleeping()) {
             handleBedRest(player, data);
             return;
-        } else {
-            // Reset bed rest ticks if not sleeping (only check occasionally)
-            if (player.tickCount % 20 == 0 && data.getBedRestTicks() > 0) {
+        }
+        
+        // LARGE SERVER OPTIMIZATION: Process non-sleeping players in staggered batches
+        // Each player is processed every PLAYER_BATCH_SIZE ticks based on their UUID
+        // This distributes the load evenly: 150 players / 5 = 30 players per tick
+        // EXCEPTION: Players who are resting (but not sleeping) need to be processed every tick
+        boolean isResting = playersResting.getOrDefault(player.getUUID(), false);
+        
+        if (!isResting) {
+            int playerBatchSize = FatigueConfig.getPlayerBatchSize();
+            int playerBatch = Math.abs(player.getUUID().hashCode() % playerBatchSize);
+            if (player.tickCount % playerBatchSize != playerBatch) {
+                return; // Not this player's turn this tick
+            }
+        }
+        
+        // Process player (either resting or their batched turn)
+        {
+            // Check if player was resting but is no longer sleeping
+            if (playersResting.getOrDefault(player.getUUID(), false) && !data.hasRestedEnough()) {
+                // Player woke up but hasn't rested enough
+                BlockPos bedPos = data.getLastBedPosition();
+                
+                if (bedPos != null) {
+                    double distanceToBed = player.distanceToSqr(bedPos.getX() + 0.5, bedPos.getY(), bedPos.getZ() + 0.5);
+                    double maxDistance = 3.0; // Must stay within 3 blocks of bed
+                    
+                    if (distanceToBed <= maxDistance * maxDistance) {
+                        // Player is still near the bed - continue rest tracking
+                        // Treat as "resting in bed area" - same speed as sleeping
+                        data.incrementBedRestTicks();
+                        
+                        // Check if player has now rested enough
+                        if (data.hasRestedEnough()) {
+                            LOGGER.info("{} finished resting while near bed!", player.getName().getString());
+                            data.fullyRestore();
+                            playersResting.remove(player.getUUID());
+                            data.setLastBedPosition(null);
+                            
+                            if (player instanceof ServerPlayer serverPlayer) {
+                                PacketDistributor.sendToPlayer(serverPlayer, new FatigueSyncPacket(data.getFatigueTicks()));
+                                serverPlayer.displayClientMessage(
+                                    Component.translatable("message.tharidiathings.fully_rested"),
+                                    true
+                                );
+                            }
+                        }
+                        // No messages to avoid spam - player can check their fatigue bar
+                    } else {
+                        // Player moved away from bed - stop rest
+                        LOGGER.warn("{} moved too far from bed! Resetting rest progress", 
+                            player.getName().getString());
+                        playersResting.remove(player.getUUID());
+                        data.resetBedRestTicks();
+                        data.setLastBedPosition(null);
+                    }
+                } else {
+                    // No bed position - can't track rest
+                    playersResting.remove(player.getUUID());
+                    data.resetBedRestTicks();
+                }
+            }
+            
+            // Reset bed rest ticks if not sleeping and not marked as resting
+            if (!playersResting.getOrDefault(player.getUUID(), false) && 
+                player.tickCount % 20 == 0 && data.getBedRestTicks() > 0) {
                 data.resetBedRestTicks();
             }
         }
         
-        // Check for movement and decrease fatigue (every 5 ticks to reduce overhead)
-        if (player.tickCount % MOVEMENT_CHECK_INTERVAL == 0) {
+        // Check for movement and decrease fatigue (configurable interval to reduce overhead)
+        if (player.tickCount % FatigueConfig.getMovementCheckInterval() == 0) {
             handleMovement(player, data);
         }
         
-        // Check for bed proximity recovery (every second to avoid expensive block scanning)
-        if (player.tickCount % BED_CHECK_INTERVAL == 0) {
+        // Check for bed proximity recovery (configurable interval to avoid expensive block scanning)
+        if (player.tickCount % FatigueConfig.getBedCheckInterval() == 0) {
             handleBedProximity(player, data);
         }
         
@@ -120,16 +177,49 @@ public class FatigueHandler {
     
     /**
      * Handles bed rest recovery
+     * This is called EVERY TICK when player is sleeping for accurate rest tracking
      */
     private static void handleBedRest(Player player, FatigueData data) {
+        // Mark player as resting (done every tick to ensure it's always set)
+        boolean wasAlreadyResting = playersResting.getOrDefault(player.getUUID(), false);
+        playersResting.put(player.getUUID(), true);
+        
+        if (!wasAlreadyResting) {
+            LOGGER.info("Player {} started resting in bed", player.getName().getString());
+        }
+        
+        // Store bed position
+        BlockPos sleepPos = player.getSleepingPos().orElse(null);
+        if (sleepPos != null) {
+            data.setLastBedPosition(sleepPos);
+        }
+        
+        // Increment bed rest ticks (counts how long they've been in bed)
         data.incrementBedRestTicks();
+        
+        // Log progress every 5 seconds to reduce spam
+        if (data.getBedRestTicks() % 100 == 0) {
+            int seconds = data.getBedRestTicks() / 20;
+            int requiredSeconds = FatigueConfig.getBedRestTime() / 20;
+            LOGGER.info("{} resting: {}/{} seconds ({} remaining)", 
+                player.getName().getString(), seconds, requiredSeconds, requiredSeconds - seconds);
+        }
         
         // Check if player has rested enough
         if (data.hasRestedEnough()) {
+            // Player has rested for the required time - fully restore
+            LOGGER.info("{} has rested enough! Fully restoring energy", player.getName().getString());
             data.fullyRestore();
+            playersResting.remove(player.getUUID());
+            data.setLastBedPosition(null); // Clear bed position
+            
             // Sync immediately after full restore
             if (player instanceof ServerPlayer serverPlayer) {
                 PacketDistributor.sendToPlayer(serverPlayer, new FatigueSyncPacket(data.getFatigueTicks()));
+                serverPlayer.displayClientMessage(
+                    Component.translatable("message.tharidiathings.fully_rested"),
+                    true
+                );
             }
         }
     }
@@ -174,37 +264,45 @@ public class FatigueHandler {
     
     /**
      * Handles bed proximity recovery
-     * Uses cache to avoid expensive block scanning every call
+     * Players recover fatigue when near a bed, even when standing still
      */
     private static void handleBedProximity(Player player, FatigueData data) {
-        // Don't recover if already at max or if sleeping
-        if (data.getFatigueTicks() >= FatigueData.MAX_FATIGUE_TICKS || player.isSleeping()) {
+        // Don't recover if already at max
+        // NOTE: Removed the "|| player.isSleeping()" check because sleeping players should recover in handleBedRest instead
+        if (data.getFatigueTicks() >= FatigueConfig.getMaxFatigueTicks()) {
             data.resetProximityTicks();
             return;
         }
         
-        // Check cache first to avoid expensive block scanning
-        double x = player.getX();
-        double z = player.getZ();
-        Boolean cachedResult = data.getCachedBedProximity(x, z);
-        
-        boolean nearBed;
-        if (cachedResult != null) {
-            // Use cached result
-            nearBed = cachedResult;
-        } else {
-            // Cache miss or invalidated - perform expensive check
-            nearBed = isNearBed(player);
-            data.setCachedBedProximity(x, z, nearBed);
+        // Skip proximity recovery if player is sleeping (use bed rest instead)
+        if (player.isSleeping()) {
+            data.resetProximityTicks();
+            return;
         }
         
-        if (nearBed) {
-            data.incrementProximityTicks();
+        // Always check for bed/campfire proximity (removed cache to ensure consistency)
+        // The check runs every bedCheckInterval ticks
+        boolean nearRestPoint = isNearRestPoint(player);
+        
+        if (nearRestPoint) {
+            // Increment by bedCheckInterval since this is only called every bedCheckInterval ticks
+            int bedCheckInterval = FatigueConfig.getBedCheckInterval();
+            for (int i = 0; i < bedCheckInterval; i++) {
+                data.incrementProximityTicks();
+            }
             
-            // Recover fatigue every 10 seconds
-            if (data.getProximityTicks() >= FatigueData.PROXIMITY_RECOVERY_INTERVAL) {
-                data.increaseFatigue(FatigueData.PROXIMITY_RECOVERY_AMOUNT);
+            // Recover fatigue at configured interval
+            if (data.getProximityTicks() >= FatigueConfig.getProximityRecoveryInterval()) {
+                data.increaseFatigue(FatigueConfig.getProximityRecoveryAmount());
                 data.resetProximityTicks();
+                
+                LOGGER.info("{} recovered {} seconds of fatigue (proximity)", 
+                    player.getName().getString(), FatigueConfig.getProximityRecoveryAmount() / 20);
+                
+                // Sync to client immediately after recovery
+                if (player instanceof ServerPlayer serverPlayer) {
+                    PacketDistributor.sendToPlayer(serverPlayer, new FatigueSyncPacket(data.getFatigueTicks()));
+                }
             }
         } else {
             data.resetProximityTicks();
@@ -212,16 +310,17 @@ public class FatigueHandler {
     }
     
     /**
-     * Checks if player is within range of a bed
+     * Checks if player is within range of a bed or campfire
      * Optimized to check only horizontally and limited vertical range
-     * since beds are typically on the ground
+     * since rest points are typically on the ground
      */
-    private static boolean isNearBed(Player player) {
+    private static boolean isNearRestPoint(Player player) {
         BlockPos playerPos = player.blockPosition();
-        int range = (int) Math.ceil(FatigueData.BED_PROXIMITY_RANGE);
-        double rangeSquared = FatigueData.BED_PROXIMITY_RANGE * FatigueData.BED_PROXIMITY_RANGE;
+        double bedRange = FatigueConfig.getBedProximityRange();
+        int range = (int) Math.ceil(bedRange);
+        double rangeSquared = bedRange * bedRange;
         
-        // Optimize by checking only ±5 blocks vertically (beds are usually on same level)
+        // Optimize by checking only ±5 blocks vertically (rest points are usually on same level)
         int verticalRange = Math.min(5, range);
         
         // Check blocks in an optimized pattern
@@ -244,8 +343,11 @@ public class FatigueHandler {
                         }
                         
                         BlockState state = player.level().getBlockState(checkPos);
-                        if (state.getBlock() instanceof BedBlock) {
-                            return true; // Early exit as soon as bed is found
+                        Block block = state.getBlock();
+                        
+                        // Check for bed or campfire (lit or unlit)
+                        if (block instanceof BedBlock || block instanceof CampfireBlock) {
+                            return true; // Early exit as soon as rest point is found
                         }
                     }
                 }
@@ -261,27 +363,29 @@ public class FatigueHandler {
     private static void checkAndSendWarnings(ServerPlayer player, FatigueData data) {
         UUID playerUUID = player.getUUID();
         int currentTicks = data.getFatigueTicks();
+        int threshold5Min = FatigueConfig.getWarningThreshold5MinTicks();
+        int threshold1Min = FatigueConfig.getWarningThreshold1MinTicks();
         
         // Reset warnings when fatigue is restored above thresholds
-        if (currentTicks > WARNING_THRESHOLD_5_MIN) {
+        if (currentTicks > threshold5Min) {
             warningsSent5Min.remove(playerUUID);
             warningsSent1Min.remove(playerUUID);
-        } else if (currentTicks > WARNING_THRESHOLD_1_MIN) {
+        } else if (currentTicks > threshold1Min) {
             warningsSent1Min.remove(playerUUID);
         }
         
         // Send 5-minute warning
-        if (currentTicks <= WARNING_THRESHOLD_5_MIN && currentTicks > WARNING_THRESHOLD_1_MIN) {
+        if (currentTicks <= threshold5Min && currentTicks > threshold1Min) {
             if (!warningsSent5Min.getOrDefault(playerUUID, false)) {
-                PacketDistributor.sendToPlayer(player, new FatigueWarningPacket(5));
+                PacketDistributor.sendToPlayer(player, new FatigueWarningPacket(FatigueConfig.getWarningThreshold5MinTicks() / (60 * 20)));
                 warningsSent5Min.put(playerUUID, true);
             }
         }
         
         // Send 1-minute warning
-        if (currentTicks <= WARNING_THRESHOLD_1_MIN && currentTicks > 0) {
+        if (currentTicks <= threshold1Min && currentTicks > 0) {
             if (!warningsSent1Min.getOrDefault(playerUUID, false)) {
-                PacketDistributor.sendToPlayer(player, new FatigueWarningPacket(1));
+                PacketDistributor.sendToPlayer(player, new FatigueWarningPacket(FatigueConfig.getWarningThreshold1MinTicks() / (60 * 20)));
                 warningsSent1Min.put(playerUUID, true);
             }
         }
@@ -291,11 +395,16 @@ public class FatigueHandler {
      * Applies exhaustion effects (slowness and nausea)
      */
     private static void applyExhaustionEffects(Player player) {
-        // Apply extreme slowness (level 3 = -60% speed)
-        player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 3, false, false, false));
+        int duration = FatigueConfig.getExhaustionEffectDuration();
+        int slownessLevel = FatigueConfig.getExhaustionSlownessLevel();
         
-        // Apply slight nausea for blurred vision
-        player.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 40, 0, false, false, false));
+        // Apply configurable slowness effect
+        player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, duration, slownessLevel, false, false, false));
+        
+        // Apply nausea if configured
+        if (FatigueConfig.shouldApplyNauseaEffect()) {
+            player.addEffect(new MobEffectInstance(MobEffects.CONFUSION, duration, 0, false, false, false));
+        }
     }
     
     /**
@@ -307,7 +416,8 @@ public class FatigueHandler {
     }
     
     /**
-     * Prevent player from leaving bed until fully rested
+     * Handle when player wakes up
+     * If they haven't rested enough, they must stay near the bed to continue resting
      */
     @SubscribeEvent
     public static void onPlayerWakeUp(PlayerWakeUpEvent event) {
@@ -320,25 +430,126 @@ public class FatigueHandler {
         
         FatigueData data = player.getData(FatigueAttachments.FATIGUE_DATA);
         
-        // If player tries to leave bed before fully rested, prevent it
-        if (data.getBedRestTicks() > 0 && !data.hasRestedEnough()) {
-            // We can't directly cancel the wake up event, but we can force them back to sleep
-            // This is handled by checking if they have enough rest
-            // If not, they should stay in bed
-            
-            // Note: The actual prevention of leaving bed requires checking in the player tick
-            // when they attempt to stop sleeping
+        // If player wakes up, check if they were resting
+        if (playersResting.getOrDefault(player.getUUID(), false)) {
+            if (data.hasRestedEnough()) {
+                // Player has rested enough, allow wake up
+                playersResting.remove(player.getUUID());
+                data.setLastBedPosition(null);
+                LOGGER.info("{} fully rested and woke up naturally (rested for {}/{} ticks)", 
+                    player.getName().getString(), data.getBedRestTicks(), FatigueConfig.getBedRestTime());
+            } else {
+                // Player woke up early (probably due to SleepFinishedTimeEvent)
+                int remaining = (FatigueConfig.getBedRestTime() - data.getBedRestTicks()) / 20;
+                LOGGER.info("{} woke up early! Must stay near bed for {} more seconds",
+                    player.getName().getString(), remaining);
+                
+                // Keep resting flag - they must stay near bed
+                // The tick handler will continue rest tracking if they stay close
+                // No message to avoid spam
+            }
+        } else {
+            // Player wasn't marked as resting - reset their bed rest ticks
+            data.resetBedRestTicks();
+            data.setLastBedPosition(null);
         }
     }
     
     /**
-     * Clean up warnings when player logs out
+     * Track when players start sleeping (both day and night)
+     * Daytime sleeping is NOT forced - use super-fast bed proximity recovery instead
+     */
+    @SubscribeEvent
+    public static void onBedInteract(PlayerInteractEvent.RightClickBlock event) {
+        Player player = event.getEntity();
+        
+        // Server-side only
+        if (player.level().isClientSide) {
+            return;
+        }
+        
+        BlockPos pos = event.getPos();
+        BlockState state = player.level().getBlockState(pos);
+        
+        // Check if the block is a bed
+        if (!(state.getBlock() instanceof BedBlock bedBlock)) {
+            return;
+        }
+        
+        FatigueData data = player.getData(FatigueAttachments.FATIGUE_DATA);
+        
+        // If player is not at full fatigue, mark for special rest tracking
+        if (data.getFatigueTicks() < FatigueConfig.getMaxFatigueTicks()) {
+            // Check if it's daytime (using configurable cycle length)
+            long dayTime = player.level().getDayTime() % FatigueConfig.getDayCycleLength();
+            boolean isDaytime = dayTime >= 0 && dayTime < FatigueConfig.getDayEndTime();
+            
+            if (isDaytime && player instanceof ServerPlayer serverPlayer) {
+                // Don't allow day sleep - show message about using proximity recovery
+                event.setCanceled(true);
+                event.setCancellationResult(InteractionResult.FAIL);
+                
+                serverPlayer.displayClientMessage(
+                    Component.translatable("message.tharidiathings.cant_sleep_day_use_proximity"),
+                    true
+                );
+                
+                LOGGER.info("Player {} tried to sleep during day - redirected to proximity recovery", 
+                    player.getName().getString());
+            }
+            // Night time marking is done in handleBedRest when player starts sleeping
+        }
+    }
+    
+    /**
+     * Prevent time skip when players are resting for fatigue
+     * CRITICAL: This must check ALL players, including those who just entered bed
+     */
+    @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.HIGHEST)
+    public static void onSleepFinished(net.neoforged.neoforge.event.level.SleepFinishedTimeEvent event) {
+        // Check if any players are resting OR fatigued and sleeping
+        int restingCount = 0;
+        StringBuilder restingPlayers = new StringBuilder();
+        
+        for (Player player : event.getLevel().players()) {
+            boolean isResting = playersResting.getOrDefault(player.getUUID(), false);
+            
+            // Also check if player is sleeping and fatigued (might not be marked yet)
+            if (!isResting && player.isSleeping()) {
+                FatigueData data = player.getData(FatigueAttachments.FATIGUE_DATA);
+                if (data.getFatigueTicks() < FatigueConfig.getMaxFatigueTicks()) {
+                    isResting = true;
+                    playersResting.put(player.getUUID(), true); // Mark them now
+                    LOGGER.info("Player {} was sleeping while fatigued but not marked - marking now", 
+                        player.getName().getString());
+                }
+            }
+            
+            if (isResting) {
+                restingCount++;
+                if (restingPlayers.length() > 0) restingPlayers.append(", ");
+                restingPlayers.append(player.getName().getString());
+            }
+        }
+        
+        if (restingCount > 0) {
+            // At least one player is still resting - prevent time skip
+            LOGGER.info("BLOCKING TIME SKIP - {} player(s) are resting: {}", restingCount, restingPlayers);
+            event.setTimeAddition(0);
+        } else {
+            LOGGER.info("No resting players - allowing time skip");
+        }
+    }
+    
+    /**
+     * Clean up warnings and resting state when player logs out
      */
     @SubscribeEvent
     public static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
         UUID playerUUID = event.getEntity().getUUID();
         warningsSent5Min.remove(playerUUID);
         warningsSent1Min.remove(playerUUID);
+        playersResting.remove(playerUUID);
     }
     
     /**

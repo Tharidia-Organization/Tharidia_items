@@ -32,6 +32,13 @@ public class ComponentSelectionMenu extends AbstractContainerMenu {
         return pos;
     }
     
+    public boolean isGoldAnvil() {
+        return access.evaluate((level, blockPos) -> {
+            var state = level.getBlockState(blockPos);
+            return state.is(TharidiaThings.HOT_GOLD_MARKER.get());
+        }, false);
+    }
+    
     public void selectComponent(String componentId) {
         access.execute((level, blockPos) -> {
             if (level.getBlockEntity(blockPos) instanceof IHotMetalAnvilEntity entity) {

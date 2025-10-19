@@ -273,16 +273,19 @@ public class PinzaItem extends Item {
             case "iron" -> switch (componentId) {
                 case "lama_lunga" -> new ItemStack(TharidiaThings.LAMA_LUNGA.get());
                 case "lama_corta" -> new ItemStack(TharidiaThings.LAMA_CORTA.get());
+                case "elsa" -> new ItemStack(TharidiaThings.ELSA.get());
                 default -> ItemStack.EMPTY;
             };
             case "gold" -> switch (componentId) {
                 case "lama_lunga" -> new ItemStack(TharidiaThings.GOLD_LAMA_LUNGA.get());
                 case "lama_corta" -> new ItemStack(TharidiaThings.GOLD_LAMA_CORTA.get());
+                // No gold elsa
                 default -> ItemStack.EMPTY;
             };
             case "copper" -> switch (componentId) {
                 case "lama_lunga" -> new ItemStack(TharidiaThings.COPPER_LAMA_LUNGA.get());
                 case "lama_corta" -> new ItemStack(TharidiaThings.COPPER_LAMA_CORTA.get());
+                case "elsa" -> new ItemStack(TharidiaThings.COPPER_ELSA.get());
                 default -> ItemStack.EMPTY;
             };
             default -> ItemStack.EMPTY;
@@ -314,7 +317,14 @@ public class PinzaItem extends Item {
         } else if (type == HoldingType.HOT_COPPER) {
             stack.set(DataComponents.CUSTOM_MODEL_DATA, new net.minecraft.world.item.component.CustomModelData(4));
         } else if (type == HoldingType.COMPONENT) {
-            stack.set(DataComponents.CUSTOM_MODEL_DATA, new net.minecraft.world.item.component.CustomModelData(2));
+            // Different model data based on component type
+            int modelData = switch (itemId) {
+                case "lama_lunga" -> 5;
+                case "lama_corta" -> 6;
+                case "elsa" -> 7;
+                default -> 2; // Fallback to generic component model
+            };
+            stack.set(DataComponents.CUSTOM_MODEL_DATA, new net.minecraft.world.item.component.CustomModelData(modelData));
         }
     }
     
