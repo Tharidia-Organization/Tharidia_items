@@ -20,8 +20,9 @@ import java.util.*;
 public class ClaimExpirationHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger(ClaimExpirationHandler.class);
     
-    // Check every 20 seconds (400 ticks)
-    private static final int CHECK_INTERVAL = 400;
+    // Check every 60 seconds (1200 ticks) - reduced from 20s for better performance
+    // Expiration checks don't need to be super frequent
+    private static final int CHECK_INTERVAL = 1200;
     private static int tickCounter = 0;
     
     // Warning times in milliseconds
@@ -58,13 +59,26 @@ public class ClaimExpirationHandler {
         List<BlockPos> claimsToRemove = new ArrayList<>();
         List<ClaimWarning> warnings = new ArrayList<>();
         
-        // Use claim registry to efficiently check all claims
+        // OPTIMIZED: Use claim registry for O(1) lookup instead of scanning all chunks
         String dimension = level.dimension().location().toString();
         List<com.tharidia.tharidia_things.claim.ClaimRegistry.ClaimData> dimensionClaims = 
             com.tharidia.tharidia_things.claim.ClaimRegistry.getClaimsInDimension(dimension);
         
+        // Early exit if no claims
+        if (dimensionClaims.isEmpty()) {
+            return;
+        }
+        
+        long currentTime = System.currentTimeMillis();
+        
         for (com.tharidia.tharidia_things.claim.ClaimRegistry.ClaimData claimData : dimensionClaims) {
             BlockPos claimPos = claimData.getPosition();
+            
+            // OPTIMIZATION: Only load block entity if chunk is loaded
+            if (!level.hasChunkAt(claimPos)) {
+                continue;
+            }
+            
             BlockEntity blockEntity = level.getBlockEntity(claimPos);
             
             if (blockEntity instanceof ClaimBlockEntity claim) {
@@ -72,7 +86,6 @@ public class ClaimExpirationHandler {
                     continue;
                 }
                 
-                long currentTime = System.currentTimeMillis();
                 long expirationTime = claim.getExpirationTime();
                 
                 if (expirationTime <= 0) {

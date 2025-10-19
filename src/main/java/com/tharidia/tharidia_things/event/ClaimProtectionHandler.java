@@ -35,6 +35,12 @@ public class ClaimProtectionHandler {
         new java.util.concurrent.ConcurrentHashMap<>();
     private static long lastCacheClear = System.currentTimeMillis();
     private static final long CACHE_CLEAR_INTERVAL = 5000; // Clear cache every 5 seconds
+    
+    // Cache for claim lookups (prevents repeated registry searches)
+    private static final java.util.Map<BlockPos, ClaimBlockEntity> claimCache = 
+        new java.util.concurrent.ConcurrentHashMap<>();
+    private static long lastClaimCacheClear = System.currentTimeMillis();
+    private static final long CLAIM_CACHE_CLEAR_INTERVAL = 10000; // Clear every 10 seconds
 
     /**
      * Prevents block breaking in claimed areas
@@ -378,35 +384,53 @@ public class ClaimProtectionHandler {
     
     /**
      * Finds a claim in a specific chunk that protects the given position
+     * OPTIMIZED: Uses ClaimRegistry instead of scanning ~98,000 blocks per chunk
      */
     private static ClaimBlockEntity findClaimInSpecificChunk(ServerLevel level, int chunkX, int chunkZ, BlockPos pos) {
-        // Calculate chunk bounds
-        int minX = chunkX << 4;
-        int minZ = chunkZ << 4;
-        int maxX = minX + 15;
-        int maxZ = minZ + 15;
-
-        // Scan the entire chunk for claim blocks
-        for (int x = minX; x <= maxX; x++) {
-            for (int z = minZ; z <= maxZ; z++) {
-                for (int y = level.getMinBuildHeight(); y < level.getMaxBuildHeight(); y++) {
-                    BlockPos checkPos = new BlockPos(x, y, z);
-                    if (level.getBlockState(checkPos).getBlock() instanceof ClaimBlock) {
-                        BlockEntity blockEntity = level.getBlockEntity(checkPos);
-                        if (blockEntity instanceof ClaimBlockEntity claimEntity) {
-                            // Check if the position is within the claim's protection area
-                            int minY = checkPos.getY() - 20;
-                            int maxY = checkPos.getY() + 40;
-
-                            if (pos.getY() >= minY && pos.getY() <= maxY) {
-                                return claimEntity;
-                            }
-                        }
+        // Clear claim cache periodically
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastClaimCacheClear > CLAIM_CACHE_CLEAR_INTERVAL) {
+            claimCache.clear();
+            lastClaimCacheClear = currentTime;
+        }
+        
+        // Get dimension
+        String dimension = level.dimension().location().toString();
+        
+        // Use ClaimRegistry for O(1) lookup instead of O(n) chunk scan
+        List<com.tharidia.tharidia_things.claim.ClaimRegistry.ClaimData> dimensionClaims = 
+            com.tharidia.tharidia_things.claim.ClaimRegistry.getClaimsInDimension(dimension);
+        
+        // Filter claims in the target chunk
+        for (com.tharidia.tharidia_things.claim.ClaimRegistry.ClaimData claimData : dimensionClaims) {
+            BlockPos claimPos = claimData.getPosition();
+            
+            // Check if claim is in the target chunk
+            int claimChunkX = claimPos.getX() >> 4;
+            int claimChunkZ = claimPos.getZ() >> 4;
+            
+            if (claimChunkX == chunkX && claimChunkZ == chunkZ) {
+                // Check if position is within claim's protection area (Y-axis)
+                int minY = claimPos.getY() - 20;
+                int maxY = claimPos.getY() + 40;
+                
+                if (pos.getY() >= minY && pos.getY() <= maxY) {
+                    // Try cache first
+                    ClaimBlockEntity cached = claimCache.get(claimPos);
+                    if (cached != null) {
+                        return cached;
+                    }
+                    
+                    // Cache miss - load from world
+                    BlockEntity blockEntity = level.getBlockEntity(claimPos);
+                    if (blockEntity instanceof ClaimBlockEntity claimEntity) {
+                        claimCache.put(claimPos, claimEntity);
+                        return claimEntity;
                     }
                 }
             }
         }
-
+        
         return null;
     }
     

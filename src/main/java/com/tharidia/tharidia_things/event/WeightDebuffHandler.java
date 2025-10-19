@@ -15,14 +15,23 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Handles weight-based debuffs for players
+ * Optimized to reduce tick impact
  */
 public class WeightDebuffHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger(WeightDebuffHandler.class);
     private static final ResourceLocation WEIGHT_SPEED_MODIFIER_ID = 
         ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, "weight_speed_penalty");
     
+    // Performance optimization: Check swimming every 5 ticks instead of every tick
+    private static final int SWIM_CHECK_INTERVAL = 5;
+    
+    // LARGE SERVER OPTIMIZATION: Stagger player processing to distribute load
+    // Process only 1/5th of players per tick for weight updates
+    private static final int PLAYER_BATCH_SIZE = 5;
+    
     /**
      * Apply speed debuff based on weight
+     * LARGE SERVER: Uses player batching to distribute load
      */
     @SubscribeEvent
     public static void onPlayerTick(EntityTickEvent.Pre event) {
@@ -33,6 +42,12 @@ public class WeightDebuffHandler {
         // Only update every 20 ticks (1 second) to reduce performance impact
         if (player.tickCount % 20 != 0) {
             return;
+        }
+        
+        // LARGE SERVER OPTIMIZATION: Process players in staggered batches
+        int playerBatch = Math.abs(player.getUUID().hashCode() % PLAYER_BATCH_SIZE);
+        if ((player.tickCount / 20) % PLAYER_BATCH_SIZE != playerBatch) {
+            return; // Not this player's turn this second
         }
         
         // Server-side only
@@ -52,11 +67,23 @@ public class WeightDebuffHandler {
     
     /**
      * Prevent swimming up when overencumbered
+     * OPTIMIZED: Check only every SWIM_CHECK_INTERVAL ticks with player batching
      */
     @SubscribeEvent
     public static void onPlayerSwim(EntityTickEvent.Pre event) {
         if (!(event.getEntity() instanceof Player player)) {
             return;
+        }
+        
+        // Only check every SWIM_CHECK_INTERVAL ticks to reduce overhead
+        if (player.tickCount % SWIM_CHECK_INTERVAL != 0) {
+            return;
+        }
+        
+        // LARGE SERVER OPTIMIZATION: Batch players for swim checks too
+        int playerBatch = Math.abs(player.getUUID().hashCode() % PLAYER_BATCH_SIZE);
+        if ((player.tickCount / SWIM_CHECK_INTERVAL) % PLAYER_BATCH_SIZE != playerBatch) {
+            return; // Not this player's turn
         }
         
         if (player.level().isClientSide) {

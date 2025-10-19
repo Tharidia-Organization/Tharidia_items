@@ -3,10 +3,13 @@ package com.tharidia.tharidia_things.client;
 import com.mojang.logging.LogUtils;
 import com.tharidia.tharidia_things.block.entity.PietroBlockEntity;
 import com.tharidia.tharidia_things.network.ClaimOwnerSyncPacket;
+import com.tharidia.tharidia_things.network.FatigueSyncPacket;
+import com.tharidia.tharidia_things.network.FatigueWarningPacket;
 import com.tharidia.tharidia_things.network.HierarchySyncPacket;
 import com.tharidia.tharidia_things.network.RealmSyncPacket;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -217,5 +220,21 @@ public class ClientPacketHandler {
         cachedHierarchyData.clear();
         cachedOwnerUUID = null;
         cachedOwnerName = "";
+    }
+    
+    public static void handleFatigueSync(FatigueSyncPacket packet, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            Player player = Minecraft.getInstance().player;
+            if (player != null) {
+                FatigueSyncPacket.handle(packet, player);
+            }
+        });
+    }
+    
+    public static void handleFatigueWarning(FatigueWarningPacket packet, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            // Show the warning overlay on screen
+            FatigueHudOverlay.showWarning(packet.minutesLeft());
+        });
     }
 }

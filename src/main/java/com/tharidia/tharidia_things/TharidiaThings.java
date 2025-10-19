@@ -24,8 +24,11 @@ import com.tharidia.tharidia_things.item.CopperLamaLungaItem;
 import com.tharidia.tharidia_things.item.CopperLamaCortaItem;
 import com.tharidia.tharidia_things.client.ClientPacketHandler;
 import com.tharidia.tharidia_things.command.ClaimCommands;
+import com.tharidia.tharidia_things.command.FatigueCommands;
 import com.tharidia.tharidia_things.event.ClaimProtectionHandler;
+import com.tharidia.tharidia_things.fatigue.FatigueAttachments;
 import com.tharidia.tharidia_things.network.ClaimOwnerSyncPacket;
+import com.tharidia.tharidia_things.network.FatigueSyncPacket;
 import com.tharidia.tharidia_things.network.HierarchySyncPacket;
 import com.tharidia.tharidia_things.network.RealmSyncPacket;
 import com.tharidia.tharidia_things.network.UpdateHierarchyPacket;
@@ -191,6 +194,8 @@ public class TharidiaThings {
         CREATIVE_MODE_TABS.register(modEventBus);
         // Register the Deferred Register to the mod event bus so menus get registered
         MENU_TYPES.register(modEventBus);
+        // Register the Deferred Register to the mod event bus so attachment types get registered
+        FatigueAttachments.ATTACHMENT_TYPES.register(modEventBus);
 
         // Register ourselves for server and other game events we are interested in.
         // Note that this is necessary if and only if we want *this* class (TharidiaThings) to respond directly to events.
@@ -208,6 +213,8 @@ public class TharidiaThings {
         NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.SmithingHandler.class);
         // Register the name selection handler
         NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.NameSelectionHandler.class);
+        // Register the fatigue handler
+        NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.FatigueHandler.class);
         
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
@@ -238,6 +245,16 @@ public class TharidiaThings {
                 HierarchySyncPacket.STREAM_CODEC,
                 ClientPacketHandler::handleHierarchySync
             );
+            registrar.playToClient(
+                FatigueSyncPacket.TYPE,
+                FatigueSyncPacket.STREAM_CODEC,
+                ClientPacketHandler::handleFatigueSync
+            );
+            registrar.playToClient(
+                com.tharidia.tharidia_things.network.FatigueWarningPacket.TYPE,
+                com.tharidia.tharidia_things.network.FatigueWarningPacket.STREAM_CODEC,
+                ClientPacketHandler::handleFatigueWarning
+            );
             LOGGER.info("Client packet handlers registered");
         } else {
             // On server, register dummy handlers (packets won't be received here anyway)
@@ -254,6 +271,16 @@ public class TharidiaThings {
             registrar.playToClient(
                 HierarchySyncPacket.TYPE,
                 HierarchySyncPacket.STREAM_CODEC,
+                (packet, context) -> {}
+            );
+            registrar.playToClient(
+                FatigueSyncPacket.TYPE,
+                FatigueSyncPacket.STREAM_CODEC,
+                (packet, context) -> {}
+            );
+            registrar.playToClient(
+                com.tharidia.tharidia_things.network.FatigueWarningPacket.TYPE,
+                com.tharidia.tharidia_things.network.FatigueWarningPacket.STREAM_CODEC,
                 (packet, context) -> {}
             );
             LOGGER.info("Server-side packet registration completed (dummy handlers)");
@@ -370,10 +397,11 @@ public class TharidiaThings {
 
     @SubscribeEvent
     public void onRegisterCommands(RegisterCommandsEvent event) {
-        LOGGER.info("Registering claim commands");
+        LOGGER.info("Registering commands");
         ClaimCommands.register(event.getDispatcher());
         com.tharidia.tharidia_things.command.ClaimAdminCommands.register(event.getDispatcher());
-        LOGGER.info("Claim commands registered successfully");
+        FatigueCommands.register(event.getDispatcher());
+        LOGGER.info("Commands registered successfully");
     }
 
     /**
