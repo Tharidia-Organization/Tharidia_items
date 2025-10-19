@@ -23,6 +23,10 @@ repositories {
         name = "Modrinth"
         url = "https://api.modrinth.com/maven"
     }
+    // Local libs folder for tharidia_tweaks
+    flatDir {
+        dirs 'libs'
+    }
 }
 
 base {
@@ -118,6 +122,10 @@ configurations {
 dependencies {
     // AzureLib for animated models
     implementation "maven.modrinth:azurelib:DaHwg77L"
+    
+    // Tharidia Tweaks mod - local dependency (will be in same mods folder)
+    // Add as compileOnly since it will be loaded at runtime from mods folder
+    compileOnly files("libs/tharidiatweaks-1.1.6.jar")
 
     // Example optional mod dependency with JEI
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime

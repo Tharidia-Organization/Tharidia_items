@@ -1,4 +1,10 @@
 {
+  "_comment": "This is an example weight configuration",
+  "_comment2": "Copy this datapack to your world's datapacks folder to customize item weights",
+  "_comment3": "Adjust item_weights to set weight values for specific items",
+  "_comment4": "Adjust thresholds to change when encumbrance penalties apply",
+  "_comment5": "Adjust debuffs to customize speed penalties and restrictions",
+  
   "item_weights": {
     "minecraft:stone": 2.0,
     "minecraft:cobblestone": 2.0,
@@ -67,4 +73,3 @@
     "overencumbered_disable_swim_up": true
   }
 }
-.

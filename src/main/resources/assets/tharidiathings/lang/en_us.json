@@ -54,5 +54,7 @@
 
   "gui.tharidiathings.component_selection": "Select Component",
   "gui.tharidiathings.component.lama_lunga": "Lama Lunga (Long Blade)",
-  "gui.tharidiathings.component.lama_corta": "Lama Corta (Short Blade)"
+  "gui.tharidiathings.component.lama_corta": "Lama Corta (Short Blade)",
+  
+  "gui.tharidiathings.name_selection": "Choose Your Name"
 }

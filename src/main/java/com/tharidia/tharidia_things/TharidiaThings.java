@@ -30,6 +30,7 @@ import com.tharidia.tharidia_things.network.HierarchySyncPacket;
 import com.tharidia.tharidia_things.network.RealmSyncPacket;
 import com.tharidia.tharidia_things.network.UpdateHierarchyPacket;
 import com.tharidia.tharidia_things.network.SelectComponentPacket;
+import com.tharidia.tharidia_things.network.SubmitNamePacket;
 import com.tharidia.tharidia_things.realm.RealmManager;
 
 import net.neoforged.api.distmarker.Dist;
@@ -132,6 +133,10 @@ public class TharidiaThings {
     public static final DeferredHolder<net.minecraft.world.inventory.MenuType<?>, net.minecraft.world.inventory.MenuType<com.tharidia.tharidia_things.gui.ComponentSelectionMenu>> COMPONENT_SELECTION_MENU =
         MENU_TYPES.register("component_selection_menu", () -> net.neoforged.neoforge.common.extensions.IMenuTypeExtension.create(com.tharidia.tharidia_things.gui.ComponentSelectionMenu::new));
     
+    // Creates a MenuType for the Name Selection GUI
+    public static final DeferredHolder<net.minecraft.world.inventory.MenuType<?>, net.minecraft.world.inventory.MenuType<com.tharidia.tharidia_things.gui.NameSelectionMenu>> NAME_SELECTION_MENU =
+        MENU_TYPES.register("name_selection_menu", () -> net.neoforged.neoforge.common.extensions.IMenuTypeExtension.create(com.tharidia.tharidia_things.gui.NameSelectionMenu::new));
+    
     // Smithing items
     public static final DeferredItem<Item> HOT_IRON = ITEMS.register("hot_iron", () -> new HotIronItem(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)));
     public static final DeferredItem<Item> HOT_GOLD = ITEMS.register("hot_gold", () -> new HotGoldItem(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)));
@@ -201,6 +206,8 @@ public class TharidiaThings {
         NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.WeightDebuffHandler.class);
         // Register the smithing handler
         NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.SmithingHandler.class);
+        // Register the name selection handler
+        NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.NameSelectionHandler.class);
         
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
@@ -263,6 +270,11 @@ public class TharidiaThings {
             SelectComponentPacket.STREAM_CODEC,
             SelectComponentPacket::handle
         );
+        registrar.playToServer(
+            SubmitNamePacket.TYPE,
+            SubmitNamePacket.STREAM_CODEC,
+            SubmitNamePacket::handle
+        );
         
         LOGGER.info("Network payloads registered successfully");
     }
@@ -272,6 +284,7 @@ public class TharidiaThings {
         event.register(CLAIM_MENU.get(), com.tharidia.tharidia_things.client.gui.ClaimScreen::new);
         event.register(PIETRO_MENU.get(), com.tharidia.tharidia_things.client.gui.PietroScreen::new);
         event.register(COMPONENT_SELECTION_MENU.get(), com.tharidia.tharidia_things.client.gui.ComponentSelectionScreen::new);
+        event.register(NAME_SELECTION_MENU.get(), com.tharidia.tharidia_things.client.gui.NameSelectionScreen::new);
         LOGGER.info("Menu screens registered successfully");
     }
 
