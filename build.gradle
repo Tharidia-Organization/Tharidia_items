@@ -23,7 +23,11 @@ repositories {
         name = "Modrinth"
         url = "https://api.modrinth.com/maven"
     }
-    // Local libs folder for tharidia_tweaks
+    maven {
+        name = "Geckolib"
+        url = "https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/"
+    }
+    // Local libs folder for tharidia_tweaks and azurelib
     flatDir {
         dirs 'libs'
     }
@@ -120,8 +124,8 @@ configurations {
 }
 
 dependencies {
-    // AzureLib for animated models
-    implementation "maven.modrinth:azurelib:DaHwg77L"
+    // AzureLib for animated models (NeoForge version) - local dependency
+    compileOnly files("libs/azurelib-neo-1.21.1-3.0.38.jar")
     
     // Tharidia Tweaks mod - local dependency (will be in same mods folder)
     // Add as compileOnly since it will be loaded at runtime from mods folder

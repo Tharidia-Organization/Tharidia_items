@@ -255,11 +255,15 @@ public class PinzaItem extends Item {
             clearHolding(pinzaStack);
             damagePinza(pinzaStack, player);
             
-            // Drop the appropriate component based on material
+            // Try to add the component to player's inventory, if full drop it on the ground
             ItemStack componentStack = getComponentStack(componentId, materialType);
             if (!componentStack.isEmpty()) {
-                ItemEntity itemEntity = new ItemEntity(level, player.getX(), player.getY(), player.getZ(), componentStack);
-                level.addFreshEntity(itemEntity);
+                boolean added = player.getInventory().add(componentStack);
+                if (!added) {
+                    // Inventory is full, drop on the ground
+                    ItemEntity itemEntity = new ItemEntity(level, player.getX(), player.getY(), player.getZ(), componentStack);
+                    level.addFreshEntity(itemEntity);
+                }
             }
             
             player.displayClientMessage(Component.translatable("item.tharidiathings.pinza.cooled"), true);

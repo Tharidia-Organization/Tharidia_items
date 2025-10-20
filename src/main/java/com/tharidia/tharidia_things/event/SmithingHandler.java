@@ -13,6 +13,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -324,6 +325,27 @@ public class SmithingHandler {
         player.displayClientMessage(Component.translatable("item.tharidiathings.pinza.grabbed_hot_copper"), true);
     }
     
+    @SubscribeEvent(priority = EventPriority.HIGH)
+    public static void onAnvilInteraction(PlayerInteractEvent.RightClickBlock event) {
+        Level level = event.getLevel();
+        BlockPos pos = event.getPos();
+        BlockState state = level.getBlockState(pos);
+        ItemStack heldItem = event.getItemStack();
+        
+        // Prevent anvil GUI opening if player is holding a Pinza, but allow item use
+        if (state.getBlock() instanceof net.minecraft.world.level.block.AnvilBlock) {
+            if (heldItem.getItem() instanceof PinzaItem) {
+                // Check if player is sneaking - if so, allow normal anvil interaction
+                if (event.getEntity() != null && event.getEntity().isCrouching()) {
+                    return;
+                }
+                
+                // Deny block use (prevents GUI) but allow item use (allows Pinza actions)
+                event.setUseBlock(net.neoforged.neoforge.common.util.TriState.FALSE);
+                TharidiaThings.LOGGER.debug("Denied anvil block use - player has Pinza");
+            }
+        }
+    }
     
     @SubscribeEvent(priority = EventPriority.HIGHEST)  
     public static void onPlayerTick(net.neoforged.neoforge.event.tick.PlayerTickEvent.Pre event) {
