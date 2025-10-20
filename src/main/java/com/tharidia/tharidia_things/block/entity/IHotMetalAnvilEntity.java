@@ -26,4 +26,23 @@ public interface IHotMetalAnvilEntity {
      * Gets the material type of this hot metal (e.g., "iron", "gold", "copper")
      */
     String getMaterialType();
+    
+    // Minigame methods
+    boolean isMinigameActive();
+    
+    void startMinigame();
+    
+    float getCircleX();
+    
+    float getCircleZ();
+    
+    float getCurrentRadius();
+    
+    float getTargetRadius();
+    
+    long getMinigameStartTime();
+    
+    int getFailureCount();
+    
+    boolean checkHit(float hitAccuracy);
 }
