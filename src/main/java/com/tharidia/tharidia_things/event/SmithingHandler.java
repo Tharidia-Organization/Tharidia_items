@@ -82,9 +82,12 @@ public class SmithingHandler {
                     
                     // Damage the hammer
                     if (event.getEntity() instanceof ServerPlayer player) {
-                        heldItem.hurtAndBreak(1, player, player.getEquipmentSlotForItem(heldItem));
+                        heldItem.hurtAndBreak(1, player, net.minecraft.world.entity.EquipmentSlot.MAINHAND);
                     }
                 }
+                
+                // CLIENT AND SERVER: Show hammer swing animation
+                event.getEntity().swing(InteractionHand.MAIN_HAND);
                 
                 // Cancel event on BOTH sides to prevent other interactions
                 event.setCanceled(true);
@@ -254,11 +257,10 @@ public class SmithingHandler {
         PinzaItem.setHolding(pinzaStack, PinzaItem.HoldingType.HOT_IRON, "hot_iron");
         
         // Damage the Pinza
-        pinzaStack.hurtAndBreak(1, player, net.minecraft.world.entity.EquipmentSlot.MAINHAND);
+        damagePinza(pinzaStack, player);
         
-        // Play sound and show message
+        // Play sound
         level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 1.0F, 1.0F);
-        player.displayClientMessage(Component.translatable("item.tharidiathings.pinza.grabbed_hot_iron"), true);
     }
     
     private static void grabHotGoldWithPinza(net.minecraft.world.Container container, BlockPos pos, 
@@ -286,11 +288,10 @@ public class SmithingHandler {
         PinzaItem.setHolding(pinzaStack, PinzaItem.HoldingType.HOT_GOLD, "hot_gold");
         
         // Damage the Pinza
-        pinzaStack.hurtAndBreak(1, player, net.minecraft.world.entity.EquipmentSlot.MAINHAND);
+        damagePinza(pinzaStack, player);
         
-        // Play sound and show message
+        // Play sound
         level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 1.0F, 1.0F);
-        player.displayClientMessage(Component.translatable("item.tharidiathings.pinza.grabbed_hot_gold"), true);
     }
     
     private static void grabHotCopperWithPinza(net.minecraft.world.Container container, BlockPos pos, 
@@ -318,11 +319,10 @@ public class SmithingHandler {
         PinzaItem.setHolding(pinzaStack, PinzaItem.HoldingType.HOT_COPPER, "hot_copper");
         
         // Damage the Pinza
-        pinzaStack.hurtAndBreak(1, player, net.minecraft.world.entity.EquipmentSlot.MAINHAND);
+        damagePinza(pinzaStack, player);
         
-        // Play sound and show message
+        // Play sound
         level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 1.0F, 1.0F);
-        player.displayClientMessage(Component.translatable("item.tharidiathings.pinza.grabbed_hot_copper"), true);
     }
     
     @SubscribeEvent(priority = EventPriority.HIGH)
@@ -374,17 +374,14 @@ public class SmithingHandler {
                         // Set Pinza to hold it
                         if (isHotIron) {
                             PinzaItem.setHolding(mainHand, PinzaItem.HoldingType.HOT_IRON, "hot_iron");
-                            player.displayClientMessage(Component.translatable("item.tharidiathings.pinza.grabbed_hot_iron"), true);
                         } else if (isHotGold) {
                             PinzaItem.setHolding(mainHand, PinzaItem.HoldingType.HOT_GOLD, "hot_gold");
-                            player.displayClientMessage(Component.translatable("item.tharidiathings.pinza.grabbed_hot_gold"), true);
                         } else if (isHotCopper) {
                             PinzaItem.setHolding(mainHand, PinzaItem.HoldingType.HOT_COPPER, "hot_copper");
-                            player.displayClientMessage(Component.translatable("item.tharidiathings.pinza.grabbed_hot_copper"), true);
                         }
                         
                         // Damage Pinza
-                        mainHand.hurtAndBreak(1, player, net.minecraft.world.entity.EquipmentSlot.MAINHAND);
+                        damagePinza(mainHand, player);
                         
                         return;
                     }
@@ -398,17 +395,14 @@ public class SmithingHandler {
                         // Set Pinza to hold it
                         if (isHotIron) {
                             PinzaItem.setHolding(offHand, PinzaItem.HoldingType.HOT_IRON, "hot_iron");
-                            player.displayClientMessage(Component.translatable("item.tharidiathings.pinza.grabbed_hot_iron"), true);
                         } else if (isHotGold) {
                             PinzaItem.setHolding(offHand, PinzaItem.HoldingType.HOT_GOLD, "hot_gold");
-                            player.displayClientMessage(Component.translatable("item.tharidiathings.pinza.grabbed_hot_gold"), true);
                         } else if (isHotCopper) {
                             PinzaItem.setHolding(offHand, PinzaItem.HoldingType.HOT_COPPER, "hot_copper");
-                            player.displayClientMessage(Component.translatable("item.tharidiathings.pinza.grabbed_hot_copper"), true);
                         }
                         
                         // Damage Pinza
-                        offHand.hurtAndBreak(1, player, net.minecraft.world.entity.EquipmentSlot.OFFHAND);
+                        damagePinza(offHand, player);
                         
                         return;
                     }
@@ -448,24 +442,12 @@ public class SmithingHandler {
                                 TharidiaThings.LOGGER.info("Found player with empty Pinza! Transferring...");
                                 if (isHotIron) {
                                     PinzaItem.setHolding(mainHand, PinzaItem.HoldingType.HOT_IRON, "hot_iron");
-                                    nearestPlayer.displayClientMessage(
-                                        Component.translatable("item.tharidiathings.pinza.grabbed_hot_iron"), 
-                                        true
-                                    );
                                 } else if (isHotGold) {
                                     PinzaItem.setHolding(mainHand, PinzaItem.HoldingType.HOT_GOLD, "hot_gold");
-                                    nearestPlayer.displayClientMessage(
-                                        Component.translatable("item.tharidiathings.pinza.grabbed_hot_gold"), 
-                                        true
-                                    );
                                 } else if (isHotCopper) {
                                     PinzaItem.setHolding(mainHand, PinzaItem.HoldingType.HOT_COPPER, "hot_copper");
-                                    nearestPlayer.displayClientMessage(
-                                        Component.translatable("item.tharidiathings.pinza.grabbed_hot_copper"), 
-                                        true
-                                    );
                                 }
-                                mainHand.hurtAndBreak(1, nearestPlayer, net.minecraft.world.entity.EquipmentSlot.MAINHAND);
+                                damagePinza(mainHand, nearestPlayer);
                                 event.setCanceled(true);
                                 return;
                             }
@@ -478,24 +460,12 @@ public class SmithingHandler {
                                 TharidiaThings.LOGGER.info("Found player with empty Pinza in off hand! Transferring...");
                                 if (isHotIron) {
                                     PinzaItem.setHolding(offHand, PinzaItem.HoldingType.HOT_IRON, "hot_iron");
-                                    nearestPlayer.displayClientMessage(
-                                        Component.translatable("item.tharidiathings.pinza.grabbed_hot_iron"), 
-                                        true
-                                    );
                                 } else if (isHotGold) {
                                     PinzaItem.setHolding(offHand, PinzaItem.HoldingType.HOT_GOLD, "hot_gold");
-                                    nearestPlayer.displayClientMessage(
-                                        Component.translatable("item.tharidiathings.pinza.grabbed_hot_gold"), 
-                                        true
-                                    );
                                 } else if (isHotCopper) {
                                     PinzaItem.setHolding(offHand, PinzaItem.HoldingType.HOT_COPPER, "hot_copper");
-                                    nearestPlayer.displayClientMessage(
-                                        Component.translatable("item.tharidiathings.pinza.grabbed_hot_copper"), 
-                                        true
-                                    );
                                 }
-                                offHand.hurtAndBreak(1, nearestPlayer, net.minecraft.world.entity.EquipmentSlot.OFFHAND);
+                                damagePinza(offHand, nearestPlayer);
                                 event.setCanceled(true);
                                 return;
                             }
@@ -513,6 +483,24 @@ public class SmithingHandler {
                 event.setCanceled(true);
                 TharidiaThings.LOGGER.info("Hot metal item entity spawn canceled.");
             }
+        }
+    }
+    
+    private static void damagePinza(ItemStack stack, Player player) {
+        // Directly apply damage to the item
+        int currentDamage = stack.getDamageValue();
+        int newDamage = currentDamage + 1;
+        int maxDurability = 480; // Match PinzaItem.MAX_DURABILITY
+        
+        if (newDamage >= maxDurability) {
+            // Item is broken - remove it
+            stack.shrink(1);
+            TharidiaThings.LOGGER.info("Pinza broke!");
+        } else {
+            // Apply damage
+            stack.setDamageValue(newDamage);
+            TharidiaThings.LOGGER.info("Pinza damaged: {} -> {}/{}", 
+                currentDamage, newDamage, maxDurability);
         }
     }
 }

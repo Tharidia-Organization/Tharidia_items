@@ -5,6 +5,7 @@ import com.tharidia.tharidia_things.block.entity.IHotMetalAnvilEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
@@ -28,11 +29,11 @@ import java.util.List;
 
 /**
  * Pinza (Tongs) - Used to handle hot iron and smithing components.
- * Has 300 durability and can hold different items (hot iron, components).
+ * Has 480 durability and can hold different items (hot iron, components).
  */
 public class PinzaItem extends Item {
     
-    private static final int MAX_DURABILITY = 300;
+    private static final int MAX_DURABILITY = 480;
     private static final String TAG_HOLDING = "HoldingItem";
     private static final String TAG_HOLDING_TYPE = "HoldingType";
     private static final String TAG_MATERIAL = "Material";
@@ -47,6 +48,32 @@ public class PinzaItem extends Item {
     
     public PinzaItem(Properties properties) {
         super(properties.durability(MAX_DURABILITY));
+    }
+    
+    @Override
+    public boolean isDamageable(ItemStack stack) {
+        return true;
+    }
+    
+    @Override
+    public int getMaxDamage(ItemStack stack) {
+        return MAX_DURABILITY;
+    }
+    
+    @Override
+    public boolean isBarVisible(ItemStack stack) {
+        return stack.isDamaged();
+    }
+    
+    @Override
+    public int getBarWidth(ItemStack stack) {
+        return Math.round(13.0F - (float)stack.getDamageValue() * 13.0F / (float)MAX_DURABILITY);
+    }
+    
+    @Override
+    public int getBarColor(ItemStack stack) {
+        float f = Math.max(0.0F, ((float)MAX_DURABILITY - (float)stack.getDamageValue()) / (float)MAX_DURABILITY);
+        return net.minecraft.util.Mth.hsvToRgb(f / 3.0F, 1.0F, 1.0F);
     }
     
     @Override
@@ -110,12 +137,7 @@ public class PinzaItem extends Item {
                 }
             } else {
                 // Hot metal not finished yet
-                if (!level.isClientSide) {
-                    player.displayClientMessage(
-                        Component.translatable("item.tharidiathings.pinza.not_finished"), 
-                        true
-                    );
-                }
+                // Silently do nothing
                 return InteractionResult.FAIL;
             }
         }
@@ -147,9 +169,6 @@ public class PinzaItem extends Item {
                 }
                 
                 if (!foundHotIron) {
-                    if (!level.isClientSide) {
-                        player.displayClientMessage(Component.translatable("item.tharidiathings.pinza.no_hot_iron"), true);
-                    }
                     return false;
                 }
                 
@@ -163,7 +182,6 @@ public class PinzaItem extends Item {
                     setHolding(pinzaStack, HoldingType.HOT_IRON, "hot_iron");
                     damagePinza(pinzaStack, player);
                     level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 1.0F, 1.0F);
-                    player.displayClientMessage(Component.translatable("item.tharidiathings.pinza.grabbed_hot_iron"), true);
                     
                     // Mark the block entity as changed to sync to client
                     blockEntity.setChanged();
@@ -201,7 +219,6 @@ public class PinzaItem extends Item {
             }
             
             level.playSound(null, above, SoundEvents.ANVIL_PLACE, SoundSource.BLOCKS, 1.0F, 1.0F);
-            player.displayClientMessage(Component.translatable("item.tharidiathings.pinza.placed_on_anvil"), true);
         }
         
         return true;
@@ -219,7 +236,6 @@ public class PinzaItem extends Item {
             level.removeBlock(pos, false);
             
             level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 1.0F, 1.0F);
-            player.displayClientMessage(Component.translatable("item.tharidiathings.pinza.picked_component"), true);
         }
         
         return true;
@@ -265,8 +281,6 @@ public class PinzaItem extends Item {
                     level.addFreshEntity(itemEntity);
                 }
             }
-            
-            player.displayClientMessage(Component.translatable("item.tharidiathings.pinza.cooled"), true);
         }
         
         return true;
@@ -297,7 +311,20 @@ public class PinzaItem extends Item {
     }
     
     private void damagePinza(ItemStack stack, Player player) {
-        stack.hurtAndBreak(1, player, player.getEquipmentSlotForItem(stack));
+        // Directly apply damage to the item
+        int currentDamage = stack.getDamageValue();
+        int newDamage = currentDamage + 1;
+        
+        if (newDamage >= MAX_DURABILITY) {
+            // Item is broken - remove it
+            stack.shrink(1);
+            com.tharidia.tharidia_things.TharidiaThings.LOGGER.info("Pinza broke!");
+        } else {
+            // Apply damage
+            stack.setDamageValue(newDamage);
+            com.tharidia.tharidia_things.TharidiaThings.LOGGER.info("Pinza damaged: {} -> {}/{}", 
+                currentDamage, newDamage, MAX_DURABILITY);
+        }
     }
     
     public static void setHolding(ItemStack stack, HoldingType type, String itemId) {

@@ -42,6 +42,11 @@ public class Config {
     public static final ModConfigSpec.IntValue SMITHING_MAX_FAILURES = BUILDER
             .comment("Maximum number of failures before losing the piece (if enabled)")
             .defineInRange("smithingMaxFailures", 3, 1, 10);
+    
+    // Pinza (Tongs) settings
+    public static final ModConfigSpec.IntValue PINZA_DURABILITY = BUILDER
+            .comment("Maximum durability (uses) for the Pinza (Tongs)")
+            .defineInRange("pinzaDurability", 480, 1, 10000);
 
     static final ModConfigSpec SPEC = BUILDER.build();
 }

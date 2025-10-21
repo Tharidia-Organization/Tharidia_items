@@ -146,7 +146,7 @@ public class TharidiaThings {
     public static final DeferredItem<Item> HOT_IRON = ITEMS.register("hot_iron", () -> new HotIronItem(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)));
     public static final DeferredItem<Item> HOT_GOLD = ITEMS.register("hot_gold", () -> new HotGoldItem(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)));
     public static final DeferredItem<Item> HOT_COPPER = ITEMS.register("hot_copper", () -> new HotCopperItem(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)));
-    public static final DeferredItem<Item> PINZA = ITEMS.register("pinza", () -> new PinzaItem(new Item.Properties().stacksTo(1)));
+    public static final DeferredItem<Item> PINZA = ITEMS.register("pinza", () -> new PinzaItem(new Item.Properties()));
     public static final DeferredItem<Item> LAMA_LUNGA = ITEMS.register("lama_lunga", () -> new LamaLungaItem(new Item.Properties()));
     public static final DeferredItem<Item> LAMA_CORTA = ITEMS.register("lama_corta", () -> new LamaCortaItem(new Item.Properties()));
     public static final DeferredItem<Item> ELSA = ITEMS.register("elsa", () -> new ElsaItem(new Item.Properties()));

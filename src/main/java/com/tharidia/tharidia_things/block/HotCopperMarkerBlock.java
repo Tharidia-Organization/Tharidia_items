@@ -26,8 +26,8 @@ public class HotCopperMarkerBlock extends Block implements EntityBlock {
             .mapColor(MapColor.NONE)
             .noCollission()
             .noOcclusion()
-            .air()
             .noLootTable()
+            .replaceable() // Can be replaced by other blocks but not considered air
         );
     }
     

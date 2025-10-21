@@ -57,8 +57,11 @@ public class HotCopperAnvilRenderer implements BlockEntityRenderer<HotCopperAnvi
         
         poseStack.pushPose();
         
-        // Render the appropriate progressive model
+        // Render the appropriate progressive model with full brightness (emissive/glowing effect)
         var vertexConsumer = buffer.getBuffer(RenderType.cutout());
+        
+        // Use maximum light level for glowing effect (15 for both block and sky light)
+        int fullBright = 0xF000F0; // Max light level (240, 240)
         
         blockRenderer.getModelRenderer().renderModel(
             poseStack.last(),
@@ -66,7 +69,7 @@ public class HotCopperAnvilRenderer implements BlockEntityRenderer<HotCopperAnvi
             null,
             hotCopperModels[strikes],
             1.0f, 1.0f, 1.0f,
-            combinedLight,
+            fullBright, // Use full brightness instead of combinedLight
             combinedOverlay,
             ModelData.EMPTY,
             null
