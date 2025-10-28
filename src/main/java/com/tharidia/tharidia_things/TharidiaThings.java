@@ -222,11 +222,8 @@ public class TharidiaThings {
         // Register the fatigue handler
         NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.FatigueHandler.class);
         
-        // Log version for debugging
-        LOGGER.info("=================================================");
-        LOGGER.info("TharidiaThings v1.0.8 - NEW REST SYSTEM LOADED");
-        LOGGER.info("Features: Rest Near Bed, No Force-Back, Time Skip Block");
-        LOGGER.info("=================================================");
+        // Mod initialized
+        LOGGER.info("TharidiaThings initialized");
         
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
@@ -234,12 +231,10 @@ public class TharidiaThings {
 
     private void commonSetup(FMLCommonSetupEvent event) {
         // Common setup
-        LOGGER.info("HELLO FROM COMMON SETUP");
     }
 
     private void registerPayloads(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar("1");
-        LOGGER.info("Registering network payloads (dist: {})", FMLEnvironment.dist);
 
         if (FMLEnvironment.dist.isClient()) {
             registrar.playToClient(
@@ -267,7 +262,6 @@ public class TharidiaThings {
                 com.tharidia.tharidia_things.network.FatigueWarningPacket.STREAM_CODEC,
                 ClientPacketHandler::handleFatigueWarning
             );
-            LOGGER.info("Client packet handlers registered");
         } else {
             // On server, register dummy handlers (packets won't be received here anyway)
             registrar.playToClient(
@@ -295,7 +289,6 @@ public class TharidiaThings {
                 com.tharidia.tharidia_things.network.FatigueWarningPacket.STREAM_CODEC,
                 (packet, context) -> {}
             );
-            LOGGER.info("Server-side packet registration completed (dummy handlers)");
         }
         
         // Register server-bound packets (works on both sides)
@@ -314,28 +307,21 @@ public class TharidiaThings {
             SubmitNamePacket.STREAM_CODEC,
             SubmitNamePacket::handle
         );
-        
-        LOGGER.info("Network payloads registered successfully");
     }
 
     private void registerScreens(net.neoforged.neoforge.client.event.RegisterMenuScreensEvent event) {
-        LOGGER.info("Registering menu screens");
         event.register(CLAIM_MENU.get(), com.tharidia.tharidia_things.client.gui.ClaimScreen::new);
         event.register(PIETRO_MENU.get(), com.tharidia.tharidia_things.client.gui.PietroScreen::new);
         event.register(COMPONENT_SELECTION_MENU.get(), com.tharidia.tharidia_things.client.gui.ComponentSelectionScreen::new);
         event.register(NAME_SELECTION_MENU.get(), com.tharidia.tharidia_things.client.gui.NameSelectionScreen::new);
-        LOGGER.info("Menu screens registered successfully");
     }
 
     // You can use SubscribeEvent and let the Event Bus discover methods to call
     @SubscribeEvent
     public void onPlayerLoggedIn(PlayerLoggedInEvent event) {
-        LOGGER.info("Player logged in: {}", event.getEntity().getName().getString());
         if (event.getEntity().level() instanceof net.minecraft.server.level.ServerLevel serverLevel) {
             // Send a full sync on login - this will clear and replace all client-side realm data
             syncAllRealmsToPlayer((ServerPlayer) event.getEntity(), serverLevel);
-        } else {
-            LOGGER.warn("Player logged in but level is not ServerLevel: {}", event.getEntity().level());
         }
     }
     
@@ -343,23 +329,10 @@ public class TharidiaThings {
      * Sends all realm data to a specific player (full sync)
      */
     private void syncAllRealmsToPlayer(ServerPlayer player, net.minecraft.server.level.ServerLevel serverLevel) {
-        LOGGER.info("syncAllRealmsToPlayer called for player {} in dimension {}", 
-            player.getName().getString(), serverLevel.dimension().location());
-        
         List<RealmSyncPacket.RealmData> realmDataList = new ArrayList<>();
         List<PietroBlockEntity> allRealms = RealmManager.getRealms(serverLevel);
-        LOGGER.info("RealmManager.getRealms returned {} realms for player {}", 
-            allRealms.size(), player.getName().getString());
-        
-        if (allRealms.isEmpty()) {
-            LOGGER.warn("No realms found in dimension {}! This might be expected if no Pietro blocks have been placed yet.", 
-                serverLevel.dimension().location());
-        }
         
         for (PietroBlockEntity realm : allRealms) {
-            LOGGER.info("Processing realm at {} owned by {} with size {}", 
-                realm.getBlockPos(), realm.getOwnerName(), realm.getRealmSize());
-            
             RealmSyncPacket.RealmData data = new RealmSyncPacket.RealmData(
                 realm.getBlockPos(),
                 realm.getRealmSize(),
@@ -368,54 +341,40 @@ public class TharidiaThings {
                 realm.getCenterChunk().z
             );
             realmDataList.add(data);
-            LOGGER.info("Added realm data: pos={}, size={}, center=({}, {})", 
-                realm.getBlockPos(), realm.getRealmSize(), 
-                realm.getCenterChunk().x, realm.getCenterChunk().z);
         }
         
         RealmSyncPacket packet = new RealmSyncPacket(realmDataList, true); // true = full sync
-        LOGGER.info("Sending full RealmSyncPacket with {} realms to player {}", 
-            realmDataList.size(), player.getName().getString());
         PacketDistributor.sendToPlayer(player, packet);
-        LOGGER.info("RealmSyncPacket sent successfully to {}", player.getName().getString());
+        
+        LOGGER.info("Synced {} realms to player {}", realmDataList.size(), player.getName().getString());
     }
 
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
-        // Do something when the server starts
-        LOGGER.info("HELLO from server starting");
-        
         // Load claim registry from persistent storage
         net.minecraft.server.level.ServerLevel overworld = event.getServer().getLevel(net.minecraft.world.level.Level.OVERWORLD);
         if (overworld != null) {
             com.tharidia.tharidia_things.claim.ClaimRegistry.loadFromPersistentStorage(overworld);
-            LOGGER.info("Claim registry loaded from persistent storage");
         } else {
             LOGGER.error("Could not load claim registry: overworld is null");
         }
         
         // Register weight data loader
         event.getServer().getResourceManager();
-        LOGGER.info("Weight system initialized");
     }
     
     @SubscribeEvent
     public void onAddReloadListeners(net.neoforged.neoforge.event.AddReloadListenerEvent event) {
         event.addListener(new com.tharidia.tharidia_things.weight.WeightDataLoader());
-        LOGGER.info("Weight data loader registered");
         event.addListener(new com.tharidia.tharidia_things.config.CropProtectionConfig());
-        LOGGER.info("Crop protection config loader registered");
         event.addListener(new com.tharidia.tharidia_things.config.FatigueConfig());
-        LOGGER.info("Fatigue config loader registered");
     }
 
     @SubscribeEvent
     public void onRegisterCommands(RegisterCommandsEvent event) {
-        LOGGER.info("Registering commands");
         ClaimCommands.register(event.getDispatcher());
         com.tharidia.tharidia_things.command.ClaimAdminCommands.register(event.getDispatcher());
         FatigueCommands.register(event.getDispatcher());
-        LOGGER.info("Commands registered successfully");
     }
 
     /**

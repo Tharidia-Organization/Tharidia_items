@@ -45,10 +45,6 @@ public class TharidiaThingsClient {
 
     @SubscribeEvent
     static void onClientSetup(FMLClientSetupEvent event) {
-        // Some client setup code
-        TharidiaThings.LOGGER.info("HELLO FROM CLIENT SETUP");
-        TharidiaThings.LOGGER.info("MINECRAFT NAME >> {}", Minecraft.getInstance().getUser().getName());
-
         // Register block entity renderers
         event.enqueueWork(() -> {
             BlockEntityRenderers.register(TharidiaThings.PIETRO_BLOCK_ENTITY.get(), context -> new PietroBlockRenderer());
@@ -66,7 +62,6 @@ public class TharidiaThingsClient {
                 ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/hot_iron_anvil_" + i)
             ));
         }
-        TharidiaThings.LOGGER.info("Registered hot iron progressive 3D models (0-4 strikes) for anvil renderer");
         
         // Register progressive hot gold 3D models for anvil renderer (0-4 strikes)
         for (int i = 0; i <= 4; i++) {
@@ -74,7 +69,6 @@ public class TharidiaThingsClient {
                 ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/hot_gold_anvil_" + i)
             ));
         }
-        TharidiaThings.LOGGER.info("Registered hot gold progressive 3D models (0-4 strikes) for anvil renderer");
         
         // Register progressive hot copper 3D models for anvil renderer (0-4 strikes)
         for (int i = 0; i <= 4; i++) {
@@ -82,7 +76,6 @@ public class TharidiaThingsClient {
                 ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/hot_copper_anvil_" + i)
             ));
         }
-        TharidiaThings.LOGGER.info("Registered hot copper progressive 3D models (0-4 strikes) for anvil renderer");
     }
 
     @SubscribeEvent
@@ -93,7 +86,6 @@ public class TharidiaThingsClient {
             TharidiaThings.modLoc("realm_overlay"),
             new RealmOverlay()
         );
-        TharidiaThings.LOGGER.info("Registered Realm Overlay");
         
         // Register the weight HUD overlay in the lower left corner
         event.registerAbove(
@@ -101,6 +93,5 @@ public class TharidiaThingsClient {
             TharidiaThings.modLoc("weight_overlay"),
             new com.tharidia.tharidia_things.client.WeightHudOverlay()
         );
-        TharidiaThings.LOGGER.info("Registered Weight HUD Overlay");
     }
 }

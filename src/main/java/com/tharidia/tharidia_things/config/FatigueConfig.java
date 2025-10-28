@@ -85,100 +85,79 @@ public class FatigueConfig extends SimpleJsonResourceReloadListener {
                 ResourceLocation location = entry.getKey();
                 JsonObject json = entry.getValue().getAsJsonObject();
                 
-                LOGGER.info("Loading fatigue config from: {}", location);
-                
                 // Load fatigue system settings
                 if (json.has("max_fatigue_minutes")) {
                     int minutes = json.get("max_fatigue_minutes").getAsInt();
                     maxFatigueTicks = minutes * 60 * 20;
-                    LOGGER.info("Set max fatigue to {} minutes ({} ticks)", minutes, maxFatigueTicks);
                 }
                 
                 if (json.has("bed_rest_time_seconds")) {
                     int seconds = json.get("bed_rest_time_seconds").getAsInt();
                     bedRestTime = seconds * 20;
-                    LOGGER.info("Set bed rest time to {} seconds ({} ticks)", seconds, bedRestTime);
                 }
                 
                 if (json.has("proximity_recovery_interval_seconds")) {
                     int seconds = json.get("proximity_recovery_interval_seconds").getAsInt();
                     proximityRecoveryInterval = seconds * 20;
-                    LOGGER.info("Set proximity recovery interval to {} seconds", seconds);
                 }
                 
                 if (json.has("proximity_recovery_amount_seconds")) {
                     int seconds = json.get("proximity_recovery_amount_seconds").getAsInt();
                     proximityRecoveryAmount = seconds * 20;
-                    LOGGER.info("Set proximity recovery amount to {} seconds of fatigue", seconds);
                 }
                 
                 if (json.has("bed_proximity_range")) {
                     bedProximityRange = json.get("bed_proximity_range").getAsDouble();
-                    LOGGER.info("Set bed proximity range to {} blocks", bedProximityRange);
                 }
                 
                 // Load performance settings
                 if (json.has("movement_check_interval")) {
                     movementCheckInterval = json.get("movement_check_interval").getAsInt();
-                    LOGGER.info("Set movement check interval to {} ticks", movementCheckInterval);
                 }
                 
                 if (json.has("bed_check_interval")) {
                     bedCheckInterval = json.get("bed_check_interval").getAsInt();
-                    LOGGER.info("Set bed check interval to {} ticks", bedCheckInterval);
                 }
                 
                 if (json.has("player_batch_size")) {
                     playerBatchSize = json.get("player_batch_size").getAsInt();
-                    LOGGER.info("Set player batch size to {}", playerBatchSize);
                 }
                 
                 // Load warning thresholds
                 if (json.has("warning_threshold_5_minutes")) {
                     warningThreshold5Min = json.get("warning_threshold_5_minutes").getAsInt();
-                    LOGGER.info("Set 5-minute warning threshold to {} minutes", warningThreshold5Min);
                 }
                 
                 if (json.has("warning_threshold_1_minute")) {
                     warningThreshold1Min = json.get("warning_threshold_1_minute").getAsInt();
-                    LOGGER.info("Set 1-minute warning threshold to {} minutes", warningThreshold1Min);
                 }
                 
                 // Load exhaustion effect settings
                 if (json.has("exhaustion_slowness_level")) {
                     exhaustionSlownessLevel = json.get("exhaustion_slowness_level").getAsInt();
-                    LOGGER.info("Set exhaustion slowness level to {}", exhaustionSlownessLevel);
                 }
                 
                 if (json.has("exhaustion_effect_duration")) {
                     exhaustionEffectDuration = json.get("exhaustion_effect_duration").getAsInt();
-                    LOGGER.info("Set exhaustion effect duration to {} ticks", exhaustionEffectDuration);
                 }
                 
                 if (json.has("apply_nausea_effect")) {
                     applyNauseaEffect = json.get("apply_nausea_effect").getAsBoolean();
-                    LOGGER.info("Set apply nausea effect to {}", applyNauseaEffect);
                 }
                 
                 // Load day/night cycle settings
                 if (json.has("day_cycle_length")) {
                     dayCycleLength = json.get("day_cycle_length").getAsInt();
-                    LOGGER.info("Set day cycle length to {} ticks", dayCycleLength);
                 }
                 
                 if (json.has("day_end_time")) {
                     dayEndTime = json.get("day_end_time").getAsInt();
-                    LOGGER.info("Set day end time to {} ticks", dayEndTime);
                 }
                 
                 loaded++;
             } catch (Exception e) {
                 LOGGER.error("Error loading fatigue config from {}", entry.getKey(), e);
             }
-        }
-        
-        if (loaded == 0) {
-            LOGGER.info("No custom fatigue configs found, using defaults");
         }
         
         LOGGER.info("Fatigue configuration loaded: max={} ticks, bed rest={} ticks, proximity range={} blocks",

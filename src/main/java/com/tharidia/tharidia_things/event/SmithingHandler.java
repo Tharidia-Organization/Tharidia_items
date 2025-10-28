@@ -40,7 +40,6 @@ public class SmithingHandler {
             return;
         }
         
-        TharidiaThings.LOGGER.debug("Hammer detected at: " + pos);
         
         // Check if clicking on marker block directly
         BlockPos checkPos = pos;
@@ -56,11 +55,9 @@ public class SmithingHandler {
             isGoldMarker = level.getBlockState(checkPos).is(TharidiaThings.HOT_GOLD_MARKER.get());
             isCopperMarker = level.getBlockState(checkPos).is(TharidiaThings.HOT_COPPER_MARKER.get());
             isMarkerBlock = isIronMarker || isGoldMarker || isCopperMarker;
-            TharidiaThings.LOGGER.debug("Clicked anvil, checking above: " + checkPos);
         }
         
         if (!isMarkerBlock) {
-            TharidiaThings.LOGGER.debug("No hot metal marker block found");
             return;
         }
         
@@ -150,28 +147,21 @@ public class SmithingHandler {
             }
             
             if (hasHotMetal) {
-                TharidiaThings.LOGGER.info("HOT METAL DETECTED IN TABLE!");
-                
                 // ALWAYS cancel the event when hot iron is present to prevent table from giving item
                 event.setCanceled(true);
-                TharidiaThings.LOGGER.info("EVENT CANCELED");
                 
                 // If using Pinza with empty hands, manually grab the hot metal
                 if (heldItem.getItem() instanceof PinzaItem pinza) {
                     PinzaItem.HoldingType holdingType = PinzaItem.getHoldingType(heldItem);
-                    TharidiaThings.LOGGER.info("PINZA DETECTED! Holding type: " + holdingType);
                     
                     if (holdingType == PinzaItem.HoldingType.NONE) {
                         // Manually grab hot metal from table
                         if (!level.isClientSide) {
                             if (isIron) {
-                                TharidiaThings.LOGGER.info("CALLING grabHotIronWithPinza");
                                 grabHotIronWithPinza(container, pos, level, event.getEntity(), heldItem);
                             } else if (isGold) {
-                                TharidiaThings.LOGGER.info("CALLING grabHotGoldWithPinza");
                                 grabHotGoldWithPinza(container, pos, level, event.getEntity(), heldItem);
                             } else if (isCopper) {
-                                TharidiaThings.LOGGER.info("CALLING grabHotCopperWithPinza");
                                 grabHotCopperWithPinza(container, pos, level, event.getEntity(), heldItem);
                             }
                         }
@@ -342,7 +332,6 @@ public class SmithingHandler {
                 
                 // Deny block use (prevents GUI) but allow item use (allows Pinza actions)
                 event.setUseBlock(net.neoforged.neoforge.common.util.TriState.FALSE);
-                TharidiaThings.LOGGER.debug("Denied anvil block use - player has Pinza");
             }
         }
     }
@@ -423,7 +412,6 @@ public class SmithingHandler {
             boolean isHotCopper = stack.is(TharidiaThings.HOT_COPPER.get());
             
             if (isHotIron || isHotGold || isHotCopper) {
-                TharidiaThings.LOGGER.warn("HOT METAL ITEM ENTITY SPAWNING! Canceling.");
                 
                 // Try to find nearest player with empty Pinza
                 if (!event.getLevel().isClientSide()) {
@@ -439,7 +427,6 @@ public class SmithingHandler {
                         if (mainHand.getItem() instanceof PinzaItem) {
                             PinzaItem.HoldingType holdingType = PinzaItem.getHoldingType(mainHand);
                             if (holdingType == PinzaItem.HoldingType.NONE) {
-                                TharidiaThings.LOGGER.info("Found player with empty Pinza! Transferring...");
                                 if (isHotIron) {
                                     PinzaItem.setHolding(mainHand, PinzaItem.HoldingType.HOT_IRON, "hot_iron");
                                 } else if (isHotGold) {
@@ -457,7 +444,6 @@ public class SmithingHandler {
                         if (offHand.getItem() instanceof PinzaItem) {
                             PinzaItem.HoldingType holdingType = PinzaItem.getHoldingType(offHand);
                             if (holdingType == PinzaItem.HoldingType.NONE) {
-                                TharidiaThings.LOGGER.info("Found player with empty Pinza in off hand! Transferring...");
                                 if (isHotIron) {
                                     PinzaItem.setHolding(offHand, PinzaItem.HoldingType.HOT_IRON, "hot_iron");
                                 } else if (isHotGold) {
@@ -481,7 +467,6 @@ public class SmithingHandler {
                 
                 // Cancel the spawn to prevent hot metal from being on ground
                 event.setCanceled(true);
-                TharidiaThings.LOGGER.info("Hot metal item entity spawn canceled.");
             }
         }
     }
@@ -495,12 +480,9 @@ public class SmithingHandler {
         if (newDamage >= maxDurability) {
             // Item is broken - remove it
             stack.shrink(1);
-            TharidiaThings.LOGGER.info("Pinza broke!");
         } else {
             // Apply damage
             stack.setDamageValue(newDamage);
-            TharidiaThings.LOGGER.info("Pinza damaged: {} -> {}/{}", 
-                currentDamage, newDamage, maxDurability);
         }
     }
 }

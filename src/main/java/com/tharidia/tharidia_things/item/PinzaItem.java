@@ -318,12 +318,9 @@ public class PinzaItem extends Item {
         if (newDamage >= MAX_DURABILITY) {
             // Item is broken - remove it
             stack.shrink(1);
-            com.tharidia.tharidia_things.TharidiaThings.LOGGER.info("Pinza broke!");
         } else {
             // Apply damage
             stack.setDamageValue(newDamage);
-            com.tharidia.tharidia_things.TharidiaThings.LOGGER.info("Pinza damaged: {} -> {}/{}", 
-                currentDamage, newDamage, MAX_DURABILITY);
         }
     }
     

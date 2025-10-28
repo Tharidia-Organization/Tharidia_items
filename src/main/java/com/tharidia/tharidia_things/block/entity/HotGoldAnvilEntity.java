@@ -183,7 +183,7 @@ public class HotGoldAnvilEntity extends BlockEntity implements IHotMetalAnvilEnt
     @Override
     public void startMinigame() {
         minigameActive = true;
-        minigameStartTime = System.currentTimeMillis();
+        minigameStartTime = level.getGameTime(); // Use game time (ticks) instead of system time
         
         // Random position on the anvil surface
         circleX = 0.2f + level.random.nextFloat() * 0.6f;
@@ -213,9 +213,10 @@ public class HotGoldAnvilEntity extends BlockEntity implements IHotMetalAnvilEnt
     
     @Override
     public float getCurrentRadius() {
-        if (!minigameActive) return 0;
+        if (!minigameActive || level == null) return 0;
         
-        long elapsed = System.currentTimeMillis() - minigameStartTime;
+        long elapsedTicks = level.getGameTime() - minigameStartTime;
+        double elapsedSeconds = elapsedTicks / 20.0; // Convert ticks to seconds (20 ticks = 1 second)
         
         // Get cycle time based on current phase (gets faster each phase)
         double maxCycleTime = com.tharidia.tharidia_things.Config.SMITHING_MAX_CYCLE_TIME.get();
@@ -225,7 +226,7 @@ public class HotGoldAnvilEntity extends BlockEntity implements IHotMetalAnvilEnt
         
         // Calculate current radius (oscillates between ~0.002 and 0.30, quasi punto fino a cerchio grande)
         // Add phaseOffset for random starting position
-        double cycle = (elapsed / 1000.0) / cycleTime;
+        double cycle = elapsedSeconds / cycleTime;
         double phase = (cycle % 1.0) * Math.PI * 2.0 + phaseOffset;
         
         return (float) (0.151 + Math.sin(phase) * 0.149);

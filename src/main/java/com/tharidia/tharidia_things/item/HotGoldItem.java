@@ -40,8 +40,6 @@ public class HotGoldItem extends Item {
                 Component.translatable("item.tharidiathings.hot_gold.burned_hands"), 
                 true
             );
-            
-            com.tharidia.tharidia_things.TharidiaThings.LOGGER.debug("Hot gold burned player hands");
         }
         super.inventoryTick(stack, level, entity, slotId, isSelected);
     }

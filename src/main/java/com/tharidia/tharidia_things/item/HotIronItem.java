@@ -40,8 +40,6 @@ public class HotIronItem extends Item {
                 Component.translatable("item.tharidiathings.hot_iron.burned_hands"), 
                 true
             );
-            
-            com.tharidia.tharidia_things.TharidiaThings.LOGGER.debug("Hot iron burned player hands");
         }
         super.inventoryTick(stack, level, entity, slotId, isSelected);
     }
