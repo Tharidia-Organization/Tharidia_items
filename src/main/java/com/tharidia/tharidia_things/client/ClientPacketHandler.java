@@ -7,8 +7,7 @@ import com.tharidia.tharidia_things.network.FatigueSyncPacket;
 import com.tharidia.tharidia_things.network.FatigueWarningPacket;
 import com.tharidia.tharidia_things.network.HierarchySyncPacket;
 import com.tharidia.tharidia_things.network.RealmSyncPacket;
-import com.tharidia.tharidia_tweaks.TharidiaTweaks;
-import com.tharidia.tharidia_tweaks.rpg_gates.network.SyncGateRestrictionsPacket;
+import com.tharidia.tharidia_things.network.SyncGateRestrictionsPacket;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
@@ -239,20 +238,14 @@ public class ClientPacketHandler {
             FatigueHudOverlay.showWarning(packet.minutesLeft());
         });
     }
-
-
+    
     /**
-     * Handles the packet on the client side
+     * Handles RPG Gates restrictions sync from tharidiatweaks mod
      */
-    public static void handleSyncRestriciton(SyncGateRestrictionsPacket packet, IPayloadContext context) {
+    public static void handleGateRestrictionsSync(SyncGateRestrictionsPacket packet, IPayloadContext context) {
         context.enqueueWork(() -> {
-            // Update client-side cache with blocked items
             ClientGateCache.updateBlockedItems(packet.blockedItems());
-
-            TharidiaTweaks.LOGGER.debug(
-                    "Client received gate restrictions update: {} blocked items",
-                    packet.blockedItems().size()
-            );
+            LOGGER.debug("Updated RPG Gates restrictions: {} items blocked", packet.blockedItems().size());
         });
     }
 }

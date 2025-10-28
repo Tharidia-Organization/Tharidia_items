@@ -1,6 +1,5 @@
 package com.tharidia.tharidia_things;
 
-import com.tharidia.tharidia_tweaks.rpg_gates.network.SyncGateRestrictionsPacket;
 import org.slf4j.Logger;
 import com.mojang.logging.LogUtils;
 import com.tharidia.tharidia_things.block.PietroBlock;
@@ -37,6 +36,7 @@ import com.tharidia.tharidia_things.network.RealmSyncPacket;
 import com.tharidia.tharidia_things.network.UpdateHierarchyPacket;
 import com.tharidia.tharidia_things.network.SelectComponentPacket;
 import com.tharidia.tharidia_things.network.SubmitNamePacket;
+import com.tharidia.tharidia_things.network.SyncGateRestrictionsPacket;
 import com.tharidia.tharidia_things.realm.RealmManager;
 
 import net.neoforged.api.distmarker.Dist;
@@ -268,13 +268,13 @@ public class TharidiaThings {
                 com.tharidia.tharidia_things.network.FatigueWarningPacket.STREAM_CODEC,
                 ClientPacketHandler::handleFatigueWarning
             );
-            // RPG Gates packet (from tharidia_tweaks integration)
+            // RPG Gates sync from tharidiatweaks
             registrar.playToClient(
-                    SyncGateRestrictionsPacket.TYPE,
-                    SyncGateRestrictionsPacket.STREAM_CODEC,
-                    ClientPacketHandler::handleSyncRestriciton
+                SyncGateRestrictionsPacket.TYPE,
+                SyncGateRestrictionsPacket.STREAM_CODEC,
+                ClientPacketHandler::handleGateRestrictionsSync
             );
-            LOGGER.info("Client packet handlers registered (including RPG Gates)");
+            LOGGER.info("Client packet handlers registered");
         } else {
             // On server, register dummy handlers (packets won't be received here anyway)
             registrar.playToClient(
@@ -302,11 +302,11 @@ public class TharidiaThings {
                 com.tharidia.tharidia_things.network.FatigueWarningPacket.STREAM_CODEC,
                 (packet, context) -> {}
             );
-            // RPG Gates packet (dummy handler on server)
+            // RPG Gates sync from tharidiatweaks (dummy handler)
             registrar.playToClient(
-                    SyncGateRestrictionsPacket.TYPE,
-                    SyncGateRestrictionsPacket.STREAM_CODEC,
-                    (packet, context) -> {}
+                SyncGateRestrictionsPacket.TYPE,
+                SyncGateRestrictionsPacket.STREAM_CODEC,
+                (packet, context) -> {}
             );
             LOGGER.info("Server-side packet registration completed (dummy handlers)");
         }

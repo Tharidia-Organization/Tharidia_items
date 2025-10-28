@@ -1,7 +1,6 @@
 package com.tharidia.tharidia_things.client;
 
 import com.tharidia.tharidia_things.TharidiaThings;
-import com.tharidia.tharidia_tweaks.TharidiaTweaks;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.api.distmarker.Dist;
@@ -34,7 +33,7 @@ public class ClientInputHandler {
                 event.setCanceled(true);
                 event.setSwingHand(false);
                 
-                TharidiaTweaks.LOGGER.debug(
+                TharidiaThings.LOGGER.debug(
                     "Client blocked attack input with {} (cached as restricted)",
                     mainHand.getItem()
                 );
