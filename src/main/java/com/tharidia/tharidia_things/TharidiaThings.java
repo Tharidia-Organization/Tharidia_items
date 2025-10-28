@@ -1,5 +1,6 @@
 package com.tharidia.tharidia_things;
 
+import com.tharidia.tharidia_tweaks.rpg_gates.network.SyncGateRestrictionsPacket;
 import org.slf4j.Logger;
 import com.mojang.logging.LogUtils;
 import com.tharidia.tharidia_things.block.PietroBlock;
@@ -222,8 +223,11 @@ public class TharidiaThings {
         // Register the fatigue handler
         NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.FatigueHandler.class);
         
-        // Mod initialized
-        LOGGER.info("TharidiaThings initialized");
+        // Log version for debugging
+        LOGGER.info("=================================================");
+        LOGGER.info("TharidiaThings v1.0.8 - NEW REST SYSTEM LOADED");
+        LOGGER.info("Features: Rest Near Bed, No Force-Back, Time Skip Block");
+        LOGGER.info("=================================================");
         
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
@@ -231,10 +235,12 @@ public class TharidiaThings {
 
     private void commonSetup(FMLCommonSetupEvent event) {
         // Common setup
+        LOGGER.info("HELLO FROM COMMON SETUP");
     }
 
     private void registerPayloads(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar("1");
+        LOGGER.info("Registering network payloads (dist: {})", FMLEnvironment.dist);
 
         if (FMLEnvironment.dist.isClient()) {
             registrar.playToClient(
@@ -262,6 +268,13 @@ public class TharidiaThings {
                 com.tharidia.tharidia_things.network.FatigueWarningPacket.STREAM_CODEC,
                 ClientPacketHandler::handleFatigueWarning
             );
+            // RPG Gates packet (from tharidia_tweaks integration)
+            registrar.playToClient(
+                    SyncGateRestrictionsPacket.TYPE,
+                    SyncGateRestrictionsPacket.STREAM_CODEC,
+                    ClientPacketHandler::handleSyncRestriciton
+            );
+            LOGGER.info("Client packet handlers registered (including RPG Gates)");
         } else {
             // On server, register dummy handlers (packets won't be received here anyway)
             registrar.playToClient(
@@ -289,6 +302,13 @@ public class TharidiaThings {
                 com.tharidia.tharidia_things.network.FatigueWarningPacket.STREAM_CODEC,
                 (packet, context) -> {}
             );
+            // RPG Gates packet (dummy handler on server)
+            registrar.playToClient(
+                    SyncGateRestrictionsPacket.TYPE,
+                    SyncGateRestrictionsPacket.STREAM_CODEC,
+                    (packet, context) -> {}
+            );
+            LOGGER.info("Server-side packet registration completed (dummy handlers)");
         }
         
         // Register server-bound packets (works on both sides)
@@ -345,7 +365,7 @@ public class TharidiaThings {
         
         RealmSyncPacket packet = new RealmSyncPacket(realmDataList, true); // true = full sync
         PacketDistributor.sendToPlayer(player, packet);
-        
+
         LOGGER.info("Synced {} realms to player {}", realmDataList.size(), player.getName().getString());
     }
 
