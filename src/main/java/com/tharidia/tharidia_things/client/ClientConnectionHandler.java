@@ -46,7 +46,11 @@ public class ClientConnectionHandler {
         }
         isLoggingIn = false;
         ClientPacketHandler.syncedRealms.clear();
+        ClientPacketHandler.clearHierarchyCache();
         RealmClientHandler.reset();
+        // Clear gate restriction cache
+        ClientGateCache.clear();
+        LOGGER.info("[GATE CACHE] Cleared gate restrictions cache on disconnect");
     }
     
     /**

@@ -1,5 +1,6 @@
 package com.tharidia.tharidia_things;
 
+import com.tharidia.tharidia_tweaks.rpg_gates.network.SyncGateRestrictionsPacket;
 import org.slf4j.Logger;
 import com.mojang.logging.LogUtils;
 import com.tharidia.tharidia_things.block.PietroBlock;
@@ -267,7 +268,13 @@ public class TharidiaThings {
                 com.tharidia.tharidia_things.network.FatigueWarningPacket.STREAM_CODEC,
                 ClientPacketHandler::handleFatigueWarning
             );
-            LOGGER.info("Client packet handlers registered");
+            // RPG Gates packet (from tharidia_tweaks integration)
+            registrar.playToClient(
+                    SyncGateRestrictionsPacket.TYPE,
+                    SyncGateRestrictionsPacket.STREAM_CODEC,
+                    ClientPacketHandler::handleSyncRestriciton
+            );
+            LOGGER.info("Client packet handlers registered (including RPG Gates)");
         } else {
             // On server, register dummy handlers (packets won't be received here anyway)
             registrar.playToClient(
@@ -294,6 +301,12 @@ public class TharidiaThings {
                 com.tharidia.tharidia_things.network.FatigueWarningPacket.TYPE,
                 com.tharidia.tharidia_things.network.FatigueWarningPacket.STREAM_CODEC,
                 (packet, context) -> {}
+            );
+            // RPG Gates packet (dummy handler on server)
+            registrar.playToClient(
+                    SyncGateRestrictionsPacket.TYPE,
+                    SyncGateRestrictionsPacket.STREAM_CODEC,
+                    (packet, context) -> {}
             );
             LOGGER.info("Server-side packet registration completed (dummy handlers)");
         }
