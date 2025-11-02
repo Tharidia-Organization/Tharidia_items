@@ -83,11 +83,13 @@ public class PietroBlock extends BaseEntityBlock {
         // Place upper half
         level.setBlock(pos.above(), state.setValue(HALF, DoubleBlockHalf.UPPER), 3);
 
-        // Store the player's name and UUID who placed the block
-        if (!level.isClientSide && placer instanceof Player player) {
+        // Store the player's chosen name and UUID who placed the block
+        if (!level.isClientSide && placer instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
             BlockEntity blockEntity = level.getBlockEntity(pos);
             if (blockEntity instanceof PietroBlockEntity pietroBlockEntity) {
-                pietroBlockEntity.setOwner(player.getName().getString(), player.getUUID());
+                // Use chosen name from NameService instead of Minecraft username
+                String chosenName = com.tharidia.tharidia_things.util.PlayerNameHelper.getChosenName(serverPlayer);
+                pietroBlockEntity.setOwner(chosenName, serverPlayer.getUUID());
                 
                 // Sync the new realm to all online players
                 if (level instanceof ServerLevel serverLevel) {

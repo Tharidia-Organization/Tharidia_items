@@ -2,6 +2,8 @@ package com.tharidia.tharidia_things.event;
 
 import com.tharidia.tharidia_things.TharidiaThings;
 import com.tharidia.tharidia_things.network.RequestNamePacket;
+import com.tharidia.tharidia_things.lobby.LobbyEvents;
+import com.tharidia.tharidia_things.Config;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
@@ -17,6 +19,13 @@ public class PreLoginNameHandler {
     public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         // Only run on server side
         if (event.getEntity() instanceof ServerPlayer serverPlayer) {
+            // If this server is the lobby (config) or lobby mode is active, skip the name prompt here
+            // The player will be asked on the main server instead.
+            if (Config.IS_LOBBY_SERVER.get() || LobbyEvents.isLobbyMode()) {
+                TharidiaThings.LOGGER.info("[NAME SELECTION] Lobby detected - skipping name prompt for {}",
+                    serverPlayer.getName().getString());
+                return;
+            }
             // Check if player needs to choose a name
             boolean needsName = RequestNamePacket.checkIfPlayerNeedsName(serverPlayer);
             

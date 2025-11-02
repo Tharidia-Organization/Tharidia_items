@@ -30,13 +30,15 @@ public class ClaimRegistry {
         public final BlockPos position;
         public final UUID ownerUUID;
         public String claimName;
+        public String ownerName; // Chosen name from NameService
         public final long creationTime;
         public final String dimension;
 
-        public ClaimData(BlockPos position, UUID ownerUUID, String claimName, long creationTime, String dimension) {
+        public ClaimData(BlockPos position, UUID ownerUUID, String claimName, String ownerName, long creationTime, String dimension) {
             this.position = position;
             this.ownerUUID = ownerUUID;
             this.claimName = claimName;
+            this.ownerName = ownerName;
             this.creationTime = creationTime;
             this.dimension = dimension;
         }
@@ -51,6 +53,10 @@ public class ClaimRegistry {
 
         public String getClaimName() {
             return claimName;
+        }
+        
+        public String getOwnerName() {
+            return ownerName;
         }
 
         public String getDimension() {
@@ -68,6 +74,7 @@ public class ClaimRegistry {
             pos,
             claim.getOwnerUUID(),
             claim.getClaimName(),
+            claim.getOwnerName(),
             claim.getCreationTime(),
             dimension
         );

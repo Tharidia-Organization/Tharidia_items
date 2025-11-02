@@ -31,6 +31,8 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
     private static final int MAX_VISIBLE_PLAYERS = 6;
     private UUID selectedPlayerForRankChange = null;
     private boolean showRankSelectionMenu = false;
+    private int rankMenuX = 0;
+    private int rankMenuY = 0;
 
     public PietroScreen(PietroMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
@@ -263,17 +265,20 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
     }
     
     private void renderRankSelectionMenu(GuiGraphics guiGraphics) {
-        int menuX = this.leftPos + 90;
-        int menuY = this.topPos + 90;
         int menuWidth = 80;
         int menuHeight = 90;
         
-        // Background
-        guiGraphics.fill(menuX, menuY, menuX + menuWidth, menuY + menuHeight, 0xDD000000);
-        guiGraphics.renderOutline(menuX, menuY, menuWidth, menuHeight, 0xFFFFFFFF);
+        // Use stored menu position (set when button is clicked)
+        int menuX = rankMenuX;
+        int menuY = rankMenuY;
+        
+        // Background with shadow effect
+        guiGraphics.fill(menuX + 2, menuY + 2, menuX + menuWidth + 2, menuY + menuHeight + 2, 0x88000000); // Shadow
+        guiGraphics.fill(menuX, menuY, menuX + menuWidth, menuY + menuHeight, 0xEE222222); // Dark background
+        guiGraphics.renderOutline(menuX, menuY, menuWidth, menuHeight, 0xFFAAAAAA); // Light border
         
         // Title
-        guiGraphics.drawString(this.font, "§6Scegli Rango:", menuX + 5, menuY + 5, 0x404040, false);
+        guiGraphics.drawString(this.font, "§6Scegli Rango:", menuX + 5, menuY + 5, 0xFFFFFF, false);
         
         // Rank options (except LORD)
         HierarchyRank[] selectableRanks = {HierarchyRank.CONSIGLIERE, HierarchyRank.GUARDIA, HierarchyRank.MILIZIANO, HierarchyRank.COLONO};
@@ -281,7 +286,15 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
         
         for (HierarchyRank rank : selectableRanks) {
             String rankColor = getRankColor(rank);
-            guiGraphics.drawString(this.font, rankColor + rank.getDisplayName(), menuX + 8, optionY, 0x404040, false);
+            // Highlight on hover
+            int relMouseX = (int)(Minecraft.getInstance().mouseHandler.xpos() * Minecraft.getInstance().getWindow().getGuiScaledWidth() / Minecraft.getInstance().getWindow().getScreenWidth());
+            int relMouseY = (int)(Minecraft.getInstance().mouseHandler.ypos() * Minecraft.getInstance().getWindow().getGuiScaledHeight() / Minecraft.getInstance().getWindow().getScreenHeight());
+            
+            if (relMouseX >= menuX && relMouseX <= menuX + menuWidth && relMouseY >= optionY && relMouseY <= optionY + 15) {
+                guiGraphics.fill(menuX + 2, optionY, menuX + menuWidth - 2, optionY + 14, 0x55FFFFFF); // Hover highlight
+            }
+            
+            guiGraphics.drawString(this.font, rankColor + rank.getDisplayName(), menuX + 8, optionY + 3, 0xFFFFFF, false);
             optionY += 15;
         }
     }
@@ -323,10 +336,12 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
         if (button == 0 && currentTab == TAB_CLAIMS) { // Left click on claims tab
             // Check if clicking on rank selection menu
             if (showRankSelectionMenu && selectedPlayerForRankChange != null) {
-                int menuX = this.leftPos + 5; //TODO fix the values to put the menu in the correct position
-                int menuY = this.topPos + 5;
                 int menuWidth = 80;
                 int menuHeight = 90;
+                
+                // Use stored menu position
+                int menuX = rankMenuX;
+                int menuY = rankMenuY;
                 
                 if (mouseX >= menuX && mouseX <= menuX + menuWidth && mouseY >= menuY && mouseY <= menuY + menuHeight) {
                     // Check which rank was clicked
@@ -393,9 +408,24 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
                         
                         if (mouseX >= buttonX && mouseX <= buttonX + buttonWidth && 
                             mouseY >= buttonY && mouseY <= buttonY + buttonHeight) {
-                            // Open rank selection menu
+                            // Open rank selection menu positioned right below the button
                             selectedPlayerForRankChange = entry.playerUUID;
                             showRankSelectionMenu = true;
+                            
+                            // Position menu directly below the clicked button
+                            rankMenuX = buttonX - 20; // Slightly to the left to center it better
+                            rankMenuY = buttonY + buttonHeight + 2; // Just below the button
+                            
+                            // Make sure menu doesn't go off screen
+                            int menuWidth = 80;
+                            int menuHeight = 90;
+                            if (rankMenuX + menuWidth > this.leftPos + this.imageWidth) {
+                                rankMenuX = this.leftPos + this.imageWidth - menuWidth - 5;
+                            }
+                            if (rankMenuY + menuHeight > this.topPos + this.imageHeight) {
+                                rankMenuY = buttonY - menuHeight - 2; // Show above if no space below
+                            }
+                            
                             return true;
                         }
                     }

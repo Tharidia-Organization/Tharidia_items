@@ -27,127 +27,78 @@ public class LobbyCommand {
     }
     
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
-        // /queue - Check your position in queue
-        dispatcher.register(Commands.literal("queue")
-            .executes(context -> {
-                if (!(context.getSource().getEntity() instanceof ServerPlayer player)) {
-                    context.getSource().sendFailure(Component.literal("§cThis command can only be used by players!"));
-                    return 0;
-                }
-                
-                int position = queueManager.getQueuePosition(player.getUUID());
-                if (position > 0) {
-                    long waitTime = queueManager.getWaitTime(player.getUUID());
-                    context.getSource().sendSuccess(() -> Component.literal(
-                        "§e§l[QUEUE] §7You are in position §6#" + position
-                    ), false);
-                    context.getSource().sendSuccess(() -> Component.literal(
-                        "§7Queue size: §6" + queueManager.getQueueSize() + " §7| Wait time: §6" + waitTime + "s"
-                    ), false);
-                } else {
-                    context.getSource().sendSuccess(() -> Component.literal(
-                        "§e§l[QUEUE] §7You are not in the queue"
-                    ), false);
-                }
-                return 1;
-            })
-        );
-        
-        // /play - Join the main server (or queue)
-        dispatcher.register(Commands.literal("play")
-            .executes(context -> {
-                if (!(context.getSource().getEntity() instanceof ServerPlayer player)) {
-                    context.getSource().sendFailure(Component.literal("§cThis command can only be used by players!"));
-                    return 0;
-                }
-                
-                if (!queueManager.isQueueEnabled()) {
-                    transferManager.transferToMain(player);
-                } else {
-                    if (!queueManager.isInQueue(player.getUUID())) {
-                        queueManager.addToQueue(player);
-                    } else {
-                        queueManager.updateQueuePosition(player);
-                    }
-                }
-                return 1;
-            })
-        );
-        
-        // /queueadmin - Admin commands
-        dispatcher.register(Commands.literal("queueadmin")
-            .requires(source -> source.hasPermission(2)) // OP level 2
+        // Only register admin commands - no commands for non-OP players
+        registerQueueAdmin(dispatcher, "thqueueadmin");
+    }
+
+
+    private static void registerQueueAdmin(CommandDispatcher<CommandSourceStack> dispatcher, String root) {
+        // /<root> - Admin commands (requires OP level 4)
+        dispatcher.register(Commands.literal(root)
+            .requires(source -> source.hasPermission(4))
             
-            // /queueadmin enable
+            // /thqueueadmin enable
             .then(Commands.literal("enable")
                 .executes(context -> {
                     queueManager.setQueueEnabled(true);
-                    context.getSource().sendSuccess(() -> Component.literal(
-                        "§a§l[QUEUE] §7Queue system enabled"
-                    ), true);
+                    sendFeedback(context, "§a§l[QUEUE] §7Queue system enabled");
                     return 1;
                 })
             )
             
-            // /queueadmin disable
+            // /thqueueadmin disable
             .then(Commands.literal("disable")
                 .executes(context -> {
                     queueManager.setQueueEnabled(false);
-                    context.getSource().sendSuccess(() -> Component.literal(
-                        "§c§l[QUEUE] §7Queue system disabled"
-                    ), true);
+                    sendFeedback(context, "§c§l[QUEUE] §7Queue system disabled");
                     return 1;
                 })
             )
             
-            // /queueadmin clear
+            // /thqueueadmin clear
             .then(Commands.literal("clear")
                 .executes(context -> {
                     queueManager.clearQueue();
-                    context.getSource().sendSuccess(() -> Component.literal(
-                        "§a§l[QUEUE] §7Queue cleared"
-                    ), true);
+                    sendFeedback(context, "§a§l[QUEUE] §7Queue cleared");
                     return 1;
                 })
             )
             
-            // /queueadmin list
+            // /thqueueadmin list
             .then(Commands.literal("list")
                 .executes(context -> {
                     return listQueue(context);
                 })
             )
             
-            // /queueadmin send <player>
+            // /thqueueadmin send <player>
             .then(Commands.literal("send")
                 .then(Commands.argument("player", EntityArgument.player())
                     .executes(context -> {
                         ServerPlayer target = EntityArgument.getPlayer(context, "player");
                         transferManager.transferToMain(target);
                         queueManager.removeFromQueue(target.getUUID());
-                        context.getSource().sendSuccess(() -> Component.literal(
-                            "§a§l[QUEUE] §7Sent §6" + target.getName().getString() + "§7 to main server"
-                        ), true);
+                        sendFeedback(context, "§a§l[QUEUE] §7Sent §6" + target.getName().getString() + "§7 to main server");
                         return 1;
                     })
                 )
             )
             
-            // /queueadmin sendnext
+            // /thqueueadmin sendnext
             .then(Commands.literal("sendnext")
                 .executes(context -> {
                     return sendNextPlayer(context);
                 })
             )
             
-            // /queueadmin sendall
+            // /thqueueadmin sendall
             .then(Commands.literal("sendall")
                 .executes(context -> {
                     return sendAllPlayers(context);
                 })
             )
             
-            // /queueadmin autotransfer <on|off>
+            // /thqueueadmin autotransfer <on|off>
             .then(Commands.literal("autotransfer")
                 .then(Commands.argument("state", StringArgumentType.word())
                     .suggests((context, builder) -> {
@@ -159,36 +110,32 @@ public class LobbyCommand {
                         String state = StringArgumentType.getString(context, "state");
                         boolean enabled = state.equalsIgnoreCase("on");
                         queueManager.setAutoTransfer(enabled);
-                        context.getSource().sendSuccess(() -> Component.literal(
-                            "§a§l[QUEUE] §7Auto-transfer " + (enabled ? "enabled" : "disabled")
-                        ), true);
+                        sendFeedback(context, "§a§l[QUEUE] §7Auto-transfer " + (enabled ? "enabled" : "disabled"));
                         return 1;
                     })
                 )
             )
             
-            // /queueadmin maxplayers <number>
+            // /thqueueadmin maxplayers <number>
             .then(Commands.literal("maxplayers")
                 .then(Commands.argument("max", IntegerArgumentType.integer(1, 1000))
                     .executes(context -> {
                         int max = IntegerArgumentType.getInteger(context, "max");
                         queueManager.setMaxMainServerPlayers(max);
-                        context.getSource().sendSuccess(() -> Component.literal(
-                            "§a§l[QUEUE] §7Max main server players set to: §6" + max
-                        ), true);
+                        sendFeedback(context, "§a§l[QUEUE] §7Max main server players set to: §6" + max);
                         return 1;
                     })
                 )
             )
             
-            // /queueadmin info
+            // /thqueueadmin info
             .then(Commands.literal("info")
                 .executes(context -> {
                     return showQueueInfo(context);
                 })
             )
             
-            // /queueadmin lobbymode <on|off>
+            // /thqueueadmin lobbymode <on|off>
             .then(Commands.literal("lobbymode")
                 .then(Commands.argument("state", StringArgumentType.word())
                     .suggests((context, builder) -> {
@@ -200,15 +147,65 @@ public class LobbyCommand {
                         String state = StringArgumentType.getString(context, "state");
                         boolean enabled = state.equalsIgnoreCase("on");
                         LobbyEvents.setLobbyMode(enabled);
-                        context.getSource().sendSuccess(() -> Component.literal(
-                            "§a§l[LOBBY] §7Lobby mode " + (enabled ? "enabled" : "disabled")
-                        ), true);
-                        context.getSource().sendSuccess(() -> Component.literal(
-                            "§7Players will " + (enabled ? "now" : "no longer") + " spawn in spectator mode"
-                        ), true);
+                        sendFeedback(context, "§a§l[LOBBY] §7Lobby mode " + (enabled ? "enabled" : "disabled"));
+                        sendFeedback(context, "§7Players will " + (enabled ? "now" : "no longer") + " spawn in spectator mode");
                         return 1;
                     })
                 )
+            )
+            
+            // /thqueueadmin play - Admin command to manually join/queue (bypasses restrictions)
+            .then(Commands.literal("play")
+                .executes(context -> {
+                    if (!(context.getSource().getEntity() instanceof ServerPlayer player)) {
+                        context.getSource().sendFailure(Component.literal("§cThis command can only be used by players!"));
+                        return 0;
+                    }
+                    
+                    if (!queueManager.isQueueEnabled()) {
+                        transferManager.transferToMain(player);
+                        sendFeedback(context, "§a§l[ADMIN] §7Transferring to main server...");
+                    } else {
+                        if (!queueManager.isInQueue(player.getUUID())) {
+                            queueManager.addToQueue(player);
+                        } else {
+                            queueManager.updateQueuePosition(player);
+                        }
+                    }
+                    return 1;
+                })
+            )
+            
+            // /thqueueadmin sendtolobby <player> - Send player from main to lobby
+            .then(Commands.literal("sendtolobby")
+                .then(Commands.argument("player", EntityArgument.player())
+                    .executes(context -> {
+                        ServerPlayer target = EntityArgument.getPlayer(context, "player");
+                        transferManager.transferToServer(target, "lobby");
+                        sendFeedback(context, "§a§l[QUEUE] §7Sent §6" + target.getName().getString() + "§7 to lobby server");
+                        return 1;
+                    })
+                )
+            )
+            
+            // /thqueueadmin queue - Check queue position (admin only)
+            .then(Commands.literal("queue")
+                .executes(context -> {
+                    if (!(context.getSource().getEntity() instanceof ServerPlayer player)) {
+                        context.getSource().sendFailure(Component.literal("§cThis command can only be used by players!"));
+                        return 0;
+                    }
+                    
+                    int position = queueManager.getQueuePosition(player.getUUID());
+                    if (position > 0) {
+                        long waitTime = queueManager.getWaitTime(player.getUUID());
+                        sendFeedback(context, "§e§l[QUEUE] §7You are in position §6#" + position);
+                        sendFeedback(context, "§7Queue size: §6" + queueManager.getQueueSize() + " §7| Wait time: §6" + waitTime + "s");
+                    } else {
+                        sendFeedback(context, "§e§l[QUEUE] §7You are not in the queue");
+                    }
+                    return 1;
+                })
             )
         );
     }
@@ -217,15 +214,11 @@ public class LobbyCommand {
         List<UUID> queue = queueManager.getQueuedPlayers();
         
         if (queue.isEmpty()) {
-            context.getSource().sendSuccess(() -> Component.literal(
-                "§e§l[QUEUE] §7Queue is empty"
-            ), false);
+            sendFeedback(context, "§e§l[QUEUE] §7Queue is empty");
             return 1;
         }
         
-        context.getSource().sendSuccess(() -> Component.literal(
-            "§6§l=== Queue List (" + queue.size() + " players) ==="
-        ), false);
+        sendFeedback(context, "§6§l=== Queue List (" + queue.size() + " players) ===");
         
         int position = 1;
         for (UUID uuid : queue) {
@@ -233,10 +226,7 @@ public class LobbyCommand {
             String name = player != null ? player.getName().getString() : "Unknown";
             long waitTime = queueManager.getWaitTime(uuid);
             
-            final int pos = position;
-            context.getSource().sendSuccess(() -> Component.literal(
-                "§7" + pos + ". §6" + name + " §7(waited: §6" + waitTime + "s§7)"
-            ), false);
+            sendFeedback(context, "§7" + position + ". §6" + name + " §7(waited: §6" + waitTime + "s§7)");
             position++;
         }
         return 1;
@@ -246,22 +236,16 @@ public class LobbyCommand {
         UUID nextUuid = queueManager.pollNextInQueue();
         
         if (nextUuid == null) {
-            context.getSource().sendSuccess(() -> Component.literal(
-                "§e§l[QUEUE] §7Queue is empty"
-            ), false);
+            sendFeedback(context, "§e§l[QUEUE] §7Queue is empty");
             return 1;
         }
         
         ServerPlayer player = context.getSource().getServer().getPlayerList().getPlayer(nextUuid);
         if (player != null) {
             transferManager.transferToMain(player);
-            context.getSource().sendSuccess(() -> Component.literal(
-                "§a§l[QUEUE] §7Sent §6" + player.getName().getString() + "§7 to main server"
-            ), true);
+            sendFeedback(context, "§a§l[QUEUE] §7Sent §6" + player.getName().getString() + "§7 to main server");
         } else {
-            context.getSource().sendSuccess(() -> Component.literal(
-                "§c§l[QUEUE] §7Player not found (offline?)"
-            ), false);
+            sendFeedback(context, "§c§l[QUEUE] §7Player not found (offline?)");
         }
         return 1;
     }
@@ -279,30 +263,30 @@ public class LobbyCommand {
             }
         }
         
-        final int finalSent = sent;
-        context.getSource().sendSuccess(() -> Component.literal(
-            "§a§l[QUEUE] §7Sent §6" + finalSent + "§7 players to main server"
-        ), true);
+        sendFeedback(context, "§a§l[QUEUE] §7Sent §6" + sent + "§7 players to main server");
         return 1;
     }
     
     private static int showQueueInfo(CommandContext<CommandSourceStack> context) {
-        context.getSource().sendSuccess(() -> Component.literal("§6§l=== Queue Information ==="), false);
-        context.getSource().sendSuccess(() -> Component.literal(
-            "§7Lobby Mode: " + (LobbyEvents.isLobbyMode() ? "§aEnabled" : "§cDisabled")
-        ), false);
-        context.getSource().sendSuccess(() -> Component.literal(
-            "§7Queue Status: " + (queueManager.isQueueEnabled() ? "§aEnabled" : "§cDisabled")
-        ), false);
-        context.getSource().sendSuccess(() -> Component.literal(
-            "§7Auto-transfer: " + (queueManager.isAutoTransfer() ? "§aEnabled" : "§cDisabled")
-        ), false);
-        context.getSource().sendSuccess(() -> Component.literal(
-            "§7Max players: §6" + queueManager.getMaxMainServerPlayers()
-        ), false);
-        context.getSource().sendSuccess(() -> Component.literal(
-            "§7Current queue size: §6" + queueManager.getQueueSize()
-        ), false);
+        sendFeedback(context, "§6§l=== Queue Information ===");
+        sendFeedback(context, "§7Lobby Mode: " + (LobbyEvents.isLobbyMode() ? "§aEnabled" : "§cDisabled"));
+        sendFeedback(context, "§7Queue Status: " + (queueManager.isQueueEnabled() ? "§aEnabled" : "§cDisabled"));
+        sendFeedback(context, "§7Auto-transfer: " + (queueManager.isAutoTransfer() ? "§aEnabled" : "§cDisabled"));
+        sendFeedback(context, "§7Max players: §6" + queueManager.getMaxMainServerPlayers());
+        sendFeedback(context, "§7Current queue size: §6" + queueManager.getQueueSize());
         return 1;
+    }
+    
+    /**
+     * Helper method to send feedback that works in both game chat and console
+     */
+    private static void sendFeedback(CommandContext<CommandSourceStack> context, String message) {
+        Component component = Component.literal(message);
+        // Send to command source (works for both player and console)
+        context.getSource().sendSuccess(() -> component, false);
+        // If executed by a player, also ensure they see it in chat
+        if (context.getSource().getEntity() instanceof ServerPlayer player) {
+            player.sendSystemMessage(component);
+        }
     }
 }

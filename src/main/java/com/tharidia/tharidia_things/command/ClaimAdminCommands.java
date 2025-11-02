@@ -27,7 +27,7 @@ public class ClaimAdminCommands {
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(
             Commands.literal("claimadmin")
-                .requires(source -> source.hasPermission(2)) // Require OP level 2
+                .requires(source -> source.hasPermission(4)) // Require OP level 4 (admin)
                 .then(Commands.literal("info")
                     .then(Commands.argument("pos", BlockPosArgument.blockPos())
                         .executes(ClaimAdminCommands::executeInfo)))

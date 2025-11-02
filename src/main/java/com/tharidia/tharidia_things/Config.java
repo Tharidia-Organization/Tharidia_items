@@ -48,5 +48,10 @@ public class Config {
             .comment("Maximum durability (uses) for the Pinza (Tongs)")
             .defineInRange("pinzaDurability", 480, 1, 10000);
 
+    // Lobby server flag
+    public static final ModConfigSpec.BooleanValue IS_LOBBY_SERVER = BUILDER
+            .comment("If true, this server is treated as the Lobby: skip character name prompt here and only ask on main server")
+            .define("isLobbyServer", false);
+
     static final ModConfigSpec SPEC = BUILDER.build();
 }

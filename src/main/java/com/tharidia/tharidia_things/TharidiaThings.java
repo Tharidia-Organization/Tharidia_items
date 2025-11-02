@@ -42,6 +42,9 @@ import com.tharidia.tharidia_things.lobby.QueueManager;
 import com.tharidia.tharidia_things.lobby.ServerTransferManager;
 import com.tharidia.tharidia_things.lobby.LobbyCommand;
 import com.tharidia.tharidia_things.lobby.LobbyEvents;
+import com.tharidia.tharidia_things.lobby.LobbyChatBlocker;
+import com.tharidia.tharidia_things.lobby.LobbyProtectionHandler;
+import com.tharidia.tharidia_things.lobby.ServerCommandBlocker;
 
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.loading.FMLEnvironment;
@@ -226,8 +229,12 @@ public class TharidiaThings {
         NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.PreLoginNameHandler.class);
         // Register the fatigue handler
         NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.FatigueHandler.class);
-        // Register lobby events
+        // Register lobby events and protection (always register to block /server command everywhere)
         NeoForge.EVENT_BUS.register(LobbyEvents.class);
+        NeoForge.EVENT_BUS.register(LobbyChatBlocker.class);
+        NeoForge.EVENT_BUS.register(LobbyProtectionHandler.class);
+        NeoForge.EVENT_BUS.register(ServerCommandBlocker.class);
+        LOGGER.info("Lobby protection handlers registered (chat blocker, spectator enforcer, /server blocker)");
         
         // Register handshake bypass (CLIENT ONLY)
         if (FMLEnvironment.dist == Dist.CLIENT) {
@@ -450,8 +457,12 @@ public class TharidiaThings {
         // Register weight data loader
         event.getServer().getResourceManager();
         
-        // Initialize lobby queue system
-        initializeLobbySystem();
+        // Initialize lobby queue system only on lobby servers
+        if (Config.IS_LOBBY_SERVER.get()) {
+            initializeLobbySystem();
+        } else {
+            LOGGER.info("Skipping lobby system initialization (isLobbyServer=false)");
+        }
     }
     
     /**
@@ -492,7 +503,12 @@ public class TharidiaThings {
         ClaimCommands.register(event.getDispatcher());
         com.tharidia.tharidia_things.command.ClaimAdminCommands.register(event.getDispatcher());
         FatigueCommands.register(event.getDispatcher());
-        LobbyCommand.register(event.getDispatcher());
+        if (Config.IS_LOBBY_SERVER.get()) {
+            LOGGER.info("Registering lobby commands (isLobbyServer=true)");
+            LobbyCommand.register(event.getDispatcher());
+        } else {
+            LOGGER.info("Not registering lobby commands on non-lobby server (isLobbyServer=false)");
+        }
     }
 
     /**

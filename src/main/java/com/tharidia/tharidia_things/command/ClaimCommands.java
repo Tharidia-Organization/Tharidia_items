@@ -38,6 +38,7 @@ public class ClaimCommands {
                     .then(Commands.argument("player", EntityArgument.player())
                         .executes(ClaimCommands::executeUntrust)))
                 .then(Commands.literal("flag")
+                    .requires(source -> source.hasPermission(4)) // Admin only
                     .then(Commands.literal("explosions")
                         .then(Commands.literal("allow").executes(ctx -> executeFlag(ctx, "explosions", true)))
                         .then(Commands.literal("deny").executes(ctx -> executeFlag(ctx, "explosions", false))))
@@ -50,9 +51,6 @@ public class ClaimCommands {
                     .then(Commands.literal("fire")
                         .then(Commands.literal("allow").executes(ctx -> executeFlag(ctx, "fire", true)))
                         .then(Commands.literal("deny").executes(ctx -> executeFlag(ctx, "fire", false)))))
-                .then(Commands.literal("rent")
-                    .then(Commands.argument("days", IntegerArgumentType.integer(1, 365))
-                        .executes(ClaimCommands::executeRent)))
                 .then(Commands.literal("abandon")
                     .executes(ClaimCommands::executeAbandon))
                 .then(Commands.literal("list")

@@ -26,6 +26,7 @@ import java.util.UUID;
 
 public class ClaimBlockEntity extends BlockEntity implements MenuProvider {
     private UUID ownerUUID;
+    private String ownerName = ""; // Chosen name from NameService
     private Set<UUID> trustedPlayers = new HashSet<>();
     private String claimName = "";
     private long creationTime;
@@ -116,11 +117,16 @@ public class ClaimBlockEntity extends BlockEntity implements MenuProvider {
             this.claimCountWhenPlaced = com.tharidia.tharidia_things.claim.ClaimRegistry.getPlayerClaimCountPersistent(ownerUUID, serverLevel);
         }
 
-        // Automatically set claim name to owner's name
+        // Automatically set claim name and owner name using chosen name from NameService
         if (level instanceof ServerLevel serverLevel) {
             net.minecraft.server.level.ServerPlayer player = serverLevel.getServer().getPlayerList().getPlayer(ownerUUID);
             if (player != null) {
-                this.claimName = player.getName().getString() + "'s Claim";
+                this.ownerName = com.tharidia.tharidia_things.util.PlayerNameHelper.getChosenName(player);
+                this.claimName = this.ownerName + "'s Claim";
+            } else {
+                // Player is offline, try to get from NameService storage
+                this.ownerName = com.tharidia.tharidia_things.util.PlayerNameHelper.getChosenNameByUUID(ownerUUID, serverLevel.getServer());
+                this.claimName = this.ownerName + "'s Claim";
             }
         }
 
@@ -154,6 +160,15 @@ public class ClaimBlockEntity extends BlockEntity implements MenuProvider {
 
     public String getClaimName() {
         return claimName;
+    }
+    
+    public String getOwnerName() {
+        return ownerName;
+    }
+    
+    public void setOwnerName(String ownerName) {
+        this.ownerName = ownerName;
+        setChanged();
     }
 
     public void setClaimName(String name) {
@@ -464,6 +479,7 @@ public class ClaimBlockEntity extends BlockEntity implements MenuProvider {
         if (ownerUUID != null) {
             tag.putUUID("OwnerUUID", ownerUUID);
         }
+        tag.putString("OwnerName", ownerName);
         tag.put("Inventory", inventory.serializeNBT(registries));
         
         // Save trusted players
@@ -511,6 +527,12 @@ public class ClaimBlockEntity extends BlockEntity implements MenuProvider {
         super.loadAdditional(tag, registries);
         if (tag.hasUUID("OwnerUUID")) {
             ownerUUID = tag.getUUID("OwnerUUID");
+        }
+        if (tag.contains("OwnerName")) {
+            ownerName = tag.getString("OwnerName");
+        } else if (ownerUUID != null && level instanceof ServerLevel serverLevel) {
+            // Migrate old claims without ownerName
+            ownerName = com.tharidia.tharidia_things.util.PlayerNameHelper.getChosenNameByUUID(ownerUUID, serverLevel.getServer());
         }
         if (tag.contains("Inventory")) {
             inventory.deserializeNBT(registries, tag.getCompound("Inventory"));
