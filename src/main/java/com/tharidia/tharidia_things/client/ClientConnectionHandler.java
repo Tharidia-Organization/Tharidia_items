@@ -1,6 +1,8 @@
 package com.tharidia.tharidia_things.client;
 
 import com.mojang.logging.LogUtils;
+import com.tharidia.tharidia_things.client.gui.PreLoginNameScreen;
+import net.minecraft.client.Minecraft;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
@@ -8,6 +10,7 @@ import org.slf4j.Logger;
 
 /**
  * Handles client connection events to properly clear synced realm data
+ * and manage pre-login name selection
  */
 public class ClientConnectionHandler {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -17,6 +20,9 @@ public class ClientConnectionHandler {
     
     // Track boundary visibility state across logout/login (made public for ClientPacketHandler)
     public static boolean boundariesWereVisible = false;
+    
+    // Track if we're waiting for name selection
+    private static boolean waitingForNameSelection = false;
     
     /**
      * Called when client starts logging in
@@ -45,12 +51,40 @@ public class ClientConnectionHandler {
             LOGGER.info("[DEBUG] Clearing {} synced realms on disconnect", ClientPacketHandler.syncedRealms.size());
         }
         isLoggingIn = false;
+        waitingForNameSelection = false;
         ClientPacketHandler.syncedRealms.clear();
         ClientPacketHandler.clearHierarchyCache();
         RealmClientHandler.reset();
         // Clear gate restriction cache
         ClientGateCache.clear();
         LOGGER.info("[GATE CACHE] Cleared gate restrictions cache on disconnect");
+    }
+    
+    /**
+     * Called when server requests name selection
+     */
+    public static void handleNameRequest(boolean needsName) {
+        if (needsName && !waitingForNameSelection) {
+            waitingForNameSelection = true;
+            LOGGER.info("[NAME SELECTION] Server requires name selection - showing pre-login screen");
+            
+            // Show the pre-login name selection screen
+            Minecraft.getInstance().execute(() -> {
+                Minecraft mc = Minecraft.getInstance();
+                mc.setScreen(new PreLoginNameScreen());
+            });
+        } else if (!needsName) {
+            LOGGER.info("[NAME SELECTION] Player already has a name, proceeding with login");
+            waitingForNameSelection = false;
+        }
+    }
+    
+    /**
+     * Called when name has been submitted successfully
+     */
+    public static void onNameSubmitted() {
+        waitingForNameSelection = false;
+        LOGGER.info("[NAME SELECTION] Name submitted, continuing login");
     }
     
     /**

@@ -8,6 +8,7 @@ import com.tharidia.tharidia_things.network.FatigueWarningPacket;
 import com.tharidia.tharidia_things.network.HierarchySyncPacket;
 import com.tharidia.tharidia_things.network.RealmSyncPacket;
 import com.tharidia.tharidia_things.network.SyncGateRestrictionsPacket;
+import com.tharidia.tharidia_things.network.RequestNamePacket;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
@@ -246,6 +247,16 @@ public class ClientPacketHandler {
         context.enqueueWork(() -> {
             ClientGateCache.updateBlockedItems(packet.blockedItems());
             LOGGER.debug("Updated RPG Gates restrictions: {} items blocked", packet.blockedItems().size());
+        });
+    }
+    
+    /**
+     * Handles name request packet from server
+     */
+    public static void handleRequestName(RequestNamePacket packet, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            LOGGER.info("[NAME SELECTION] Received name request: needsName={}", packet.needsName());
+            ClientConnectionHandler.handleNameRequest(packet.needsName());
         });
     }
 }

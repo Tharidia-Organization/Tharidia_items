@@ -90,7 +90,7 @@ description='''${mod_description}'''
 [[dependencies.${mod_id}]]
     modId="tharidiatweaks"
     type="required"
-    versionRange="[1.1.6,)"
+    versionRange="[1.1.4,)"
     ordering="AFTER"
     side="SERVER"
 

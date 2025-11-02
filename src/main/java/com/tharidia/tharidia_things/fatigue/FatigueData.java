@@ -28,6 +28,9 @@ public class FatigueData implements INBTSerializable<CompoundTag> {
     // Last bed position for forcing player back to bed
     private BlockPos lastBedPosition = null;
     
+    // Fatigue reduction bypass (admin can disable fatigue decrease for specific players)
+    private boolean fatigueReductionDisabled = false;
+    
     public FatigueData() {
         this.fatigueTicks = FatigueConfig.getMaxFatigueTicks();
         this.bedRestTicks = 0;
@@ -37,6 +40,7 @@ public class FatigueData implements INBTSerializable<CompoundTag> {
         this.lastPosZ = 0;
         this.lastMovementTime = System.currentTimeMillis();
         this.wasMoving = false;
+        this.fatigueReductionDisabled = false;
     }
     
     /**
@@ -57,7 +61,7 @@ public class FatigueData implements INBTSerializable<CompoundTag> {
      * Decreases fatigue by one tick (called when player is moving)
      */
     public void decreaseFatigue() {
-        if (fatigueTicks > 0) {
+        if (fatigueTicks > 0 && !fatigueReductionDisabled) {
             fatigueTicks--;
         }
     }
@@ -67,7 +71,7 @@ public class FatigueData implements INBTSerializable<CompoundTag> {
      * This is more accurate than tick-based decrement, especially with player batching
      */
     public void decreaseFatigueByTime(long elapsedMillis) {
-        if (fatigueTicks > 0) {
+        if (fatigueTicks > 0 && !fatigueReductionDisabled) {
             // Convert milliseconds to ticks (1 tick = 50ms at 20 TPS)
             int ticksToDecrease = (int) (elapsedMillis / 50);
             fatigueTicks = Math.max(0, fatigueTicks - ticksToDecrease);
@@ -240,6 +244,20 @@ public class FatigueData implements INBTSerializable<CompoundTag> {
     }
     
     /**
+     * Checks if fatigue reduction is disabled for this player
+     */
+    public boolean isFatigueReductionDisabled() {
+        return fatigueReductionDisabled;
+    }
+    
+    /**
+     * Sets whether fatigue reduction is disabled
+     */
+    public void setFatigueReductionDisabled(boolean disabled) {
+        this.fatigueReductionDisabled = disabled;
+    }
+    
+    /**
      * Fully restores fatigue
      */
     public void fullyRestore() {
@@ -261,6 +279,7 @@ public class FatigueData implements INBTSerializable<CompoundTag> {
         tag.putDouble("LastPosZ", lastPosZ);
         tag.putLong("LastMovementTime", lastMovementTime);
         tag.putBoolean("WasMoving", wasMoving);
+        tag.putBoolean("FatigueReductionDisabled", fatigueReductionDisabled);
         
         // Save last bed position if present
         if (lastBedPosition != null) {
@@ -282,6 +301,7 @@ public class FatigueData implements INBTSerializable<CompoundTag> {
         lastPosZ = tag.getDouble("LastPosZ");
         lastMovementTime = tag.contains("LastMovementTime") ? tag.getLong("LastMovementTime") : System.currentTimeMillis();
         wasMoving = tag.contains("WasMoving") ? tag.getBoolean("WasMoving") : false;
+        fatigueReductionDisabled = tag.contains("FatigueReductionDisabled") ? tag.getBoolean("FatigueReductionDisabled") : false;
         
         // Load last bed position if present
         if (tag.contains("BedPosX") && tag.contains("BedPosY") && tag.contains("BedPosZ")) {

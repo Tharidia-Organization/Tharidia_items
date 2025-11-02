@@ -21,7 +21,7 @@ public class FatigueCommands {
     
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("tharidia")
-            .requires(source -> source.hasPermission(2)) // OP level 2
+            .requires(source -> source.hasPermission(4)) // OP level 2
             .then(Commands.literal("fatigue")
                 .then(Commands.literal("check")
                     .then(Commands.argument("player", EntityArgument.player())
@@ -39,6 +39,15 @@ public class FatigueCommands {
                         .executes(FatigueCommands::resetFatigue)))
                 .then(Commands.literal("resetall")
                     .executes(FatigueCommands::resetAllFatigue))
+                .then(Commands.literal("bypass")
+                    .then(Commands.literal("enable")
+                        .then(Commands.argument("players", EntityArgument.players())
+                            .executes(FatigueCommands::enableBypass)))
+                    .then(Commands.literal("disable")
+                        .then(Commands.argument("players", EntityArgument.players())
+                            .executes(FatigueCommands::disableBypass)))
+                    .then(Commands.literal("list")
+                        .executes(FatigueCommands::listBypass)))
             )
         );
     }
@@ -77,6 +86,11 @@ public class FatigueCommands {
                 status = "§a§lHEALTHY";
             }
             context.getSource().sendSuccess(() -> Component.literal("§6║ §7Status: " + status + " §6║"), false);
+            
+            // Bypass status
+            if (data.isFatigueReductionDisabled()) {
+                context.getSource().sendSuccess(() -> Component.literal("§6║ §e⚠ Bypass: §aENABLED §6║"), false);
+            }
             
             // Bed rest info
             if (target.isSleeping()) {
@@ -262,5 +276,122 @@ public class FatigueCommands {
         source.sendSuccess(() -> Component.literal("§eDay End Time: §f" + FatigueConfig.getDayEndTime() + " ticks"), false);
         
         return 1;
+    }
+    
+    /**
+     * Enable fatigue reduction bypass for players
+     * The fatigue bar remains visible but time doesn't decrease
+     */
+    private static int enableBypass(CommandContext<CommandSourceStack> context) {
+        try {
+            Collection<ServerPlayer> targets = EntityArgument.getPlayers(context, "players");
+            
+            if (targets.isEmpty()) {
+                context.getSource().sendFailure(Component.literal("§cNo players found"));
+                return 0;
+            }
+            
+            int count = 0;
+            StringBuilder playerNames = new StringBuilder();
+            
+            for (ServerPlayer target : targets) {
+                FatigueData data = target.getData(FatigueAttachments.FATIGUE_DATA);
+                data.setFatigueReductionDisabled(true);
+                
+                if (count > 0) playerNames.append(", ");
+                playerNames.append(target.getName().getString());
+                count++;
+                
+                // Notify the player
+                target.sendSystemMessage(Component.literal("§aYour fatigue reduction has been disabled by an admin"));
+            }
+            
+            final String names = playerNames.toString();
+            final int finalCount = count;
+            context.getSource().sendSuccess(() -> Component.literal(
+                "§aEnabled fatigue bypass for §f" + finalCount + "§a player(s): §f" + names
+            ), true);
+            
+            return count;
+        } catch (Exception e) {
+            context.getSource().sendFailure(Component.literal("§cError enabling bypass: " + e.getMessage()));
+            return 0;
+        }
+    }
+    
+    /**
+     * Disable fatigue reduction bypass for players
+     */
+    private static int disableBypass(CommandContext<CommandSourceStack> context) {
+        try {
+            Collection<ServerPlayer> targets = EntityArgument.getPlayers(context, "players");
+            
+            if (targets.isEmpty()) {
+                context.getSource().sendFailure(Component.literal("§cNo players found"));
+                return 0;
+            }
+            
+            int count = 0;
+            StringBuilder playerNames = new StringBuilder();
+            
+            for (ServerPlayer target : targets) {
+                FatigueData data = target.getData(FatigueAttachments.FATIGUE_DATA);
+                data.setFatigueReductionDisabled(false);
+                
+                if (count > 0) playerNames.append(", ");
+                playerNames.append(target.getName().getString());
+                count++;
+                
+                // Notify the player
+                target.sendSystemMessage(Component.literal("§eYour fatigue reduction has been re-enabled by an admin"));
+            }
+            
+            final String names = playerNames.toString();
+            final int finalCount = count;
+            context.getSource().sendSuccess(() -> Component.literal(
+                "§aDisabled fatigue bypass for §f" + finalCount + "§a player(s): §f" + names
+            ), true);
+            
+            return count;
+        } catch (Exception e) {
+            context.getSource().sendFailure(Component.literal("§cError disabling bypass: " + e.getMessage()));
+            return 0;
+        }
+    }
+    
+    /**
+     * List all players with fatigue bypass enabled
+     */
+    private static int listBypass(CommandContext<CommandSourceStack> context) {
+        Collection<ServerPlayer> players = context.getSource().getServer().getPlayerList().getPlayers();
+        
+        if (players.isEmpty()) {
+            context.getSource().sendFailure(Component.literal("§cNo players online"));
+            return 0;
+        }
+        
+        StringBuilder bypassPlayers = new StringBuilder();
+        int count = 0;
+        
+        for (ServerPlayer player : players) {
+            FatigueData data = player.getData(FatigueAttachments.FATIGUE_DATA);
+            if (data.isFatigueReductionDisabled()) {
+                if (count > 0) bypassPlayers.append(", ");
+                bypassPlayers.append("§f").append(player.getName().getString());
+                count++;
+            }
+        }
+        
+        if (count == 0) {
+            context.getSource().sendSuccess(() -> Component.literal("§eNo players have fatigue bypass enabled"), false);
+        } else {
+            final String names = bypassPlayers.toString();
+            final int finalCount = count;
+            context.getSource().sendSuccess(() -> Component.literal(
+                "§6Players with fatigue bypass (§f" + finalCount + "§6): " + names
+            ), false);
+        }
+        
+        return count;
     }
 }

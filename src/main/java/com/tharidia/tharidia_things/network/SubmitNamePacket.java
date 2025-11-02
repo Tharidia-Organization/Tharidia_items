@@ -57,9 +57,6 @@ public record SubmitNamePacket(String chosenName) implements CustomPacketPayload
                         String sanitized = (String) sanitizedMethod.invoke(result);
                         serverPlayer.sendSystemMessage(Component.literal("§aName set successfully: " + sanitized));
                         
-                        // Close the GUI
-                        serverPlayer.closeContainer();
-                        
                         // Log success
                         com.tharidia.tharidia_things.TharidiaThings.LOGGER.info("Player {} chose name: {}", 
                             serverPlayer.getName().getString(), sanitized);
@@ -68,12 +65,8 @@ public record SubmitNamePacket(String chosenName) implements CustomPacketPayload
                         String error = (String) errorMethod.invoke(result);
                         serverPlayer.sendSystemMessage(Component.literal("§c" + error));
                         
-                        // Reopen the name selection GUI
-                        serverPlayer.closeContainer();
-                        serverPlayer.openMenu(new net.minecraft.world.SimpleMenuProvider(
-                            (id, inv, player) -> new com.tharidia.tharidia_things.gui.NameSelectionMenu(id, inv),
-                            Component.translatable("gui.tharidiathings.name_selection")
-                        ));
+                        com.tharidia.tharidia_things.TharidiaThings.LOGGER.warn("Player {} failed to set name: {}", 
+                            serverPlayer.getName().getString(), error);
                     }
                 } catch (Exception e) {
                     com.tharidia.tharidia_things.TharidiaThings.LOGGER.error("Error submitting name - tharidia_tweaks might not be loaded", e);

@@ -38,6 +38,10 @@ import com.tharidia.tharidia_things.network.SelectComponentPacket;
 import com.tharidia.tharidia_things.network.SubmitNamePacket;
 import com.tharidia.tharidia_things.network.SyncGateRestrictionsPacket;
 import com.tharidia.tharidia_things.realm.RealmManager;
+import com.tharidia.tharidia_things.lobby.QueueManager;
+import com.tharidia.tharidia_things.lobby.ServerTransferManager;
+import com.tharidia.tharidia_things.lobby.LobbyCommand;
+import com.tharidia.tharidia_things.lobby.LobbyEvents;
 
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.loading.FMLEnvironment;
@@ -95,6 +99,10 @@ public class TharidiaThings {
     public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
     // Create a Deferred Register to hold MenuTypes which will all be registered under the "tharidiathings" namespace
     public static final DeferredRegister<net.minecraft.world.inventory.MenuType<?>> MENU_TYPES = DeferredRegister.create(BuiltInRegistries.MENU, MODID);
+    
+    // Lobby queue system
+    private static QueueManager queueManager;
+    private static ServerTransferManager transferManager;
 
     // Creates a new Block with the id "tharidiathings:pietro", combining the namespace and path
     public static final DeferredBlock<PietroBlock> PIETRO = BLOCKS.register("pietro", () -> new PietroBlock(BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(3.0F, 6.0F).noOcclusion()));
@@ -138,10 +146,6 @@ public class TharidiaThings {
     // Creates a MenuType for the Component Selection GUI
     public static final DeferredHolder<net.minecraft.world.inventory.MenuType<?>, net.minecraft.world.inventory.MenuType<com.tharidia.tharidia_things.gui.ComponentSelectionMenu>> COMPONENT_SELECTION_MENU =
         MENU_TYPES.register("component_selection_menu", () -> net.neoforged.neoforge.common.extensions.IMenuTypeExtension.create(com.tharidia.tharidia_things.gui.ComponentSelectionMenu::new));
-    
-    // Creates a MenuType for the Name Selection GUI
-    public static final DeferredHolder<net.minecraft.world.inventory.MenuType<?>, net.minecraft.world.inventory.MenuType<com.tharidia.tharidia_things.gui.NameSelectionMenu>> NAME_SELECTION_MENU =
-        MENU_TYPES.register("name_selection_menu", () -> net.neoforged.neoforge.common.extensions.IMenuTypeExtension.create(com.tharidia.tharidia_things.gui.NameSelectionMenu::new));
     
     // Smithing items
     public static final DeferredItem<Item> HOT_IRON = ITEMS.register("hot_iron", () -> new HotIronItem(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)));
@@ -218,10 +222,18 @@ public class TharidiaThings {
         NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.WeightDebuffHandler.class);
         // Register the smithing handler
         NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.SmithingHandler.class);
-        // Register the name selection handler
-        NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.NameSelectionHandler.class);
+        // Register the pre-login name handler
+        NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.PreLoginNameHandler.class);
         // Register the fatigue handler
         NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.FatigueHandler.class);
+        // Register lobby events
+        NeoForge.EVENT_BUS.register(LobbyEvents.class);
+        
+        // Register handshake bypass (CLIENT ONLY)
+        if (FMLEnvironment.dist == Dist.CLIENT) {
+            NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.client.HandshakeBypass.class);
+            LOGGER.warn("Handshake bypass registered - you can connect to servers with different mod versions");
+        }
         
         // Log version for debugging
         LOGGER.info("=================================================");
@@ -241,8 +253,41 @@ public class TharidiaThings {
     private void registerPayloads(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar("1");
         LOGGER.info("Registering network payloads (dist: {})", FMLEnvironment.dist);
-
+        
+        // BungeeCord channel registration DISABLED
+        // This channel is not essential and causes connection issues with clients
+        // Server transfers via Velocity proxy will not work without this, but
+        // the mod will function normally otherwise
+        /*
+        try {
+            registrar.playToClient(
+                ServerTransferManager.BungeeCordPayload.TYPE,
+                ServerTransferManager.BungeeCordPayload.STREAM_CODEC,
+                (payload, context) -> {
+                    // Handled by Velocity proxy, just acknowledge receipt
+                }
+            ).optional();
+            LOGGER.info("Registered bungeecord:main channel (optional)");
+        } catch (Exception e) {
+            LOGGER.warn("Could not register bungeecord:main (another mod may have registered it): {}", e.getMessage());
+        }
+        */
+        
         if (FMLEnvironment.dist.isClient()) {
+            // Ensure client advertises bungeecord:main if nobody else does
+            try {
+                registrar.playToClient(
+                    ServerTransferManager.BungeeCordPayload.TYPE,
+                    ServerTransferManager.BungeeCordPayload.STREAM_CODEC,
+                    (payload, context) -> { /* handled by Velocity proxy; no-op */ }
+                ).optional();
+                LOGGER.info("Client registered bungeecord:main channel (optional)");
+            } catch (Exception e) {
+                // If another mod already registered it, that’s fine—just log and continue
+                LOGGER.warn("bungeecord:main already registered by another mod; skipping. {}", e.getMessage());
+            }
+
+            
             registrar.playToClient(
                 ClaimOwnerSyncPacket.TYPE,
                 ClaimOwnerSyncPacket.STREAM_CODEC,
@@ -274,8 +319,26 @@ public class TharidiaThings {
                 SyncGateRestrictionsPacket.STREAM_CODEC,
                 ClientPacketHandler::handleGateRestrictionsSync
             );
+            // Name request packet
+            registrar.playToClient(
+                com.tharidia.tharidia_things.network.RequestNamePacket.TYPE,
+                com.tharidia.tharidia_things.network.RequestNamePacket.STREAM_CODEC,
+                ClientPacketHandler::handleRequestName
+            );
             LOGGER.info("Client packet handlers registered");
         } else {
+            // Register server bungeecord:main using the same protocol version as client ("1")
+            try {
+                registrar.playToClient(
+                    ServerTransferManager.BungeeCordPayload.TYPE,
+                    ServerTransferManager.BungeeCordPayload.STREAM_CODEC,
+                    (payload, context) -> {}
+                ).optional();
+                LOGGER.info("Server registered bungeecord:main (optional, version: 1)");
+            } catch (Exception e) {
+                LOGGER.warn("Server could not register bungeecord:main: {}", e.getMessage());
+            }
+
             // On server, register dummy handlers (packets won't be received here anyway)
             registrar.playToClient(
                 ClaimOwnerSyncPacket.TYPE,
@@ -308,6 +371,12 @@ public class TharidiaThings {
                 SyncGateRestrictionsPacket.STREAM_CODEC,
                 (packet, context) -> {}
             );
+            // Name request packet (dummy handler)
+            registrar.playToClient(
+                com.tharidia.tharidia_things.network.RequestNamePacket.TYPE,
+                com.tharidia.tharidia_things.network.RequestNamePacket.STREAM_CODEC,
+                (packet, context) -> {}
+            );
             LOGGER.info("Server-side packet registration completed (dummy handlers)");
         }
         
@@ -333,7 +402,6 @@ public class TharidiaThings {
         event.register(CLAIM_MENU.get(), com.tharidia.tharidia_things.client.gui.ClaimScreen::new);
         event.register(PIETRO_MENU.get(), com.tharidia.tharidia_things.client.gui.PietroScreen::new);
         event.register(COMPONENT_SELECTION_MENU.get(), com.tharidia.tharidia_things.client.gui.ComponentSelectionScreen::new);
-        event.register(NAME_SELECTION_MENU.get(), com.tharidia.tharidia_things.client.gui.NameSelectionScreen::new);
     }
 
     // You can use SubscribeEvent and let the Event Bus discover methods to call
@@ -381,6 +449,35 @@ public class TharidiaThings {
         
         // Register weight data loader
         event.getServer().getResourceManager();
+        
+        // Initialize lobby queue system
+        initializeLobbySystem();
+    }
+    
+    /**
+     * Initializes the lobby queue system
+     */
+    private void initializeLobbySystem() {
+        try {
+            LOGGER.info("Initializing lobby queue system...");
+            
+            // Create queue manager and transfer manager
+            queueManager = new QueueManager(LOGGER);
+            transferManager = new ServerTransferManager(LOGGER);
+            
+            // Initialize lobby command and events
+            LobbyCommand.initialize(queueManager, transferManager);
+            LobbyEvents.initialize(queueManager, transferManager, LOGGER);
+            
+            // Lobby mode is disabled by default - enable with /queueadmin lobbymode on
+            LobbyEvents.setLobbyMode(false);
+            
+            LOGGER.info("Lobby queue system initialized successfully");
+            LOGGER.info("Use /queueadmin lobbymode on to activate lobby mode");
+            
+        } catch (Exception e) {
+            LOGGER.error("Failed to initialize lobby system: " + e.getMessage(), e);
+        }
     }
     
     @SubscribeEvent
@@ -395,6 +492,7 @@ public class TharidiaThings {
         ClaimCommands.register(event.getDispatcher());
         com.tharidia.tharidia_things.command.ClaimAdminCommands.register(event.getDispatcher());
         FatigueCommands.register(event.getDispatcher());
+        LobbyCommand.register(event.getDispatcher());
     }
 
     /**
