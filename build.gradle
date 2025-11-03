@@ -131,6 +131,16 @@ dependencies {
     // compileOnly for compile-time access, localRuntime for dev environment testing
     compileOnly files("libs/tharidiatweaks-${tharidiatweaks_version}.jar")
     runtimeOnly files("libs/tharidiatweaks-${tharidiatweaks_version}.jar")
+    
+    // MySQL Connector for database communication - included in JAR via JarJar
+    implementation 'com.mysql:mysql-connector-j:8.3.0'
+    jarJar(group: 'com.mysql', name: 'mysql-connector-j', version: '[8.3.0,9.0.0)')
+    
+    // HikariCP for connection pooling - included in JAR via JarJar
+    implementation 'com.zaxxer:HikariCP:5.1.0'
+    jarJar(group: 'com.zaxxer', name: 'HikariCP', version: '[5.1.0,6.0.0)')
+    
+    // SLF4J API is already provided by Minecraft/NeoForge - no need to include it
 
     // Example optional mod dependency with JEI
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime

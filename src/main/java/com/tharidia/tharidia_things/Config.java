@@ -53,5 +53,30 @@ public class Config {
             .comment("If true, this server is treated as the Lobby: skip character name prompt here and only ask on main server")
             .define("isLobbyServer", false);
 
+    // Database configuration for cross-server communication
+    public static final ModConfigSpec.ConfigValue<String> DATABASE_HOST = BUILDER
+            .comment("Database host address (e.g., 127.0.0.1 or localhost)")
+            .define("databaseHost", "127.0.0.1");
+    
+    public static final ModConfigSpec.IntValue DATABASE_PORT = BUILDER
+            .comment("Database port (default: 3306 for MySQL/MariaDB)")
+            .defineInRange("databasePort", 3306, 1, 65535);
+    
+    public static final ModConfigSpec.ConfigValue<String> DATABASE_NAME = BUILDER
+            .comment("Database name")
+            .define("databaseName", "tharidia_queue");
+    
+    public static final ModConfigSpec.ConfigValue<String> DATABASE_USERNAME = BUILDER
+            .comment("Database username")
+            .define("databaseUsername", "tharidia_user");
+    
+    public static final ModConfigSpec.ConfigValue<String> DATABASE_PASSWORD = BUILDER
+            .comment("Database password")
+            .define("databasePassword", "changeme");
+    
+    public static final ModConfigSpec.BooleanValue DATABASE_ENABLED = BUILDER
+            .comment("Enable database connection for cross-server communication")
+            .define("databaseEnabled", false);
+
     static final ModConfigSpec SPEC = BUILDER.build();
 }
