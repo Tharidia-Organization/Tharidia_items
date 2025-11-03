@@ -1,6 +1,9 @@
 package com.tharidia.tharidia_things.lobby;
 
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.BossEvent;
+import net.minecraft.server.level.ServerBossEvent;
+import net.minecraft.network.chat.Component;
 import org.slf4j.Logger;
 
 import java.util.*;
@@ -15,8 +18,9 @@ public class QueueManager {
     private final Logger logger;
     private final Queue<UUID> queue = new ConcurrentLinkedQueue<>();
     private final Map<UUID, Long> queueJoinTime = new ConcurrentHashMap<>();
+    private final Map<UUID, ServerBossEvent> bossBars = new ConcurrentHashMap<>();
     
-    private boolean queueEnabled = false;
+    private boolean queueEnabled = true;
     private boolean autoTransfer = false;
     private int maxMainServerPlayers = 100;
     
@@ -29,10 +33,13 @@ public class QueueManager {
      */
     public void addToQueue(ServerPlayer player) {
         UUID uuid = player.getUUID();
+        logger.info("[DEBUG] addToQueue called for player: {}, already in queue: {}", player.getName().getString(), queue.contains(uuid));
         if (!queue.contains(uuid)) {
             queue.add(uuid);
             queueJoinTime.put(uuid, System.currentTimeMillis());
+            logger.info("[DEBUG] Player added to queue, calling updateQueuePosition and createOrUpdateBossBar");
             updateQueuePosition(player);
+            createOrUpdateBossBar(player);
             logger.info("Added {} to queue. Position: {}", player.getName().getString(), getQueuePosition(uuid));
         }
     }
@@ -43,6 +50,7 @@ public class QueueManager {
     public void removeFromQueue(UUID uuid) {
         queue.remove(uuid);
         queueJoinTime.remove(uuid);
+        removeBossBar(uuid);
     }
     
     /**
@@ -66,6 +74,7 @@ public class QueueManager {
         UUID uuid = queue.poll();
         if (uuid != null) {
             queueJoinTime.remove(uuid);
+            removeBossBar(uuid);
         }
         return uuid;
     }
@@ -95,6 +104,10 @@ public class QueueManager {
      * Clear the entire queue
      */
     public void clearQueue() {
+        // Remove all boss bars
+        for (UUID uuid : new ArrayList<>(queue)) {
+            removeBossBar(uuid);
+        }
         queue.clear();
         queueJoinTime.clear();
         logger.info("Queue cleared");
@@ -106,12 +119,15 @@ public class QueueManager {
     public void updateQueuePosition(ServerPlayer player) {
         int position = getQueuePosition(player.getUUID());
         if (position > 0) {
+            updateBossBar(player, position);
             player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
                 "§e§l[QUEUE] §7You are in position §6#" + position + "§7 in the queue"
             ));
             player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
                 "§7Please wait while we process your connection..."
             ));
+        } else {
+            removeBossBar(player.getUUID());
         }
     }
     
@@ -165,5 +181,80 @@ public class QueueManager {
      */
     public List<UUID> getQueuedPlayers() {
         return new ArrayList<>(queue);
+    }
+    
+    /**
+     * Update all boss bars for players in queue (call this when queue order changes)
+     */
+    public void updateAllBossBars(net.minecraft.server.MinecraftServer server) {
+        for (UUID uuid : queue) {
+            ServerPlayer player = server.getPlayerList().getPlayer(uuid);
+            if (player != null) {
+                int position = getQueuePosition(uuid);
+                updateBossBar(player, position);
+            }
+        }
+    }
+    
+    /**
+     * Create or update the boss bar for a player showing their queue position
+     */
+    private void createOrUpdateBossBar(ServerPlayer player) {
+        UUID uuid = player.getUUID();
+        int position = getQueuePosition(uuid);
+        int queueSize = getQueueSize();
+        
+        ServerBossEvent bossBar = bossBars.get(uuid);
+        if (bossBar == null) {
+            bossBar = new ServerBossEvent(
+                Component.literal("§6Posizione in coda: #" + position + "/" + queueSize),
+                BossEvent.BossBarColor.YELLOW,
+                BossEvent.BossBarOverlay.PROGRESS
+            );
+            bossBar.setCreateWorldFog(false);
+            bossBar.setVisible(true);
+            bossBars.put(uuid, bossBar);
+            bossBar.addPlayer(player);
+            logger.info("[BossBar] Created for {} at position {}/{}", player.getName().getString(), position, queueSize);
+        } else {
+            bossBar.setName(Component.literal("§6Posizione in coda: #" + position + "/" + queueSize));
+            if (!bossBar.getPlayers().contains(player)) {
+                bossBar.addPlayer(player);
+            }
+            logger.info("[BossBar] Updated for {} at position {}/{}", player.getName().getString(), position, queueSize);
+        }
+        bossBar.setProgress(1.0F);
+    }
+    
+    /**
+     * Update the boss bar for a player with new position
+     */
+    private void updateBossBar(ServerPlayer player, int position) {
+        UUID uuid = player.getUUID();
+        int queueSize = getQueueSize();
+        
+        ServerBossEvent bossBar = bossBars.get(uuid);
+        if (bossBar == null) {
+            createOrUpdateBossBar(player);
+        } else {
+            bossBar.setName(Component.literal("§6Queue Position: #" + position + "/" + queueSize));
+            bossBar.setProgress(1.0F);
+            if (!bossBar.getPlayers().contains(player)) {
+                bossBar.addPlayer(player);
+                logger.info("[BossBar] Re-added player {} to existing boss bar", player.getName().getString());
+            }
+        }
+    }
+    
+    /**
+     * Remove the boss bar for a player
+     */
+    private void removeBossBar(UUID uuid) {
+        ServerBossEvent bossBar = bossBars.remove(uuid);
+        if (bossBar != null) {
+            bossBar.removeAllPlayers();
+            bossBar.setVisible(false);
+            logger.info("[BossBar] Removed for player {}", uuid);
+        }
     }
 }

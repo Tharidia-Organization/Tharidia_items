@@ -541,7 +541,7 @@ public class TharidiaThings {
             com.tharidia.tharidia_things.lobby.QueueCommandHandler.initialize(queueManager, transferManager, LOGGER);
             
             // Lobby mode is disabled by default - enable with /queueadmin lobbymode on
-            LobbyEvents.setLobbyMode(false);
+            LobbyEvents.setLobbyMode(true);
             
             LOGGER.info("Lobby queue system initialized successfully");
             LOGGER.info("Use /queueadmin lobbymode on to activate lobby mode");
