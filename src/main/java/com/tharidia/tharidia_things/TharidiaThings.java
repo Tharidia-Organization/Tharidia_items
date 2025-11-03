@@ -106,6 +106,11 @@ public class TharidiaThings {
     // Lobby queue system
     private static QueueManager queueManager;
     private static ServerTransferManager transferManager;
+    
+    // Database system for cross-server communication
+    private static com.tharidia.tharidia_things.database.DatabaseManager databaseManager;
+    private static com.tharidia.tharidia_things.database.DatabaseCommandQueue commandQueue;
+    private static com.tharidia.tharidia_things.lobby.CommandPoller commandPoller;
 
     // Creates a new Block with the id "tharidiathings:pietro", combining the namespace and path
     public static final DeferredBlock<PietroBlock> PIETRO = BLOCKS.register("pietro", () -> new PietroBlock(BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(3.0F, 6.0F).noOcclusion()));
@@ -215,6 +220,8 @@ public class TharidiaThings {
         // Note that this is necessary if and only if we want *this* class (TharidiaThings) to respond directly to events.
         // Do not add this line if there are no @SubscribeEvent-annotated functions in this class, like onServerStarting() below.
         NeoForge.EVENT_BUS.register(this);
+        // Register server stopping event
+        NeoForge.EVENT_BUS.addListener(this::onServerStopping);
         // Register the claim protection handler
         NeoForge.EVENT_BUS.register(ClaimProtectionHandler.class);
         // Register the claim expiration handler
@@ -334,17 +341,19 @@ public class TharidiaThings {
             );
             LOGGER.info("Client packet handlers registered");
         } else {
-            // Register server bungeecord:main using the same protocol version as client ("1")
+            // Register server bungeecord:main for sending transfers to clients
             try {
                 registrar.playToClient(
                     ServerTransferManager.BungeeCordPayload.TYPE,
                     ServerTransferManager.BungeeCordPayload.STREAM_CODEC,
-                    (payload, context) -> {}
+                    (payload, context) -> {} // Dummy handler, actual handling by Velocity
                 ).optional();
-                LOGGER.info("Server registered bungeecord:main (optional, version: 1)");
+                LOGGER.info("Server registered bungeecord:main for outgoing transfers (optional)");
             } catch (Exception e) {
-                LOGGER.warn("Server could not register bungeecord:main: {}", e.getMessage());
+                LOGGER.warn("Could not register bungeecord:main client handler: {}", e.getMessage());
             }
+            
+            // Server bungeecord:main handler removed - now using database for cross-server communication
 
             // On server, register dummy handlers (packets won't be received here anyway)
             registrar.playToClient(
@@ -457,6 +466,9 @@ public class TharidiaThings {
         // Register weight data loader
         event.getServer().getResourceManager();
         
+        // Initialize database system
+        initializeDatabaseSystem(event.getServer());
+        
         // Initialize lobby queue system only on lobby servers
         if (Config.IS_LOBBY_SERVER.get()) {
             initializeLobbySystem();
@@ -464,6 +476,51 @@ public class TharidiaThings {
             LOGGER.info("Skipping lobby system initialization (isLobbyServer=false)");
         }
     }
+    
+    /**
+     * Initializes the database system for cross-server communication
+     */
+    private void initializeDatabaseSystem(net.minecraft.server.MinecraftServer server) {
+        try {
+            LOGGER.info("Initializing database system...");
+            
+            // Create database manager
+            databaseManager = new com.tharidia.tharidia_things.database.DatabaseManager(LOGGER);
+            
+            // Initialize database connection
+            if (databaseManager.initialize()) {
+                // Create command queue
+                commandQueue = new com.tharidia.tharidia_things.database.DatabaseCommandQueue(databaseManager, LOGGER);
+                
+                // Initialize remote commands on main server
+                if (!Config.IS_LOBBY_SERVER.get()) {
+                    // Create transfer manager for main server
+                    if (transferManager == null) {
+                        transferManager = new ServerTransferManager(LOGGER);
+                    }
+                    com.tharidia.tharidia_things.lobby.LobbyRemoteCommand.initialize(commandQueue, transferManager);
+                    LOGGER.info("Remote lobby commands initialized (main server mode)");
+                }
+                
+                // Start command poller on lobby server
+                if (Config.IS_LOBBY_SERVER.get()) {
+                    commandPoller = new com.tharidia.tharidia_things.lobby.CommandPoller(commandQueue, databaseManager, server, LOGGER);
+                    commandPoller.start();
+                    LOGGER.info("Command poller started (lobby server mode)");
+                }
+                
+                // No need to schedule cleanup here - will be done by CommandPoller or manually
+                
+                LOGGER.info("Database system initialized successfully");
+            } else {
+                LOGGER.warn("Database initialization failed or disabled - remote commands will not work");
+            }
+            
+        } catch (Exception e) {
+            LOGGER.error("Failed to initialize database system: {}", e.getMessage(), e);
+        }
+    }
+    
     
     /**
      * Initializes the lobby queue system
@@ -480,15 +537,38 @@ public class TharidiaThings {
             LobbyCommand.initialize(queueManager, transferManager);
             LobbyEvents.initialize(queueManager, transferManager, LOGGER);
             
+            // Initialize queue command handler for remote commands
+            com.tharidia.tharidia_things.lobby.QueueCommandHandler.initialize(queueManager, transferManager, LOGGER);
+            
             // Lobby mode is disabled by default - enable with /queueadmin lobbymode on
             LobbyEvents.setLobbyMode(false);
             
             LOGGER.info("Lobby queue system initialized successfully");
             LOGGER.info("Use /queueadmin lobbymode on to activate lobby mode");
+            LOGGER.info("Remote queue commands from main server are now enabled");
             
         } catch (Exception e) {
             LOGGER.error("Failed to initialize lobby system: " + e.getMessage(), e);
         }
+    }
+    
+    /**
+     * Called when the server is stopping
+     */
+    public void onServerStopping(net.neoforged.neoforge.event.server.ServerStoppingEvent event) {
+        LOGGER.info("Server stopping, cleaning up resources...");
+        
+        // Stop command poller
+        if (commandPoller != null) {
+            commandPoller.stop();
+        }
+        
+        // Shutdown database
+        if (databaseManager != null) {
+            databaseManager.shutdown();
+        }
+        
+        LOGGER.info("Resource cleanup completed");
     }
     
     @SubscribeEvent
@@ -507,7 +587,8 @@ public class TharidiaThings {
             LOGGER.info("Registering lobby commands (isLobbyServer=true)");
             LobbyCommand.register(event.getDispatcher());
         } else {
-            LOGGER.info("Not registering lobby commands on non-lobby server (isLobbyServer=false)");
+            LOGGER.info("Registering remote lobby commands for main server (isLobbyServer=false)");
+            com.tharidia.tharidia_things.lobby.LobbyRemoteCommand.register(event.getDispatcher());
         }
     }
 

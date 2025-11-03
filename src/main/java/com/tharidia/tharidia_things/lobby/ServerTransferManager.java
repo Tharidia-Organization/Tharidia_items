@@ -56,6 +56,10 @@ public class ServerTransferManager {
         public CustomPacketPayload.Type<? extends CustomPacketPayload> type() {
             return TYPE;
         }
+        
+        public byte[] getData() {
+            return data;
+        }
     }
     
     public ServerTransferManager(Logger logger) {
