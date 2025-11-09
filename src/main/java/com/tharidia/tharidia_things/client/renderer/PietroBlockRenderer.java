@@ -2,20 +2,19 @@ package com.tharidia.tharidia_things.client.renderer;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.tharidia.tharidia_things.block.entity.PietroBlockEntity;
-import com.tharidia.tharidia_things.client.model.PietroBlockModel;
-import mod.azure.azurelib.common.api.client.renderer.GeoBlockRenderer;
+
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
+import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
 
-public class PietroBlockRenderer extends GeoBlockRenderer<PietroBlockEntity> {
+public class PietroBlockRenderer implements BlockEntityRenderer<PietroBlockEntity> {
 
-    public PietroBlockRenderer() {
-        super(new PietroBlockModel());
-    }
+    public PietroBlockRenderer(BlockEntityRendererProvider.Context context) {}
 
     @Override
-    public RenderType getRenderType(PietroBlockEntity animatable, ResourceLocation texture, MultiBufferSource bufferSource, float partialTick) {
-        return RenderType.entityCutoutNoCull(texture);
+    public void render(PietroBlockEntity blockEntity, float partialTick,
+                       PoseStack poseStack, MultiBufferSource bufferSource,
+                       int packedLight, int packedOverlay) {
     }
 }

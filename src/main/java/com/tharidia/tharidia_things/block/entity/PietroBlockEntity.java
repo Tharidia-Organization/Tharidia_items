@@ -4,12 +4,6 @@ import com.tharidia.tharidia_things.TharidiaThings;
 import com.tharidia.tharidia_things.claim.ClaimRegistry;
 import com.tharidia.tharidia_things.realm.HierarchyRank;
 import com.tharidia.tharidia_things.realm.RealmManager;
-import mod.azure.azurelib.common.api.common.animatable.GeoBlockEntity;
-import mod.azure.azurelib.core.animatable.instance.AnimatableInstanceCache;
-import mod.azure.azurelib.core.animation.AnimatableManager;
-import mod.azure.azurelib.core.animation.AnimationController;
-import mod.azure.azurelib.core.animation.RawAnimation;
-import mod.azure.azurelib.common.internal.common.util.AzureLibUtil;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -36,11 +30,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-public class PietroBlockEntity extends BlockEntity implements GeoBlockEntity, MenuProvider {
-    private final AnimatableInstanceCache cache = AzureLibUtil.createInstanceCache(this);
+public class PietroBlockEntity extends BlockEntity implements MenuProvider {
 
-    // Animation controller
-    private static final RawAnimation IDLE_ANIMATION = RawAnimation.begin().thenLoop("animation.model.new");
     private static final int MIN_REALM_SIZE = 3;
     private static final int MAX_REALM_SIZE = 15;
     private static final int DEFAULT_REALM_SIZE = 3;
@@ -656,17 +647,5 @@ public class PietroBlockEntity extends BlockEntity implements GeoBlockEntity, Me
     @Override
     public Packet<ClientGamePacketListener> getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
-    }
-
-    @Override
-    public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>(this, "controller", 0, state -> {
-            return state.setAndContinue(IDLE_ANIMATION);
-        }));
-    }
-
-    @Override
-    public AnimatableInstanceCache getAnimatableInstanceCache() {
-        return cache;
     }
 }

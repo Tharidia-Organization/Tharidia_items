@@ -125,7 +125,7 @@ configurations {
 
 dependencies {
     // AzureLib for animated models (NeoForge version) - local dependency
-    implementation files("libs/azurelib-neo-1.21.1-3.0.38.jar")
+    //implementation files("libs/azurelib-neo-1.21.1-3.0.38.jar")
     
     // Tharidia Tweaks mod - local dependency (will be in same mods folder)
     // compileOnly for compile-time access, localRuntime for dev environment testing

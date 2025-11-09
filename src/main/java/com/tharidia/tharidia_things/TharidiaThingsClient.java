@@ -47,7 +47,7 @@ public class TharidiaThingsClient {
     static void onClientSetup(FMLClientSetupEvent event) {
         // Register block entity renderers
         event.enqueueWork(() -> {
-            BlockEntityRenderers.register(TharidiaThings.PIETRO_BLOCK_ENTITY.get(), context -> new PietroBlockRenderer());
+            BlockEntityRenderers.register(TharidiaThings.PIETRO_BLOCK_ENTITY.get(), PietroBlockRenderer::new);
             BlockEntityRenderers.register(TharidiaThings.HOT_IRON_ANVIL_ENTITY.get(), HotIronAnvilRenderer::new);
             BlockEntityRenderers.register(TharidiaThings.HOT_GOLD_ANVIL_ENTITY.get(), HotGoldAnvilRenderer::new);
             BlockEntityRenderers.register(TharidiaThings.HOT_COPPER_ANVIL_ENTITY.get(), HotCopperAnvilRenderer::new);
