@@ -155,6 +155,10 @@ public class TharidiaThings {
     public static final DeferredHolder<net.minecraft.world.inventory.MenuType<?>, net.minecraft.world.inventory.MenuType<com.tharidia.tharidia_things.gui.ComponentSelectionMenu>> COMPONENT_SELECTION_MENU =
         MENU_TYPES.register("component_selection_menu", () -> net.neoforged.neoforge.common.extensions.IMenuTypeExtension.create(com.tharidia.tharidia_things.gui.ComponentSelectionMenu::new));
     
+    // Creates a MenuType for the Trade GUI
+    public static final DeferredHolder<net.minecraft.world.inventory.MenuType<?>, net.minecraft.world.inventory.MenuType<com.tharidia.tharidia_things.gui.TradeMenu>> TRADE_MENU =
+        MENU_TYPES.register("trade_menu", () -> net.neoforged.neoforge.common.extensions.IMenuTypeExtension.create(com.tharidia.tharidia_things.gui.TradeMenu::new));
+    
     // Smithing items
     public static final DeferredItem<Item> HOT_IRON = ITEMS.register("hot_iron", () -> new HotIronItem(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)));
     public static final DeferredItem<Item> HOT_GOLD = ITEMS.register("hot_gold", () -> new HotGoldItem(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)));
@@ -236,6 +240,8 @@ public class TharidiaThings {
         NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.PreLoginNameHandler.class);
         // Register the fatigue handler
         NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.FatigueHandler.class);
+        // Register the trade interaction handler
+        NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.TradeInteractionHandler.class);
         // Register lobby events and protection (always register to block /server command everywhere)
         NeoForge.EVENT_BUS.register(LobbyEvents.class);
         NeoForge.EVENT_BUS.register(LobbyChatBlocker.class);
@@ -339,6 +345,17 @@ public class TharidiaThings {
                 com.tharidia.tharidia_things.network.RequestNamePacket.STREAM_CODEC,
                 ClientPacketHandler::handleRequestName
             );
+            // Trade packets (client-bound)
+            registrar.playToClient(
+                com.tharidia.tharidia_things.network.TradeRequestPacket.TYPE,
+                com.tharidia.tharidia_things.network.TradeRequestPacket.STREAM_CODEC,
+                (packet, context) -> com.tharidia.tharidia_things.client.TradeClientHandler.handleTradeRequest(packet)
+            );
+            registrar.playToClient(
+                com.tharidia.tharidia_things.network.TradeCompletePacket.TYPE,
+                com.tharidia.tharidia_things.network.TradeCompletePacket.STREAM_CODEC,
+                (packet, context) -> com.tharidia.tharidia_things.client.TradeClientHandler.handleTradeComplete(packet)
+            );
             LOGGER.info("Client packet handlers registered");
         } else {
             // Register server bungeecord:main for sending transfers to clients
@@ -393,6 +410,17 @@ public class TharidiaThings {
                 com.tharidia.tharidia_things.network.RequestNamePacket.STREAM_CODEC,
                 (packet, context) -> {}
             );
+            // Trade packets (client-bound, dummy handlers)
+            registrar.playToClient(
+                com.tharidia.tharidia_things.network.TradeRequestPacket.TYPE,
+                com.tharidia.tharidia_things.network.TradeRequestPacket.STREAM_CODEC,
+                (packet, context) -> {}
+            );
+            registrar.playToClient(
+                com.tharidia.tharidia_things.network.TradeCompletePacket.TYPE,
+                com.tharidia.tharidia_things.network.TradeCompletePacket.STREAM_CODEC,
+                (packet, context) -> {}
+            );
             LOGGER.info("Server-side packet registration completed (dummy handlers)");
         }
         
@@ -412,12 +440,32 @@ public class TharidiaThings {
             SubmitNamePacket.STREAM_CODEC,
             SubmitNamePacket::handle
         );
+        // Trade packets (server-bound)
+        registrar.playToServer(
+            com.tharidia.tharidia_things.network.TradeResponsePacket.TYPE,
+            com.tharidia.tharidia_things.network.TradeResponsePacket.STREAM_CODEC,
+            (packet, context) -> context.enqueueWork(() -> 
+                com.tharidia.tharidia_things.network.TradePacketHandler.handleTradeResponse(packet, (ServerPlayer) context.player()))
+        );
+        registrar.playToServer(
+            com.tharidia.tharidia_things.network.TradeUpdatePacket.TYPE,
+            com.tharidia.tharidia_things.network.TradeUpdatePacket.STREAM_CODEC,
+            (packet, context) -> context.enqueueWork(() -> 
+                com.tharidia.tharidia_things.network.TradePacketHandler.handleTradeUpdate(packet, (ServerPlayer) context.player()))
+        );
+        registrar.playToServer(
+            com.tharidia.tharidia_things.network.TradeCancelPacket.TYPE,
+            com.tharidia.tharidia_things.network.TradeCancelPacket.STREAM_CODEC,
+            (packet, context) -> context.enqueueWork(() -> 
+                com.tharidia.tharidia_things.network.TradePacketHandler.handleTradeCancel(packet, (ServerPlayer) context.player()))
+        );
     }
 
     private void registerScreens(net.neoforged.neoforge.client.event.RegisterMenuScreensEvent event) {
         event.register(CLAIM_MENU.get(), com.tharidia.tharidia_things.client.gui.ClaimScreen::new);
         event.register(PIETRO_MENU.get(), com.tharidia.tharidia_things.client.gui.PietroScreen::new);
         event.register(COMPONENT_SELECTION_MENU.get(), com.tharidia.tharidia_things.client.gui.ComponentSelectionScreen::new);
+        event.register(TRADE_MENU.get(), com.tharidia.tharidia_things.client.gui.TradeScreen::new);
     }
 
     // You can use SubscribeEvent and let the Event Bus discover methods to call

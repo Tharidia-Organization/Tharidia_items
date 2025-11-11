@@ -78,5 +78,12 @@ public class Config {
             .comment("Enable database connection for cross-server communication")
             .define("databaseEnabled", false);
 
+    // Market system configuration
+    public static final ModConfigSpec.ConfigValue<java.util.List<? extends String>> TRADE_CURRENCY_ITEMS = BUILDER
+            .comment("List of items that can be used as currency to initiate trades (e.g., minecraft:potato, minecraft:gold_nugget)")
+            .defineList("tradeCurrencyItems", 
+                java.util.Arrays.asList("minecraft:potato"), 
+                obj -> obj instanceof String);
+
     static final ModConfigSpec SPEC = BUILDER.build();
 }
