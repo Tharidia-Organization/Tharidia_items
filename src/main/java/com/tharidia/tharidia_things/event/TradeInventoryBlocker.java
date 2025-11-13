@@ -13,7 +13,7 @@ import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
 /**
  * Prevents players from opening their inventory or other containers while in a trade
- * Also prevents movement during trade
+ * Also prevents movement during trade (bypasses invmove mod)
  */
 public class TradeInventoryBlocker {
 
@@ -46,8 +46,13 @@ public class TradeInventoryBlocker {
         if (event.getEntity() instanceof ServerPlayer player) {
             // Check if player is in a trade
             if (TradeManager.isPlayerInTrade(player.getUUID())) {
-                // Cancel any movement
+                // Cancel any horizontal movement (keep vertical for gravity)
+                // This bypasses invmove mod by setting movement to zero every tick
                 player.setDeltaMovement(0, player.getDeltaMovement().y, 0);
+                
+                // Also reset input flags to prevent movement
+                player.setShiftKeyDown(false);
+                player.setSprinting(false);
             }
         }
     }
@@ -73,8 +78,9 @@ public class TradeInventoryBlocker {
                 
                 ServerPlayer otherPlayer = session.getOtherPlayer(serverPlayer.getUUID());
                 if (otherPlayer != null) {
+                    String playerName = com.tharidia.tharidia_things.util.PlayerNameHelper.getChosenName(serverPlayer);
                     otherPlayer.closeContainer();
-                    otherPlayer.sendSystemMessage(Component.literal("§c" + serverPlayer.getName().getString() + " ha chiuso il menu di scambio."));
+                    otherPlayer.sendSystemMessage(Component.literal("§c" + playerName + " ha chiuso il menu di scambio."));
                 }
                 
                 serverPlayer.sendSystemMessage(Component.literal("§7Scambio annullato."));

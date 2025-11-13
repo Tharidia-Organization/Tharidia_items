@@ -124,7 +124,7 @@ public class PietroBlockEntity extends BlockEntity implements MenuProvider {
                 // Broadcast expansion to nearby players
                 for (Player nearbyPlayer : level.players()) {
                     if (nearbyPlayer.distanceToSqr(worldPosition.getX(), worldPosition.getY(), worldPosition.getZ()) < 256) {
-                        nearbyPlayer.sendSystemMessage(Component.literal("§a✓ Regno espanso a " + 
+                        nearbyPlayer.sendSystemMessage(Component.literal("§aRegno espanso a " +
                             getRealmSize() + "x" + getRealmSize() + " chunks!"));
                     }
                 }

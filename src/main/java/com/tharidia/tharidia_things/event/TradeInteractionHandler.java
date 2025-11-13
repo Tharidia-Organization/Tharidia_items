@@ -59,14 +59,16 @@ public class TradeInteractionHandler {
         }
 
         if (TradeManager.isPlayerInTrade(targetPlayer.getUUID())) {
-            serverInitiator.sendSystemMessage(Component.literal("§c" + targetPlayer.getName().getString() + " è già impegnato in uno scambio!"));
+            String targetName = com.tharidia.tharidia_things.util.PlayerNameHelper.getChosenName(targetPlayer);
+            serverInitiator.sendSystemMessage(Component.literal("§c" + targetName + " è già impegnato in uno scambio!"));
             event.setCanceled(true);
             return;
         }
 
         // Check if target already has a pending request
         if (TradeManager.hasPendingRequest(targetPlayer.getUUID())) {
-            serverInitiator.sendSystemMessage(Component.literal("§c" + targetPlayer.getName().getString() + " ha già una richiesta di scambio in sospeso!"));
+            String targetName = com.tharidia.tharidia_things.util.PlayerNameHelper.getChosenName(targetPlayer);
+            serverInitiator.sendSystemMessage(Component.literal("§c" + targetName + " ha già una richiesta di scambio in sospeso!"));
             event.setCanceled(true);
             return;
         }
@@ -75,13 +77,16 @@ public class TradeInteractionHandler {
         TradeManager.createTradeRequest(serverInitiator, targetPlayer);
 
         // Send packet to target player to show request screen
+        String initiatorName = com.tharidia.tharidia_things.util.PlayerNameHelper.getChosenName(serverInitiator);
+        String targetName = com.tharidia.tharidia_things.util.PlayerNameHelper.getChosenName(targetPlayer);
+        
         PacketDistributor.sendToPlayer(targetPlayer, new TradeRequestPacket(
             serverInitiator.getUUID(),
-            serverInitiator.getName().getString()
+            initiatorName
         ));
 
         // Notify initiator
-        serverInitiator.sendSystemMessage(Component.literal("§6Richiesta di scambio inviata a " + targetPlayer.getName().getString()));
+        serverInitiator.sendSystemMessage(Component.literal("§6Richiesta di scambio inviata a " + targetName));
 
         event.setCanceled(true);
     }
@@ -91,9 +96,19 @@ public class TradeInteractionHandler {
             return false;
         }
 
-        List<? extends String> currencyItems = Config.TRADE_CURRENCY_ITEMS.get();
         ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
-
+        String itemIdString = itemId.toString();
+        
+        // Check if it's a Numismatic Overhaul coin or money bag
+        if (itemIdString.equals("numismaticoverhaul:bronze_coin") ||
+            itemIdString.equals("numismaticoverhaul:silver_coin") ||
+            itemIdString.equals("numismaticoverhaul:gold_coin") ||
+            itemIdString.equals("numismaticoverhaul:money_bag")) {
+            return true;
+        }
+        
+        // Check config list
+        List<? extends String> currencyItems = Config.TRADE_CURRENCY_ITEMS.get();
         return currencyItems.stream()
                 .anyMatch(currency -> {
                     try {

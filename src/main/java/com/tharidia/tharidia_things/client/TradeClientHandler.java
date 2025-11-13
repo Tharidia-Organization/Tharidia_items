@@ -24,6 +24,9 @@ public class TradeClientHandler {
     public static void handleTradeComplete(TradeCompletePacket packet) {
         Minecraft minecraft = Minecraft.getInstance();
         minecraft.execute(() -> {
+            // Reset camera
+            TradeCameraHandler.resetCamera();
+            
             // Close any open trade screen
             if (minecraft.screen != null) {
                 minecraft.setScreen(null);
@@ -45,13 +48,13 @@ public class TradeClientHandler {
                     tradeMenu.setTaxInfo(packet.taxRate(), packet.taxAmount());
                     
                     // Update other player's items
-                    for (int i = 0; i < packet.otherPlayerItems().size() && i < 24; i++) {
+                    for (int i = 0; i < packet.otherPlayerItems().size() && i < 6; i++) {
                         ItemStack stack = packet.otherPlayerItems().get(i);
                         tradeMenu.getOtherPlayerOffer().setItem(i, stack.copy());
                     }
                     
                     // Clear remaining slots if fewer items
-                    for (int i = packet.otherPlayerItems().size(); i < 24; i++) {
+                    for (int i = packet.otherPlayerItems().size(); i < 6; i++) {
                         tradeMenu.getOtherPlayerOffer().setItem(i, ItemStack.EMPTY);
                     }
                 }

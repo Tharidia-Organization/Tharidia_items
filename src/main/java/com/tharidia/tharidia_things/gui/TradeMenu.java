@@ -16,7 +16,7 @@ import net.minecraft.world.item.ItemStack;
 import java.util.UUID;
 
 /**
- * Medieval-themed trade menu with 24 slots per player
+ * Medieval-themed trade menu with 6 slots per player
  */
 public class TradeMenu extends AbstractContainerMenu {
     private final Container playerOffer;
@@ -30,18 +30,24 @@ public class TradeMenu extends AbstractContainerMenu {
     private boolean otherPlayerFinalConfirmed;
     private double taxRate;
     private int taxAmount;
+    private boolean tradeCompleted = false; // Flag to prevent item duplication
 
     // Server-side constructor
     public TradeMenu(int containerId, Inventory playerInventory, TradeSession session, Player player) {
         super(TharidiaThings.TRADE_MENU.get(), containerId);
-        this.playerOffer = new SimpleContainer(24);
-        this.otherPlayerOffer = new SimpleContainer(24);
+        this.playerOffer = new SimpleContainer(6);
+        this.otherPlayerOffer = new SimpleContainer(6);
         this.sessionId = session.getSessionId();
         
         UUID playerId = player.getUUID();
         Player otherPlayer = session.getOtherPlayer(playerId);
         this.otherPlayerId = otherPlayer.getUUID();
-        this.otherPlayerName = otherPlayer.getName().getString();
+        // Use registered name from PlayerNameHelper
+        if (otherPlayer instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
+            this.otherPlayerName = com.tharidia.tharidia_things.util.PlayerNameHelper.getChosenName(serverPlayer);
+        } else {
+            this.otherPlayerName = otherPlayer.getName().getString();
+        }
         
         layoutSlots(playerInventory);
     }
@@ -49,8 +55,8 @@ public class TradeMenu extends AbstractContainerMenu {
     // Client-side constructor
     public TradeMenu(int containerId, Inventory playerInventory, FriendlyByteBuf extraData) {
         super(TharidiaThings.TRADE_MENU.get(), containerId);
-        this.playerOffer = new SimpleContainer(24);
-        this.otherPlayerOffer = new SimpleContainer(24);
+        this.playerOffer = new SimpleContainer(6);
+        this.otherPlayerOffer = new SimpleContainer(6);
         this.sessionId = extraData.readUUID();
         this.otherPlayerId = extraData.readUUID();
         this.otherPlayerName = extraData.readUtf();
@@ -59,14 +65,14 @@ public class TradeMenu extends AbstractContainerMenu {
     }
 
     private void layoutSlots(Inventory playerInventory) {
-        // GUI is 320x240 pixels (wider for two-column layout)
+        // GUI is 230x195 pixels
         
-        // Player's offer slots (left side) - 24 slots in 6 rows of 4
-        int playerOfferX = 30; // Adjusted for wider GUI
-        int playerOfferY = 18;
-        for (int row = 0; row < 6; row++) {
-            for (int col = 0; col < 4; col++) {
-                final int slotIndex = col + row * 4;
+        // Player's offer slots (left side) - 6 slots in 2 rows of 3
+        int playerOfferX = 35;
+        int playerOfferY = 20;
+        for (int row = 0; row < 2; row++) {
+            for (int col = 0; col < 3; col++) {
+                final int slotIndex = col + row * 3;
                 this.addSlot(new Slot(playerOffer, slotIndex, playerOfferX + col * 18, playerOfferY + row * 18) {
                     @Override
                     public boolean mayPickup(Player player) {
@@ -101,12 +107,12 @@ public class TradeMenu extends AbstractContainerMenu {
             }
         }
 
-        // Other player's offer slots (right side) - 24 slots in 6 rows of 4
-        int otherOfferX = 218; // Adjusted for wider GUI
-        int otherOfferY = 18;
-        for (int row = 0; row < 6; row++) {
-            for (int col = 0; col < 4; col++) {
-                this.addSlot(new Slot(otherPlayerOffer, col + row * 4, otherOfferX + col * 18, otherOfferY + row * 18) {
+        // Other player's offer slots (right side) - 6 slots in 2 rows of 3
+        int otherOfferX = 145;
+        int otherOfferY = 20;
+        for (int row = 0; row < 2; row++) {
+            for (int col = 0; col < 3; col++) {
+                this.addSlot(new Slot(otherPlayerOffer, col + row * 3, otherOfferX + col * 18, otherOfferY + row * 18) {
                     @Override
                     public boolean mayPickup(Player player) {
                         return false; // Cannot take items from other player's side
@@ -121,8 +127,8 @@ public class TradeMenu extends AbstractContainerMenu {
         }
 
         // Player inventory (bottom)
-        int invStartX = 80; // Adjusted for wider GUI
-        int invStartY = 158;
+        int invStartX = 35;
+        int invStartY = 108;
         
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
@@ -145,7 +151,7 @@ public class TradeMenu extends AbstractContainerMenu {
     @Override
     public void clicked(int slotId, int button, net.minecraft.world.inventory.ClickType clickType, Player player) {
         // Block all interactions with trade slots after confirmation
-        if (slotId >= 0 && slotId < 24) { // Player offer slots
+        if (slotId >= 0 && slotId < 6) { // Player offer slots
             if (playerConfirmed || playerFinalConfirmed) {
                 player.sendSystemMessage(Component.literal("§cNon puoi modificare gli item dopo la conferma!"));
                 return;
@@ -169,19 +175,19 @@ public class TradeMenu extends AbstractContainerMenu {
             ItemStack slotStack = slot.getItem();
             itemstack = slotStack.copy();
             
-            // If shift-clicking from player offer slots (0-23)
-            if (index < 24) {
-                if (!this.moveItemStackTo(slotStack, 48, 84, true)) {
+            // If shift-clicking from player offer slots (0-5)
+            if (index < 6) {
+                if (!this.moveItemStackTo(slotStack, 12, 48, true)) {
                     return ItemStack.EMPTY;
                 }
             }
-            // If shift-clicking from other player's slots (24-47) - not allowed
-            else if (index < 48) {
+            // If shift-clicking from other player's slots (6-11) - not allowed
+            else if (index < 12) {
                 return ItemStack.EMPTY;
             }
-            // If shift-clicking from player inventory (48-83)
+            // If shift-clicking from player inventory (12-47)
             else {
-                if (!this.moveItemStackTo(slotStack, 0, 24, false)) {
+                if (!this.moveItemStackTo(slotStack, 0, 6, false)) {
                     return ItemStack.EMPTY;
                 }
             }
@@ -206,10 +212,10 @@ public class TradeMenu extends AbstractContainerMenu {
     public void removed(Player player) {
         super.removed(player);
         
-        // ALWAYS return items to player when menu is closed
-        // This prevents item loss in all scenarios
-        if (!player.level().isClientSide) {
-            for (int i = 0; i < 24; i++) {
+        // Only return items if trade was NOT completed successfully
+        // This prevents item duplication when trade completes
+        if (!player.level().isClientSide && !tradeCompleted) {
+            for (int i = 0; i < 6; i++) {
                 ItemStack stack = playerOffer.removeItemNoUpdate(i);
                 if (!stack.isEmpty()) {
                     if (!player.getInventory().add(stack)) {
@@ -284,5 +290,9 @@ public class TradeMenu extends AbstractContainerMenu {
     
     public int getTaxAmount() {
         return taxAmount;
+    }
+    
+    public void setTradeCompleted(boolean completed) {
+        this.tradeCompleted = completed;
     }
 }

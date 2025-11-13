@@ -38,8 +38,10 @@ public class TradePacketHandler {
             openTradeMenu(requester, session);
             openTradeMenu(target, session);
 
-            requester.sendSystemMessage(Component.literal("§6" + target.getName().getString() + " ha accettato lo scambio!"));
-            target.sendSystemMessage(Component.literal("§6Scambio iniziato con " + requester.getName().getString()));
+            String targetName = com.tharidia.tharidia_things.util.PlayerNameHelper.getChosenName(target);
+            String requesterName = com.tharidia.tharidia_things.util.PlayerNameHelper.getChosenName(requester);
+            requester.sendSystemMessage(Component.literal("§6" + targetName + " ha accettato lo scambio!"));
+            target.sendSystemMessage(Component.literal("§6Scambio iniziato con " + requesterName));
         } else {
             // Decline the trade request
             TradeManager.declineTradeRequest(player);
@@ -47,7 +49,8 @@ public class TradePacketHandler {
             // Notify the requester
             ServerPlayer requester = player.getServer().getPlayerList().getPlayer(packet.requesterId());
             if (requester != null) {
-                requester.sendSystemMessage(Component.literal("§c" + player.getName().getString() + " ha rifiutato lo scambio."));
+                String playerName = com.tharidia.tharidia_things.util.PlayerNameHelper.getChosenName(player);
+                requester.sendSystemMessage(Component.literal("§c" + playerName + " ha rifiutato lo scambio."));
             }
         }
     }
@@ -153,8 +156,9 @@ public class TradePacketHandler {
         // Notify other player
         ServerPlayer otherPlayer = session.getOtherPlayer(player.getUUID());
         if (otherPlayer != null) {
+            String playerName = com.tharidia.tharidia_things.util.PlayerNameHelper.getChosenName(player);
             otherPlayer.closeContainer();
-            otherPlayer.sendSystemMessage(Component.literal("§c" + player.getName().getString() + " ha annullato lo scambio."));
+            otherPlayer.sendSystemMessage(Component.literal("§c" + playerName + " ha annullato lo scambio."));
         }
 
         // Close player's menu
@@ -166,13 +170,16 @@ public class TradePacketHandler {
     }
 
     private static void openTradeMenu(ServerPlayer player, TradeSession session) {
+        ServerPlayer otherPlayer = session.getOtherPlayer(player.getUUID());
+        String otherPlayerName = com.tharidia.tharidia_things.util.PlayerNameHelper.getChosenName(otherPlayer);
+        
         player.openMenu(new SimpleMenuProvider(
             (containerId, playerInventory, p) -> new TradeMenu(containerId, playerInventory, session, p),
             Component.literal("Scambio")
         ), buf -> {
             buf.writeUUID(session.getSessionId());
-            buf.writeUUID(session.getOtherPlayer(player.getUUID()).getUUID());
-            buf.writeUtf(session.getOtherPlayer(player.getUUID()).getName().getString());
+            buf.writeUUID(otherPlayer.getUUID());
+            buf.writeUtf(otherPlayerName);
         });
     }
 
@@ -206,6 +213,14 @@ public class TradePacketHandler {
         giveItemsToPlayer(player1, player2ItemsAfterTax);
         giveItemsToPlayer(player2, player1ItemsAfterTax);
 
+        // Mark trade as completed to prevent item duplication
+        if (player1.containerMenu instanceof TradeMenu tradeMenu1) {
+            tradeMenu1.setTradeCompleted(true);
+        }
+        if (player2.containerMenu instanceof TradeMenu tradeMenu2) {
+            tradeMenu2.setTradeCompleted(true);
+        }
+
         // Send completion packets
         PacketDistributor.sendToPlayer(player1, new TradeCompletePacket(session.getSessionId(), true));
         PacketDistributor.sendToPlayer(player2, new TradeCompletePacket(session.getSessionId(), true));
@@ -235,14 +250,29 @@ public class TradePacketHandler {
     }
 
     private static boolean verifyPlayerHasItems(ServerPlayer player, List<ItemStack> items) {
+        // Check if player has items in their inventory
+        // Items in trade slots should be in the player's inventory
         for (ItemStack requiredStack : items) {
             if (requiredStack.isEmpty()) continue;
             
             int remaining = requiredStack.getCount();
+            
+            // Check in main inventory and hotbar
             for (ItemStack invStack : player.getInventory().items) {
                 if (ItemStack.isSameItemSameComponents(invStack, requiredStack)) {
                     remaining -= invStack.getCount();
                     if (remaining <= 0) break;
+                }
+            }
+            
+            // If still missing items, check if they're in the trade menu container
+            if (remaining > 0 && player.containerMenu instanceof TradeMenu tradeMenu) {
+                for (int i = 0; i < 6; i++) {
+                    ItemStack tradeStack = tradeMenu.getPlayerOffer().getItem(i);
+                    if (ItemStack.isSameItemSameComponents(tradeStack, requiredStack)) {
+                        remaining -= tradeStack.getCount();
+                        if (remaining <= 0) break;
+                    }
                 }
             }
             
