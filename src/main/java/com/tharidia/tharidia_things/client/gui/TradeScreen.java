@@ -3,6 +3,7 @@ package com.tharidia.tharidia_things.client.gui;
 import com.tharidia.tharidia_things.gui.TradeMenu;
 import com.tharidia.tharidia_things.network.TradeCancelPacket;
 import com.tharidia.tharidia_things.network.TradeUpdatePacket;
+import com.tharidia.tharidia_things.network.TradeFinalConfirmPacket;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -24,11 +25,15 @@ public class TradeScreen extends AbstractContainerScreen<TradeMenu> {
         ResourceLocation.fromNamespaceAndPath("tharidiathings", "textures/gui/trade_gui.png");
     
     private Button confirmButton;
+    private Button cancelButton;
+    private Button finalConfirmButton;
+    private Button completeTradeButton;
     private boolean localConfirmed = false;
+    private boolean localFinalConfirmed = false;
 
     public TradeScreen(TradeMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
-        this.imageWidth = 276;
+        this.imageWidth = 320; // Increased from 276 to 320
         this.imageHeight = 240;
     }
 
@@ -39,17 +44,37 @@ public class TradeScreen extends AbstractContainerScreen<TradeMenu> {
         int centerX = this.leftPos + this.imageWidth / 2;
         int buttonY = this.topPos + 130;
         
-        // Confirm/Cancel button in the center
-        this.confirmButton = this.addRenderableWidget(Button.builder(
-            Component.literal("§6§l⚜ Conferma ⚜"),
-            button -> toggleConfirm()
-        ).bounds(centerX - 50, buttonY, 100, 20).build());
+        // Buttons arranged horizontally - half width and smaller text
+        int buttonWidth = 45; // Reduced from 90 to 45 (half)
+        int buttonSpacing = 5;
+        int totalWidth = (buttonWidth * 2) + buttonSpacing;
+        int startX = centerX - (totalWidth / 2);
         
-        // Cancel trade button
-        this.addRenderableWidget(Button.builder(
-            Component.literal("§c✗ Annulla"),
+        // Confirm button (left)
+        this.confirmButton = this.addRenderableWidget(Button.builder(
+            Component.literal("Conferma"),
+            button -> toggleConfirm()
+        ).bounds(startX, buttonY, buttonWidth, 20).build());
+        
+        // Cancel button (right)
+        this.cancelButton = this.addRenderableWidget(Button.builder(
+            Component.literal("Annulla"),
             button -> cancelTrade()
-        ).bounds(centerX - 40, buttonY + 25, 80, 16).build());
+        ).bounds(startX + buttonWidth + buttonSpacing, buttonY, buttonWidth, 20).build());
+        
+        // Final confirm button (only visible when both players confirmed)
+        this.finalConfirmButton = this.addRenderableWidget(Button.builder(
+            Component.literal("Conferma"),
+            button -> toggleFinalConfirm()
+        ).bounds(startX, buttonY, buttonWidth, 20).build());
+        this.finalConfirmButton.visible = false;
+        
+        // Complete trade button (only visible when both players final confirmed)
+        this.completeTradeButton = this.addRenderableWidget(Button.builder(
+            Component.literal("COMPLETA"),
+            button -> completeTrade()
+        ).bounds(startX + buttonWidth + buttonSpacing, buttonY, buttonWidth, 20).build());
+        this.completeTradeButton.visible = false;
     }
 
     @Override
@@ -68,7 +93,7 @@ public class TradeScreen extends AbstractContainerScreen<TradeMenu> {
         // Draw slot backgrounds for player's side (left)
         for (int row = 0; row < 6; row++) {
             for (int col = 0; col < 4; col++) {
-                int slotX = x + 8 + col * 18;
+                int slotX = x + 30 + col * 18; // Adjusted for wider GUI
                 int slotY = y + 18 + row * 18;
                 guiGraphics.fill(slotX - 1, slotY - 1, slotX + 17, slotY + 17, 0xFF8B8B8B);
             }
@@ -77,7 +102,7 @@ public class TradeScreen extends AbstractContainerScreen<TradeMenu> {
         // Draw slot backgrounds for other player's side (right)
         for (int row = 0; row < 6; row++) {
             for (int col = 0; col < 4; col++) {
-                int slotX = x + 186 + col * 18;
+                int slotX = x + 218 + col * 18; // Adjusted for wider GUI
                 int slotY = y + 18 + row * 18;
                 guiGraphics.fill(slotX - 1, slotY - 1, slotX + 17, slotY + 17, 0xFF8B8B8B);
             }
@@ -95,45 +120,132 @@ public class TradeScreen extends AbstractContainerScreen<TradeMenu> {
     protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         // Draw player name (left side)
         Component playerLabel = Component.literal("§6La Vostra Offerta");
-        guiGraphics.drawString(this.font, playerLabel, 8, 6, 0x404040, false);
+        guiGraphics.drawString(this.font, playerLabel, 30, 6, 0x404040, false);
         
         // Draw other player name (right side)
         Component otherLabel = Component.literal("§6" + this.menu.getOtherPlayerName());
         int otherLabelWidth = this.font.width(otherLabel);
-        guiGraphics.drawString(this.font, otherLabel, this.imageWidth - otherLabelWidth - 8, 6, 0x404040, false);
+        guiGraphics.drawString(this.font, otherLabel, this.imageWidth - otherLabelWidth - 30, 6, 0x404040, false);
+        
+        // Draw tax information
+        drawTaxInfo(guiGraphics);
         
         // Draw confirmation status
         int statusY = 135;
         if (localConfirmed) {
-            guiGraphics.drawString(this.font, "§2✓ Confermato", 10, statusY, 0x404040, false);
+            guiGraphics.drawString(this.font, "§2✓ Confermato", 30, statusY, 0x404040, false);
         } else {
-            guiGraphics.drawString(this.font, "§7In attesa...", 10, statusY, 0x404040, false);
+            guiGraphics.drawString(this.font, "§7In attesa...", 30, statusY, 0x404040, false);
         }
         
         if (this.menu.isOtherPlayerConfirmed()) {
             Component otherConfirmed = Component.literal("§2✓ Confermato");
             int width = this.font.width(otherConfirmed);
-            guiGraphics.drawString(this.font, otherConfirmed, this.imageWidth - width - 10, statusY, 0x404040, false);
+            guiGraphics.drawString(this.font, otherConfirmed, this.imageWidth - width - 30, statusY, 0x404040, false);
         } else {
             Component otherWaiting = Component.literal("§7In attesa...");
             int width = this.font.width(otherWaiting);
-            guiGraphics.drawString(this.font, otherWaiting, this.imageWidth - width - 10, statusY, 0x404040, false);
+            guiGraphics.drawString(this.font, otherWaiting, this.imageWidth - width - 30, statusY, 0x404040, false);
         }
         
-        // Update button text based on confirmation state
-        if (localConfirmed) {
-            confirmButton.setMessage(Component.literal("§e§l⚠ Annulla Conferma"));
+        // Manage button visibility based on state
+        boolean bothConfirmed = this.menu.isPlayerConfirmed() && this.menu.isOtherPlayerConfirmed();
+        boolean bothFinalConfirmed = this.menu.isPlayerFinalConfirmed() && this.menu.isOtherPlayerFinalConfirmed();
+        
+        if (bothFinalConfirmed) {
+            // Show only complete trade button
+            confirmButton.visible = false;
+            cancelButton.visible = false;
+            finalConfirmButton.visible = false;
+            completeTradeButton.visible = true;
+            completeTradeButton.active = true;
+            
+            // Draw attention
+            int centerX = this.imageWidth / 2;
+            guiGraphics.drawString(this.font, "§a§l▼ CLICCA PER COMPLETARE ▼", centerX - 60, 145, 0x00FF00, false);
+        } else if (bothConfirmed) {
+            // Show final confirm and cancel buttons (both visible)
+            confirmButton.visible = false;
+            cancelButton.visible = true; // Keep cancel button visible
+            finalConfirmButton.visible = true;
+            finalConfirmButton.active = true;
+            completeTradeButton.visible = false;
+            
+            if (localFinalConfirmed) {
+                finalConfirmButton.setMessage(Component.literal("Annulla"));
+            } else {
+                finalConfirmButton.setMessage(Component.literal("Conferma"));
+            }
+            
+            // Removed yellow "CONFERMA FINALE" text
         } else {
-            confirmButton.setMessage(Component.literal("§6§l⚜ Conferma ⚜"));
+            // Show normal confirm and cancel buttons
+            confirmButton.visible = true;
+            cancelButton.visible = true;
+            finalConfirmButton.visible = false;
+            completeTradeButton.visible = false;
+            
+            if (localConfirmed) {
+                confirmButton.setMessage(Component.literal("Annulla"));
+            } else {
+                confirmButton.setMessage(Component.literal("Conferma"));
+            }
         }
+    }
+    
+    private void drawTaxInfo(GuiGraphics guiGraphics) {
+        // Get tax info from menu (synced from server)
+        double taxRate = this.menu.getTaxRate();
+        int taxAmount = this.menu.getTaxAmount();
+        
+        if (taxAmount > 0) {
+            int taxPercent = (int) (taxRate * 100);
+            
+            // Calculate total currency from other player's offer
+            int totalCurrency = 0;
+            for (int i = 0; i < 24; i++) {
+                ItemStack stack = this.menu.getOtherPlayerOffer().getItem(i);
+                if (!stack.isEmpty() && isCurrencyItem(stack)) {
+                    totalCurrency += stack.getCount();
+                }
+            }
+            
+            int taxedCurrency = totalCurrency - taxAmount;
+            
+            // Draw tax info in the center
+            int centerX = this.imageWidth / 2;
+            String taxInfo = String.format("§cTassa: %d%% (-%d)", taxPercent, taxAmount);
+            String receiveInfo = String.format("§aRiceverai: %d", taxedCurrency);
+            
+            int taxInfoWidth = this.font.width(taxInfo);
+            int receiveInfoWidth = this.font.width(receiveInfo);
+            
+            guiGraphics.drawString(this.font, taxInfo, centerX - taxInfoWidth / 2, 120, 0xFF0000, false);
+            guiGraphics.drawString(this.font, receiveInfo, centerX - receiveInfoWidth / 2, 128, 0x00FF00, false);
+        }
+    }
+    
+    private boolean isCurrencyItem(ItemStack stack) {
+        if (stack.isEmpty()) {
+            return false;
+        }
+        
+        // This is a simplified check - in production, use Config.TRADE_CURRENCY_ITEMS
+        return stack.getItem().toString().contains("potato") || 
+               stack.getItem().toString().contains("gold_nugget");
+    }
+    
+    private double getTaxRate() {
+        // Default 10% - in production, use Config.TRADE_TAX_RATE.get()
+        return 0.1;
     }
 
     @Override
     protected void containerTick() {
         super.containerTick();
         
-        // Check if both players confirmed - trade will complete server-side
-        if (this.menu.isPlayerConfirmed() && this.menu.isOtherPlayerConfirmed()) {
+        // Check if both players final confirmed - trade will complete server-side
+        if (this.menu.isPlayerFinalConfirmed() && this.menu.isOtherPlayerFinalConfirmed()) {
             // Trade completed, menu will be closed by server
         }
     }
@@ -158,6 +270,39 @@ public class TradeScreen extends AbstractContainerScreen<TradeMenu> {
         ));
         
         this.menu.setPlayerConfirmed(localConfirmed);
+        
+        // Log for debugging
+        if (localConfirmed) {
+            Minecraft.getInstance().player.sendSystemMessage(Component.literal("§aHai confermato! Aspetta che anche l'altro giocatore confermi."));
+        } else {
+            Minecraft.getInstance().player.sendSystemMessage(Component.literal("§7Conferma annullata."));
+        }
+    }
+
+    private void toggleFinalConfirm() {
+        localFinalConfirmed = !localFinalConfirmed;
+        
+        // Send final confirmation to server
+        PacketDistributor.sendToServer(new TradeFinalConfirmPacket(
+            Minecraft.getInstance().player.getUUID(),
+            localFinalConfirmed
+        ));
+        
+        this.menu.setPlayerFinalConfirmed(localFinalConfirmed);
+        
+        // Log for debugging
+        if (localFinalConfirmed) {
+            Minecraft.getInstance().player.sendSystemMessage(Component.literal("§a§lHai confermato FINALMENTE! Aspetta che anche l'altro giocatore confermi."));
+        } else {
+            Minecraft.getInstance().player.sendSystemMessage(Component.literal("§7Conferma finale annullata."));
+        }
+    }
+
+    private void completeTrade() {
+        // The trade is already completed server-side when both players final confirmed
+        // This button just acknowledges and closes the GUI
+        Minecraft.getInstance().player.sendSystemMessage(Component.literal("§a§l✓ SCAMBIO COMPLETATO!"));
+        Minecraft.getInstance().player.closeContainer();
     }
 
     private void cancelTrade() {
@@ -170,5 +315,24 @@ public class TradeScreen extends AbstractContainerScreen<TradeMenu> {
     @Override
     public boolean isPauseScreen() {
         return false;
+    }
+    
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        // Block inventory key (E) when in trade
+        if (keyCode == 69) { // E key
+            return true;
+        }
+        // Block ESC key to prevent closing
+        if (keyCode == 256) { // ESC key
+            return true;
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+    
+    @Override
+    public void onClose() {
+        // Prevent closing the screen - players must use Cancel button
+        // This prevents accidental closure and item loss
     }
 }

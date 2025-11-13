@@ -1,15 +1,19 @@
 package com.tharidia.tharidia_things.network;
 
+import com.tharidia.tharidia_things.Config;
 import com.tharidia.tharidia_things.TharidiaThings;
 import com.tharidia.tharidia_things.gui.TradeMenu;
 import com.tharidia.tharidia_things.trade.TradeManager;
 import com.tharidia.tharidia_things.trade.TradeSession;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -60,18 +64,81 @@ public class TradePacketHandler {
         session.updatePlayerItems(player.getUUID(), packet.items());
         session.setPlayerConfirmed(player.getUUID(), packet.confirmed());
 
-        // Notify other player
+        // Notify other player via packet
         ServerPlayer otherPlayer = session.getOtherPlayer(player.getUUID());
-        if (otherPlayer != null && otherPlayer.containerMenu instanceof TradeMenu otherMenu) {
-            // Update other player's view
-            otherMenu.setOtherPlayerConfirmed(packet.confirmed());
+        if (otherPlayer != null) {
+            // Update other player's menu server-side
+            if (otherPlayer.containerMenu instanceof TradeMenu otherMenu) {
+                otherMenu.setOtherPlayerConfirmed(packet.confirmed());
+                
+                // Only show items when confirmed
+                if (packet.confirmed()) {
+                    updateMenuItems(otherMenu.getOtherPlayerOffer(), packet.items());
+                } else {
+                    // Clear items if unconfirmed
+                    clearMenuItems(otherMenu.getOtherPlayerOffer());
+                }
+            }
             
-            // Update items in the menu
-            updateMenuItems(otherMenu.getOtherPlayerOffer(), packet.items());
+            // Send sync packet to other player's client
+            List<ItemStack> itemsToSend = packet.confirmed() ? packet.items() : List.of();
+            
+            // Calculate tax info for the items being sent
+            double taxRate = Config.TRADE_TAX_RATE.get();
+            int taxAmount = calculateTaxAmount(itemsToSend, taxRate);
+            
+            PacketDistributor.sendToPlayer(otherPlayer, new TradeSyncPacket(
+                itemsToSend,
+                packet.confirmed(),
+                session.isPlayerFinalConfirmed(player.getUUID()),
+                taxRate,
+                taxAmount
+            ));
+        }
+    }
+
+    public static void handleTradeFinalConfirm(TradeFinalConfirmPacket packet, ServerPlayer player) {
+        TradeSession session = TradeManager.getPlayerSession(player.getUUID());
+        
+        if (session == null) {
+            player.sendSystemMessage(Component.literal("§cNessuna sessione di scambio attiva."));
+            return;
         }
 
-        // Check if both players confirmed
-        if (session.isBothConfirmed()) {
+        // Check if both players have confirmed their items first
+        if (!session.isBothConfirmed()) {
+            player.sendSystemMessage(Component.literal("§cEntrambi i giocatori devono prima confermare i loro oggetti."));
+            return;
+        }
+
+        // Update final confirmation
+        session.setPlayerFinalConfirmed(player.getUUID(), packet.confirmed());
+
+        // Notify other player
+        ServerPlayer otherPlayer = session.getOtherPlayer(player.getUUID());
+        if (otherPlayer != null) {
+            if (otherPlayer.containerMenu instanceof TradeMenu otherMenu) {
+                otherMenu.setOtherPlayerFinalConfirmed(packet.confirmed());
+            }
+            
+            // Send sync packet to update other player's client
+            List<ItemStack> playerItems = session.getPlayerItems(player.getUUID());
+            
+            // Calculate tax info for the items being sent
+            double taxRate = Config.TRADE_TAX_RATE.get();
+            int taxAmount = calculateTaxAmount(playerItems, taxRate);
+            
+            PacketDistributor.sendToPlayer(otherPlayer, new TradeSyncPacket(
+                playerItems,
+                session.isPlayerConfirmed(player.getUUID()),
+                packet.confirmed(),
+                taxRate,
+                taxAmount
+            ));
+        }
+
+        // Check if both players final confirmed
+        if (session.isBothFinalConfirmed()) {
             completeTrade(session);
         }
     }
@@ -131,9 +198,13 @@ public class TradePacketHandler {
         removeItemsFromPlayer(player1, player1Items);
         removeItemsFromPlayer(player2, player2Items);
 
-        // Give items to opposite players
-        giveItemsToPlayer(player1, player2Items);
-        giveItemsToPlayer(player2, player1Items);
+        // Apply tax to currency items
+        List<ItemStack> player1ItemsAfterTax = applyTax(player1Items);
+        List<ItemStack> player2ItemsAfterTax = applyTax(player2Items);
+
+        // Give items to opposite players (with tax applied)
+        giveItemsToPlayer(player1, player2ItemsAfterTax);
+        giveItemsToPlayer(player2, player1ItemsAfterTax);
 
         // Send completion packets
         PacketDistributor.sendToPlayer(player1, new TradeCompletePacket(session.getSessionId(), true));
@@ -216,9 +287,88 @@ public class TradePacketHandler {
             container.setItem(i, ItemStack.EMPTY);
         }
         
-        // Set new items
+        // Set new items (with tax preview for currency items)
         for (int i = 0; i < Math.min(items.size(), container.getContainerSize()); i++) {
-            container.setItem(i, items.get(i).copy());
+            ItemStack displayStack = items.get(i).copy();
+            
+            // Apply tax preview to currency items
+            if (isCurrencyItem(displayStack)) {
+                int taxedAmount = applyTaxToAmount(displayStack.getCount());
+                displayStack.setCount(taxedAmount);
+            }
+            
+            container.setItem(i, displayStack);
         }
+    }
+
+    private static void clearMenuItems(net.minecraft.world.Container container) {
+        for (int i = 0; i < container.getContainerSize(); i++) {
+            container.setItem(i, ItemStack.EMPTY);
+        }
+    }
+
+    private static boolean isCurrencyItem(ItemStack stack) {
+        if (stack.isEmpty()) {
+            return false;
+        }
+
+        List<? extends String> currencyItems = Config.TRADE_CURRENCY_ITEMS.get();
+        ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
+
+        return currencyItems.stream()
+                .anyMatch(currency -> {
+                    try {
+                        ResourceLocation currencyId = ResourceLocation.parse(currency);
+                        return currencyId.equals(itemId);
+                    } catch (Exception e) {
+                        return false;
+                    }
+                });
+    }
+
+    private static int applyTaxToAmount(int amount) {
+        double taxRate = Config.TRADE_TAX_RATE.get();
+        return (int) Math.floor(amount * (1.0 - taxRate));
+    }
+
+    private static List<ItemStack> applyTax(List<ItemStack> items) {
+        List<ItemStack> taxedItems = new ArrayList<>();
+        
+        for (ItemStack stack : items) {
+            if (stack.isEmpty()) continue;
+            
+            ItemStack taxedStack = stack.copy();
+            
+            // Apply tax only to currency items
+            if (isCurrencyItem(taxedStack)) {
+                int taxedAmount = applyTaxToAmount(taxedStack.getCount());
+                taxedStack.setCount(taxedAmount);
+                
+                if (taxedAmount > 0) {
+                    taxedItems.add(taxedStack);
+                }
+            } else {
+                taxedItems.add(taxedStack);
+            }
+        }
+        
+        return taxedItems;
+    }
+    
+    private static int calculateTaxAmount(List<ItemStack> items, double taxRate) {
+        int totalCurrency = 0;
+        
+        for (ItemStack stack : items) {
+            if (!stack.isEmpty() && isCurrencyItem(stack)) {
+                totalCurrency += stack.getCount();
+            }
+        }
+        
+        if (totalCurrency > 0) {
+            int taxedAmount = (int) Math.floor(totalCurrency * (1.0 - taxRate));
+            return totalCurrency - taxedAmount;
+        }
+        
+        return 0;
     }
 }

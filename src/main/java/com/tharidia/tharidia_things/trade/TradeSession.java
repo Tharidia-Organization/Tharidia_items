@@ -16,6 +16,8 @@ public class TradeSession {
     private final List<ItemStack> player2Items;
     private boolean player1Confirmed;
     private boolean player2Confirmed;
+    private boolean player1FinalConfirmed;
+    private boolean player2FinalConfirmed;
     private final long creationTime;
 
     public TradeSession(ServerPlayer player1, ServerPlayer player2) {
@@ -26,6 +28,8 @@ public class TradeSession {
         this.player2Items = new ArrayList<>();
         this.player1Confirmed = false;
         this.player2Confirmed = false;
+        this.player1FinalConfirmed = false;
+        this.player2FinalConfirmed = false;
         this.creationTime = System.currentTimeMillis();
     }
 
@@ -34,10 +38,12 @@ public class TradeSession {
             player1Items.clear();
             player1Items.addAll(items);
             player1Confirmed = false; // Reset confirmation when items change
+            player1FinalConfirmed = false; // Reset final confirmation
         } else if (player2.getUUID().equals(playerId)) {
             player2Items.clear();
             player2Items.addAll(items);
             player2Confirmed = false; // Reset confirmation when items change
+            player2FinalConfirmed = false; // Reset final confirmation
         }
     }
 
@@ -51,6 +57,26 @@ public class TradeSession {
 
     public boolean isBothConfirmed() {
         return player1Confirmed && player2Confirmed;
+    }
+
+    public void setPlayerFinalConfirmed(UUID playerId, boolean confirmed) {
+        if (player1.getUUID().equals(playerId)) {
+            player1FinalConfirmed = confirmed;
+        } else if (player2.getUUID().equals(playerId)) {
+            player2FinalConfirmed = confirmed;
+        }
+    }
+
+    public boolean isBothFinalConfirmed() {
+        return player1FinalConfirmed && player2FinalConfirmed;
+    }
+
+    public boolean isPlayer1FinalConfirmed() {
+        return player1FinalConfirmed;
+    }
+
+    public boolean isPlayer2FinalConfirmed() {
+        return player2FinalConfirmed;
     }
 
     public boolean isExpired() {
@@ -76,5 +102,33 @@ public class TradeSession {
 
     public boolean involves(UUID playerId) {
         return player1.getUUID().equals(playerId) || player2.getUUID().equals(playerId);
+    }
+    
+    // Helper methods for packet handling
+    public List<ItemStack> getPlayerItems(UUID playerId) {
+        if (player1.getUUID().equals(playerId)) {
+            return getPlayer1Items();
+        } else if (player2.getUUID().equals(playerId)) {
+            return getPlayer2Items();
+        }
+        return List.of();
+    }
+    
+    public boolean isPlayerConfirmed(UUID playerId) {
+        if (player1.getUUID().equals(playerId)) {
+            return player1Confirmed;
+        } else if (player2.getUUID().equals(playerId)) {
+            return player2Confirmed;
+        }
+        return false;
+    }
+    
+    public boolean isPlayerFinalConfirmed(UUID playerId) {
+        if (player1.getUUID().equals(playerId)) {
+            return player1FinalConfirmed;
+        } else if (player2.getUUID().equals(playerId)) {
+            return player2FinalConfirmed;
+        }
+        return false;
     }
 }

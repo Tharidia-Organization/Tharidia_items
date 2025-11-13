@@ -242,6 +242,10 @@ public class TharidiaThings {
         NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.FatigueHandler.class);
         // Register the trade interaction handler
         NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.TradeInteractionHandler.class);
+        // Register the trade inventory blocker
+        NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.TradeInventoryBlocker.class);
+        // Register the currency protection handler
+        NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.CurrencyProtectionHandler.class);
         // Register lobby events and protection (always register to block /server command everywhere)
         NeoForge.EVENT_BUS.register(LobbyEvents.class);
         NeoForge.EVENT_BUS.register(LobbyChatBlocker.class);
@@ -356,6 +360,11 @@ public class TharidiaThings {
                 com.tharidia.tharidia_things.network.TradeCompletePacket.STREAM_CODEC,
                 (packet, context) -> com.tharidia.tharidia_things.client.TradeClientHandler.handleTradeComplete(packet)
             );
+            registrar.playToClient(
+                com.tharidia.tharidia_things.network.TradeSyncPacket.TYPE,
+                com.tharidia.tharidia_things.network.TradeSyncPacket.STREAM_CODEC,
+                (packet, context) -> com.tharidia.tharidia_things.client.TradeClientHandler.handleTradeSync(packet)
+            );
             LOGGER.info("Client packet handlers registered");
         } else {
             // Register server bungeecord:main for sending transfers to clients
@@ -421,6 +430,11 @@ public class TharidiaThings {
                 com.tharidia.tharidia_things.network.TradeCompletePacket.STREAM_CODEC,
                 (packet, context) -> {}
             );
+            registrar.playToClient(
+                com.tharidia.tharidia_things.network.TradeSyncPacket.TYPE,
+                com.tharidia.tharidia_things.network.TradeSyncPacket.STREAM_CODEC,
+                (packet, context) -> {}
+            );
             LOGGER.info("Server-side packet registration completed (dummy handlers)");
         }
         
@@ -458,6 +472,12 @@ public class TharidiaThings {
             com.tharidia.tharidia_things.network.TradeCancelPacket.STREAM_CODEC,
             (packet, context) -> context.enqueueWork(() -> 
                 com.tharidia.tharidia_things.network.TradePacketHandler.handleTradeCancel(packet, (ServerPlayer) context.player()))
+        );
+        registrar.playToServer(
+            com.tharidia.tharidia_things.network.TradeFinalConfirmPacket.TYPE,
+            com.tharidia.tharidia_things.network.TradeFinalConfirmPacket.STREAM_CODEC,
+            (packet, context) -> context.enqueueWork(() -> 
+                com.tharidia.tharidia_things.network.TradePacketHandler.handleTradeFinalConfirm(packet, (ServerPlayer) context.player()))
         );
     }
 
@@ -606,14 +626,26 @@ public class TharidiaThings {
     public void onServerStopping(net.neoforged.neoforge.event.server.ServerStoppingEvent event) {
         LOGGER.info("Server stopping, cleaning up resources...");
         
-        // Stop command poller
+        // Stop command poller first (it uses the database)
         if (commandPoller != null) {
-            commandPoller.stop();
+            try {
+                LOGGER.info("Stopping command poller...");
+                commandPoller.stop();
+                LOGGER.info("Command poller stopped");
+            } catch (Exception e) {
+                LOGGER.error("Error stopping command poller: {}", e.getMessage(), e);
+            }
         }
         
-        // Shutdown database
+        // Then shutdown database
         if (databaseManager != null) {
-            databaseManager.shutdown();
+            try {
+                LOGGER.info("Shutting down database...");
+                databaseManager.shutdown();
+                LOGGER.info("Database shutdown complete");
+            } catch (Exception e) {
+                LOGGER.error("Error shutting down database: {}", e.getMessage(), e);
+            }
         }
         
         LOGGER.info("Resource cleanup completed");
@@ -631,6 +663,7 @@ public class TharidiaThings {
         ClaimCommands.register(event.getDispatcher());
         com.tharidia.tharidia_things.command.ClaimAdminCommands.register(event.getDispatcher());
         FatigueCommands.register(event.getDispatcher());
+        com.tharidia.tharidia_things.command.TradeCommands.register(event.getDispatcher());
         if (Config.IS_LOBBY_SERVER.get()) {
             LOGGER.info("Registering lobby commands (isLobbyServer=true)");
             LobbyCommand.register(event.getDispatcher());

@@ -36,7 +36,7 @@ public class DatabaseManager {
         try {
             String dbHost = Config.DATABASE_HOST.get();
             int dbPort = Config.DATABASE_PORT.get();
-            String dbName = Config.DATABASE_NAME.get();
+            String dbName = "market";
             String dbUser = Config.DATABASE_USERNAME.get();
             
             logger.info("Initializing database connection to {}:{} (database: {}, user: {})", 
@@ -52,12 +52,13 @@ public class DatabaseManager {
             config.setUsername(dbUser);
             config.setPassword(Config.DATABASE_PASSWORD.get());
             
-            // Connection pool settings
-            config.setMaximumPoolSize(10);
-            config.setMinimumIdle(2);
-            config.setConnectionTimeout(30000); // 30 seconds
-            config.setIdleTimeout(600000); // 10 minutes
-            config.setMaxLifetime(1800000); // 30 minutes
+            // Connection pool settings - aggressive timeouts for faster shutdown
+            config.setMaximumPoolSize(5); // Reduced pool size
+            config.setMinimumIdle(1); // Reduced minimum idle
+            config.setConnectionTimeout(10000); // 10 seconds (reduced from 30)
+            config.setIdleTimeout(300000); // 5 minutes (reduced from 10)
+            config.setMaxLifetime(600000); // 10 minutes (reduced from 30)
+            config.setLeakDetectionThreshold(60000); // 1 minute leak detection
             
             // Connection test query
             config.setConnectionTestQuery("SELECT 1");
@@ -167,9 +168,25 @@ public class DatabaseManager {
     public void shutdown() {
         if (dataSource != null && !dataSource.isClosed()) {
             logger.info("Shutting down database connection pool...");
-            dataSource.close();
-            initialized = false;
-            logger.info("Database connection pool closed");
+            
+            try {
+                // Set a short timeout for shutdown
+                dataSource.setLoginTimeout(2); // 2 seconds max for any pending operations
+                
+                // Close the pool - this should be fast with the aggressive timeouts
+                dataSource.close();
+                initialized = false;
+                logger.info("Database connection pool closed successfully");
+            } catch (Exception e) {
+                logger.error("Error during database shutdown (forcing close): {}", e.getMessage());
+                // Force close even if there's an error
+                try {
+                    dataSource.close();
+                } catch (Exception ignored) {
+                    // Ignore any further errors
+                }
+                initialized = false;
+            }
         }
     }
 }

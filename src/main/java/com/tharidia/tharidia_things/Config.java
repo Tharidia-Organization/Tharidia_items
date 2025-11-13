@@ -84,6 +84,10 @@ public class Config {
             .defineList("tradeCurrencyItems", 
                 java.util.Arrays.asList("minecraft:potato"), 
                 obj -> obj instanceof String);
+    
+    public static final ModConfigSpec.DoubleValue TRADE_TAX_RATE = BUILDER
+            .comment("Tax rate applied to currency items in trades (0.1 = 10% tax)")
+            .defineInRange("tradeTaxRate", 0.1, 0.0, 1.0);
 
     static final ModConfigSpec SPEC = BUILDER.build();
 }

@@ -21,7 +21,7 @@ public class CommandPoller {
     private final MinecraftServer server;
     private final Logger logger;
     private final ScheduledExecutorService scheduler;
-    private boolean running = false;
+    private volatile boolean running = false;
     
     public CommandPoller(DatabaseCommandQueue commandQueue, DatabaseManager databaseManager, MinecraftServer server, Logger logger) {
         this.commandQueue = commandQueue;
@@ -64,13 +64,23 @@ public class CommandPoller {
         
         running = false;
         logger.info("Stopping command poller...");
-        scheduler.shutdown();
+        
+        // Immediately cancel all scheduled tasks
+        scheduler.shutdownNow();
         
         try {
-            if (!scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
+            // Wait only 2 seconds for termination
+            if (!scheduler.awaitTermination(2, TimeUnit.SECONDS)) {
+                logger.warn("Command poller did not terminate in time, forcing shutdown");
+                // Force interrupt all threads
                 scheduler.shutdownNow();
+                // Wait a bit more
+                if (!scheduler.awaitTermination(1, TimeUnit.SECONDS)) {
+                    logger.error("Command poller could not be stopped gracefully");
+                }
             }
         } catch (InterruptedException e) {
+            logger.warn("Interrupted while stopping command poller");
             scheduler.shutdownNow();
             Thread.currentThread().interrupt();
         }
@@ -82,6 +92,11 @@ public class CommandPoller {
      * Poll for new commands and execute them
      */
     private void pollCommands() {
+        // Check if we're still running before doing anything
+        if (!running) {
+            return;
+        }
+        
         try {
             List<DatabaseCommandQueue.QueuedCommand> commands = commandQueue.getPendingCommands();
             
@@ -125,6 +140,11 @@ public class CommandPoller {
      * Cleanup old executed commands
      */
     private void cleanupOldCommands() {
+        // Check if we're still running before doing anything
+        if (!running) {
+            return;
+        }
+        
         try {
             if (databaseManager != null && databaseManager.isInitialized()) {
                 databaseManager.cleanupOldCommands();
