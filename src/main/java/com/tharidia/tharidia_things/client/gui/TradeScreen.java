@@ -33,8 +33,8 @@ public class TradeScreen extends AbstractContainerScreen<TradeMenu> {
 
     public TradeScreen(TradeMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
-        this.imageWidth = 230; // Slightly increased
-        this.imageHeight = 195; // Increased to fit status text below buttons
+        this.imageWidth = 230;
+        this.imageHeight = 195;
     }
 
     @Override
