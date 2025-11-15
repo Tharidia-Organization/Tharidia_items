@@ -163,11 +163,6 @@ public class PietroBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return Block.box(0.0D, 0.0D, 0.0D, 0.0D, 0.0D, 0.0D);
-    }
-
-    @Override
     public boolean onDestroyedByPlayer(BlockState state, Level level, BlockPos pos, Player player, boolean willHarvest, net.minecraft.world.level.material.FluidState fluid) {
         if (!level.isClientSide && level instanceof ServerLevel serverLevel) {
             // Get the lower block position (where the block entity is)

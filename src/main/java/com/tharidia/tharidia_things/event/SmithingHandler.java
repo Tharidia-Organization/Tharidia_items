@@ -27,7 +27,7 @@ import net.minecraft.world.entity.item.ItemEntity;
  */
 public class SmithingHandler {
     
-    private static final String RUSTIC_HAMMER_ID = "rustic_engineer:rustic_hammer";
+    private static final String PALADINS_HAMMER_ID = "paladins:stone_great_hammer";
     
     @SubscribeEvent
     public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
@@ -35,8 +35,8 @@ public class SmithingHandler {
         BlockPos pos = event.getPos();
         ItemStack heldItem = event.getItemStack();
         
-        // Check if player is holding rustic engineer hammer
-        if (!isRusticHammer(heldItem)) {
+        // Check if player is holding paladins hammer
+        if (!isPaladinsHammer(heldItem)) {
             return;
         }
         
@@ -92,10 +92,10 @@ public class SmithingHandler {
         }
     }
     
-    private static boolean isRusticHammer(ItemStack stack) {
+    private static boolean isPaladinsHammer(ItemStack stack) {
         if (stack.isEmpty()) return false;
         String itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
-        return RUSTIC_HAMMER_ID.equals(itemId);
+        return PALADINS_HAMMER_ID.equals(itemId);
     }
     
     private static void openComponentSelectionMenu(ServerPlayer player, BlockPos pos) {

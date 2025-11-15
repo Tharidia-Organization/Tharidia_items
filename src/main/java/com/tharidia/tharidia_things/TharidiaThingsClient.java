@@ -10,6 +10,7 @@ import com.tharidia.tharidia_things.client.renderer.HotIronAnvilRenderer;
 import com.tharidia.tharidia_things.client.renderer.HotGoldAnvilRenderer;
 import com.tharidia.tharidia_things.client.renderer.HotCopperAnvilRenderer;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.api.distmarker.Dist;
@@ -51,6 +52,12 @@ public class TharidiaThingsClient {
             BlockEntityRenderers.register(TharidiaThings.HOT_IRON_ANVIL_ENTITY.get(), HotIronAnvilRenderer::new);
             BlockEntityRenderers.register(TharidiaThings.HOT_GOLD_ANVIL_ENTITY.get(), HotGoldAnvilRenderer::new);
             BlockEntityRenderers.register(TharidiaThings.HOT_COPPER_ANVIL_ENTITY.get(), HotCopperAnvilRenderer::new);
+            
+            // Set render type for Pietro block to support transparency
+            net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(
+                TharidiaThings.PIETRO.get(), 
+                RenderType.cutout()
+            );
         });
     }
 
