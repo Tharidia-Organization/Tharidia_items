@@ -51,8 +51,8 @@ public class BattleGauntle extends Item {
     public void onUseTick(Level level, LivingEntity livingEntity, ItemStack stack, int remainingUseDuration) {
         if (!livingEntity.level().isClientSide()) {
             if (livingEntity instanceof Player player) {
-                var hitTarger = getPlayerLookAt(player, 5, 1.0F);
-                if (hitTarger instanceof EntityHitResult entityHit &&
+                var hitTarget = getPlayerLookAt(player, 5);
+                if (hitTarget instanceof EntityHitResult entityHit &&
                         entityHit.getEntity() instanceof Player player_target) {
                     player_target.addEffect(new MobEffectInstance(MobEffects.GLOWING, 2, 0, false, false, false));
                 }
@@ -65,8 +65,8 @@ public class BattleGauntle extends Item {
     public ItemStack finishUsingItem(ItemStack stack, Level level, LivingEntity livingEntity) {
         if (!livingEntity.level().isClientSide()) {
             if (livingEntity instanceof Player player) {
-                var hitTarger = getPlayerLookAt(player, 5, 1.0F);
-                if (hitTarger instanceof EntityHitResult entityHit &&
+                var hitTarget = getPlayerLookAt(player, 5);
+                if (hitTarget instanceof EntityHitResult entityHit &&
                         entityHit.getEntity() instanceof Player player_target) {
                     player.displayClientMessage(Component.literal(
                             String.format("You are inviting %s to a battle", player_target.getName().getString())),
@@ -78,16 +78,12 @@ public class BattleGauntle extends Item {
 
                     MenuProvider menuProvider = new SimpleMenuProvider(
                             (containerId, playerInventory, target) -> {
-                                // This runs on the server, creating the menu instance.
-                                // We use the simple (id, inv) constructor
                                 return new BattleInviteMenu(containerId, playerInventory);
                             },
-                            Component.literal("Battle Invitation") // This is the GUI's title
-                    );
+                            Component.literal("Battle Invitation"));
 
                     player_target.openMenu(menuProvider, (buffer) -> {
-                        // This part writes the inviter's name into the packet
-                        // that gets sent to the client.
+                        buffer.writeUtf(player.getUUID().toString());
                         buffer.writeUtf(player.getName().getString());
                     });
                 }
@@ -105,10 +101,10 @@ public class BattleGauntle extends Item {
      *                      1.0F if not in a render event).
      * @return A HitResult (can be EntityHitResult, or MISS).
      */
-    public static HitResult getPlayerLookAt(Player player, double reachDistance, float partialTicks) {
+    public static HitResult getPlayerLookAt(Player player, double reachDistance) {
         // 1. Get Player's "eyes" and "look" vectors
-        Vec3 eyePosition = player.getEyePosition(partialTicks);
-        Vec3 lookVector = player.getViewVector(partialTicks);
+        Vec3 eyePosition = player.getEyePosition(1.0F);
+        Vec3 lookVector = player.getViewVector(1.0F);
         Vec3 endPosition = eyePosition.add(lookVector.scale(reachDistance));
 
         // 2. Perform a block raycast
