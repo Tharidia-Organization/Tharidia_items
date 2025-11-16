@@ -2,6 +2,7 @@ package com.tharidia.tharidia_things.network;
 
 import com.tharidia.tharidia_things.TharidiaThings;
 import com.tharidia.tharidia_things.compoundTag.BattleGauntleAttachments;
+import com.tharidia.tharidia_things.util.PlayerNameHelper;
 
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -53,9 +54,12 @@ public record BattleInviteResponsePacket(UUID inviterUuid, boolean accepted) imp
         if (packet.accepted()) {
             // --- ACCEPTED LOGIC---
             inviterPlayer.sendSystemMessage(
-                    Component.literal(targetPlayer.getName().getString() + " accepted your battle!"));
+                    Component.literal(
+                            PlayerNameHelper.getChosenName((ServerPlayer) targetPlayer) +
+                                    " accepted your battle!"));
             targetPlayer.sendSystemMessage(
-                    Component.literal("You accepted the battle from " + inviterPlayer.getName().getString()));
+                    Component.literal("You accepted the battle from " +
+                            PlayerNameHelper.getChosenName((ServerPlayer) inviterPlayer)));
 
             BattleGauntleAttachments inviterBattleAttachments = inviterPlayer
                     .getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());

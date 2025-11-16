@@ -8,6 +8,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -38,7 +40,7 @@ public class BattleLogic {
                 targetAttachments.setChallengerUUID(null);
 
                 ((ServerPlayer) source).connection.send(new ClientboundSetTitleTextPacket(
-                        Component.literal("You won").withColor(0x00FF00)));
+                        Component.literal("You win").withColor(0x00FF00)));
                 ((ServerPlayer) target).connection.send(new ClientboundSetTitleTextPacket(
                         Component.literal("You lose").withColor(0xFF0000)));
 
@@ -48,6 +50,11 @@ public class BattleLogic {
                         100,
                         0.3, 1, 0.3,
                         0.1);
+
+                target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 200, 7, false, false, false));
+                target.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 200, 1, false, false, false));
+                target.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 200, 1, false, false, false));
+                target.addEffect(new MobEffectInstance(MobEffects.JUMP, 200, 256, false, false, false));
 
                 event.setCanceled(true);
             }

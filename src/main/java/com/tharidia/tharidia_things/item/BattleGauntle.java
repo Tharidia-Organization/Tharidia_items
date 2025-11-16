@@ -3,8 +3,10 @@ package com.tharidia.tharidia_things.item;
 import com.google.common.base.Predicate;
 import com.tharidia.tharidia_things.compoundTag.BattleGauntleAttachments;
 import com.tharidia.tharidia_things.gui.BattleInviteMenu;
+import com.tharidia.tharidia_things.util.PlayerNameHelper;
 
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.MenuProvider;
@@ -90,10 +92,8 @@ public class BattleGauntle extends Item {
                 if (hitTarget instanceof EntityHitResult entityHit &&
                         entityHit.getEntity() instanceof Player player_target) {
                     player.displayClientMessage(Component.literal(
-                            String.format("You are inviting %s to a battle", player_target.getName().getString())),
-                            false);
-                    player_target.displayClientMessage(Component.literal(
-                            String.format("%s is inviting you to a battle", player.getName().getString())),
+                            String.format("You are inviting %s to a battle",
+                                    PlayerNameHelper.getChosenName((ServerPlayer) player_target))),
                             false);
                     player.getCooldowns().addCooldown(player.getMainHandItem().getItem(), 100);
 
@@ -105,7 +105,7 @@ public class BattleGauntle extends Item {
 
                     player_target.openMenu(menuProvider, (buffer) -> {
                         buffer.writeUUID(player.getUUID());
-                        buffer.writeUtf(player.getName().getString());
+                        buffer.writeUtf(PlayerNameHelper.getChosenName((ServerPlayer) player));
                     });
                 }
             }
