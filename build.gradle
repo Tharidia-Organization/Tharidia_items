@@ -62,6 +62,18 @@ neoForge {
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 
+        client2 {
+            // This defines a new run named 'client2'
+            client() // This tells NeoGradle to set it up as a client run
+
+            // Set the username for this run
+            programArguments = ['--username', 'Dev2']
+
+            // This is highly recommended to avoid conflicts
+            gameDirectory = project.file('runs/client2') 
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
         server {
             server()
             programArgument '--nogui'

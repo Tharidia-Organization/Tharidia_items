@@ -23,12 +23,15 @@ import com.tharidia.tharidia_things.item.GoldLamaLungaItem;
 import com.tharidia.tharidia_things.item.GoldLamaCortaItem;
 import com.tharidia.tharidia_things.item.CopperLamaLungaItem;
 import com.tharidia.tharidia_things.item.CopperLamaCortaItem;
+import com.tharidia.tharidia_things.item.BattleGauntle;
 import com.tharidia.tharidia_things.item.CopperElsaItem;
 import com.tharidia.tharidia_things.client.ClientPacketHandler;
 import com.tharidia.tharidia_things.command.ClaimCommands;
 import com.tharidia.tharidia_things.command.FatigueCommands;
+import com.tharidia.tharidia_things.compoundTag.BattleGauntleAttachments;
 import com.tharidia.tharidia_things.event.ClaimProtectionHandler;
 import com.tharidia.tharidia_things.fatigue.FatigueAttachments;
+import com.tharidia.tharidia_things.gui.BattleInviteMenu;
 import com.tharidia.tharidia_things.network.ClaimOwnerSyncPacket;
 import com.tharidia.tharidia_things.network.FatigueSyncPacket;
 import com.tharidia.tharidia_things.network.HierarchySyncPacket;
@@ -158,6 +161,11 @@ public class TharidiaThings {
     // Creates a MenuType for the Trade GUI
     public static final DeferredHolder<net.minecraft.world.inventory.MenuType<?>, net.minecraft.world.inventory.MenuType<com.tharidia.tharidia_things.gui.TradeMenu>> TRADE_MENU =
         MENU_TYPES.register("trade_menu", () -> net.neoforged.neoforge.common.extensions.IMenuTypeExtension.create(com.tharidia.tharidia_things.gui.TradeMenu::new));
+
+    // Creates a MenuType for the Battle Invite GUI
+    public static final DeferredHolder<net.minecraft.world.inventory.MenuType<?>, net.minecraft.world.inventory.MenuType<com.tharidia.tharidia_things.gui.BattleInviteMenu>> BATTLE_INVITE_MENU =
+        MENU_TYPES.register("battle_invite_menu", () -> net.neoforged.neoforge.common.extensions.IMenuTypeExtension.create(com.tharidia.tharidia_things.gui.BattleInviteMenu::new));
+    
     
     // Smithing items
     public static final DeferredItem<Item> HOT_IRON = ITEMS.register("hot_iron", () -> new HotIronItem(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)));
@@ -172,6 +180,9 @@ public class TharidiaThings {
     public static final DeferredItem<Item> COPPER_LAMA_LUNGA = ITEMS.register("copper_lama_lunga", () -> new CopperLamaLungaItem(new Item.Properties()));
     public static final DeferredItem<Item> COPPER_LAMA_CORTA = ITEMS.register("copper_lama_corta", () -> new CopperLamaCortaItem(new Item.Properties()));
     public static final DeferredItem<Item> COPPER_ELSA = ITEMS.register("copper_elsa", () -> new CopperElsaItem(new Item.Properties()));
+
+    // Battle Gauntle
+    public static final DeferredItem<Item> BATTLE_GAUNTLE = ITEMS.register("battle_gauntle", ()->new BattleGauntle(new Item.Properties().stacksTo(1)));
 
     // Creates a creative tab with the id "tharidiathings:tharidia_tab" for the mod items, that is placed after the combat tab
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> THARIDIA_TAB = CREATIVE_MODE_TABS.register("tharidia_tab", () -> CreativeModeTab.builder()
@@ -193,6 +204,7 @@ public class TharidiaThings {
                 output.accept(COPPER_LAMA_LUNGA.get());
                 output.accept(COPPER_LAMA_CORTA.get());
                 output.accept(COPPER_ELSA.get());
+                output.accept(BATTLE_GAUNTLE.get());
             }).build());
 
     // The constructor for the mod class is the first code that is run when your mod is loaded.
@@ -251,6 +263,8 @@ public class TharidiaThings {
         NeoForge.EVENT_BUS.register(LobbyChatBlocker.class);
         NeoForge.EVENT_BUS.register(LobbyProtectionHandler.class);
         NeoForge.EVENT_BUS.register(ServerCommandBlocker.class);
+
+        BattleGauntleAttachments.register(modEventBus);
         LOGGER.info("Lobby protection handlers registered (chat blocker, spectator enforcer, /server blocker)");
         
         // Register handshake bypass (CLIENT ONLY)
@@ -486,6 +500,7 @@ public class TharidiaThings {
         event.register(PIETRO_MENU.get(), com.tharidia.tharidia_things.client.gui.PietroScreen::new);
         event.register(COMPONENT_SELECTION_MENU.get(), com.tharidia.tharidia_things.client.gui.ComponentSelectionScreen::new);
         event.register(TRADE_MENU.get(), com.tharidia.tharidia_things.client.gui.TradeScreen::new);
+        event.register(BATTLE_INVITE_MENU.get(), com.tharidia.tharidia_things.client.gui.BattleInviteScreen::new);
     }
 
     // You can use SubscribeEvent and let the Event Bus discover methods to call
