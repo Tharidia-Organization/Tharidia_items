@@ -50,7 +50,6 @@ public record BattleInviteResponsePacket(UUID inviterUuid, boolean accepted) imp
             return;
         }
 
-        // Now you have both players!
         if (packet.accepted()) {
             // --- ACCEPTED LOGIC---
             inviterPlayer.sendSystemMessage(

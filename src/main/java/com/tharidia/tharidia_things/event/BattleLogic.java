@@ -12,6 +12,7 @@ import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 
 @EventBusSubscriber(modid = TharidiaThings.MODID)
 public class BattleLogic {
@@ -35,19 +36,36 @@ public class BattleLogic {
                 targetAttachments.setInBattle(false);
 
                 ((ServerPlayer) source).connection.send(new ClientboundSetTitleTextPacket(
-                        Component.literal("You won")));
+                        Component.literal("You won").withColor(0x00FF00)));
                 ((ServerPlayer) target).connection.send(new ClientboundSetTitleTextPacket(
-                        Component.literal("You lose")));
+                        Component.literal("You lose").withColor(0xFF0000)));
 
                 level.sendParticles(
                         ParticleTypes.END_ROD,
                         source.getX(), source.getY(), source.getZ(),
                         100,
-                        0.5, 1, 0.5,
+                        0.3, 1, 0.3,
                         0.1);
-            }
 
-            event.setCanceled(true);
+                event.setCanceled(true);
+            }
+        }
+    }
+
+    @SubscribeEvent
+    // To test with 3 players
+    public static void onPlayerAttach(AttackEntityEvent event) {
+        if (event.getTarget().level().isClientSide())
+            return;
+
+        if (event.getTarget() instanceof Player target) {
+            BattleGauntleAttachments targetAttachments = target.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
+
+            if (targetAttachments.getInBattle()) {
+                event.getEntity().displayClientMessage(
+                        Component.literal("You can't attack this player, he is in battle").withColor(0x857700), false);
+                event.setCanceled(true);
+            }
         }
     }
 }

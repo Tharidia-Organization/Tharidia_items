@@ -77,7 +77,7 @@ public class BattleInviteScreen extends AbstractContainerScreen<BattleInviteMenu
                 this.title,
                 (this.imageWidth / 2 - this.font.width(this.title) / 2),
                 10,
-                0x404040, // Dark gray color
+                0xFFFFFF, // Color
                 false); // No shadow
 
         // Get the inviter's name from the menu
@@ -88,7 +88,7 @@ public class BattleInviteScreen extends AbstractContainerScreen<BattleInviteMenu
                 inviteText,
                 (this.imageWidth / 2 - this.font.width(inviteText) / 2),
                 25,
-                0x404040,
+                0xFFFFFF,
                 false);
     }
 }
