@@ -24,7 +24,7 @@ public class BattleGauntleAttachments implements INBTSerializable<CompoundTag> {
         this.in_battle = in_battle;
     }
 
-    public float getBattleGauntle() {
+    public float getPlayerHealth() {
         return this.player_health;
     }
 

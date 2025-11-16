@@ -1,6 +1,7 @@
 package com.tharidia.tharidia_things.item;
 
 import com.google.common.base.Predicate;
+import com.tharidia.tharidia_things.compoundTag.BattleGauntleAttachments;
 import com.tharidia.tharidia_things.gui.BattleInviteMenu;
 
 import net.minecraft.network.chat.Component;
@@ -43,8 +44,28 @@ public class BattleGauntle extends Item {
     public InteractionResultHolder<ItemStack> use(Level level, Player player,
             InteractionHand usedHand) {
         ItemStack itemstack = player.getItemInHand(usedHand);
-        player.startUsingItem(usedHand);
-        return InteractionResultHolder.consume(itemstack);
+        var hitTarget = getPlayerLookAt(player, 5);
+        if (hitTarget instanceof EntityHitResult entityHit &&
+                entityHit.getEntity() instanceof Player target) {
+            BattleGauntleAttachments playerAttachments = player.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
+            BattleGauntleAttachments targetAttachments = target.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
+
+            if (playerAttachments.getInBattle()) {
+                player.displayClientMessage(Component.literal("You are already in battle"), false);
+                return InteractionResultHolder.fail(itemstack);
+            }
+            if (targetAttachments.getInBattle()) {
+                player.displayClientMessage(Component.literal(
+                        String.format("%s is already in battle", target.getName().getString())),
+                        false);
+                return InteractionResultHolder.fail(itemstack);
+            }
+
+            player.startUsingItem(usedHand);
+            return InteractionResultHolder.success(itemstack);
+        } else {
+            return InteractionResultHolder.fail(itemstack);
+        }
     }
 
     @Override
@@ -83,7 +104,7 @@ public class BattleGauntle extends Item {
                             Component.literal("Battle Invitation"));
 
                     player_target.openMenu(menuProvider, (buffer) -> {
-                        buffer.writeUtf(player.getUUID().toString());
+                        buffer.writeUUID(player.getUUID());
                         buffer.writeUtf(player.getName().getString());
                     });
                 }

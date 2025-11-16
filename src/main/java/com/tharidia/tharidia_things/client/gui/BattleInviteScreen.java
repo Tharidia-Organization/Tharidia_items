@@ -1,12 +1,14 @@
 package com.tharidia.tharidia_things.client.gui;
 
 import com.tharidia.tharidia_things.gui.BattleInviteMenu;
+import com.tharidia.tharidia_things.network.BattleInviteResponsePacket;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 public class BattleInviteScreen extends AbstractContainerScreen<BattleInviteMenu> {
 
@@ -29,8 +31,9 @@ public class BattleInviteScreen extends AbstractContainerScreen<BattleInviteMenu
         this.addRenderableWidget(Button.builder(
                 Component.literal("Accept"),
                 (button) -> {
-                    // TODO: Send a packet to the server to accept the battle
-                    System.out.println("Battle Accepted!");
+                    // Send a packet to the server with "accepted = true"
+                    var packet = new BattleInviteResponsePacket(this.menu.inviterUUID, true);
+                    PacketDistributor.sendToServer(packet);
                     this.onClose(); // Close the GUI
                 })
                 .bounds(this.leftPos + 30, this.topPos + 40, 50, 20) // x, y, width, height
@@ -40,8 +43,9 @@ public class BattleInviteScreen extends AbstractContainerScreen<BattleInviteMenu
         this.addRenderableWidget(Button.builder(
                 Component.literal("Decline"),
                 (button) -> {
-                    // TODO: Send a packet to the server to decline
-                    System.out.println("Battle Declined!");
+                    // Send a packet to the server with "accepted = false"
+                    var packet = new BattleInviteResponsePacket(this.menu.inviterUUID, false);
+                    PacketDistributor.sendToServer(packet);
                     this.onClose(); // Close the GUI
                 })
                 .bounds(this.leftPos + 96, this.topPos + 40, 50, 20) // x, y, width, height

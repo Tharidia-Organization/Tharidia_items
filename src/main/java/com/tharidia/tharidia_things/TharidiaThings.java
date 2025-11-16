@@ -32,6 +32,7 @@ import com.tharidia.tharidia_things.compoundTag.BattleGauntleAttachments;
 import com.tharidia.tharidia_things.event.ClaimProtectionHandler;
 import com.tharidia.tharidia_things.fatigue.FatigueAttachments;
 import com.tharidia.tharidia_things.gui.BattleInviteMenu;
+import com.tharidia.tharidia_things.network.BattlePackets;
 import com.tharidia.tharidia_things.network.ClaimOwnerSyncPacket;
 import com.tharidia.tharidia_things.network.FatigueSyncPacket;
 import com.tharidia.tharidia_things.network.HierarchySyncPacket;
@@ -265,6 +266,9 @@ public class TharidiaThings {
         NeoForge.EVENT_BUS.register(ServerCommandBlocker.class);
 
         BattleGauntleAttachments.register(modEventBus);
+
+        modEventBus.addListener(BattlePackets::register);
+        
         LOGGER.info("Lobby protection handlers registered (chat blocker, spectator enforcer, /server blocker)");
         
         // Register handshake bypass (CLIENT ONLY)

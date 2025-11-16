@@ -1,5 +1,7 @@
 package com.tharidia.tharidia_things.gui; // You might want to move this to an 'inventory' package
 
+import java.util.UUID;
+
 import com.tharidia.tharidia_things.TharidiaThings;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -9,14 +11,14 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 
 public class BattleInviteMenu extends AbstractContainerMenu {
-    public final Component inviterUUID;
+    public final UUID inviterUUID;
     public final Component inviterName;
 
     /**
      * A new "base" constructor that does the real work.
      * We make it private or protected.
      */
-    private BattleInviteMenu(int containerId, Inventory playerInventory, Component inviterUUID, Component inviterName) {
+    private BattleInviteMenu(int containerId, Inventory playerInventory, UUID inviterUUID, Component inviterName) {
         super(TharidiaThings.BATTLE_INVITE_MENU.get(), containerId);
         this.inviterUUID = inviterUUID;
         this.inviterName = inviterName;
@@ -27,7 +29,7 @@ public class BattleInviteMenu extends AbstractContainerMenu {
      * This just calls the base constructor with a "default" name.
      */
     public BattleInviteMenu(int containerId, Inventory playerInventory) {
-        this(containerId, playerInventory, Component.literal("UNKNOWN"), Component.literal("UNKNOWN"));
+        this(containerId, playerInventory, UUID.randomUUID(), Component.literal("UNKNOWN"));
     }
 
     /**
@@ -36,10 +38,10 @@ public class BattleInviteMenu extends AbstractContainerMenu {
      */
     public BattleInviteMenu(int containerId, Inventory playerInventory, FriendlyByteBuf buffer) {
         // Read the name from the buffer FIRST
-        this(containerId, playerInventory, Component.literal(buffer.readUtf()), Component.literal(buffer.readUtf()));
+        this(containerId, playerInventory, buffer.readUUID(), Component.literal(buffer.readUtf()));
     }
 
-    public Component getInviterUUID() {
+    public UUID getInviterUUID() {
         return inviterUUID;
     }
 
