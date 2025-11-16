@@ -62,10 +62,13 @@ public record BattleInviteResponsePacket(UUID inviterUuid, boolean accepted) imp
             BattleGauntleAttachments targetBattleAttachments = targetPlayer
                     .getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
 
-            inviterBattleAttachments.setPlayerHealth(inviterPlayer.getHealth());
             inviterBattleAttachments.setInBattle(true);
-            targetBattleAttachments.setPlayerHealth(targetPlayer.getHealth());
+            inviterBattleAttachments.setChallengerUUID(targetPlayer.getUUID());
+            inviterBattleAttachments.setPlayerHealth(inviterPlayer.getHealth());
+
             targetBattleAttachments.setInBattle(true);
+            targetBattleAttachments.setChallengerUUID(inviterPlayer.getUUID());
+            targetBattleAttachments.setPlayerHealth(targetPlayer.getHealth());
 
             inviterPlayer.setHealth(inviterPlayer.getMaxHealth());
             targetPlayer.setHealth(targetPlayer.getMaxHealth());

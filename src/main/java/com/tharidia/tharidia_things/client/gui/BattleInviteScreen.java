@@ -1,5 +1,6 @@
 package com.tharidia.tharidia_things.client.gui;
 
+import com.tharidia.tharidia_things.TharidiaThings;
 import com.tharidia.tharidia_things.gui.BattleInviteMenu;
 import com.tharidia.tharidia_things.network.BattleInviteResponsePacket;
 
@@ -7,10 +8,13 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 public class BattleInviteScreen extends AbstractContainerScreen<BattleInviteMenu> {
+    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID,
+            "textures/gui/battle_invitation_gui.png");
 
     public BattleInviteScreen(BattleInviteMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
@@ -64,8 +68,14 @@ public class BattleInviteScreen extends AbstractContainerScreen<BattleInviteMenu
 
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTicks, int mouseX, int mouseY) {
-        // We don't have a background texture, so this can be empty.
-        // The 'renderBackground' in the render() method handles the darkening.
+        // --- 2. IMPLEMENT THIS METHOD ---
+        // This will draw your background texture
+
+        int x = this.leftPos;
+        int y = this.topPos;
+
+        // Draw the background
+        graphics.blit(TEXTURE, x, y, 0, 0, this.imageWidth, this.imageHeight);
     }
 
     @Override
@@ -77,7 +87,7 @@ public class BattleInviteScreen extends AbstractContainerScreen<BattleInviteMenu
                 this.title,
                 (this.imageWidth / 2 - this.font.width(this.title) / 2),
                 10,
-                0xFFFFFF, // Color
+                0x000000, // Color
                 false); // No shadow
 
         // Get the inviter's name from the menu
@@ -88,7 +98,7 @@ public class BattleInviteScreen extends AbstractContainerScreen<BattleInviteMenu
                 inviteText,
                 (this.imageWidth / 2 - this.font.width(inviteText) / 2),
                 25,
-                0xFFFFFF,
+                0x000000,
                 false);
     }
 }

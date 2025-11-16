@@ -1,5 +1,6 @@
 package com.tharidia.tharidia_things.compoundTag;
 
+import java.util.UUID;
 import java.util.function.Supplier;
 
 import com.tharidia.tharidia_things.TharidiaThings;
@@ -14,6 +15,7 @@ import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
 public class BattleGauntleAttachments implements INBTSerializable<CompoundTag> {
     private boolean in_battle;
+    private UUID challenger_uuid;
     private float player_health;
 
     public void setPlayerHealth(float health) {
@@ -24,6 +26,10 @@ public class BattleGauntleAttachments implements INBTSerializable<CompoundTag> {
         this.in_battle = in_battle;
     }
 
+    public void setChallengerUUID(UUID challenger_uuid) {
+        this.challenger_uuid = challenger_uuid;
+    }
+
     public float getPlayerHealth() {
         return this.player_health;
     }
@@ -32,11 +38,16 @@ public class BattleGauntleAttachments implements INBTSerializable<CompoundTag> {
         return this.in_battle;
     }
 
+    public UUID getChallengerUUID() {
+        return this.challenger_uuid;
+    }
+
     @Override
     public CompoundTag serializeNBT(Provider provider) {
         CompoundTag nbt = new CompoundTag();
         nbt.putFloat("player_health", this.player_health);
         nbt.putBoolean("in_battle", this.in_battle);
+        nbt.putUUID("challenger_uuid", challenger_uuid);
         return nbt;
     }
 
@@ -44,6 +55,7 @@ public class BattleGauntleAttachments implements INBTSerializable<CompoundTag> {
     public void deserializeNBT(Provider provider, CompoundTag nbt) {
         this.player_health = nbt.getFloat("player_health");
         this.in_battle = nbt.getBoolean("in_battle");
+        this.challenger_uuid = nbt.getUUID("challenger_uuid");
     }
 
     public static final DeferredRegister<AttachmentType<?>> ATTACKMENT_TYPES = DeferredRegister

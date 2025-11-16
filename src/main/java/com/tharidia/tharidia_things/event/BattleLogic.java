@@ -33,7 +33,9 @@ public class BattleLogic {
                 target.setHealth(targetAttachments.getPlayerHealth());
 
                 sourceAttachments.setInBattle(false);
+                sourceAttachments.setChallengerUUID(null);
                 targetAttachments.setInBattle(false);
+                targetAttachments.setChallengerUUID(null);
 
                 ((ServerPlayer) source).connection.send(new ClientboundSetTitleTextPacket(
                         Component.literal("You won").withColor(0x00FF00)));
@@ -53,7 +55,6 @@ public class BattleLogic {
     }
 
     @SubscribeEvent
-    // To test with 3 players
     public static void onPlayerAttach(AttackEntityEvent event) {
         if (event.getTarget().level().isClientSide())
             return;
@@ -62,9 +63,12 @@ public class BattleLogic {
             BattleGauntleAttachments targetAttachments = target.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
 
             if (targetAttachments.getInBattle()) {
-                event.getEntity().displayClientMessage(
-                        Component.literal("You can't attack this player, he is in battle").withColor(0x857700), false);
-                event.setCanceled(true);
+                if (!targetAttachments.getChallengerUUID().equals(event.getEntity().getUUID())) {
+                    event.getEntity().displayClientMessage(
+                            Component.literal("You can't attack this player, he is in battle").withColor(0x857700),
+                            false);
+                    event.setCanceled(true);
+                }
             }
         }
     }
