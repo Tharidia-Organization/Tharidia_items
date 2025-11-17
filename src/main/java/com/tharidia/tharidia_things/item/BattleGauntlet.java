@@ -27,8 +27,8 @@ import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
-public class BattleGauntle extends Item {
-    public BattleGauntle(Properties properties) {
+public class BattleGauntlet extends Item {
+    public BattleGauntlet(Properties properties) {
         super(properties);
     }
 
