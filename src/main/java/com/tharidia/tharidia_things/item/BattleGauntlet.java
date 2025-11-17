@@ -53,12 +53,13 @@ public class BattleGauntlet extends Item {
             BattleGauntleAttachments targetAttachments = target.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
 
             if (playerAttachments.getInBattle()) {
-                player.displayClientMessage(Component.literal("You are already in battle"), false);
+                player.displayClientMessage(Component.translatable("message.tharidiathings.battle.player_in_battle"),
+                        false);
                 return InteractionResultHolder.fail(itemstack);
             }
             if (targetAttachments.getInBattle()) {
-                player.displayClientMessage(Component.literal(
-                        String.format("%s is already in battle", target.getName().getString())),
+                player.displayClientMessage(Component.translatable(
+                        "message.tharidiathings.battle.target_in_battle"),
                         false);
                 return InteractionResultHolder.fail(itemstack);
             }
@@ -91,17 +92,16 @@ public class BattleGauntlet extends Item {
                 var hitTarget = getPlayerLookAt(player, 5);
                 if (hitTarget instanceof EntityHitResult entityHit &&
                         entityHit.getEntity() instanceof Player player_target) {
-                    player.displayClientMessage(Component.literal(
-                            String.format("You are inviting %s to a battle",
-                                    PlayerNameHelper.getChosenName((ServerPlayer) player_target))),
-                            false);
+                    player.displayClientMessage(Component.translatable(
+                            "message.tharidiathings.battle.player_invite",
+                            PlayerNameHelper.getChosenName((ServerPlayer) player_target)), false);
                     player.getCooldowns().addCooldown(player.getMainHandItem().getItem(), 100);
 
                     MenuProvider menuProvider = new SimpleMenuProvider(
                             (containerId, playerInventory, target) -> {
                                 return new BattleInviteMenu(containerId, playerInventory);
                             },
-                            Component.literal("Battle Invitation"));
+                            Component.translatable("gui.tharidiathings.battle_invitation.title"));
 
                     player_target.openMenu(menuProvider, (buffer) -> {
                         buffer.writeUUID(player.getUUID());

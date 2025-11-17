@@ -31,7 +31,6 @@ import com.tharidia.tharidia_things.command.FatigueCommands;
 import com.tharidia.tharidia_things.compoundTag.BattleGauntleAttachments;
 import com.tharidia.tharidia_things.event.ClaimProtectionHandler;
 import com.tharidia.tharidia_things.fatigue.FatigueAttachments;
-import com.tharidia.tharidia_things.gui.BattleInviteMenu;
 import com.tharidia.tharidia_things.network.BattlePackets;
 import com.tharidia.tharidia_things.network.ClaimOwnerSyncPacket;
 import com.tharidia.tharidia_things.network.FatigueSyncPacket;
