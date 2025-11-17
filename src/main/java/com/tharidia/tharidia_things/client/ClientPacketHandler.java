@@ -9,6 +9,8 @@ import com.tharidia.tharidia_things.network.HierarchySyncPacket;
 import com.tharidia.tharidia_things.network.RealmSyncPacket;
 import com.tharidia.tharidia_things.network.SyncGateRestrictionsPacket;
 import com.tharidia.tharidia_things.network.RequestNamePacket;
+import com.tharidia.tharidia_things.network.ZoneMusicPacket;
+import com.tharidia.tharidia_things.network.MusicFileDataPacket;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
@@ -257,6 +259,32 @@ public class ClientPacketHandler {
         context.enqueueWork(() -> {
             LOGGER.info("[NAME SELECTION] Received name request: needsName={}", packet.needsName());
             ClientConnectionHandler.handleNameRequest(packet.needsName());
+        });
+    }
+    
+    /**
+     * Handles zone music packet from tharidiatweaks mod
+     */
+    public static void handleZoneMusic(ZoneMusicPacket packet, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            if (packet.stop()) {
+                LOGGER.info("[ZONE MUSIC] Stopping music");
+                ZoneMusicPlayer.stopMusic();
+            } else {
+                LOGGER.info("[ZONE MUSIC] Playing music: {} (loop: {})", packet.musicFile(), packet.loop());
+                ZoneMusicPlayer.playMusic(packet.musicFile(), packet.loop());
+            }
+        });
+    }
+    
+    /**
+     * Handles music file data packet from server
+     */
+    public static void handleMusicFileData(MusicFileDataPacket packet, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            LOGGER.info("[MUSIC DOWNLOAD] Received chunk {}/{} of {} ({} bytes)", 
+                packet.chunkIndex() + 1, packet.totalChunks(), packet.musicFile(), packet.data().length);
+            ZoneMusicPlayer.receiveMusicChunk(packet);
         });
     }
 }

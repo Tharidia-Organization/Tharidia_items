@@ -5,6 +5,7 @@ import com.tharidia.tharidia_things.client.ClientConnectionHandler;
 import com.tharidia.tharidia_things.client.RealmBoundaryRenderer;
 import com.tharidia.tharidia_things.client.RealmClientHandler;
 import com.tharidia.tharidia_things.client.RealmOverlay;
+import com.tharidia.tharidia_things.client.ZoneMusicPlayer;
 import com.tharidia.tharidia_things.client.renderer.PietroBlockRenderer;
 import com.tharidia.tharidia_things.client.renderer.HotIronAnvilRenderer;
 import com.tharidia.tharidia_things.client.renderer.HotGoldAnvilRenderer;
@@ -36,6 +37,9 @@ public class TharidiaThingsClient {
         // The config screen is accessed by going to the Mods screen > clicking on your mod > clicking on config.
         // Do not forget to add translations for your config options to the en_us.json file.
         container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
+        
+        // Initialize zone music player
+        ZoneMusicPlayer.initialize();
         
         // Register client-side event handlers to the NeoForge event bus
         NeoForge.EVENT_BUS.register(RealmBoundaryRenderer.class);

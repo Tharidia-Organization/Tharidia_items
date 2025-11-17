@@ -152,6 +152,10 @@ dependencies {
     implementation 'com.zaxxer:HikariCP:5.1.0'
     jarJar(group: 'com.zaxxer', name: 'HikariCP', version: '[5.1.0,6.0.0)')
     
+    // JLayer for MP3 playback - included in JAR via JarJar
+    implementation 'javazoom:jlayer:1.0.1'
+    jarJar(group: 'javazoom', name: 'jlayer', version: '[1.0.1,2.0.0)')
+    
     // SLF4J API is already provided by Minecraft/NeoForge - no need to include it
 
     // Paladins mod dependency for stone great hammer

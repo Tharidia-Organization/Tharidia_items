@@ -367,6 +367,18 @@ public class TharidiaThings {
                 com.tharidia.tharidia_things.network.RequestNamePacket.STREAM_CODEC,
                 ClientPacketHandler::handleRequestName
             );
+            // Zone music packet from tharidiatweaks
+            registrar.playToClient(
+                com.tharidia.tharidia_things.network.ZoneMusicPacket.TYPE,
+                com.tharidia.tharidia_things.network.ZoneMusicPacket.STREAM_CODEC,
+                ClientPacketHandler::handleZoneMusic
+            );
+            // Music file data packet
+            registrar.playToClient(
+                com.tharidia.tharidia_things.network.MusicFileDataPacket.TYPE,
+                com.tharidia.tharidia_things.network.MusicFileDataPacket.STREAM_CODEC,
+                ClientPacketHandler::handleMusicFileData
+            );
             // Trade packets (client-bound)
             registrar.playToClient(
                 com.tharidia.tharidia_things.network.TradeRequestPacket.TYPE,
@@ -437,6 +449,18 @@ public class TharidiaThings {
                 com.tharidia.tharidia_things.network.RequestNamePacket.STREAM_CODEC,
                 (packet, context) -> {}
             );
+            // Zone music packet (dummy handler)
+            registrar.playToClient(
+                com.tharidia.tharidia_things.network.ZoneMusicPacket.TYPE,
+                com.tharidia.tharidia_things.network.ZoneMusicPacket.STREAM_CODEC,
+                (packet, context) -> {}
+            );
+            // Music file data packet (dummy handler)
+            registrar.playToClient(
+                com.tharidia.tharidia_things.network.MusicFileDataPacket.TYPE,
+                com.tharidia.tharidia_things.network.MusicFileDataPacket.STREAM_CODEC,
+                (packet, context) -> {}
+            );
             // Trade packets (client-bound, dummy handlers)
             registrar.playToClient(
                 com.tharidia.tharidia_things.network.TradeRequestPacket.TYPE,
@@ -496,6 +520,13 @@ public class TharidiaThings {
             com.tharidia.tharidia_things.network.TradeFinalConfirmPacket.STREAM_CODEC,
             (packet, context) -> context.enqueueWork(() -> 
                 com.tharidia.tharidia_things.network.TradePacketHandler.handleTradeFinalConfirm(packet, (ServerPlayer) context.player()))
+        );
+        // Music file request packet (server-bound)
+        registrar.playToServer(
+            com.tharidia.tharidia_things.network.RequestMusicFilePacket.TYPE,
+            com.tharidia.tharidia_things.network.RequestMusicFilePacket.STREAM_CODEC,
+            (packet, context) -> context.enqueueWork(() -> 
+                com.tharidia.tharidia_things.network.ServerMusicFileHandler.handleMusicFileRequest(packet, (ServerPlayer) context.player()))
         );
     }
 

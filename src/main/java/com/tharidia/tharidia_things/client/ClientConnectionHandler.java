@@ -58,6 +58,9 @@ public class ClientConnectionHandler {
         // Clear gate restriction cache
         ClientGateCache.clear();
         LOGGER.info("[GATE CACHE] Cleared gate restrictions cache on disconnect");
+        // Stop zone music playback
+        ZoneMusicPlayer.stopMusic();
+        LOGGER.info("[ZONE MUSIC] Stopped music playback on disconnect");
     }
     
     /**
