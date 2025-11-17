@@ -40,9 +40,9 @@ public class BattleLogic {
                 targetAttachments.setChallengerUUID(null);
 
                 ((ServerPlayer) source).connection.send(new ClientboundSetTitleTextPacket(
-                        Component.literal("You win").withColor(0x00FF00)));
+                        Component.translatable("message.tharidiathings.battle.win").withColor(0x00FF00)));
                 ((ServerPlayer) target).connection.send(new ClientboundSetTitleTextPacket(
-                        Component.literal("You lose").withColor(0xFF0000)));
+                        Component.translatable("message.tharidiathings.battle.lose").withColor(0xFF0000)));
 
                 level.sendParticles(
                         ParticleTypes.END_ROD,
@@ -54,7 +54,7 @@ public class BattleLogic {
                 target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 200, 7, false, false, false));
                 target.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 200, 1, false, false, false));
                 target.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 200, 1, false, false, false));
-                target.addEffect(new MobEffectInstance(MobEffects.JUMP, 200, 256, false, false, false));
+                target.addEffect(new MobEffectInstance(MobEffects.JUMP, 200, 500, false, false, false));
 
                 event.setCanceled(true);
             }
@@ -72,7 +72,8 @@ public class BattleLogic {
             if (targetAttachments.getInBattle()) {
                 if (!targetAttachments.getChallengerUUID().equals(event.getEntity().getUUID())) {
                     event.getEntity().displayClientMessage(
-                            Component.literal("You can't attack this player, he is in battle").withColor(0x857700),
+                            Component.translatable("message.tharidiathings.battle.unable_to_attack")
+                                    .withColor(0x857700),
                             false);
                     event.setCanceled(true);
                 }

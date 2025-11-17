@@ -23,7 +23,7 @@ import com.tharidia.tharidia_things.item.GoldLamaLungaItem;
 import com.tharidia.tharidia_things.item.GoldLamaCortaItem;
 import com.tharidia.tharidia_things.item.CopperLamaLungaItem;
 import com.tharidia.tharidia_things.item.CopperLamaCortaItem;
-import com.tharidia.tharidia_things.item.BattleGauntle;
+import com.tharidia.tharidia_things.item.BattleGauntlet;
 import com.tharidia.tharidia_things.item.CopperElsaItem;
 import com.tharidia.tharidia_things.client.ClientPacketHandler;
 import com.tharidia.tharidia_things.command.ClaimCommands;
@@ -31,7 +31,6 @@ import com.tharidia.tharidia_things.command.FatigueCommands;
 import com.tharidia.tharidia_things.compoundTag.BattleGauntleAttachments;
 import com.tharidia.tharidia_things.event.ClaimProtectionHandler;
 import com.tharidia.tharidia_things.fatigue.FatigueAttachments;
-import com.tharidia.tharidia_things.gui.BattleInviteMenu;
 import com.tharidia.tharidia_things.network.BattlePackets;
 import com.tharidia.tharidia_things.network.ClaimOwnerSyncPacket;
 import com.tharidia.tharidia_things.network.FatigueSyncPacket;
@@ -183,7 +182,7 @@ public class TharidiaThings {
     public static final DeferredItem<Item> COPPER_ELSA = ITEMS.register("copper_elsa", () -> new CopperElsaItem(new Item.Properties()));
 
     // Battle Gauntle
-    public static final DeferredItem<Item> BATTLE_GAUNTLE = ITEMS.register("battle_gauntle", ()->new BattleGauntle(new Item.Properties().stacksTo(1)));
+    public static final DeferredItem<Item> BATTLE_GAUNTLE = ITEMS.register("battle_gauntlet", ()->new BattleGauntlet(new Item.Properties().stacksTo(1)));
 
     // Creates a creative tab with the id "tharidiathings:tharidia_tab" for the mod items, that is placed after the combat tab
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> THARIDIA_TAB = CREATIVE_MODE_TABS.register("tharidia_tab", () -> CreativeModeTab.builder()

@@ -27,6 +27,7 @@
   "item.tharidiathings.gold_lama_corta": "Lama Corta (Gold)",
   "item.tharidiathings.copper_lama_lunga": "Lama Lunga (Copper)",
   "item.tharidiathings.copper_lama_corta": "Lama Corta (Copper)",
+  "item.tharidiathings.battle_gauntlet": "Battle Gauntlet",
 
   "item.tharidiathings.pinza.holding.hot_iron": "Holding: Hot Iron",
   "item.tharidiathings.pinza.holding.hot_gold": "Holding: Hot Gold",
@@ -56,13 +57,25 @@
   "gui.tharidiathings.component.lama_lunga": "Lama Lunga (Long Blade)",
   "gui.tharidiathings.component.lama_corta": "Lama Corta (Short Blade)",
   "gui.tharidiathings.component.elsa": "Elsa (Hilt)",
-  
+
   "gui.tharidiathings.name_selection": "Choose Your Name",
+
+  "gui.tharidiathings.battle_invitation.title": "Battle Invitation",
+  "gui.tharidiathings.battle_invitation.invitator_label": "Invite from: %s",
+  "gui.tharidiathings.battle_invitation.button.accept": "Accept",
+  "gui.tharidiathings.battle_invitation.button.decline": "Decline",
   
   "message.tharidiathings.must_rest": "You must rest to recover your energy!",
   "message.tharidiathings.resting_for_fatigue": "Resting to recover energy...",
   "message.tharidiathings.fully_rested": "Fully rested! Energy restored.",
   "message.tharidiathings.cant_sleep_day_use_proximity": "Too tired to sleep now. Rest near a bed to recover energy.",
   "message.tharidiathings.stay_near_bed": "Stay near the bed to rest (%s seconds remaining)",
-  "message.tharidiathings.rest_interrupted": "Rest interrupted! You moved too far from the bed."
+  "message.tharidiathings.rest_interrupted": "Rest interrupted! You moved too far from the bed.",
+
+  "message.tharidiathings.battle.unable_to_attack": "You can't attack this player, he is in battle",
+  "message.tharidiathings.battle.player_in_battle": "You are already in battle",
+  "message.tharidiathings.battle.target_in_battle": "This player is already in battle",
+  "message.tharidiathings.battle.player_invite": "You are inviting %s to a battle",
+  "message.tharidiathings.battle.win": "You win the battle",
+  "message.tharidiathings.battle.lose": "You lose the battle"
 }

@@ -33,7 +33,7 @@ public class BattleInviteScreen extends AbstractContainerScreen<BattleInviteMenu
 
         // Accept Button
         this.addRenderableWidget(Button.builder(
-                Component.literal("Accept"),
+                Component.translatable("gui.tharidiathings.battle_invitation.button.accept"),
                 (button) -> {
                     // Send a packet to the server with "accepted = true"
                     var packet = new BattleInviteResponsePacket(this.menu.inviterUUID, true);
@@ -45,7 +45,7 @@ public class BattleInviteScreen extends AbstractContainerScreen<BattleInviteMenu
 
         // Decline Button
         this.addRenderableWidget(Button.builder(
-                Component.literal("Decline"),
+                Component.translatable("gui.tharidiathings.battle_invitation.button.decline"),
                 (button) -> {
                     // Send a packet to the server with "accepted = false"
                     var packet = new BattleInviteResponsePacket(this.menu.inviterUUID, false);
@@ -91,7 +91,9 @@ public class BattleInviteScreen extends AbstractContainerScreen<BattleInviteMenu
                 false); // No shadow
 
         // Get the inviter's name from the menu
-        Component inviteText = Component.literal("Invite from: ").append(this.menu.getInviterName());
+        Component inviteText = Component.translatable(
+                "gui.tharidiathings.battle_invitation.invitator_label",
+                this.menu.getInviterName());
 
         // Draw the "Invite from: [Player]" text
         graphics.drawString(this.font,

@@ -27,6 +27,7 @@
   "item.tharidiathings.gold_lama_corta": "Lama Corta (Oro)",
   "item.tharidiathings.copper_lama_lunga": "Lama Lunga (Rame)",
   "item.tharidiathings.copper_lama_corta": "Lama Corta (Rame)",
+  "item.tharidiathings.battle_gauntlet": "Guanto di Battaglia",
 
   "item.tharidiathings.pinza.holding.hot_iron": "Tenendo: Ferro Caldo",
   "item.tharidiathings.pinza.holding.hot_gold": "Tenendo: Oro Caldo",
@@ -58,11 +59,23 @@
   "gui.tharidiathings.component.elsa": "Elsa",
   
   "gui.tharidiathings.name_selection": "Scegli il Tuo Nome",
+
+  "gui.tharidiathings.battle_invitation.title": "Invito alla battaglia",
+  "gui.tharidiathings.battle_invitation.invitator_label": "Invito da: %s",
+  "gui.tharidiathings.battle_invitation.button.accept": "Accetta",
+  "gui.tharidiathings.battle_invitation.button.decline": "Rifiuta",
   
   "message.tharidiathings.must_rest": "Devi riposare per recuperare le energie!",
   "message.tharidiathings.resting_for_fatigue": "Riposo per recuperare energie...",
   "message.tharidiathings.fully_rested": "Completamente riposato! Energie ripristinate.",
   "message.tharidiathings.cant_sleep_day_use_proximity": "Troppo stanco per dormire ora. Riposa vicino a un letto per recuperare energie.",
   "message.tharidiathings.stay_near_bed": "Rimani vicino al letto per riposare (%s secondi rimanenti)",
-  "message.tharidiathings.rest_interrupted": "Riposo interrotto! Ti sei allontanato troppo dal letto."
+  "message.tharidiathings.rest_interrupted": "Riposo interrotto! Ti sei allontanato troppo dal letto.",
+
+  "message.tharidiathings.battle.unable_to_attack": "Non puoi attaccare questo giocatore, è in combattimento",
+  "message.tharidiathings.battle.player_in_battle": "Sei già in battaglia",
+  "message.tharidiathings.battle.target_in_battle": "Questo giocatore è già in battaglia",
+  "message.tharidiathings.battle.player_invite": "Stai invitando %s a una battaglia",
+  "message.tharidiathings.battle.win": "Hai vinto la battaglia",
+  "message.tharidiathings.battle.lose": "Hai perso la battaglia"
 }
