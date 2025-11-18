@@ -31,6 +31,7 @@ import com.tharidia.tharidia_things.command.FatigueCommands;
 import com.tharidia.tharidia_things.compoundTag.BattleGauntleAttachments;
 import com.tharidia.tharidia_things.event.ClaimProtectionHandler;
 import com.tharidia.tharidia_things.fatigue.FatigueAttachments;
+import com.tharidia.tharidia_things.features.FreezeManager;
 import com.tharidia.tharidia_things.network.BattlePackets;
 import com.tharidia.tharidia_things.network.ClaimOwnerSyncPacket;
 import com.tharidia.tharidia_things.network.FatigueSyncPacket;
@@ -264,6 +265,9 @@ public class TharidiaThings {
         NeoForge.EVENT_BUS.register(LobbyProtectionHandler.class);
         NeoForge.EVENT_BUS.register(ServerCommandBlocker.class);
 
+        // Register Freeze Manager for master freeze command
+        NeoForge.EVENT_BUS.register(FreezeManager.class);
+
         BattleGauntleAttachments.register(modEventBus);
 
         modEventBus.addListener(BattlePackets::register);
@@ -284,6 +288,10 @@ public class TharidiaThings {
         
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
+
+        // Initialize Freeze Manager system
+        FreezeManager.initialize(LOGGER);
+        
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {

@@ -1,9 +1,9 @@
 package com.tharidia.tharidia_things.event;
 
 import java.util.UUID;
-
 import com.tharidia.tharidia_things.TharidiaThings;
 import com.tharidia.tharidia_things.compoundTag.BattleGauntleAttachments;
+import com.tharidia.tharidia_things.features.FreezeManager;
 
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
@@ -18,6 +18,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
 @EventBusSubscriber(modid = TharidiaThings.MODID)
 public class BattleLogic {
@@ -54,12 +55,25 @@ public class BattleLogic {
                         0.3, 1, 0.3,
                         0.1);
 
-                target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 200, 7, false, false, false));
                 target.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 200, 1, false, false, false));
                 target.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 200, 1, false, false, false));
-                target.addEffect(new MobEffectInstance(MobEffects.JUMP, 200, 500, false, false, false));
+
+                if (target instanceof ServerPlayer serverTarget) {
+                    target.displayClientMessage(Component.literal("FreezingPlayer"), false);
+                    FreezeManager.freezePlayer(serverTarget);
+                    target.displayClientMessage(Component.literal("FreezePlayer"), false);
+                }
 
                 event.setCanceled(true);
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public static void onPlayerTick(PlayerTickEvent.Post event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            if (player.tickCount % 220 == 0) {
+                FreezeManager.unfreezePlayer(player);
             }
         }
     }
