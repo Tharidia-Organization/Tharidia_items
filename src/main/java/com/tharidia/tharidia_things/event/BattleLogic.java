@@ -1,5 +1,7 @@
 package com.tharidia.tharidia_things.event;
 
+import java.util.UUID;
+
 import com.tharidia.tharidia_things.TharidiaThings;
 import com.tharidia.tharidia_things.compoundTag.BattleGauntleAttachments;
 
@@ -15,6 +17,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent;
 
 @EventBusSubscriber(modid = TharidiaThings.MODID)
 public class BattleLogic {
@@ -78,6 +81,35 @@ public class BattleLogic {
                     event.setCanceled(true);
                 }
             }
+        }
+    }
+
+    @SubscribeEvent
+    public static void onPlayerLoggout(PlayerLoggedOutEvent event) {
+        if (event.getEntity().level().isClientSide())
+            return;
+
+        Player player = event.getEntity();
+
+        BattleGauntleAttachments playerAttachments = player.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
+
+        if (playerAttachments.getInBattle()) {
+            UUID challengerUUID = playerAttachments.getChallengerUUID();
+            if (player instanceof ServerPlayer serverPlayer) {
+                Player challengerPlayer = serverPlayer.getServer().getPlayerList().getPlayer(challengerUUID);
+
+                BattleGauntleAttachments challengerAttachments = challengerPlayer
+                        .getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
+
+                challengerAttachments.setInBattle(false);
+                challengerAttachments.setChallengerUUID(null);
+                challengerPlayer.setHealth(challengerAttachments.getPlayerHealth());
+            }
+
+            playerAttachments.setInBattle(false);
+            playerAttachments.setChallengerUUID(null);
+            player.setHealth(playerAttachments.getPlayerHealth());
+
         }
     }
 }

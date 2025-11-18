@@ -63,7 +63,7 @@ public class BattleGauntleAttachments implements INBTSerializable<CompoundTag> {
 
     public static final Supplier<AttachmentType<BattleGauntleAttachments>> BATTLE_GAUNTLE = ATTACKMENT_TYPES
             .register(
-                    "battle_gauntle",
+                    "battle_gauntlet",
                     () -> AttachmentType.serializable(BattleGauntleAttachments::new).build());
 
     public static void register(IEventBus eventBus) {
