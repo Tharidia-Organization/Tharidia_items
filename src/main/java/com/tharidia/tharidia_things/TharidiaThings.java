@@ -181,7 +181,7 @@ public class TharidiaThings {
     public static final DeferredItem<Item> COPPER_LAMA_CORTA = ITEMS.register("copper_lama_corta", () -> new CopperLamaCortaItem(new Item.Properties()));
     public static final DeferredItem<Item> COPPER_ELSA = ITEMS.register("copper_elsa", () -> new CopperElsaItem(new Item.Properties()));
 
-    // Battle Gauntle
+    // Battle Gauntlet
     public static final DeferredItem<Item> BATTLE_GAUNTLE = ITEMS.register("battle_gauntlet", ()->new BattleGauntlet(new Item.Properties().stacksTo(1)));
 
     // Creates a creative tab with the id "tharidiathings:tharidia_tab" for the mod items, that is placed after the combat tab

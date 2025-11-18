@@ -47,7 +47,10 @@ public class BattleGauntleAttachments implements INBTSerializable<CompoundTag> {
         CompoundTag nbt = new CompoundTag();
         nbt.putFloat("player_health", this.player_health);
         nbt.putBoolean("in_battle", this.in_battle);
-        nbt.putUUID("challenger_uuid", challenger_uuid);
+        // Only save UUID if it's not null
+        if (this.challenger_uuid != null) {
+            nbt.putUUID("challenger_uuid", this.challenger_uuid);
+        }
         return nbt;
     }
 
@@ -55,7 +58,12 @@ public class BattleGauntleAttachments implements INBTSerializable<CompoundTag> {
     public void deserializeNBT(Provider provider, CompoundTag nbt) {
         this.player_health = nbt.getFloat("player_health");
         this.in_battle = nbt.getBoolean("in_battle");
-        this.challenger_uuid = nbt.getUUID("challenger_uuid");
+        // Only load UUID if it exists in the NBT
+        if (nbt.contains("challenger_uuid")) {
+            this.challenger_uuid = nbt.getUUID("challenger_uuid");
+        } else {
+            this.challenger_uuid = null;
+        }
     }
 
     public static final DeferredRegister<AttachmentType<?>> ATTACKMENT_TYPES = DeferredRegister
