@@ -1,6 +1,7 @@
 package com.tharidia.tharidia_things.event;
 
-import java.util.UUID;
+import javax.annotation.Nullable;
+
 import com.tharidia.tharidia_things.TharidiaThings;
 import com.tharidia.tharidia_things.compoundTag.BattleGauntleAttachments;
 import com.tharidia.tharidia_things.features.FreezeManager;
@@ -27,43 +28,26 @@ public class BattleLogic {
         if (event.getEntity().level().isClientSide())
             return;
 
-        ServerLevel level = (ServerLevel) event.getEntity().level();
+        if (event.getEntity() instanceof Player loser) {
+            if (event.getSource().getEntity() instanceof Player winner) {
+                BattleGauntleAttachments sourceAttachments = winner
+                        .getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
+                BattleGauntleAttachments targetAttachments = loser
+                        .getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
 
-        if (event.getSource().getEntity() instanceof Player source &&
-                event.getEntity() instanceof Player target) {
-            BattleGauntleAttachments sourceAttachments = source.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
-            BattleGauntleAttachments targetAttachments = target.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
-
-            if (sourceAttachments.getInBattle() && targetAttachments.getInBattle()) {
-                source.setHealth(sourceAttachments.getPlayerHealth());
-                target.setHealth(targetAttachments.getPlayerHealth());
-
-                sourceAttachments.setInBattle(false);
-                sourceAttachments.setChallengerUUID(null);
-                targetAttachments.setInBattle(false);
-                targetAttachments.setChallengerUUID(null);
-
-                ((ServerPlayer) source).connection.send(new ClientboundSetTitleTextPacket(
-                        Component.translatable("message.tharidiathings.battle.win").withColor(0x00FF00)));
-                ((ServerPlayer) target).connection.send(new ClientboundSetTitleTextPacket(
-                        Component.translatable("message.tharidiathings.battle.lose").withColor(0xFF0000)));
-
-                level.sendParticles(
-                        ParticleTypes.END_ROD,
-                        source.getX(), source.getY(), source.getZ(),
-                        100,
-                        0.3, 1, 0.3,
-                        0.1);
-
-                target.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 200, 1, false, false, false));
-                target.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 200, 1, false, false, false));
-
-                if (target instanceof ServerPlayer serverTarget) {
-                    target.displayClientMessage(Component.literal("FreezingPlayer"), false);
-                    FreezeManager.freezePlayer(serverTarget);
-                    target.displayClientMessage(Component.literal("FreezePlayer"), false);
+                if (sourceAttachments.getInBattle() && targetAttachments.getInBattle()) {
+                    finischBattle(winner, loser);
+                    event.setCanceled(true);
                 }
-
+            } else {
+                if (loser instanceof ServerPlayer serverPlayer) {
+                    BattleGauntleAttachments targetAttachments = loser
+                            .getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
+                    Player challengerPlayer = serverPlayer.getServer().getPlayerList()
+                            .getPlayer(targetAttachments.getChallengerUUID());
+                    exitPlayerBattle(challengerPlayer);
+                }
+                finischBattle(null, loser);
                 event.setCanceled(true);
             }
         }
@@ -83,15 +67,27 @@ public class BattleLogic {
         if (event.getTarget().level().isClientSide())
             return;
 
+        Player attacker = event.getEntity();
         if (event.getTarget() instanceof Player target) {
-            BattleGauntleAttachments targetAttachments = target.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
+            BattleGauntleAttachments attackerAttachments = attacker
+                    .getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
+            BattleGauntleAttachments targetAttachments = target
+                    .getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
 
-            if (targetAttachments.getInBattle()) {
-                if (!targetAttachments.getChallengerUUID().equals(event.getEntity().getUUID())) {
-                    event.getEntity().displayClientMessage(
-                            Component.translatable("message.tharidiathings.battle.unable_to_attack")
+            if (attackerAttachments.getInBattle()) {
+                if (!attackerAttachments.getChallengerUUID().equals(target.getUUID())) {
+                    attacker.displayClientMessage(
+                            Component.translatable("message.tharidiathings.battle.unable_to_attack_1")
                                     .withColor(0x857700),
-                            false);
+                            true);
+                    event.setCanceled(true);
+                }
+            } else if (targetAttachments.getInBattle()) {
+                if (!targetAttachments.getChallengerUUID().equals(attacker.getUUID())) {
+                    attacker.displayClientMessage(
+                            Component.translatable("message.tharidiathings.battle.unable_to_attack_2")
+                                    .withColor(0x857700),
+                            true);
                     event.setCanceled(true);
                 }
             }
@@ -108,22 +104,65 @@ public class BattleLogic {
         BattleGauntleAttachments playerAttachments = player.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
 
         if (playerAttachments.getInBattle()) {
-            UUID challengerUUID = playerAttachments.getChallengerUUID();
             if (player instanceof ServerPlayer serverPlayer) {
-                Player challengerPlayer = serverPlayer.getServer().getPlayerList().getPlayer(challengerUUID);
-
-                BattleGauntleAttachments challengerAttachments = challengerPlayer
-                        .getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
-
-                challengerAttachments.setInBattle(false);
-                challengerAttachments.setChallengerUUID(null);
-                challengerPlayer.setHealth(challengerAttachments.getPlayerHealth());
+                Player challengerPlayer = serverPlayer.getServer().getPlayerList()
+                        .getPlayer(playerAttachments.getChallengerUUID());
+                exitPlayerBattle(challengerPlayer);
             }
-
-            playerAttachments.setInBattle(false);
-            playerAttachments.setChallengerUUID(null);
-            player.setHealth(playerAttachments.getPlayerHealth());
-
+            exitPlayerBattle(player);
         }
+    }
+
+    private static void finischBattle(@Nullable Player winnerPlayer, @Nullable Player loserPlayer) {
+        if (winnerPlayer == null && loserPlayer == null)
+            return;
+
+        ServerLevel level = (ServerLevel) (winnerPlayer != null ? winnerPlayer.level() : loserPlayer.level());
+        BattleGauntleAttachments winnerAttachments;
+        BattleGauntleAttachments loserAttachments;
+
+        if (winnerPlayer == null) {
+            loserAttachments = loserPlayer.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
+            if (loserPlayer instanceof ServerPlayer sp) {
+                winnerPlayer = sp.getServer().getPlayerList().getPlayer(loserAttachments.getChallengerUUID());
+            }
+        }
+
+        if (loserPlayer == null) {
+            winnerAttachments = winnerPlayer.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
+            if (loserPlayer instanceof ServerPlayer sp) {
+                winnerPlayer = sp.getServer().getPlayerList().getPlayer(winnerAttachments.getChallengerUUID());
+            }
+        }
+
+        exitPlayerBattle(winnerPlayer);
+        exitPlayerBattle(loserPlayer);
+
+        ((ServerPlayer) winnerPlayer).connection.send(new ClientboundSetTitleTextPacket(
+                Component.translatable("message.tharidiathings.battle.win").withColor(0x00FF00)));
+        ((ServerPlayer) loserPlayer).connection.send(new ClientboundSetTitleTextPacket(
+                Component.translatable("message.tharidiathings.battle.lose").withColor(0xFF0000)));
+
+        level.sendParticles(
+                ParticleTypes.END_ROD,
+                winnerPlayer.getX(), winnerPlayer.getY(), winnerPlayer.getZ(),
+                100,
+                0.3, 1, 0.3,
+                0.1);
+
+        loserPlayer.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 200, 1, false, false, false));
+        loserPlayer.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 200, 1, false, false, false));
+
+        if (loserPlayer instanceof ServerPlayer serverLoser) {
+            FreezeManager.freezePlayer(serverLoser);
+        }
+    }
+
+    private static void exitPlayerBattle(Player player) {
+        BattleGauntleAttachments playerAttachments = player.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
+
+        playerAttachments.setInBattle(false);
+        playerAttachments.setChallengerUUID(null);
+        player.setHealth(playerAttachments.getPlayerHealth());
     }
 }

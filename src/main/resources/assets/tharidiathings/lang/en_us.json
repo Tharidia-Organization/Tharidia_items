@@ -72,7 +72,8 @@
   "message.tharidiathings.stay_near_bed": "Stay near the bed to rest (%s seconds remaining)",
   "message.tharidiathings.rest_interrupted": "Rest interrupted! You moved too far from the bed.",
 
-  "message.tharidiathings.battle.unable_to_attack": "You can't attack this player, he is in battle",
+  "message.tharidiathings.battle.unable_to_attack_1": "You can't attack this player, you are in battle",
+  "message.tharidiathings.battle.unable_to_attack_2": "You can't attack this player, he is in battle",
   "message.tharidiathings.battle.player_in_battle": "You are already in battle",
   "message.tharidiathings.battle.target_in_battle": "This player is already in battle",
   "message.tharidiathings.battle.player_invite": "You are inviting %s to a battle",
