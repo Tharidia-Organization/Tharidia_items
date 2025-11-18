@@ -46,27 +46,36 @@ public class BattleGauntlet extends Item {
     public InteractionResultHolder<ItemStack> use(Level level, Player player,
             InteractionHand usedHand) {
         ItemStack itemstack = player.getItemInHand(usedHand);
-        var hitTarget = getPlayerLookAt(player, 5);
-        if (hitTarget instanceof EntityHitResult entityHit &&
-                entityHit.getEntity() instanceof Player target) {
-            BattleGauntleAttachments playerAttachments = player.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
-            BattleGauntleAttachments targetAttachments = target.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
+        try {
+            var hitTarget = getPlayerLookAt(player, 5);
+            if (hitTarget instanceof EntityHitResult entityHit &&
+                    entityHit.getEntity() instanceof Player target) {
+                BattleGauntleAttachments playerAttachments = player
+                        .getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
+                BattleGauntleAttachments targetAttachments = target
+                        .getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
 
-            if (playerAttachments.getInBattle()) {
-                player.displayClientMessage(Component.translatable("message.tharidiathings.battle.player_in_battle"),
-                        false);
+                if (playerAttachments.getInBattle()) {
+                    player.displayClientMessage(
+                            Component.translatable("message.tharidiathings.battle.player_in_battle"),
+                            false);
+                    return InteractionResultHolder.fail(itemstack);
+                }
+                if (targetAttachments.getInBattle()) {
+                    player.displayClientMessage(Component.translatable(
+                            "message.tharidiathings.battle.target_in_battle"),
+                            false);
+                    return InteractionResultHolder.fail(itemstack);
+                }
+
+                player.startUsingItem(usedHand);
+                return InteractionResultHolder.success(itemstack);
+            } else {
                 return InteractionResultHolder.fail(itemstack);
             }
-            if (targetAttachments.getInBattle()) {
-                player.displayClientMessage(Component.translatable(
-                        "message.tharidiathings.battle.target_in_battle"),
-                        false);
-                return InteractionResultHolder.fail(itemstack);
-            }
-
-            player.startUsingItem(usedHand);
-            return InteractionResultHolder.success(itemstack);
-        } else {
+        } catch (NullPointerException e) {
+            return InteractionResultHolder.fail(itemstack);
+        } catch (Exception e) {
             return InteractionResultHolder.fail(itemstack);
         }
     }

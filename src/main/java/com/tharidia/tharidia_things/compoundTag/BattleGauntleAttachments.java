@@ -14,9 +14,9 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
 public class BattleGauntleAttachments implements INBTSerializable<CompoundTag> {
-    private boolean in_battle;
-    private UUID challenger_uuid;
-    private float player_health;
+    private boolean in_battle = false;
+    private UUID challenger_uuid = null;
+    private float player_health = 0;
 
     public void setPlayerHealth(float health) {
         this.player_health = health;
