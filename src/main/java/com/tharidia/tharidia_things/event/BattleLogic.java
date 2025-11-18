@@ -54,10 +54,16 @@ public class BattleLogic {
     }
 
     @SubscribeEvent
-    public static void onPlayerTick(PlayerTickEvent.Post event) {
-        if (event.getEntity() instanceof ServerPlayer player) {
-            if (player.tickCount % 220 == 0) {
-                FreezeManager.unfreezePlayer(player);
+    public static void loseFreezeTick(PlayerTickEvent.Post event) {
+        Player player = event.getEntity();
+        BattleGauntleAttachments playerAttachments = player.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
+
+        if (playerAttachments.getLoseTick() >= 2) {
+            playerAttachments.setLoseTick(playerAttachments.getLoseTick() - 1);
+        } else if (playerAttachments.getLoseTick() == 1) {
+            playerAttachments.setLoseTick(0);
+            if (event.getEntity() instanceof ServerPlayer serverPlayer) {
+                FreezeManager.unfreezePlayer(serverPlayer);
             }
         }
     }
@@ -90,12 +96,16 @@ public class BattleLogic {
                             true);
                     event.setCanceled(true);
                 }
+            } else if (attackerAttachments.getLoseTick() > 0) {
+                event.setCanceled(true);
+            } else if (targetAttachments.getLoseTick() > 0) {
+                event.setCanceled(true);
             }
         }
     }
 
     @SubscribeEvent
-    public static void onPlayerLoggout(PlayerLoggedOutEvent event) {
+    public static void onPlayerLogout(PlayerLoggedOutEvent event) {
         if (event.getEntity().level().isClientSide())
             return;
 
@@ -118,21 +128,27 @@ public class BattleLogic {
             return;
 
         ServerLevel level = (ServerLevel) (winnerPlayer != null ? winnerPlayer.level() : loserPlayer.level());
-        BattleGauntleAttachments winnerAttachments;
-        BattleGauntleAttachments loserAttachments;
+        BattleGauntleAttachments winnerAttachments = null;
+        BattleGauntleAttachments loserAttachments = null;
 
         if (winnerPlayer == null) {
             loserAttachments = loserPlayer.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
             if (loserPlayer instanceof ServerPlayer sp) {
                 winnerPlayer = sp.getServer().getPlayerList().getPlayer(loserAttachments.getChallengerUUID());
+                winnerAttachments = winnerPlayer.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
             }
+        } else {
+            winnerAttachments = winnerPlayer.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
         }
 
         if (loserPlayer == null) {
             winnerAttachments = winnerPlayer.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
             if (loserPlayer instanceof ServerPlayer sp) {
-                winnerPlayer = sp.getServer().getPlayerList().getPlayer(winnerAttachments.getChallengerUUID());
+                loserPlayer = sp.getServer().getPlayerList().getPlayer(winnerAttachments.getChallengerUUID());
+                loserAttachments = loserPlayer.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
             }
+        } else {
+            loserAttachments = loserPlayer.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
         }
 
         exitPlayerBattle(winnerPlayer);
@@ -152,6 +168,7 @@ public class BattleLogic {
 
         loserPlayer.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 200, 1, false, false, false));
         loserPlayer.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 200, 1, false, false, false));
+        loserAttachments.setLoseTick(200);
 
         if (loserPlayer instanceof ServerPlayer serverLoser) {
             FreezeManager.freezePlayer(serverLoser);
@@ -163,6 +180,7 @@ public class BattleLogic {
 
         playerAttachments.setInBattle(false);
         playerAttachments.setChallengerUUID(null);
+        playerAttachments.setLoseTick(0);
         player.setHealth(playerAttachments.getPlayerHealth());
     }
 }

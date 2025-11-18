@@ -55,13 +55,13 @@ public class BattleGauntlet extends Item {
                 BattleGauntleAttachments targetAttachments = target
                         .getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
 
-                if (playerAttachments.getInBattle()) {
+                if (playerAttachments.getInBattle() || playerAttachments.getLoseTick() > 0) {
                     player.displayClientMessage(
                             Component.translatable("message.tharidiathings.battle.player_in_battle"),
                             false);
                     return InteractionResultHolder.fail(itemstack);
                 }
-                if (targetAttachments.getInBattle()) {
+                if (targetAttachments.getInBattle() || targetAttachments.getLoseTick() > 0) {
                     player.displayClientMessage(Component.translatable(
                             "message.tharidiathings.battle.target_in_battle"),
                             false);
