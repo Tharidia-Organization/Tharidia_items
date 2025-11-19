@@ -235,3 +235,8 @@ idea {
         downloadJavadoc = true
     }
 }
+
+tasks.named('jar') {
+    archiveBaseName.set('TharidiaThings')
+    archiveVersion.set('')
+}
