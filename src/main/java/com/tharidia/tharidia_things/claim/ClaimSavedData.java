@@ -32,11 +32,13 @@ public class ClaimSavedData extends SavedData {
         public final UUID ownerUUID;
         public final String claimName;
         public final long creationTime;
+        public final long expirationTime;
         
-        public StoredClaimData(UUID ownerUUID, String claimName, long creationTime) {
+        public StoredClaimData(UUID ownerUUID, String claimName, long creationTime, long expirationTime) {
             this.ownerUUID = ownerUUID;
             this.claimName = claimName;
             this.creationTime = creationTime;
+            this.expirationTime = expirationTime;
         }
     }
     
@@ -81,8 +83,9 @@ public class ClaimSavedData extends SavedData {
                 
                 String claimName = claimTag.getString("ClaimName");
                 long creationTime = claimTag.getLong("CreationTime");
+                long expirationTime = claimTag.getLong("ExpirationTime");
                 
-                StoredClaimData claimData = new StoredClaimData(ownerUUID, claimName, creationTime);
+                StoredClaimData claimData = new StoredClaimData(ownerUUID, claimName, creationTime, expirationTime);
                 data.storedClaims.computeIfAbsent(dimension, k -> new HashMap<>()).put(pos, claimData);
             }
         }
@@ -119,6 +122,7 @@ public class ClaimSavedData extends SavedData {
                 }
                 claimTag.putString("ClaimName", claimData.claimName);
                 claimTag.putLong("CreationTime", claimData.creationTime);
+                claimTag.putLong("ExpirationTime", claimData.expirationTime);
                 
                 claimsListTag.add(claimTag);
             }
@@ -171,13 +175,13 @@ public class ClaimSavedData extends SavedData {
     /**
      * Stores a claim
      */
-    public void storeClaim(String dimension, BlockPos pos, UUID ownerUUID, String claimName, long creationTime) {
+    public void storeClaim(String dimension, BlockPos pos, UUID ownerUUID, String claimName, long creationTime, long expirationTime) {
         Map<BlockPos, StoredClaimData> dimensionClaims = storedClaims.computeIfAbsent(dimension, k -> new HashMap<>());
         
         // Check if this is a new claim (not already stored)
         boolean isNewClaim = !dimensionClaims.containsKey(pos);
         
-        StoredClaimData data = new StoredClaimData(ownerUUID, claimName, creationTime);
+        StoredClaimData data = new StoredClaimData(ownerUUID, claimName, creationTime, expirationTime);
         dimensionClaims.put(pos, data);
         
         // Only increment player claim count if it's a new claim

@@ -192,6 +192,16 @@ public class ClaimBlockEntity extends BlockEntity implements MenuProvider {
     public void setExpirationTime(long expirationTime) {
         this.expirationTime = expirationTime;
         setChanged();
+        
+        // Update persistent storage
+        if (level instanceof ServerLevel serverLevel) {
+            ClaimRegistry.updateClaimExpirationTime(serverLevel, worldPosition, expirationTime);
+            
+            // Sync to GodEye database
+            if (ownerUUID != null) {
+                com.tharidia.tharidia_things.integration.GodEyeIntegration.syncPlayerClaims(ownerUUID, serverLevel);
+            }
+        }
     }
 
     public boolean isExpired() {

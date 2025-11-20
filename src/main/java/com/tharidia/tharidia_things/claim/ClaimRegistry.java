@@ -8,7 +8,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 /**
  * Global registry for tracking all claims in the world
@@ -89,7 +88,12 @@ public class ClaimRegistry {
         
         // Persist to saved data
         ClaimSavedData savedData = ClaimSavedData.get(level);
-        savedData.storeClaim(dimension, pos, claim.getOwnerUUID(), claim.getClaimName(), claim.getCreationTime());
+        savedData.storeClaim(dimension, pos, claim.getOwnerUUID(), claim.getClaimName(), claim.getCreationTime(), claim.getExpirationTime());
+        
+        // Sync to GodEye database
+        if (claim.getOwnerUUID() != null) {
+            com.tharidia.tharidia_things.integration.GodEyeIntegration.syncPlayerClaims(claim.getOwnerUUID(), level);
+        }
         
         LOGGER.debug("Registered claim at {} in dimension {}", pos, dimension);
     }
@@ -118,6 +122,11 @@ public class ClaimRegistry {
             ClaimSavedData savedData = ClaimSavedData.get(level);
             savedData.removeClaim(dimension, pos);
             
+            // Sync to GodEye database
+            if (data != null && data.ownerUUID != null) {
+                com.tharidia.tharidia_things.integration.GodEyeIntegration.syncPlayerClaims(data.ownerUUID, level);
+            }
+            
             LOGGER.debug("Unregistered claim at {} in dimension {}", pos, dimension);
         }
     }
@@ -142,6 +151,63 @@ public class ClaimRegistry {
         }
         
         return result;
+    }
+
+    /**
+     * Gets player claims with full details including expiration time
+     * This method loads the actual ClaimBlockEntity to get live data
+     */
+    public static List<DetailedClaimData> getPlayerClaimsWithDetails(UUID playerUUID, ServerLevel level) {
+        Set<BlockPos> positions = playerClaims.get(playerUUID);
+        if (positions == null || positions.isEmpty()) {
+            return Collections.emptyList();
+        }
+        
+        List<DetailedClaimData> result = new ArrayList<>();
+        for (BlockPos pos : positions) {
+            for (Map.Entry<String, Map<BlockPos, ClaimData>> dimensionEntry : claims.entrySet()) {
+                ClaimData data = dimensionEntry.getValue().get(pos);
+                if (data != null && playerUUID.equals(data.ownerUUID)) {
+                    // Try to get the actual block entity for live data
+                    long expirationTime = -1;
+                    if (level.hasChunkAt(pos)) {
+                        net.minecraft.world.level.block.entity.BlockEntity be = level.getBlockEntity(pos);
+                        if (be instanceof ClaimBlockEntity claimEntity) {
+                            expirationTime = claimEntity.getExpirationTime();
+                        }
+                    }
+                    
+                    result.add(new DetailedClaimData(
+                        data.position,
+                        data.ownerUUID,
+                        data.claimName,
+                        data.ownerName,
+                        data.creationTime,
+                        data.dimension,
+                        expirationTime
+                    ));
+                }
+            }
+        }
+        
+        return result;
+    }
+    
+    /**
+     * Extended claim data that includes expiration time
+     */
+    public static class DetailedClaimData extends ClaimData {
+        public final long expirationTime;
+        
+        public DetailedClaimData(BlockPos position, UUID ownerUUID, String claimName, String ownerName, 
+                                long creationTime, String dimension, long expirationTime) {
+            super(position, ownerUUID, claimName, ownerName, creationTime, dimension);
+            this.expirationTime = expirationTime;
+        }
+        
+        public long getExpirationTime() {
+            return expirationTime;
+        }
     }
 
     /**
@@ -204,6 +270,23 @@ public class ClaimRegistry {
             }
         }
     }
+    
+    /**
+     * Updates claim expiration time in persistent storage
+     */
+    public static void updateClaimExpirationTime(ServerLevel level, BlockPos pos, long expirationTime) {
+        String dimension = level.dimension().location().toString();
+        Map<BlockPos, ClaimData> dimensionClaims = claims.get(dimension);
+        
+        if (dimensionClaims != null) {
+            ClaimData data = dimensionClaims.get(pos);
+            if (data != null) {
+                // Update persistent storage
+                ClaimSavedData savedData = ClaimSavedData.get(level);
+                savedData.storeClaim(dimension, pos, data.ownerUUID, data.claimName, data.creationTime, expirationTime);
+            }
+        }
+    }
 
     /**
      * Clears all registry data (for testing or server restart)
@@ -259,7 +342,16 @@ public class ClaimRegistry {
                 BlockPos pos = claimEntry.getKey();
                 ClaimData data = claimEntry.getValue();
                 
-                savedData.storeClaim(dimension, pos, data.ownerUUID, data.claimName, data.creationTime);
+                // Try to get expiration time from the actual block entity
+                long expirationTime = -1;
+                if (level.hasChunkAt(pos)) {
+                    net.minecraft.world.level.block.entity.BlockEntity be = level.getBlockEntity(pos);
+                    if (be instanceof ClaimBlockEntity claimEntity) {
+                        expirationTime = claimEntity.getExpirationTime();
+                    }
+                }
+                
+                savedData.storeClaim(dimension, pos, data.ownerUUID, data.claimName, data.creationTime, expirationTime);
             }
         }
         
