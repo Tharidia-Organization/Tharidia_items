@@ -42,10 +42,15 @@ public class ZoneMusicPlayer {
     private static volatile boolean shouldStop = false;
     
     // Volume transition settings
-    private static final long FADE_DURATION_MS = 3000; // 2 seconds for fade in/out
+    private static final long FADE_DURATION_MS = 3000; // 3 seconds for fade in/out
     private static volatile float targetVolume = 1.0f;
     private static volatile float currentFadeVolume = 0.0f;
     private static volatile boolean isFading = false;
+    private static volatile long fadeStartTime = 0;
+    
+    // Minecraft music suppression
+    private static Thread musicSuppressionThread = null;
+    private static volatile boolean suppressMinecraftMusic = false;
     
     // Cache directory for music files
     private static Path musicCacheDir = null;
@@ -125,14 +130,16 @@ public class ZoneMusicPlayer {
         // Stop current music if playing (with fade out)
         stopMusic();
         
-        // Stop Minecraft's background music
-        stopMinecraftMusic();
+        // Start suppressing Minecraft's background music
+        startMinecraftMusicSuppression();
         
         currentMusicFile = musicFile;
         shouldLoop = loop;
         shouldStop = false;
         currentFadeVolume = 0.0f; // Start from silence
+        targetVolume = 1.0f; // Will be adjusted to actual volume in playback
         isFading = true;
+        fadeStartTime = System.currentTimeMillis();
         
         LOGGER.info("Starting music playback: {} (loop: {}) with fade-in", musicFile, loop);
         
@@ -162,8 +169,9 @@ public class ZoneMusicPlayer {
             // Trigger fade out
             isFading = true;
             targetVolume = 0.0f;
+            fadeStartTime = System.currentTimeMillis();
             
-            // Wait for fade out to complete (max 2.5 seconds)
+            // Wait for fade out to complete (max 3.5 seconds)
             long startTime = System.currentTimeMillis();
             while (isFading && (System.currentTimeMillis() - startTime) < (FADE_DURATION_MS + 500)) {
                 try {
@@ -195,8 +203,8 @@ public class ZoneMusicPlayer {
         isFading = false;
         currentFadeVolume = 0.0f;
         
-        // Resume Minecraft's background music
-        resumeMinecraftMusic();
+        // Stop suppressing Minecraft's background music
+        stopMinecraftMusicSuppression();
         
         LOGGER.debug("Music playback stopped");
     }
@@ -254,7 +262,16 @@ public class ZoneMusicPlayer {
                     
                     // Set initial volume based on Minecraft settings
                     float baseVolume = Minecraft.getInstance().options.getSoundSourceVolume(SoundSource.MUSIC);
-                    targetVolume = baseVolume;
+                    if (!isFading) {
+                        // If not already fading (e.g., on loop), start fade-in
+                        currentFadeVolume = 0.0f;
+                        targetVolume = baseVolume;
+                        isFading = true;
+                        fadeStartTime = System.currentTimeMillis();
+                    } else {
+                        // Already fading from playMusic() call
+                        targetVolume = baseVolume;
+                    }
                     setVolume(baseVolume);
                     
                     audioLine.start();
@@ -263,7 +280,6 @@ public class ZoneMusicPlayer {
                     // Decode and play
                     bitstream.closeFrame();
                     int frameCount = 0;
-                    long fadeStartTime = System.currentTimeMillis();
                     
                     while (!shouldStop) {
                         header = bitstream.readFrame();
@@ -292,16 +308,18 @@ public class ZoneMusicPlayer {
                             float fadeProgress = Math.min(1.0f, (float)elapsed / FADE_DURATION_MS);
                             
                             if (targetVolume > currentFadeVolume) {
-                                // Fade in
-                                currentFadeVolume = fadeProgress * targetVolume;
+                                // Fade in - interpolate from current to target
+                                float startVolume = currentFadeVolume;
+                                currentFadeVolume = startVolume + (fadeProgress * (targetVolume - startVolume));
                                 if (fadeProgress >= 1.0f) {
                                     isFading = false;
                                     currentFadeVolume = targetVolume;
-                                    LOGGER.info("Fade-in complete");
+                                    LOGGER.info("Fade-in complete at volume {}%", (int)(currentFadeVolume * 100));
                                 }
                             } else {
-                                // Fade out
-                                currentFadeVolume = (1.0f - fadeProgress) * baseVolume;
+                                // Fade out - interpolate from current to 0
+                                float startVolume = (fadeStartTime == 0 || elapsed == 0) ? baseVolume : currentFadeVolume;
+                                currentFadeVolume = startVolume * (1.0f - fadeProgress);
                                 if (fadeProgress >= 1.0f) {
                                     isFading = false;
                                     currentFadeVolume = 0.0f;
@@ -312,6 +330,7 @@ public class ZoneMusicPlayer {
                             effectiveVolume = currentFadeVolume;
                         } else {
                             effectiveVolume = baseVolume;
+                            currentFadeVolume = baseVolume;
                         }
                         
                         // Apply volume by scaling samples
@@ -416,33 +435,49 @@ public class ZoneMusicPlayer {
     }
     
     /**
-     * Stops Minecraft's background music
+     * Starts a background thread to continuously suppress Minecraft's music
      */
-    private static void stopMinecraftMusic() {
-        try {
-            Minecraft mc = Minecraft.getInstance();
-            if (mc.getMusicManager() != null) {
-                mc.getMusicManager().stopPlaying();
-                LOGGER.debug("Stopped Minecraft background music");
+    private static void startMinecraftMusicSuppression() {
+        stopMinecraftMusicSuppression(); // Stop any existing suppression
+        
+        suppressMinecraftMusic = true;
+        musicSuppressionThread = new Thread(() -> {
+            LOGGER.info("Started Minecraft music suppression thread");
+            while (suppressMinecraftMusic && !Thread.currentThread().isInterrupted()) {
+                try {
+                    Minecraft mc = Minecraft.getInstance();
+                    if (mc.getMusicManager() != null) {
+                        // Continuously stop any music that tries to play
+                        mc.getMusicManager().stopPlaying();
+                    }
+                    Thread.sleep(500); // Check every 500ms
+                } catch (InterruptedException e) {
+                    break;
+                } catch (Exception e) {
+                    LOGGER.debug("Error suppressing Minecraft music: {}", e.getMessage());
+                }
             }
-        } catch (Exception e) {
-            LOGGER.debug("Could not stop Minecraft music: {}", e.getMessage());
-        }
+            LOGGER.info("Stopped Minecraft music suppression thread");
+        }, "MinecraftMusicSuppression");
+        musicSuppressionThread.setDaemon(true);
+        musicSuppressionThread.start();
     }
     
     /**
-     * Resumes Minecraft's background music
+     * Stops the Minecraft music suppression thread
      */
-    private static void resumeMinecraftMusic() {
-        try {
-            Minecraft mc = Minecraft.getInstance();
-            if (mc.getMusicManager() != null) {
-                // Minecraft will automatically resume music on next tick
-                LOGGER.debug("Minecraft background music will resume");
+    private static void stopMinecraftMusicSuppression() {
+        suppressMinecraftMusic = false;
+        if (musicSuppressionThread != null && musicSuppressionThread.isAlive()) {
+            musicSuppressionThread.interrupt();
+            try {
+                musicSuppressionThread.join(1000); // Wait up to 1 second
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
             }
-        } catch (Exception e) {
-            LOGGER.debug("Could not resume Minecraft music: {}", e.getMessage());
+            musicSuppressionThread = null;
         }
+        LOGGER.debug("Minecraft background music will resume");
     }
     
     /**
