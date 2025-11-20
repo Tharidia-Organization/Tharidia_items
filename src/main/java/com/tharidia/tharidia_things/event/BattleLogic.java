@@ -184,7 +184,7 @@ public class BattleLogic {
                 player1.blockPosition(),
                 SoundEvents.RAID_HORN.value(),
                 SoundSource.PLAYERS,
-                10.0f, 1.0f);
+                60.0f, 1.0f);
     }
 
     public static void finischBattle(@Nullable Player winnerPlayer, @Nullable Player loserPlayer) {
