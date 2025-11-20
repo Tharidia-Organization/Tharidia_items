@@ -17,6 +17,7 @@ public class BattleGauntleAttachments implements INBTSerializable<CompoundTag> {
     private boolean in_battle = false;
     private UUID challenger_uuid = null;
     private float player_health = 0;
+    private int win_tick = 0;
     private int lose_tick = 0;
 
     public void setPlayerHealth(float health) {
@@ -29,6 +30,10 @@ public class BattleGauntleAttachments implements INBTSerializable<CompoundTag> {
 
     public void setChallengerUUID(UUID challenger_uuid) {
         this.challenger_uuid = challenger_uuid;
+    }
+
+    public void setWinTick(int tick) {
+        this.win_tick = tick;
     }
 
     public void setLoseTick(int tick) {
@@ -47,6 +52,10 @@ public class BattleGauntleAttachments implements INBTSerializable<CompoundTag> {
         return this.challenger_uuid;
     }
 
+    public int getWinTick() {
+        return this.win_tick;
+    }
+
     public int getLoseTick() {
         return this.lose_tick;
     }
@@ -56,6 +65,7 @@ public class BattleGauntleAttachments implements INBTSerializable<CompoundTag> {
         CompoundTag nbt = new CompoundTag();
         nbt.putFloat("player_health", this.player_health);
         nbt.putBoolean("in_battle", this.in_battle);
+        nbt.putInt("win_tick", this.win_tick);
         nbt.putInt("lose_tick", this.lose_tick);
         // Only save UUID if it's not null
         if (this.challenger_uuid != null) {
@@ -68,6 +78,7 @@ public class BattleGauntleAttachments implements INBTSerializable<CompoundTag> {
     public void deserializeNBT(Provider provider, CompoundTag nbt) {
         this.player_health = nbt.getFloat("player_health");
         this.in_battle = nbt.getBoolean("in_battle");
+        this.win_tick = nbt.getInt("win_tick");
         this.lose_tick = nbt.getInt("lose_tick");
         // Only load UUID if it exists in the NBT
         if (nbt.contains("challenger_uuid")) {

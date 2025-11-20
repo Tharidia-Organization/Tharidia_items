@@ -6,11 +6,17 @@ import com.tharidia.tharidia_things.TharidiaThings;
 import com.tharidia.tharidia_things.compoundTag.BattleGauntleAttachments;
 import com.tharidia.tharidia_things.features.FreezeManager;
 
+import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.particles.SimpleParticleType;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.player.Player;
@@ -54,12 +60,47 @@ public class BattleLogic {
     }
 
     @SubscribeEvent
-    public static void loseFreezeTick(PlayerTickEvent.Post event) {
+    public static void winTick(PlayerTickEvent.Post event) {
+        if (event.getEntity().level().isClientSide())
+            return;
+
+        ServerLevel level = ((ServerLevel) event.getEntity().level());
         Player player = event.getEntity();
         BattleGauntleAttachments playerAttachments = player.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
 
+        if (playerAttachments.getWinTick() >= 1) {
+            playerAttachments.setWinTick(playerAttachments.getWinTick() - 1);
+            level.sendParticles(
+                    ParticleTypes.END_ROD,
+                    player.getX(), player.getY(), player.getZ(),
+                    1,
+                    0.3, 1, 0.3,
+                    0.1);
+        }
+    }
+
+    @SubscribeEvent
+    public static void loseTick(PlayerTickEvent.Post event) {
+        if (event.getEntity().level().isClientSide())
+            return;
+
+        ServerLevel level = ((ServerLevel) event.getEntity().level());
+        Player player = event.getEntity();
+        BattleGauntleAttachments playerAttachments = player.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
+
+        ResourceLocation particleId = ResourceLocation.fromNamespaceAndPath("irons_spellbooks", "blood");
+        ParticleType<?> particleType = BuiltInRegistries.PARTICLE_TYPE.get(particleId);
+
         if (playerAttachments.getLoseTick() >= 2) {
             playerAttachments.setLoseTick(playerAttachments.getLoseTick() - 1);
+            if (particleType instanceof SimpleParticleType simpleParticle) {
+                level.sendParticles(
+                        simpleParticle,
+                        player.getX(), player.getY(), player.getZ(),
+                        10,
+                        0.3, 1, 0.3,
+                        0.1);
+            }
         } else if (playerAttachments.getLoseTick() == 1) {
             playerAttachments.setLoseTick(0);
             if (event.getEntity() instanceof ServerPlayer serverPlayer) {
@@ -123,11 +164,33 @@ public class BattleLogic {
         }
     }
 
-    private static void finischBattle(@Nullable Player winnerPlayer, @Nullable Player loserPlayer) {
+    public static void startBattle(Player player1, Player player2) {
+        BattleGauntleAttachments player1Attachments = player1.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
+        BattleGauntleAttachments player2Attachments = player2.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
+
+        player1Attachments.setInBattle(true);
+        player1Attachments.setChallengerUUID(player2.getUUID());
+        player1Attachments.setPlayerHealth(player1.getHealth());
+
+        player2Attachments.setInBattle(true);
+        player2Attachments.setChallengerUUID(player1.getUUID());
+        player2Attachments.setPlayerHealth(player2.getHealth());
+
+        player1.setHealth(player1.getMaxHealth());
+        player2.setHealth(player2.getMaxHealth());
+
+        player1.level().playSound(
+                null,
+                player1.blockPosition(),
+                SoundEvents.RAID_HORN.value(),
+                SoundSource.PLAYERS,
+                10.0f, 1.0f);
+    }
+
+    public static void finischBattle(@Nullable Player winnerPlayer, @Nullable Player loserPlayer) {
         if (winnerPlayer == null && loserPlayer == null)
             return;
 
-        ServerLevel level = (ServerLevel) (winnerPlayer != null ? winnerPlayer.level() : loserPlayer.level());
         BattleGauntleAttachments winnerAttachments = null;
         BattleGauntleAttachments loserAttachments = null;
 
@@ -159,23 +222,17 @@ public class BattleLogic {
         ((ServerPlayer) loserPlayer).connection.send(new ClientboundSetTitleTextPacket(
                 Component.translatable("message.tharidiathings.battle.lose").withColor(0xFF0000)));
 
-        level.sendParticles(
-                ParticleTypes.END_ROD,
-                winnerPlayer.getX(), winnerPlayer.getY(), winnerPlayer.getZ(),
-                100,
-                0.3, 1, 0.3,
-                0.1);
-
         loserPlayer.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 200, 1, false, false, false));
         loserPlayer.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 200, 1, false, false, false));
         loserAttachments.setLoseTick(200);
+        winnerAttachments.setWinTick(200);
 
         if (loserPlayer instanceof ServerPlayer serverLoser) {
             FreezeManager.freezePlayer(serverLoser);
         }
     }
 
-    private static void exitPlayerBattle(Player player) {
+    public static void exitPlayerBattle(Player player) {
         BattleGauntleAttachments playerAttachments = player.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
 
         playerAttachments.setInBattle(false);

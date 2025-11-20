@@ -1,7 +1,7 @@
 package com.tharidia.tharidia_things.network;
 
 import com.tharidia.tharidia_things.TharidiaThings;
-import com.tharidia.tharidia_things.compoundTag.BattleGauntleAttachments;
+import com.tharidia.tharidia_things.event.BattleLogic;
 import com.tharidia.tharidia_things.util.PlayerNameHelper;
 
 import net.minecraft.network.FriendlyByteBuf;
@@ -61,21 +61,7 @@ public record BattleInviteResponsePacket(UUID inviterUuid, boolean accepted) imp
                     Component.literal("You accepted the battle from " +
                             PlayerNameHelper.getChosenName((ServerPlayer) inviterPlayer)));
 
-            BattleGauntleAttachments inviterBattleAttachments = inviterPlayer
-                    .getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
-            BattleGauntleAttachments targetBattleAttachments = targetPlayer
-                    .getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
-
-            inviterBattleAttachments.setInBattle(true);
-            inviterBattleAttachments.setChallengerUUID(targetPlayer.getUUID());
-            inviterBattleAttachments.setPlayerHealth(inviterPlayer.getHealth());
-
-            targetBattleAttachments.setInBattle(true);
-            targetBattleAttachments.setChallengerUUID(inviterPlayer.getUUID());
-            targetBattleAttachments.setPlayerHealth(targetPlayer.getHealth());
-
-            inviterPlayer.setHealth(inviterPlayer.getMaxHealth());
-            targetPlayer.setHealth(targetPlayer.getMaxHealth());
+            BattleLogic.startBattle(inviterPlayer, targetPlayer);
         } else {
             // --- DECLINED LOGIC ---
             inviterPlayer.sendSystemMessage(
