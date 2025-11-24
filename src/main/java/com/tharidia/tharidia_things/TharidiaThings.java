@@ -721,6 +721,7 @@ public class TharidiaThings {
         com.tharidia.tharidia_things.command.ClaimAdminCommands.register(event.getDispatcher());
         FatigueCommands.register(event.getDispatcher());
         com.tharidia.tharidia_things.command.TradeCommands.register(event.getDispatcher());
+        com.tharidia.tharidia_things.command.MarketCommands.register(event.getDispatcher());
         if (Config.IS_LOBBY_SERVER.get()) {
             LOGGER.info("Registering lobby commands (isLobbyServer=true)");
             LobbyCommand.register(event.getDispatcher());

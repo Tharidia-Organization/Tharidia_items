@@ -146,4 +146,23 @@ public class TradeManager {
     public static Collection<TradeSession> getAllSessions() {
         return new ArrayList<>(activeSessions.values());
     }
+
+    /**
+     * Create a test trade session for admin testing
+     */
+    public static TradeSession createTestSession(ServerPlayer player) {
+        // Check if player is already in a trade
+        if (isPlayerInTrade(player.getUUID())) {
+            return null;
+        }
+
+        // For testing purposes, create a session with the same player as both participants
+        // This avoids the need to create a dummy ServerPlayer with ClientInformation
+        TradeSession session = new TradeSession(player, player);
+        activeSessions.put(session.getSessionId(), session);
+        
+        TharidiaThings.LOGGER.info("Test trade session created for: {}", player.getName().getString());
+        
+        return session;
+    }
 }

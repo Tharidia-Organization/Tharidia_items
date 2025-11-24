@@ -22,7 +22,11 @@ import java.util.List;
  */
 public class TradeScreen extends AbstractContainerScreen<TradeMenu> {
     private static final ResourceLocation TEXTURE = 
-        ResourceLocation.fromNamespaceAndPath("tharidiathings", "textures/gui/trade_gui.png");
+        ResourceLocation.fromNamespaceAndPath("tharidiathings", "textures/gui/trade_background.png");
+    private static final ResourceLocation YES_BUTTON_TEXTURE = 
+        ResourceLocation.fromNamespaceAndPath("tharidiathings", "textures/gui/trade_button_yes.png");
+    private static final ResourceLocation NO_BUTTON_TEXTURE = 
+        ResourceLocation.fromNamespaceAndPath("tharidiathings", "textures/gui/trade_button_no.png");
     
     private Button confirmButton;
     private Button cancelButton;
@@ -41,43 +45,40 @@ public class TradeScreen extends AbstractContainerScreen<TradeMenu> {
     protected void init() {
         super.init();
         
-        // Position GUI in bottom-right corner
-        this.leftPos = this.width - this.imageWidth - 10;
-        this.topPos = this.height - this.imageHeight - 10;
+        // Position GUI centered on screen
+        this.leftPos = (this.width - this.imageWidth) - 10;
+        this.topPos = (this.height - this.imageHeight) - 10;
         
         int centerX = this.leftPos + this.imageWidth / 2;
-        int buttonY = this.topPos + 60;
+        int buttonY = this.topPos + 65;
         
         // Buttons arranged horizontally
-        int buttonWidth = 50;
-        int buttonSpacing = 5;
+        int buttonWidth = 48;
+        int buttonHeight = 18;
+        int buttonSpacing = 21;
         int totalWidth = (buttonWidth * 2) + buttonSpacing;
         int startX = centerX - (totalWidth / 2);
         
-        // Confirm button (left) - Green when not confirmed, Yellow when confirmed
-        this.confirmButton = this.addRenderableWidget(Button.builder(
-            Component.literal("Conferma"),
-            button -> toggleConfirm()
-        ).bounds(startX, buttonY, buttonWidth, 20).build());
+        // Confirm button (left) - Uses trade_button_yes texture
+        this.confirmButton = this.addRenderableWidget(new TexturedButton(
+            startX, buttonY, buttonWidth, buttonHeight, true, button -> toggleConfirm()
+        ));
         
-        // Cancel button (right) - Red
-        this.cancelButton = this.addRenderableWidget(Button.builder(
-            Component.literal("Annulla"),
-            button -> cancelTrade()
-        ).bounds(startX + buttonWidth + buttonSpacing, buttonY, buttonWidth, 20).build());
+        // Cancel button (right) - Uses trade_button_no texture
+        this.cancelButton = this.addRenderableWidget(new TexturedButton(
+            startX + buttonWidth + buttonSpacing, buttonY, buttonWidth, buttonHeight, false, button -> cancelTrade()
+        ));
         
-        // Final confirm button (only visible when both players confirmed) - Bright Green
-        this.finalConfirmButton = this.addRenderableWidget(Button.builder(
-            Component.literal("Conferma"),
-            button -> toggleFinalConfirm()
-        ).bounds(startX, buttonY, buttonWidth, 20).build());
+        // Final confirm button (only visible when both players confirmed) - Uses trade_button_yes texture
+        this.finalConfirmButton = this.addRenderableWidget(new TexturedButton(
+            startX, buttonY, buttonWidth, buttonHeight, true, button -> toggleFinalConfirm()
+        ));
         this.finalConfirmButton.visible = false;
         
-        // Complete trade button (only visible when both players final confirmed) - Gold
-        this.completeTradeButton = this.addRenderableWidget(Button.builder(
-            Component.literal("COMPLETA"),
-            button -> completeTrade()
-        ).bounds(startX + buttonWidth + buttonSpacing, buttonY, buttonWidth, 20).build());
+        // Complete trade button (only visible when both players final confirmed) - Uses trade_button_yes texture
+        this.completeTradeButton = this.addRenderableWidget(new TexturedButton(
+            startX + buttonWidth + buttonSpacing, buttonY, buttonWidth, buttonHeight, true, button -> completeTrade()
+        ));
         this.completeTradeButton.visible = false;
     }
 
@@ -86,31 +87,9 @@ public class TradeScreen extends AbstractContainerScreen<TradeMenu> {
         int x = this.leftPos;
         int y = this.topPos;
 
-        // Draw background
-        guiGraphics.fill(x, y, x + this.imageWidth, y + this.imageHeight, 0xFF8B4513); // Brown background
-        guiGraphics.fill(x + 2, y + 2, x + this.imageWidth - 2, y + this.imageHeight - 2, 0xFFC0C0C0); // Light gray inner
-        
-        // Draw divider in the middle
-        int centerX = x + this.imageWidth / 2;
-        guiGraphics.fill(centerX - 1, y + 10, centerX + 1, y + 60, 0xFF8B4513);
-        
-        // Draw slot backgrounds for player's side (left) - 2 rows x 3 columns
-        for (int row = 0; row < 2; row++) {
-            for (int col = 0; col < 3; col++) {
-                int slotX = x + 35 + col * 18;
-                int slotY = y + 20 + row * 18;
-                guiGraphics.fill(slotX - 1, slotY - 1, slotX + 17, slotY + 17, 0xFF8B8B8B);
-            }
-        }
-        
-        // Draw slot backgrounds for other player's side (right) - 2 rows x 3 columns
-        for (int row = 0; row < 2; row++) {
-            for (int col = 0; col < 3; col++) {
-                int slotX = x + 145 + col * 18;
-                int slotY = y + 20 + row * 18;
-                guiGraphics.fill(slotX - 1, slotY - 1, slotX + 17, slotY + 17, 0xFF8B8B8B);
-            }
-        }
+        // Draw the custom background texture
+        // Parameters: texture, x, y, u, v, width, height, textureWidth, textureHeight
+        guiGraphics.blit(TEXTURE, x, y, 0, 0, this.imageWidth, this.imageHeight, 230, 195);
     }
 
     @Override
@@ -122,34 +101,40 @@ public class TradeScreen extends AbstractContainerScreen<TradeMenu> {
 
     @Override
     protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        // Draw player name (left side)
+        // Draw player name (left side) - smaller font using scaling
         Component playerLabel = Component.literal("§6La Vostra Offerta");
-        guiGraphics.drawString(this.font, playerLabel, 10, 8, 0x404040, false);
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().scale(0.8f, 0.8f, 1.0f);
+        guiGraphics.drawString(this.font, playerLabel, (int)(20 / 0.8f), (int)(8 / 0.8f), 0x404040, false);
+        guiGraphics.pose().popPose();
         
-        // Draw other player name (right side)
+        // Draw other player name (right side) - smaller font using scaling
         Component otherLabel = Component.literal("§6" + this.menu.getOtherPlayerName());
         int otherLabelWidth = this.font.width(otherLabel);
-        guiGraphics.drawString(this.font, otherLabel, this.imageWidth - otherLabelWidth - 35, 8, 0x404040, false);
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().scale(0.8f, 0.8f, 1.0f);
+        guiGraphics.drawString(this.font, otherLabel, (int)((this.imageWidth - otherLabelWidth - 15) / 0.8f), (int)(8 / 0.8f), 0x404040, false);
+        guiGraphics.pose().popPose();
         
         // Draw tax information
         drawTaxInfo(guiGraphics);
         
         // Draw confirmation status (below buttons)
-        int statusY = 85;
+        int statusY = 92;
         if (localConfirmed) {
-            guiGraphics.drawString(this.font, "§2✓ Confermato", 10, statusY, 0x404040, false);
+            guiGraphics.drawString(this.font, "§2✓ Confermato", 16, statusY, 0x404040, false);
         } else {
-            guiGraphics.drawString(this.font, "§7In attesa...", 10, statusY, 0x404040, false);
+            guiGraphics.drawString(this.font, "§7In attesa...", 16, statusY, 0x404040, false);
         }
         
         if (this.menu.isOtherPlayerConfirmed()) {
             Component otherConfirmed = Component.literal("§2Confermato");
             int width = this.font.width(otherConfirmed);
-            guiGraphics.drawString(this.font, otherConfirmed, this.imageWidth - width - 10, statusY, 0x404040, false);
+            guiGraphics.drawString(this.font, otherConfirmed, this.imageWidth - width - 16, statusY, 0x404040, false);
         } else {
             Component otherWaiting = Component.literal("§7In attesa...");
             int width = this.font.width(otherWaiting);
-            guiGraphics.drawString(this.font, otherWaiting, this.imageWidth - width - 10, statusY, 0x404040, false);
+            guiGraphics.drawString(this.font, otherWaiting, this.imageWidth - width - 16, statusY, 0x404040, false);
         }
         
         // Manage button visibility based on state
@@ -176,9 +161,9 @@ public class TradeScreen extends AbstractContainerScreen<TradeMenu> {
             completeTradeButton.visible = false;
             
             if (localFinalConfirmed) {
-                finalConfirmButton.setMessage(Component.literal("Annulla"));
+                ((TexturedButton)finalConfirmButton).setTexture(false); // Use no texture for "Annulla"
             } else {
-                finalConfirmButton.setMessage(Component.literal("Conferma"));
+                ((TexturedButton)finalConfirmButton).setTexture(true); // Use yes texture for "Conferma"
             }
         } else {
             // Show normal confirm and cancel buttons
@@ -188,9 +173,9 @@ public class TradeScreen extends AbstractContainerScreen<TradeMenu> {
             completeTradeButton.visible = false;
             
             if (localConfirmed) {
-                confirmButton.setMessage(Component.literal("Annulla"));
+                ((TexturedButton)confirmButton).setTexture(false); // Use no texture for "Annulla"
             } else {
-                confirmButton.setMessage(Component.literal("Conferma"));
+                ((TexturedButton)confirmButton).setTexture(true); // Use yes texture for "Conferma"
             }
         }
     }
@@ -342,5 +327,38 @@ public class TradeScreen extends AbstractContainerScreen<TradeMenu> {
     public void onClose() {
         // Prevent closing the screen - players must use Cancel button
         // This prevents accidental closure and item loss
+    }
+
+    /**
+     * Custom textured button for trade GUI
+     */
+    private static class TexturedButton extends Button {
+        private ResourceLocation texture;
+        private final ResourceLocation yesTexture;
+        private final ResourceLocation noTexture;
+        private final boolean isYesButton;
+
+        public TexturedButton(int x, int y, int width, int height, boolean isYesButton, OnPress onPress) {
+            super(x, y, width, height, Component.literal(""), onPress, DEFAULT_NARRATION);
+            this.isYesButton = isYesButton;
+            this.yesTexture = YES_BUTTON_TEXTURE;
+            this.noTexture = NO_BUTTON_TEXTURE;
+            this.texture = isYesButton ? yesTexture : noTexture;
+        }
+
+        public void setTexture(boolean useYesTexture) {
+            this.texture = useYesTexture ? yesTexture : noTexture;
+        }
+
+        @Override
+        public void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+            // Draw the button texture at full size (64x32)
+            guiGraphics.blit(texture, getX(), getY(), 0, 0, width, height, width, height);
+            
+            // Draw subtle hover effect
+            if (isHovered()) {
+                guiGraphics.fill(getX(), getY(), getX() + width, getY() + height, 0x30FFFFFF);
+            }
+        }
     }
 }

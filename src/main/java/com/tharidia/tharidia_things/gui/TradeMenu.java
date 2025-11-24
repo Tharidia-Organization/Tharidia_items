@@ -128,7 +128,7 @@ public class TradeMenu extends AbstractContainerMenu {
 
         // Player inventory (bottom)
         int invStartX = 35;
-        int invStartY = 108;
+        int invStartY = 103; // Alzato di 5 pixel (era 108)
         
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
