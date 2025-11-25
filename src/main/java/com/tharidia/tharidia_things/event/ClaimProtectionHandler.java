@@ -17,6 +17,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.level.ExplosionEvent;
 import org.slf4j.Logger;
@@ -219,8 +220,46 @@ public class ClaimProtectionHandler {
         // This event is kept for potential future use
     }
 
-    // TODO: PvP protection - requires finding correct NeoForge 1.21.1 damage event
-    // The API for damage events has changed in this version
+    /**
+     * Prevents PvP attacks in claimed areas
+     * PvP is ALWAYS disabled in claims, regardless of trust status
+     * Uses NORMAL priority to run after battle logic checks
+     */
+    @SubscribeEvent(priority = EventPriority.NORMAL)
+    public static void onPlayerAttack(AttackEntityEvent event) {
+        if (event.getEntity().level().isClientSide || !(event.getEntity().level() instanceof ServerLevel serverLevel)) {
+            return;
+        }
+        
+        // If event is already cancelled (e.g., by battle logic), don't process
+        if (event.isCanceled()) {
+            return;
+        }
+        
+        Player attacker = event.getEntity();
+        
+        // Only check player vs player attacks
+        if (!(event.getTarget() instanceof Player target)) {
+            return;
+        }
+        
+        // Check if either player is in a claimed area
+        ClaimBlockEntity attackerClaim = findClaimForPosition(serverLevel, attacker.blockPosition());
+        ClaimBlockEntity targetClaim = findClaimForPosition(serverLevel, target.blockPosition());
+        
+        // Block PvP if either player is in a claim (regardless of PvP flag or trust)
+        // PvP is ALWAYS disabled in claims
+        if (attackerClaim != null || targetClaim != null) {
+            event.setCanceled(true);
+            attacker.sendSystemMessage(Component.literal("§cPvP è disabilitato nelle aree protette!"));
+            
+            LOGGER.info("PvP attack blocked in claim - Attacker: {} (in claim: {}), Target: {} (in claim: {})", 
+                attacker.getName().getString(), 
+                attackerClaim != null,
+                target.getName().getString(),
+                targetClaim != null);
+        }
+    }
 
     /**
      * Prevents crop trampling in claimed areas

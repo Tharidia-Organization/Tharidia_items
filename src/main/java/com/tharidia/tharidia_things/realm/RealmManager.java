@@ -95,6 +95,22 @@ public class RealmManager {
     }
     
     /**
+     * Checks if a player already owns a realm in the given level
+     * @param level The server level to check
+     * @param playerUUID The UUID of the player to check
+     * @return true if the player already owns a realm, false otherwise
+     */
+    public static boolean playerOwnsRealm(ServerLevel level, UUID playerUUID) {
+        List<PietroBlockEntity> levelRealms = getRealms(level);
+        for (PietroBlockEntity realm : levelRealms) {
+            if (playerUUID.equals(realm.getOwnerUUID())) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    /**
      * Refreshes the realm list for a level by scanning for Pietro blocks
      * This can be called on world load to rebuild the realm registry
      */

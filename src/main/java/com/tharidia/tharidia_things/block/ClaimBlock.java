@@ -56,6 +56,13 @@ public class ClaimBlock extends BaseEntityBlock {
                 return null;
             }
 
+            // Check if player already has claims in other realms
+            if (player != null && hasPlayerClaimInOtherRealms(serverLevel, realm, player)) {
+                player.sendSystemMessage(Component.literal("§cPuoi avere claim solo in un Regno alla volta!"));
+                player.sendSystemMessage(Component.literal("§7Rimuovi i tuoi claim dagli altri regni prima di piazzarne qui."));
+                return null;
+            }
+
             // Check if there's already a claim block in this chunk
             ClaimBlockEntity existingClaim = getClaimInChunk(serverLevel, pos);
             if (existingClaim != null) {
@@ -126,6 +133,13 @@ public class ClaimBlock extends BaseEntityBlock {
         }
     }
 
+    /**
+     * Checks if the player already has claims in realms other than the specified one
+     */
+    private boolean hasPlayerClaimInOtherRealms(ServerLevel level, com.tharidia.tharidia_things.block.entity.PietroBlockEntity currentRealm, Player player) {
+        return hasClaimsInOtherRealms(player.getUUID(), level, currentRealm);
+    }
+    
     /**
      * Checks if the player already has a claim block in the given realm
      */

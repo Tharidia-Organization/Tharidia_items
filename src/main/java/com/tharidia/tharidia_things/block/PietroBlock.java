@@ -34,6 +34,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
+import java.util.UUID;
 
 public class PietroBlock extends BaseEntityBlock {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -340,9 +341,15 @@ public class PietroBlock extends BaseEntityBlock {
      * Checks if a Pietro block can be placed at the given position
      * @param level The server level
      * @param pos The position to check
+     * @param playerUUID The UUID of the player trying to place the block
      * @return true if the block can be placed, false otherwise
      */
-    public static boolean canPlacePietroBlock(ServerLevel level, BlockPos pos) {
+    public static boolean canPlacePietroBlock(ServerLevel level, BlockPos pos, UUID playerUUID) {
+        // First check if player already owns a realm
+        if (RealmManager.playerOwnsRealm(level, playerUUID)) {
+            return false; // Player already owns a realm
+        }
+        
         ChunkPos newChunkPos = new ChunkPos(pos);
         List<PietroBlockEntity> existingRealms = RealmManager.getRealms(level);
 

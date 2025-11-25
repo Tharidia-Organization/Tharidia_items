@@ -20,6 +20,7 @@ import org.slf4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public class RealmPlacementHandler {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -33,8 +34,14 @@ public class RealmPlacementHandler {
             if (placedBlock instanceof PietroBlock) {
                 BlockPos pos = event.getPos();
                 
-                // Check if placement is valid
-                if (!PietroBlock.canPlacePietroBlock(serverLevel, pos)) {
+                // Get player UUID if available
+                UUID playerUUID = null;
+                if (event.getEntity() instanceof Player player) {
+                    playerUUID = player.getUUID();
+                }
+                
+                // Check if placement is valid (requires player UUID for ownership check)
+                if (playerUUID == null || !PietroBlock.canPlacePietroBlock(serverLevel, pos, playerUUID)) {
                     // Cancel the placement
                     event.setCanceled(true);
                     
@@ -44,14 +51,24 @@ public class RealmPlacementHandler {
                     
                     // Notify the player
                     if (event.getEntity() instanceof Player player) {
-                        int distance = PietroBlock.getDistanceToNearestRealm(serverLevel, pos);
-                        int needed = PietroBlock.MIN_DISTANCE_CHUNKS - distance;
-                        
-                        player.sendSystemMessage(
-                            Component.literal("§cCannot place Pietro block here!")
-                                .append(Component.literal("\n§7Too close to another realm. Move " + needed + " chunks away."))
-                                .append(Component.literal("\n§7(Minimum distance: " + PietroBlock.MIN_DISTANCE_CHUNKS + " chunks)"))
-                        );
+                        // Check specific reason for cancellation
+                        if (playerUUID != null && RealmManager.playerOwnsRealm(serverLevel, playerUUID)) {
+                            // Player already owns a realm
+                            player.sendSystemMessage(
+                                Component.literal("§cCannot place Realm block!")
+                                    .append(Component.literal("\n§7You already own a realm. Each player can only have one realm."))
+                            );
+                        } else {
+                            // Too close to another realm
+                            int distance = PietroBlock.getDistanceToNearestRealm(serverLevel, pos);
+                            int needed = PietroBlock.MIN_DISTANCE_CHUNKS - distance;
+                            
+                            player.sendSystemMessage(
+                                Component.literal("§cCannot place Realm block here!")
+                                    .append(Component.literal("\n§7Too close to another realm. Move " + needed + " chunks away."))
+                                    .append(Component.literal("\n§7(Minimum distance: " + PietroBlock.MIN_DISTANCE_CHUNKS + " chunks)"))
+                            );
+                        }
                         
                         // CRITICAL: Send realm removal sync to client
                         // The block might have been briefly registered before cancellation

@@ -248,6 +248,34 @@ public class ClaimRegistry {
     }
 
     /**
+     * Checks if a player has claims in any realm other than the specified one
+     * @param playerUUID The UUID of the player to check
+     * @param level The server level
+     * @param currentRealm The realm the player is currently trying to place a claim in
+     * @return true if the player has claims in other realms, false otherwise
+     */
+    public static boolean hasClaimsInOtherRealms(UUID playerUUID, ServerLevel level, com.tharidia.tharidia_things.block.entity.PietroBlockEntity currentRealm) {
+        Set<BlockPos> playerClaimPositions = playerClaims.get(playerUUID);
+        if (playerClaimPositions == null || playerClaimPositions.isEmpty()) {
+            return false;
+        }
+        
+        // Check each claim position
+        for (BlockPos claimPos : playerClaimPositions) {
+            // Find which realm this claim is in
+            com.tharidia.tharidia_things.block.entity.PietroBlockEntity claimRealm = 
+                com.tharidia.tharidia_things.realm.RealmManager.getRealmAt(level, claimPos);
+            
+            // If claim is in a realm and it's not the current realm, player has claims in multiple realms
+            if (claimRealm != null && !claimRealm.getBlockPos().equals(currentRealm.getBlockPos())) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
      * Checks if a claim exists at the given position
      */
     public static boolean hasClaimAt(ServerLevel level, BlockPos pos) {

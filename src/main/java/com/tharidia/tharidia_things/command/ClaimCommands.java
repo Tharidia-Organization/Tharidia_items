@@ -29,16 +29,16 @@ public class ClaimCommands {
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(
             Commands.literal("claim")
-                .then(Commands.literal("info")
-                    .executes(ClaimCommands::executeInfo))
                 .then(Commands.literal("trust")
                     .then(Commands.argument("player", EntityArgument.player())
                         .executes(ClaimCommands::executeTrust)))
                 .then(Commands.literal("untrust")
                     .then(Commands.argument("player", EntityArgument.player())
                         .executes(ClaimCommands::executeUntrust)))
+                .requires(source -> source.hasPermission(4)) // Admin only
+                .then(Commands.literal("info")
+                        .executes(ClaimCommands::executeInfo))
                 .then(Commands.literal("flag")
-                    .requires(source -> source.hasPermission(4)) // Admin only
                     .then(Commands.literal("explosions")
                         .then(Commands.literal("allow").executes(ctx -> executeFlag(ctx, "explosions", true)))
                         .then(Commands.literal("deny").executes(ctx -> executeFlag(ctx, "explosions", false))))
