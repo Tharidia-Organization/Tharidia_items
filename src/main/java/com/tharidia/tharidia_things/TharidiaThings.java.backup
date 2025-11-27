@@ -103,7 +103,8 @@ public class TharidiaThings {
     
     // Database system for cross-server communication
     private static com.tharidia.tharidia_things.database.DatabaseManager databaseManager;
-    
+    private static com.tharidia.tharidia_things.database.DatabaseCommandQueue commandQueue;
+
     // Creates a new Block with the id "tharidiathings:pietro", combining the namespace and path
     public static final DeferredBlock<PietroBlock> PIETRO = BLOCKS.register("pietro", () -> new PietroBlock(BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(3.0F, 6.0F).noOcclusion()));
     // Creates a new BlockItem with the id "tharidiathings:pietro", combining the namespace and path
@@ -284,9 +285,21 @@ public class TharidiaThings {
         PayloadRegistrar registrar = event.registrar("1");
         LOGGER.info("Registering network payloads (dist: {})", FMLEnvironment.dist);
         
-        // Network payload registration for mod features
+        // BungeeCord packet registration removed - lobby system no longer needed
         
         if (FMLEnvironment.dist.isClient()) {
+            // Ensure client advertises bungeecord:main if nobody else does
+            try {
+                registrar.playToClient(
+                    // Removed ServerTransferManager packet registration
+                    // Removed ServerTransferManager packet registration
+                    (payload, context) -> { /* handled by Velocity proxy; no-op */ }
+                ).optional();
+                LOGGER.info("Client registered bungeecord:main channel (optional)");
+            } catch (Exception e) {
+                // If another mod already registered it, that’s fine—just log and continue
+                LOGGER.warn("bungeecord:main already registered by another mod; skipping. {}", e.getMessage());
+            }
 
             
             registrar.playToClient(
@@ -354,18 +367,21 @@ public class TharidiaThings {
                 com.tharidia.tharidia_things.network.TradeSyncPacket.STREAM_CODEC,
                 (packet, context) -> com.tharidia.tharidia_things.client.TradeClientHandler.handleTradeSync(packet)
             );
-            
-            // Register bungeecord:main channel to satisfy server requirement (dummy handler)
-            registrar.playToClient(
-                com.tharidia.tharidia_things.network.BungeeCordPacket.TYPE,
-                com.tharidia.tharidia_things.network.BungeeCordPacket.STREAM_CODEC,
-                (packet, context) -> {} // Dummy handler - we don't process bungeecord messages
-            );
-            
             LOGGER.info("Client packet handlers registered");
         } else {
+            // Register server bungeecord:main for sending transfers to clients
+            try {
+                registrar.playToClient(
+                    // Removed ServerTransferManager packet registration
+                    // Removed ServerTransferManager packet registration
+                    (payload, context) -> {} // Dummy handler, actual handling by Velocity
+                ).optional();
+                LOGGER.info("Server registered bungeecord:main for outgoing transfers (optional)");
+            } catch (Exception e) {
+                LOGGER.warn("Could not register bungeecord:main client handler: {}", e.getMessage());
+            }
             
-            // Server-side packet registration
+            // Server bungeecord:main handler removed - now using database for cross-server communication
 
             // On server, register dummy handlers (packets won't be received here anyway)
             registrar.playToClient(
@@ -433,14 +449,6 @@ public class TharidiaThings {
                 com.tharidia.tharidia_things.network.TradeSyncPacket.STREAM_CODEC,
                 (packet, context) -> {}
             );
-            
-            // Register bungeecord:main channel on server side (dummy handler for consistency)
-            registrar.playToClient(
-                com.tharidia.tharidia_things.network.BungeeCordPacket.TYPE,
-                com.tharidia.tharidia_things.network.BungeeCordPacket.STREAM_CODEC,
-                (packet, context) -> {} // Dummy handler
-            );
-            
             LOGGER.info("Server-side packet registration completed (dummy handlers)");
         }
         
@@ -565,9 +573,13 @@ public class TharidiaThings {
             
             // Initialize database connection
             if (databaseManager.initialize()) {
+                // Create command queue
+                commandQueue = new com.tharidia.tharidia_things.database.DatabaseCommandQueue(databaseManager, LOGGER);
+                
+                                
                 LOGGER.info("Database system initialized successfully");
             } else {
-                LOGGER.warn("Database initialization failed or disabled");
+                LOGGER.warn("Database initialization failed or disabled - remote commands will not work");
             }
             
         } catch (Exception e) {

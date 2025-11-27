@@ -96,25 +96,11 @@ public class DatabaseManager {
      * Create necessary database tables
      */
     private void createTables() {
-        String createCommandsTable = """
-            CREATE TABLE IF NOT EXISTS queue_commands (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                command VARCHAR(255) NOT NULL,
-                args TEXT,
-                sender_uuid VARCHAR(36) NOT NULL,
-                sender_name VARCHAR(255) NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                executed BOOLEAN DEFAULT FALSE,
-                executed_at TIMESTAMP NULL,
-                INDEX idx_executed (executed),
-                INDEX idx_created (created_at)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-            """;
+        // No cross-server communication tables needed - lobby system removed
         
         try (Connection conn = getConnection();
              Statement stmt = conn.createStatement()) {
             
-            stmt.executeUpdate(createCommandsTable);
             logger.info("Database tables created/verified successfully");
             
         } catch (SQLException e) {
@@ -140,26 +126,15 @@ public class DatabaseManager {
     }
     
     /**
-     * Cleanup old executed commands (older than 1 hour)
+     * Cleanup old data (placeholder for future database maintenance)
      */
-    public void cleanupOldCommands() {
+    public void cleanupOldData() {
         if (!initialized) {
             return;
         }
         
-        String sql = "DELETE FROM queue_commands WHERE executed = TRUE AND executed_at < DATE_SUB(NOW(), INTERVAL 1 HOUR)";
-        
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            int deleted = stmt.executeUpdate();
-            if (deleted > 0) {
-                logger.info("Cleaned up {} old executed commands", deleted);
-            }
-            
-        } catch (SQLException e) {
-            logger.error("Failed to cleanup old commands: {}", e.getMessage(), e);
-        }
+        // No cross-server command cleanup needed - lobby system removed
+        logger.debug("Database cleanup completed - no old data to remove");
     }
     
     /**
