@@ -46,6 +46,7 @@ public class TharidiaThingsClient {
         NeoForge.EVENT_BUS.register(ClaimBoundaryRenderer.class);
         NeoForge.EVENT_BUS.register(RealmClientHandler.class);
         NeoForge.EVENT_BUS.register(ClientConnectionHandler.class);
+        NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.client.video.VideoScreenRenderHandler.class);
     }
 
     @SubscribeEvent

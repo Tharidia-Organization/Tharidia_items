@@ -61,6 +61,9 @@ public class ClientConnectionHandler {
         // Stop zone music playback
         ZoneMusicPlayer.stopMusic();
         LOGGER.info("[ZONE MUSIC] Stopped music playback on disconnect");
+        // Clear video screens
+        com.tharidia.tharidia_things.client.video.ClientVideoScreenManager.getInstance().clear();
+        LOGGER.info("[VIDEO SCREEN] Cleared video screens on disconnect");
     }
     
     /**

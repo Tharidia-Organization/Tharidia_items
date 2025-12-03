@@ -362,6 +362,28 @@ public class TharidiaThings {
                 (packet, context) -> {} // Dummy handler - we don't process bungeecord messages
             );
             
+            // Video screen packets
+            registrar.playToClient(
+                com.tharidia.tharidia_things.network.VideoScreenSyncPacket.TYPE,
+                com.tharidia.tharidia_things.network.VideoScreenSyncPacket.STREAM_CODEC,
+                ClientPacketHandler::handleVideoScreenSync
+            );
+            registrar.playToClient(
+                com.tharidia.tharidia_things.network.VideoScreenDeletePacket.TYPE,
+                com.tharidia.tharidia_things.network.VideoScreenDeletePacket.STREAM_CODEC,
+                ClientPacketHandler::handleVideoScreenDelete
+            );
+            registrar.playToClient(
+                com.tharidia.tharidia_things.network.VideoScreenSeekPacket.TYPE,
+                com.tharidia.tharidia_things.network.VideoScreenSeekPacket.STREAM_CODEC,
+                com.tharidia.tharidia_things.client.ClientSeekPacketHandler::handleSeekPacket
+            );
+            registrar.playToClient(
+                com.tharidia.tharidia_things.network.VideoScreenVolumePacket.TYPE,
+                com.tharidia.tharidia_things.network.VideoScreenVolumePacket.STREAM_CODEC,
+                com.tharidia.tharidia_things.network.VideoScreenVolumePacket::handle
+            );
+            
             LOGGER.info("Client packet handlers registered");
         } else {
             
@@ -441,6 +463,28 @@ public class TharidiaThings {
                 (packet, context) -> {} // Dummy handler
             );
             
+            // Video screen packets (dummy handlers for server)
+            registrar.playToClient(
+                com.tharidia.tharidia_things.network.VideoScreenSyncPacket.TYPE,
+                com.tharidia.tharidia_things.network.VideoScreenSyncPacket.STREAM_CODEC,
+                (packet, context) -> {}
+            );
+            registrar.playToClient(
+                com.tharidia.tharidia_things.network.VideoScreenDeletePacket.TYPE,
+                com.tharidia.tharidia_things.network.VideoScreenDeletePacket.STREAM_CODEC,
+                (packet, context) -> {}
+            );
+            registrar.playToClient(
+                com.tharidia.tharidia_things.network.VideoScreenSeekPacket.TYPE,
+                com.tharidia.tharidia_things.network.VideoScreenSeekPacket.STREAM_CODEC,
+                (packet, context) -> {}
+            );
+            registrar.playToClient(
+                com.tharidia.tharidia_things.network.VideoScreenVolumePacket.TYPE,
+                com.tharidia.tharidia_things.network.VideoScreenVolumePacket.STREAM_CODEC,
+                (packet, context) -> {}
+            );
+            
             LOGGER.info("Server-side packet registration completed (dummy handlers)");
         }
         
@@ -508,6 +552,9 @@ public class TharidiaThings {
         if (event.getEntity().level() instanceof net.minecraft.server.level.ServerLevel serverLevel) {
             // Send a full sync on login - this will clear and replace all client-side realm data
             syncAllRealmsToPlayer((ServerPlayer) event.getEntity(), serverLevel);
+            
+            // Sync all video screens to the player
+            syncAllVideoScreensToPlayer((ServerPlayer) event.getEntity(), serverLevel);
         }
     }
     
@@ -533,6 +580,34 @@ public class TharidiaThings {
         PacketDistributor.sendToPlayer(player, packet);
 
         LOGGER.info("Synced {} realms to player {}", realmDataList.size(), player.getName().getString());
+    }
+    
+    /**
+     * Sends all video screens to a specific player
+     */
+    private void syncAllVideoScreensToPlayer(ServerPlayer player, net.minecraft.server.level.ServerLevel serverLevel) {
+        String dimension = serverLevel.dimension().location().toString();
+        com.tharidia.tharidia_things.video.VideoScreenRegistry registry = 
+            com.tharidia.tharidia_things.video.VideoScreenRegistry.get(serverLevel);
+        
+        java.util.Collection<com.tharidia.tharidia_things.video.VideoScreen> screens = 
+            registry.getScreensInDimension(dimension);
+        
+        for (com.tharidia.tharidia_things.video.VideoScreen screen : screens) {
+            com.tharidia.tharidia_things.network.VideoScreenSyncPacket packet = 
+                new com.tharidia.tharidia_things.network.VideoScreenSyncPacket(
+                    screen.getId(),
+                    dimension,
+                    screen.getCorner1(),
+                    screen.getCorner2(),
+                    screen.getVideoUrl(),
+                    screen.getPlaybackState(),
+                    screen.getVolume()
+                );
+            PacketDistributor.sendToPlayer(player, packet);
+        }
+        
+        LOGGER.info("Synced {} video screens to player {}", screens.size(), player.getName().getString());
     }
 
     @SubscribeEvent
@@ -612,6 +687,7 @@ public class TharidiaThings {
         FatigueCommands.register(event.getDispatcher());
         com.tharidia.tharidia_things.command.TradeCommands.register(event.getDispatcher());
         com.tharidia.tharidia_things.command.MarketCommands.register(event.getDispatcher());
+        com.tharidia.tharidia_things.command.VideoScreenCommands.register(event.getDispatcher());
     }
 
     /**

@@ -287,4 +287,35 @@ public class ClientPacketHandler {
             ZoneMusicPlayer.receiveMusicChunk(packet);
         });
     }
+    
+    /**
+     * Handles video screen sync packet from server
+     */
+    public static void handleVideoScreenSync(com.tharidia.tharidia_things.network.VideoScreenSyncPacket packet, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            LOGGER.info("[VIDEO SCREEN] Syncing screen {} in dimension {} with volume {}", 
+                packet.screenId(), packet.dimension(), (int)(packet.volume() * 100));
+            com.tharidia.tharidia_things.client.video.ClientVideoScreenManager.getInstance()
+                .addOrUpdateScreen(
+                    packet.screenId(),
+                    packet.dimension(),
+                    packet.corner1(),
+                    packet.corner2(),
+                    packet.videoUrl(),
+                    packet.playbackState(),
+                    packet.volume()
+                );
+        });
+    }
+    
+    /**
+     * Handles video screen delete packet from server
+     */
+    public static void handleVideoScreenDelete(com.tharidia.tharidia_things.network.VideoScreenDeletePacket packet, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            LOGGER.info("[VIDEO SCREEN] Deleting screen {} from dimension {}", packet.screenId(), packet.dimension());
+            com.tharidia.tharidia_things.client.video.ClientVideoScreenManager.getInstance()
+                .removeScreen(packet.screenId());
+        });
+    }
 }

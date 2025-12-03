@@ -22,5 +22,8 @@ public class ClientKeyHandler {
             ClaimBoundaryRenderer.toggleBoundaries();
             RealmBoundaryRenderer.toggleBoundaries();
         }
+        
+        // Update video players
+        com.tharidia.tharidia_things.client.video.VideoScreenRenderHandler.onClientTick();
     }
 }

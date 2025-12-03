@@ -1,0 +1,471 @@
+package com.tharidia.tharidia_things.client.video;
+
+import com.mojang.blaze3d.platform.NativeImage;
+import com.tharidia.tharidia_things.TharidiaThings;
+import com.tharidia.tharidia_things.video.VideoScreen;
+import com.tharidia.tharidia_things.video.YouTubeUrlExtractor;
+import net.minecraft.client.renderer.texture.DynamicTexture;
+import uk.co.caprica.vlcj.factory.MediaPlayerFactory;
+import uk.co.caprica.vlcj.player.base.MediaPlayer;
+import uk.co.caprica.vlcj.player.embedded.EmbeddedMediaPlayer;
+import uk.co.caprica.vlcj.player.embedded.videosurface.callback.BufferFormat;
+import uk.co.caprica.vlcj.player.embedded.videosurface.callback.BufferFormatCallback;
+import uk.co.caprica.vlcj.player.embedded.videosurface.callback.RenderCallback;
+import uk.co.caprica.vlcj.player.embedded.videosurface.callback.format.RV32BufferFormat;
+
+import javax.swing.*;
+import java.awt.*;
+import java.lang.reflect.Field;
+import java.nio.ByteBuffer;
+
+/**
+ * VLC-based video player for rendering YouTube videos
+ */
+public class VLCVideoPlayer_OLD_BACKUP {
+    private final VideoScreen screen;
+    private MediaPlayerFactory factory;
+    private EmbeddedMediaPlayer mediaPlayer;
+    private FFmpegStreamPlayer ffmpegPlayer; // For HLS streams
+    private DynamicTexture texture;
+    private NativeImage image;
+    private String videoUrl;
+    private boolean isStreamMode = false; // True if using FFmpeg for HLS
+    
+    private int videoWidth = 1920;
+    private int videoHeight = 1080;
+    private boolean isInitialized = false;
+    private volatile boolean isReleased = false;
+    private final Object frameLock = new Object();
+    
+    // Double buffering to eliminate tearing and frame drops
+    private int[] frontBuffer = null;
+    private int[] backBuffer = null;
+    private volatile boolean bufferSwapReady = false;
+    
+    // Error recovery
+    private int consecutiveErrors = 0;
+    private static final int MAX_ERRORS = 5;
+    private long lastErrorTime = 0;
+    private static final long ERROR_RESET_TIME = 30000;
+    
+    public VLCVideoPlayer(VideoScreen screen) {
+        this.screen = screen;
+        this.videoUrl = "";
+        
+        try {
+            initializeVLC();
+        } catch (Exception e) {
+            TharidiaThings.LOGGER.error("Failed to initialize VLC player for screen {}", screen.getId(), e);
+        }
+    }
+    
+    private void initializeVLC() {
+        try {
+            // Create VLC factory with optimized options for streaming
+            factory = new MediaPlayerFactory(
+                "--no-video-title-show",
+                "--verbose=0",
+                "--vout=dummy",
+                "--network-caching=2000",
+                "--live-caching=2000",
+                "--clock-jitter=0",
+                "--clock-synchro=0",
+                "--avcodec-hw=any"
+            );
+            
+            // Create media player
+            mediaPlayer = factory.mediaPlayers().newEmbeddedMediaPlayer();
+            
+            // Use lower resolution for testing performance
+            // TODO: Increase back to 1280x720 after optimization
+            videoWidth = 640;
+            videoHeight = 360;
+            
+            TharidiaThings.LOGGER.info("[VLC] Using native 16:9 resolution: {}x{}", videoWidth, videoHeight);
+            
+            // Create texture with its own NativeImage
+            texture = new DynamicTexture(videoWidth, videoHeight, false);
+            image = texture.getPixels(); // Get the NativeImage from DynamicTexture
+            
+            // Set up video surface callback with buffer format callback
+            mediaPlayer.videoSurface().set(
+                factory.videoSurfaces().newVideoSurface(
+                    new VideoBufferFormatCallback(),
+                    new VideoRenderCallback(),
+                    true
+                )
+            );
+            
+            TharidiaThings.LOGGER.info("[VLC] Video surface configured for {}x{}", videoWidth, videoHeight);
+            
+            isInitialized = true;
+            TharidiaThings.LOGGER.info("VLC player initialized for screen {} ({}x{})", 
+                screen.getId(), videoWidth, videoHeight);
+            
+        } catch (Exception e) {
+            TharidiaThings.LOGGER.error("Failed to initialize VLC", e);
+            isInitialized = false;
+        }
+    }
+    
+    public void loadVideo(String videoUrl) {
+        if (!isInitialized) {
+            TharidiaThings.LOGGER.error("Cannot load video - VLC not initialized");
+            return;
+        }
+        
+        this.videoUrl = videoUrl;
+        
+        try {
+            String streamUrl;
+            
+            // Check if it's a YouTube or Twitch URL
+            if (YouTubeUrlExtractor.isValidYouTubeUrl(videoUrl) || videoUrl.contains("twitch.tv")) {
+                // Extract stream URL from YouTube or Twitch
+                String platform = videoUrl.contains("twitch.tv") ? "Twitch" : "YouTube";
+                TharidiaThings.LOGGER.info("[VLC] Extracting {} stream URL from: {}", platform, videoUrl);
+                streamUrl = YouTubeUrlExtractor.getBestStreamUrl(videoUrl);
+                if (streamUrl == null) {
+                    TharidiaThings.LOGGER.error("Failed to extract stream URL from: {}", videoUrl);
+                    return;
+                }
+                TharidiaThings.LOGGER.info("[VLC] Stream URL extracted: {}", streamUrl);
+            } else {
+                // Use direct URL
+                TharidiaThings.LOGGER.info("[VLC] Using direct video URL: {}", videoUrl);
+                streamUrl = videoUrl;
+            }
+            
+            // Check if it's an HLS stream (m3u8 playlist)
+            if (streamUrl.contains(".m3u8") || streamUrl.contains("playlist")) {
+                TharidiaThings.LOGGER.info("[VLC] Detected HLS stream, using FFmpeg for in-game rendering");
+                isStreamMode = true;
+                
+                // Create FFmpeg player for HLS
+                if (ffmpegPlayer == null) {
+                    ffmpegPlayer = new FFmpegStreamPlayer(screen);
+                }
+                
+                ffmpegPlayer.loadVideo(streamUrl);
+                texture = ffmpegPlayer.getTexture();
+                
+            } else {
+                TharidiaThings.LOGGER.info("[VLC] Loading video from URL: {}", streamUrl);
+                isStreamMode = false;
+                mediaPlayer.media().play(streamUrl);
+            }
+            
+        } catch (Exception e) {
+            TharidiaThings.LOGGER.error("Failed to load video", e);
+        }
+    }
+    
+    public void play() {
+        if (isStreamMode && ffmpegPlayer != null) {
+            ffmpegPlayer.play();
+        } else if (isInitialized && mediaPlayer != null) {
+            mediaPlayer.controls().play();
+        }
+    }
+    
+    public void pause() {
+        if (isStreamMode && ffmpegPlayer != null) {
+            ffmpegPlayer.pause();
+        } else if (isInitialized && mediaPlayer != null) {
+            mediaPlayer.controls().pause();
+        }
+    }
+    
+    public void stop() {
+        if (isStreamMode && ffmpegPlayer != null) {
+            ffmpegPlayer.stop();
+        } else if (isInitialized && mediaPlayer != null) {
+            mediaPlayer.controls().stop();
+        }
+    }
+    
+    public void seekForward(int seconds) {
+        if (isStreamMode && ffmpegPlayer != null) {
+            ffmpegPlayer.seekForward(seconds);
+        } else if (isInitialized && mediaPlayer != null) {
+            long currentTime = mediaPlayer.status().time();
+            mediaPlayer.controls().setTime(currentTime + (seconds * 1000L));
+            TharidiaThings.LOGGER.info("[VLC] Seeking forward {} seconds", seconds);
+        }
+    }
+    
+    public void seekBackward(int seconds) {
+        if (isStreamMode && ffmpegPlayer != null) {
+            ffmpegPlayer.seekBackward(seconds);
+        } else if (isInitialized && mediaPlayer != null) {
+            long currentTime = mediaPlayer.status().time();
+            long newTime = Math.max(0, currentTime - (seconds * 1000L));
+            mediaPlayer.controls().setTime(newTime);
+            TharidiaThings.LOGGER.info("[VLC] Seeking backward {} seconds", seconds);
+        }
+    }
+    
+    public void setVolume(float volume) {
+        if (isStreamMode && ffmpegPlayer != null) {
+            ffmpegPlayer.setVolume(volume);
+        } else if (isInitialized && mediaPlayer != null) {
+            int vlcVolume = (int)(Math.max(0.0f, Math.min(1.0f, volume)) * 100);
+            mediaPlayer.audio().setVolume(vlcVolume);
+            TharidiaThings.LOGGER.info("[VLC] Volume set to {}", vlcVolume);
+        }
+    }
+    
+    public float getVolume() {
+        if (isStreamMode && ffmpegPlayer != null) {
+            return ffmpegPlayer.getVolume();
+        } else if (isInitialized && mediaPlayer != null) {
+            return mediaPlayer.audio().volume() / 100.0f;
+        }
+        return 1.0f;
+    }
+    
+    public void release() {
+        isReleased = true;
+        
+        if (ffmpegPlayer != null) {
+            ffmpegPlayer.release();
+            ffmpegPlayer = null;
+        }
+        if (mediaPlayer != null) {
+            mediaPlayer.release();
+            mediaPlayer = null;
+        }
+        if (factory != null) {
+            factory.release();
+            factory = null;
+        }
+        if (texture != null && !isStreamMode) {
+            texture.close();
+            texture = null;
+        }
+        if (image != null) {
+            image.close();
+            image = null;
+        }
+        isInitialized = false;
+        isStreamMode = false;
+    }
+    
+    private long lastFrameUpdate = 0;
+    private long frameUpdateCount = 0;
+    
+    public void update() {
+        if (isReleased) {
+            return;
+        }
+        
+        try {
+            if (isStreamMode && ffmpegPlayer != null) {
+                ffmpegPlayer.update();
+            } else if (bufferSwapReady && !isReleased) {
+                long startTime = System.nanoTime();
+                
+                // Process frame on main thread using double buffering
+                int[] pixels;
+                synchronized (frameLock) {
+                    if (!bufferSwapReady || frontBuffer == null) {
+                        return;
+                    }
+                    pixels = frontBuffer;
+                    bufferSwapReady = false;
+                }
+                
+                long copyTime = System.nanoTime();
+                
+                if (image != null && texture != null) {
+                    // Ultra-fast texture upload using direct memory access
+                    try {
+                        uploadPixelsDirect(image, pixels, videoWidth, videoHeight);
+                        long uploadTime = System.nanoTime();
+                        
+                        texture.upload();
+                        long gpuTime = System.nanoTime();
+                        
+                        frameUpdateCount++;
+                        if (frameUpdateCount % 30 == 0) {
+                            long totalMs = (gpuTime - startTime) / 1_000_000;
+                            long copyMs = (copyTime - startTime) / 1_000_000;
+                            long uploadMs = (uploadTime - copyTime) / 1_000_000;
+                            long gpuMs = (gpuTime - uploadTime) / 1_000_000;
+                            
+                            TharidiaThings.LOGGER.info("[VLC] Frame update timing: total={}ms (copy={}ms, upload={}ms, gpu={}ms)",
+                                totalMs, copyMs, uploadMs, gpuMs);
+                        }
+                    } catch (Exception uploadEx) {
+                        TharidiaThings.LOGGER.error("[VLC] Texture upload failed: {}", uploadEx.getMessage());
+                    }
+                }
+                
+                // Reset error counter on success
+                consecutiveErrors = 0;
+            }
+        } catch (Exception e) {
+            handleUpdateError(e);
+        }
+    }
+    
+    private void handleUpdateError(Exception e) {
+        consecutiveErrors++;
+        long now = System.currentTimeMillis();
+        
+        if (now - lastErrorTime > ERROR_RESET_TIME) {
+            consecutiveErrors = 1;
+        }
+        lastErrorTime = now;
+        
+        TharidiaThings.LOGGER.warn("[VLC] Update error {}/{}: {}", 
+            consecutiveErrors, MAX_ERRORS, e.getMessage());
+        
+        if (consecutiveErrors >= MAX_ERRORS) {
+            TharidiaThings.LOGGER.error("[VLC] Too many errors, attempting recovery...");
+            attemptRecovery();
+        }
+    }
+    
+    private void attemptRecovery() {
+        try {
+            String currentUrl = this.videoUrl;
+            TharidiaThings.LOGGER.info("[VLC] Attempting to recover playback for: {}", currentUrl);
+            
+            stop();
+            Thread.sleep(1000);
+            
+            if (!currentUrl.isEmpty()) {
+                loadVideo(currentUrl);
+                play();
+                TharidiaThings.LOGGER.info("[VLC] Recovery successful");
+                consecutiveErrors = 0;
+            }
+        } catch (Exception e) {
+            TharidiaThings.LOGGER.error("[VLC] Recovery failed", e);
+        }
+    }
+    
+    public DynamicTexture getTexture() {
+        return texture;
+    }
+    
+    public VideoScreen getScreen() {
+        return screen;
+    }
+    
+    public String getVideoUrl() {
+        return videoUrl;
+    }
+    
+    public boolean isInitialized() {
+        return isInitialized;
+    }
+    
+    /**
+     * Upload pixels directly to NativeImage - optimized single-pass
+     */
+    private void uploadPixelsDirect(NativeImage image, int[] pixels, int width, int height) {
+        // Single-pass upload - calculate x,y on the fly
+        int totalPixels = Math.min(pixels.length, width * height);
+        for (int i = 0; i < totalPixels; i++) {
+            int x = i % width;
+            int y = i / width;
+            image.setPixelRGBA(x, y, pixels[i]);
+        }
+    }
+    
+    // Buffer format callback
+    private class VideoBufferFormatCallback implements BufferFormatCallback {
+        @Override
+        public BufferFormat getBufferFormat(int sourceWidth, int sourceHeight) {
+            return new RV32BufferFormat(videoWidth, videoHeight);
+        }
+        
+        @Override
+        public void allocatedBuffers(ByteBuffer[] buffers) {
+            // Called when buffers are allocated - no action needed
+        }
+        
+        public void newFormatSize(int width, int height, int pitches, int lines) {
+            // Called when video format size changes - no action needed for now
+            TharidiaThings.LOGGER.debug("[VLC] New format size: {}x{}, pitches: {}, lines: {}", width, height, pitches, lines);
+        }
+    }
+    
+    // Render callback to update texture
+    private class VideoRenderCallback implements RenderCallback {
+        private long frameCount = 0;
+        
+        @Override
+        public void display(MediaPlayer mediaPlayer, ByteBuffer[] nativeBuffers, BufferFormat bufferFormat) {
+            if (isReleased || image == null || nativeBuffers == null || nativeBuffers.length == 0) {
+                return;
+            }
+            
+            frameCount++;
+            if (frameCount % 30 == 0) {
+                TharidiaThings.LOGGER.info("[VLC] Received frame {} for screen {}", frameCount, screen.getId());
+            }
+            
+            try {
+                ByteBuffer buffer = nativeBuffers[0];
+                buffer.rewind();
+                
+                // Get actual buffer dimensions from VLC
+                int bufferWidth = bufferFormat.getWidth();
+                int bufferHeight = bufferFormat.getHeight();
+                
+                if (frameCount == 1) {
+                    TharidiaThings.LOGGER.info("[VLC] Buffer format: {}x{}, expected: {}x{}", 
+                        bufferWidth, bufferHeight, videoWidth, videoHeight);
+                }
+                
+                // Verify dimensions match
+                if (bufferWidth != videoWidth || bufferHeight != videoHeight) {
+                    TharidiaThings.LOGGER.warn("[VLC] Dimension mismatch! Buffer: {}x{}, Expected: {}x{}", 
+                        bufferWidth, bufferHeight, videoWidth, videoHeight);
+                    return;
+                }
+                
+                // Use double buffering to prevent tearing
+                synchronized (frameLock) {
+                    if (backBuffer == null) {
+                        backBuffer = new int[videoWidth * videoHeight];
+                    }
+                    if (frontBuffer == null) {
+                        frontBuffer = new int[videoWidth * videoHeight];
+                    }
+                    
+                    // Ultra-fast bulk copy with color conversion
+                    buffer.position(0);
+                    int totalPixels = videoWidth * videoHeight;
+                    
+                    // Process in chunks for better cache performance
+                    int chunkSize = 4096; // Process 4K pixels at a time
+                    for (int chunk = 0; chunk < totalPixels; chunk += chunkSize) {
+                        int remaining = Math.min(chunkSize, totalPixels - chunk);
+                        
+                        for (int i = 0; i < remaining; i++) {
+                            int idx = chunk + i;
+                            // Read BGRA, convert to ABGR
+                            int b = buffer.get() & 0xFF;
+                            int g = buffer.get() & 0xFF;
+                            int r = buffer.get() & 0xFF;
+                            int a = buffer.get() & 0xFF;
+                            backBuffer[idx] = (a << 24) | (b << 16) | (g << 8) | r;
+                        }
+                    }
+                    
+                    // Swap buffers (fast pointer swap)
+                    int[] temp = frontBuffer;
+                    frontBuffer = backBuffer;
+                    backBuffer = temp;
+                    bufferSwapReady = true;
+                }
+            } catch (Exception e) {
+                TharidiaThings.LOGGER.warn("[VLC] Error processing frame: {}", e.getMessage());
+            }
+        }
+    }
+}
