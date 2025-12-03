@@ -23,6 +23,8 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.core.registries.Registries;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
@@ -32,12 +34,22 @@ import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
 @EventBusSubscriber(modid = TharidiaThings.MODID)
 public class BattleLogic {
+    private static final ResourceLocation DUNGEON_DIMENSION = ResourceLocation.fromNamespaceAndPath("tharidia", "dungeon");
+    
+    private static boolean isInDungeonDimension(Player player) {
+        return player.level().dimension().equals(ResourceKey.create(Registries.DIMENSION, DUNGEON_DIMENSION));
+    }
     @SubscribeEvent
     public static void onPlayerKill(LivingDeathEvent event) {
         if (event.getEntity().level().isClientSide())
             return;
 
         if (event.getEntity() instanceof Player loser) {
+            // Check if player is in dungeon dimension - skip all duel logic if true
+            if (isInDungeonDimension(loser)) {
+                return; // Let normal death handling proceed in dungeon
+            }
+            
             if (event.getSource().getEntity() instanceof Player winner) {
                 BattleGauntleAttachments sourceAttachments = winner
                         .getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());

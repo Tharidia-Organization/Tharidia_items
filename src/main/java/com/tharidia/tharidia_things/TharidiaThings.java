@@ -35,6 +35,7 @@ import com.tharidia.tharidia_things.features.FreezeManager;
 import com.tharidia.tharidia_things.network.BattlePackets;
 import com.tharidia.tharidia_things.network.ClaimOwnerSyncPacket;
 import com.tharidia.tharidia_things.network.FatigueSyncPacket;
+import com.tharidia.tharidia_things.network.DungeonQueuePacket;
 import com.tharidia.tharidia_things.network.HierarchySyncPacket;
 import com.tharidia.tharidia_things.network.RealmSyncPacket;
 import com.tharidia.tharidia_things.network.UpdateHierarchyPacket;
@@ -493,6 +494,11 @@ public class TharidiaThings {
             UpdateHierarchyPacket.TYPE,
             UpdateHierarchyPacket.STREAM_CODEC,
             UpdateHierarchyPacket::handle
+        );
+        registrar.playToServer(
+            DungeonQueuePacket.TYPE,
+            DungeonQueuePacket.STREAM_CODEC,
+            DungeonQueuePacket::handle
         );
         registrar.playToServer(
             SelectComponentPacket.TYPE,
