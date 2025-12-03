@@ -26,6 +26,7 @@ import com.tharidia.tharidia_things.item.CopperLamaCortaItem;
 import com.tharidia.tharidia_things.item.BattleGauntlet;
 import com.tharidia.tharidia_things.item.CopperElsaItem;
 import com.tharidia.tharidia_things.client.ClientPacketHandler;
+import com.tharidia.tharidia_things.command.BattleCommands;
 import com.tharidia.tharidia_things.command.ClaimCommands;
 import com.tharidia.tharidia_things.command.FatigueCommands;
 import com.tharidia.tharidia_things.compoundTag.BattleGauntleAttachments;
@@ -721,6 +722,7 @@ public class TharidiaThings {
         com.tharidia.tharidia_things.command.ClaimAdminCommands.register(event.getDispatcher());
         FatigueCommands.register(event.getDispatcher());
         com.tharidia.tharidia_things.command.TradeCommands.register(event.getDispatcher());
+        BattleCommands.register(event.getDispatcher());
         if (Config.IS_LOBBY_SERVER.get()) {
             LOGGER.info("Registering lobby commands (isLobbyServer=true)");
             LobbyCommand.register(event.getDispatcher());

@@ -77,6 +77,7 @@
   "message.tharidiathings.battle.player_in_battle": "You are already in battle",
   "message.tharidiathings.battle.target_in_battle": "This player is already in battle",
   "message.tharidiathings.battle.player_invite": "You are inviting %s to a battle",
+  "message.tharidiathings.battle.start": "Battle Start!",
   "message.tharidiathings.battle.win": "You win the battle",
   "message.tharidiathings.battle.lose": "You lose the battle"
 }
