@@ -75,7 +75,7 @@ public class BattleInviteScreen extends AbstractContainerScreen<BattleInviteMenu
         int y = this.topPos;
 
         // Draw the background
-        graphics.blit(TEXTURE, x, y, 0, 0, this.imageWidth, this.imageHeight);
+        graphics.blit(TEXTURE, x, y, 0, 0, this.imageWidth, this.imageHeight, this.imageWidth, this.imageHeight);
     }
 
     @Override
