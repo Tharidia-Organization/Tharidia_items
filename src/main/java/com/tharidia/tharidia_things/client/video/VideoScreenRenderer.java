@@ -76,8 +76,8 @@ public class VideoScreenRenderer {
         Direction.Axis axis = screen.getAxis();
         Direction facing = screen.getFacing();
 
-        // Offset to prevent z-fighting with block textures (1 pixel = 0.001 blocks)
-        float offset = 0.001f;
+        // Offset to prevent z-fighting with block textures (2 pixels = 0.002 blocks)
+        float offset = -0.002f;
 
         switch (axis) {
             case X -> {
