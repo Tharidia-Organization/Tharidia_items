@@ -3,6 +3,7 @@ package com.tharidia.tharidia_things.client.gui;
 import com.tharidia.tharidia_things.block.entity.PietroBlockEntity;
 import com.tharidia.tharidia_things.client.ClientPacketHandler;
 import com.tharidia.tharidia_things.gui.PietroMenu;
+import com.tharidia.tharidia_things.network.DungeonQueuePacket;
 import com.tharidia.tharidia_things.network.UpdateHierarchyPacket;
 import com.tharidia.tharidia_things.realm.HierarchyRank;
 import net.minecraft.client.Minecraft;
@@ -22,10 +23,12 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
     
     private static final int TAB_EXPANSION = 0;
     private static final int TAB_CLAIMS = 1;
+    private static final int TAB_DUNGEON = 2;
     
     private int currentTab = TAB_EXPANSION;
     private Button expansionTabButton;
     private Button claimsTabButton;
+    private Button dungeonTabButton;
     private List<Button> hierarchyButtons = new ArrayList<>();
     private int scrollOffset = 0;
     private static final int MAX_VISIBLE_PLAYERS = 6;
@@ -33,6 +36,7 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
     private boolean showRankSelectionMenu = false;
     private int rankMenuX = 0;
     private int rankMenuY = 0;
+    private Button enterDungeonButton;
 
     public PietroScreen(PietroMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
@@ -44,7 +48,7 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
     protected void init() {
         super.init();
         
-        int tabX = this.leftPos + 10;
+        int tabX = this.leftPos;
         int tabY = this.topPos + 15;
         int tabWidth = 70;
         int tabHeight = 20;
@@ -61,8 +65,15 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
             button -> switchTab(TAB_CLAIMS)
         ).bounds(tabX + tabWidth + 5, tabY, tabWidth + 30, tabHeight).build();
         
+        // Dungeon tab button
+        dungeonTabButton = Button.builder(
+            Component.literal("Dungeon"),
+            button -> switchTab(TAB_DUNGEON)
+        ).bounds(tabX + 2 * (tabWidth + 5) + 30, tabY, tabWidth, tabHeight).build();
+
         this.addRenderableWidget(expansionTabButton);
         this.addRenderableWidget(claimsTabButton);
+        this.addRenderableWidget(dungeonTabButton);
         
         updateTabButtons();
     }
@@ -74,9 +85,33 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
         rebuildWidgets();
     }
     
+    @Override
+    protected void rebuildWidgets() {
+        super.rebuildWidgets();
+        
+        // Clear existing dungeon button if it exists
+        if (enterDungeonButton != null) {
+            this.removeWidget(enterDungeonButton);
+            enterDungeonButton = null;
+        }
+        
+        // Add dungeon button only on dungeon tab
+        if (currentTab == TAB_DUNGEON) {
+            enterDungeonButton = Button.builder(
+                Component.literal("Entra"),
+                button -> {
+                    // Send packet to join dungeon queue
+                    sendDungeonJoinRequest();
+                }
+            ).bounds(this.leftPos + 160, this.topPos + 108, 60, 20).build();
+            this.addRenderableWidget(enterDungeonButton);
+        }
+    }
+    
     private void updateTabButtons() {
         expansionTabButton.active = currentTab != TAB_EXPANSION;
         claimsTabButton.active = currentTab != TAB_CLAIMS;
+        dungeonTabButton.active = currentTab != TAB_DUNGEON;
     }
 
     @Override
@@ -105,6 +140,8 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
             renderExpansionTab(guiGraphics);
         } else if (currentTab == TAB_CLAIMS) {
             renderClaimsTab(guiGraphics);
+        } else if (currentTab == TAB_DUNGEON) {
+            renderDungeonTab(guiGraphics);
         }
     }
     
@@ -261,6 +298,33 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
         // Render rank selection menu if open
         if (showRankSelectionMenu && selectedPlayerForRankChange != null) {
             renderRankSelectionMenu(guiGraphics);
+        }
+    }
+    
+    private void renderDungeonTab(GuiGraphics guiGraphics) {
+        int yPos = 45; // Start below tabs
+        int color = 0x404040; // Dark gray
+        
+        // Title
+        guiGraphics.drawString(this.font, "§6§lDungeon del Regno", 10, yPos, color, false);
+        yPos += 20;
+        
+        // Dungeon status
+        PietroBlockEntity pietroEntity = this.menu.getBlockEntity();
+        if (pietroEntity != null) {
+            // Dungeon info
+            guiGraphics.drawString(this.font, "§7Il tuo dungeon è pronto per", 10, yPos, color, false);
+            yPos += 12;
+            guiGraphics.drawString(this.font, "§7l'esplorazione e le sfide!", 10, yPos, color, false);
+            yPos += 20;
+            // Divider
+            guiGraphics.fill(10, yPos, 240, yPos + 1, 0xFF404040);
+            yPos += 10;
+
+            // Enter button placeholder
+            guiGraphics.drawString(this.font, "§7§o(Usa il portale del dungeon", 10, yPos, color, false);
+            yPos += 12;
+            guiGraphics.drawString(this.font, "§7§oper entrare nel dungeon)", 10, yPos, color, false);
         }
     }
     
@@ -466,6 +530,11 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
         super.removed();
         // Clear hierarchy cache when screen is closed
         ClientPacketHandler.clearHierarchyCache();
+    }
+    
+    private void sendDungeonJoinRequest() {
+        // Send packet to server to join dungeon queue
+        net.neoforged.neoforge.network.PacketDistributor.sendToServer(new DungeonQueuePacket());
     }
     
     // Removed containerTick - processing moved to server side
