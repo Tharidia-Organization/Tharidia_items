@@ -1,11 +1,13 @@
 package com.tharidia.tharidia_things.event;
 
 import javax.annotation.Nullable;
+import java.util.UUID;
 
 import com.tharidia.tharidia_things.TharidiaThings;
 import com.tharidia.tharidia_things.compoundTag.BattleGauntleAttachments;
 import com.tharidia.tharidia_things.features.FreezeManager;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.particles.SimpleParticleType;
@@ -20,6 +22,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
@@ -51,7 +54,9 @@ public class BattleLogic {
                             .getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
                     Player challengerPlayer = serverPlayer.getServer().getPlayerList()
                             .getPlayer(targetAttachments.getChallengerUUID());
-                    exitPlayerBattle(challengerPlayer);
+                    if (challengerPlayer != null) {
+                        exitPlayerBattle(challengerPlayer);
+                    }
                 }
                 finischBattle(null, loser);
                 event.setCanceled(true);
@@ -198,34 +203,52 @@ public class BattleLogic {
             loserAttachments = loserPlayer.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
             if (loserPlayer instanceof ServerPlayer sp) {
                 winnerPlayer = sp.getServer().getPlayerList().getPlayer(loserAttachments.getChallengerUUID());
-                winnerAttachments = winnerPlayer.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
+                if (winnerPlayer != null) {
+                    winnerAttachments = winnerPlayer.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
+                }
             }
         } else {
             winnerAttachments = winnerPlayer.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
         }
 
         if (loserPlayer == null) {
-            winnerAttachments = winnerPlayer.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
-            if (loserPlayer instanceof ServerPlayer sp) {
-                loserPlayer = sp.getServer().getPlayerList().getPlayer(winnerAttachments.getChallengerUUID());
-                loserAttachments = loserPlayer.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
+            if (winnerPlayer != null) {
+                winnerAttachments = winnerPlayer.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
+                if (winnerPlayer instanceof ServerPlayer sp) {
+                    loserPlayer = sp.getServer().getPlayerList().getPlayer(winnerAttachments.getChallengerUUID());
+                    if (loserPlayer != null) {
+                        loserAttachments = loserPlayer.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
+                    }
+                }
             }
         } else {
             loserAttachments = loserPlayer.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
         }
 
-        exitPlayerBattle(winnerPlayer);
-        exitPlayerBattle(loserPlayer);
+        if (winnerPlayer != null) {
+            exitPlayerBattle(winnerPlayer);
+        }
+        if (loserPlayer != null) {
+            exitPlayerBattle(loserPlayer);
+        }
 
-        ((ServerPlayer) winnerPlayer).connection.send(new ClientboundSetTitleTextPacket(
-                Component.translatable("message.tharidiathings.battle.win").withColor(0x00FF00)));
-        ((ServerPlayer) loserPlayer).connection.send(new ClientboundSetTitleTextPacket(
-                Component.translatable("message.tharidiathings.battle.lose").withColor(0xFF0000)));
+        if (winnerPlayer instanceof ServerPlayer) {
+            ((ServerPlayer) winnerPlayer).connection.send(new ClientboundSetTitleTextPacket(
+                    Component.translatable("message.tharidiathings.battle.win").withColor(0x00FF00)));
+        }
+        if (loserPlayer instanceof ServerPlayer) {
+            ((ServerPlayer) loserPlayer).connection.send(new ClientboundSetTitleTextPacket(
+                    Component.translatable("message.tharidiathings.battle.lose").withColor(0xFF0000)));
+        }
 
-        loserPlayer.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 200, 1, false, false, false));
-        loserPlayer.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 200, 1, false, false, false));
-        loserAttachments.setLoseTick(200);
-        winnerAttachments.setWinTick(200);
+        if (loserPlayer != null && loserAttachments != null) {
+            loserPlayer.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 200, 1, false, false, false));
+            loserPlayer.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 200, 1, false, false, false));
+            loserAttachments.setLoseTick(200);
+        }
+        if (winnerAttachments != null) {
+            winnerAttachments.setWinTick(200);
+        }
 
         if (loserPlayer instanceof ServerPlayer serverLoser) {
             FreezeManager.freezePlayer(serverLoser);
