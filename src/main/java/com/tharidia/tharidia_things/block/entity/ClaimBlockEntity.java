@@ -324,13 +324,17 @@ public class ClaimBlockEntity extends BlockEntity implements MenuProvider {
         long hoursInMillis = potatoCount * 60L * 60L * 1000L; // hours to milliseconds
         
         // If claim doesn't have expiration time yet, start from current time
+        long newExpirationTime;
         if (expirationTime <= 0 || expirationTime < System.currentTimeMillis()) {
-            expirationTime = System.currentTimeMillis() + hoursInMillis;
+            newExpirationTime = System.currentTimeMillis() + hoursInMillis;
             isRented = true;
         } else {
             // Add time to existing expiration
-            expirationTime += hoursInMillis;
+            newExpirationTime = expirationTime + hoursInMillis;
         }
+        
+        // Use setExpirationTime to update persistent storage and sync to GodEye database
+        setExpirationTime(newExpirationTime);
         
         // Track total potatoes paid
         totalPotatoesPaid += potatoCount;
@@ -381,9 +385,9 @@ public class ClaimBlockEntity extends BlockEntity implements MenuProvider {
         
         // Update expiration time for all connected claims
         for (ClaimBlockEntity claim : connectedClaims) {
-            claim.expirationTime = newExpirationTime;
             claim.isRented = true;
-            claim.setChanged();
+            // Use setExpirationTime to update persistent storage and sync to GodEye database
+            claim.setExpirationTime(newExpirationTime);
             level.sendBlockUpdated(claim.getBlockPos(), claim.getBlockState(), claim.getBlockState(), 3);
             
             TharidiaThings.LOGGER.info("Synced time to connected claim at {}", claim.getBlockPos());
