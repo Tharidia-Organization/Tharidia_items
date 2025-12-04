@@ -196,6 +196,11 @@ public class BattleLogic {
         player1.setHealth(player1.getMaxHealth());
         player2.setHealth(player2.getMaxHealth());
 
+        ((ServerPlayer) player1).connection.send(new ClientboundSetTitleTextPacket(
+                Component.translatable("message.tharidiathings.battle.start").withColor(0xA89700)));
+        ((ServerPlayer) player2).connection.send(new ClientboundSetTitleTextPacket(
+                Component.translatable("message.tharidiathings.battle.start").withColor(0xA89700)));
+
         player1.level().playSound(
                 null,
                 player1.blockPosition(),
@@ -274,5 +279,16 @@ public class BattleLogic {
         playerAttachments.setChallengerUUID(null);
         playerAttachments.setLoseTick(0);
         player.setHealth(playerAttachments.getPlayerHealth());
+    }
+
+    public static Player getChallengerPlayer(Player player) {
+        BattleGauntleAttachments playerAttachments = player.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
+        if (player instanceof ServerPlayer serverPlayer) {
+            if (playerAttachments.getInBattle())
+                return serverPlayer.getServer().getPlayerList()
+                        .getPlayer(playerAttachments.getChallengerUUID());
+            return null;
+        }
+        return null;
     }
 }

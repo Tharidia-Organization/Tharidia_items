@@ -26,6 +26,7 @@ import com.tharidia.tharidia_things.item.CopperLamaCortaItem;
 import com.tharidia.tharidia_things.item.BattleGauntlet;
 import com.tharidia.tharidia_things.item.CopperElsaItem;
 import com.tharidia.tharidia_things.client.ClientPacketHandler;
+import com.tharidia.tharidia_things.command.BattleCommands;
 import com.tharidia.tharidia_things.command.ClaimCommands;
 import com.tharidia.tharidia_things.command.FatigueCommands;
 import com.tharidia.tharidia_things.compoundTag.BattleGauntleAttachments;
@@ -100,11 +101,11 @@ public class TharidiaThings {
     public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
     // Create a Deferred Register to hold MenuTypes which will all be registered under the "tharidiathings" namespace
     public static final DeferredRegister<net.minecraft.world.inventory.MenuType<?>> MENU_TYPES = DeferredRegister.create(BuiltInRegistries.MENU, MODID);
-    
+
     
     // Database system for cross-server communication
     private static com.tharidia.tharidia_things.database.DatabaseManager databaseManager;
-    
+
     // Creates a new Block with the id "tharidiathings:pietro", combining the namespace and path
     public static final DeferredBlock<PietroBlock> PIETRO = BLOCKS.register("pietro", () -> new PietroBlock(BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(3.0F, 6.0F).noOcclusion()));
     // Creates a new BlockItem with the id "tharidiathings:pietro", combining the namespace and path
@@ -238,6 +239,8 @@ public class TharidiaThings {
         NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.WeightDebuffHandler.class);
         // Register the smithing handler
         NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.SmithingHandler.class);
+        // Register the freeze manager
+        NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.features.FreezeManager.class);
         // Register the pre-login name handler
         NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.PreLoginNameHandler.class);
         // Register the fatigue handler
@@ -248,19 +251,19 @@ public class TharidiaThings {
         NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.TradeInventoryBlocker.class);
         // Register the currency protection handler
         NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.CurrencyProtectionHandler.class);
-        
+
         // Register Freeze Manager for master freeze command
         NeoForge.EVENT_BUS.register(FreezeManager.class);
 
         BattleGauntleAttachments.register(modEventBus);
 
         modEventBus.addListener(BattlePackets::register);
-        
+
         // Register handshake bypass (CLIENT ONLY)
         if (FMLEnvironment.dist == Dist.CLIENT) {
             NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.client.HandshakeBypass.class);
             LOGGER.warn("Handshake bypass registered - you can connect to servers with different mod versions");
-            
+
             // Check for video tools on Windows
             com.tharidia.tharidia_things.client.video.VideoToolsManager.getInstance().checkAndInstallTools();
         }
@@ -274,8 +277,6 @@ public class TharidiaThings {
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
 
-        // Initialize Freeze Manager system
-        FreezeManager.initialize(LOGGER);
         
     }
 
@@ -358,14 +359,14 @@ public class TharidiaThings {
                 com.tharidia.tharidia_things.network.TradeSyncPacket.STREAM_CODEC,
                 (packet, context) -> com.tharidia.tharidia_things.client.TradeClientHandler.handleTradeSync(packet)
             );
-            
+
             // Register bungeecord:main channel to satisfy server requirement (dummy handler)
             registrar.playToClient(
                 com.tharidia.tharidia_things.network.BungeeCordPacket.TYPE,
                 com.tharidia.tharidia_things.network.BungeeCordPacket.STREAM_CODEC,
                 (packet, context) -> {} // Dummy handler - we don't process bungeecord messages
             );
-            
+
             // Video screen packets
             registrar.playToClient(
                 com.tharidia.tharidia_things.network.VideoScreenSyncPacket.TYPE,
@@ -387,7 +388,7 @@ public class TharidiaThings {
                 com.tharidia.tharidia_things.network.VideoScreenVolumePacket.STREAM_CODEC,
                 com.tharidia.tharidia_things.network.VideoScreenVolumePacket::handle
             );
-            
+
             LOGGER.info("Client packet handlers registered");
         } else {
             
@@ -459,14 +460,14 @@ public class TharidiaThings {
                 com.tharidia.tharidia_things.network.TradeSyncPacket.STREAM_CODEC,
                 (packet, context) -> {}
             );
-            
+
             // Register bungeecord:main channel on server side (dummy handler for consistency)
             registrar.playToClient(
                 com.tharidia.tharidia_things.network.BungeeCordPacket.TYPE,
                 com.tharidia.tharidia_things.network.BungeeCordPacket.STREAM_CODEC,
                 (packet, context) -> {} // Dummy handler
             );
-            
+
             // Video screen packets (dummy handlers for server)
             registrar.playToClient(
                 com.tharidia.tharidia_things.network.VideoScreenSyncPacket.TYPE,
@@ -488,7 +489,7 @@ public class TharidiaThings {
                 com.tharidia.tharidia_things.network.VideoScreenVolumePacket.STREAM_CODEC,
                 (packet, context) -> {}
             );
-            
+
             LOGGER.info("Server-side packet registration completed (dummy handlers)");
         }
         
@@ -561,7 +562,7 @@ public class TharidiaThings {
         if (event.getEntity().level() instanceof net.minecraft.server.level.ServerLevel serverLevel) {
             // Send a full sync on login - this will clear and replace all client-side realm data
             syncAllRealmsToPlayer((ServerPlayer) event.getEntity(), serverLevel);
-            
+
             // Sync all video screens to the player
             syncAllVideoScreensToPlayer((ServerPlayer) event.getEntity(), serverLevel);
         }
@@ -590,20 +591,20 @@ public class TharidiaThings {
 
         LOGGER.info("Synced {} realms to player {}", realmDataList.size(), player.getName().getString());
     }
-    
+
     /**
      * Sends all video screens to a specific player
      */
     private void syncAllVideoScreensToPlayer(ServerPlayer player, net.minecraft.server.level.ServerLevel serverLevel) {
         String dimension = serverLevel.dimension().location().toString();
-        com.tharidia.tharidia_things.video.VideoScreenRegistry registry = 
+        com.tharidia.tharidia_things.video.VideoScreenRegistry registry =
             com.tharidia.tharidia_things.video.VideoScreenRegistry.get(serverLevel);
-        
-        java.util.Collection<com.tharidia.tharidia_things.video.VideoScreen> screens = 
+
+        java.util.Collection<com.tharidia.tharidia_things.video.VideoScreen> screens =
             registry.getScreensInDimension(dimension);
-        
+
         for (com.tharidia.tharidia_things.video.VideoScreen screen : screens) {
-            com.tharidia.tharidia_things.network.VideoScreenSyncPacket packet = 
+            com.tharidia.tharidia_things.network.VideoScreenSyncPacket packet =
                 new com.tharidia.tharidia_things.network.VideoScreenSyncPacket(
                     screen.getId(),
                     dimension,
@@ -615,7 +616,7 @@ public class TharidiaThings {
                 );
             PacketDistributor.sendToPlayer(player, packet);
         }
-        
+
         LOGGER.info("Synced {} video screens to player {}", screens.size(), player.getName().getString());
     }
 
@@ -660,14 +661,14 @@ public class TharidiaThings {
     }
     
     
-        
+
     /**
      * Called when the server is stopping
      */
     public void onServerStopping(net.neoforged.neoforge.event.server.ServerStoppingEvent event) {
         LOGGER.info("Server stopping, cleaning up resources...");
         
-                
+
         // Then shutdown database
         if (databaseManager != null) {
             try {
@@ -695,6 +696,7 @@ public class TharidiaThings {
         com.tharidia.tharidia_things.command.ClaimAdminCommands.register(event.getDispatcher());
         FatigueCommands.register(event.getDispatcher());
         com.tharidia.tharidia_things.command.TradeCommands.register(event.getDispatcher());
+        BattleCommands.register(event.getDispatcher());
         com.tharidia.tharidia_things.command.MarketCommands.register(event.getDispatcher());
         com.tharidia.tharidia_things.command.VideoScreenCommands.register(event.getDispatcher());
     }

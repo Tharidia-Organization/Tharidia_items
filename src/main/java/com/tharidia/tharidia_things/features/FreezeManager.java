@@ -1,10 +1,15 @@
 package com.tharidia.tharidia_things.features;
 
+import com.tharidia.tharidia_things.TharidiaThings;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.entity.living.LivingKnockBackEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
-import org.slf4j.Logger;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -14,13 +19,12 @@ import java.util.UUID;
  * Manages frozen players - prevents them from moving
  */
 public class FreezeManager {
-    private static Logger logger;
     private static final Map<UUID, Vec3> frozenPlayers = new HashMap<>();
 
-    public static void initialize(Logger log) {
-        logger = log;
-        logger.info("FreezeManager initialized");
-    }
+    private static final ResourceLocation FREEZE_MOVEMENT_ID = ResourceLocation
+            .fromNamespaceAndPath(TharidiaThings.MODID, "freeze_movement");
+    private static final ResourceLocation FREEZE_JUMP_ID = ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID,
+            "freeze_jump");
 
     /**
      * Freeze a player at their current position
@@ -28,7 +32,19 @@ public class FreezeManager {
     public static void freezePlayer(ServerPlayer player) {
         Vec3 position = player.position();
         frozenPlayers.put(player.getUUID(), position);
-        logger.info("Froze player {} at position {}", player.getName().getString(), position);
+
+        // Apply attributes to prevent movement and jumping
+        AttributeInstance movement = player.getAttribute(Attributes.MOVEMENT_SPEED);
+        if (movement != null && movement.getModifier(FREEZE_MOVEMENT_ID) == null) {
+            movement.addTransientModifier(
+                    new AttributeModifier(FREEZE_MOVEMENT_ID, -1.0, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
+        }
+
+        AttributeInstance jump = player.getAttribute(Attributes.JUMP_STRENGTH);
+        if (jump != null && jump.getModifier(FREEZE_JUMP_ID) == null) {
+            jump.addTransientModifier(
+                    new AttributeModifier(FREEZE_JUMP_ID, -1.0, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
+        }
     }
 
     /**
@@ -36,7 +52,16 @@ public class FreezeManager {
      */
     public static void unfreezePlayer(ServerPlayer player) {
         if (frozenPlayers.remove(player.getUUID()) != null) {
-            logger.info("Unfroze player {}", player.getName().getString());
+            // Remove attributes
+            AttributeInstance movement = player.getAttribute(Attributes.MOVEMENT_SPEED);
+            if (movement != null) {
+                movement.removeModifier(FREEZE_MOVEMENT_ID);
+            }
+
+            AttributeInstance jump = player.getAttribute(Attributes.JUMP_STRENGTH);
+            if (jump != null) {
+                jump.removeModifier(FREEZE_JUMP_ID);
+            }
         }
     }
 
@@ -59,7 +84,15 @@ public class FreezeManager {
      */
     public static void unfreezeAll() {
         frozenPlayers.clear();
-        logger.info("Unfroze all players");
+    }
+
+    @SubscribeEvent
+    public static void onLivingKnockBack(LivingKnockBackEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            if (isFrozen(player.getUUID())) {
+                event.setCanceled(true);
+            }
+        }
     }
 
     /**
@@ -71,19 +104,23 @@ public class FreezeManager {
             UUID uuid = player.getUUID();
             if (frozenPlayers.containsKey(uuid)) {
                 Vec3 frozenPos = frozenPlayers.get(uuid);
-
-                // Teleport player back to frozen position if they moved
                 Vec3 currentPos = player.position();
-                double distance = currentPos.distanceTo(frozenPos);
 
-                if (distance > 0.1) { // Allow small movements due to physics
-                    player.teleportTo(frozenPos.x, frozenPos.y, frozenPos.z);
-                    player.setDeltaMovement(Vec3.ZERO);
-                    player.hurtMarked = true; // Force position update to client
+                // Check horizontal movement
+                double dx = currentPos.x - frozenPos.x;
+                double dz = currentPos.z - frozenPos.z;
+                double distSqr = dx * dx + dz * dz;
+
+                if (distSqr > 0.01) {
+                    player.teleportTo(frozenPos.x, currentPos.y, frozenPos.z);
+                    player.hurtMarked = true;
                 }
 
-                // Also cancel all movement to prevent jumping
-                player.setDeltaMovement(Vec3.ZERO);
+                // Stop horizontal velocity and upward vertical velocity
+                Vec3 currentDelta = player.getDeltaMovement();
+                if (currentDelta.x != 0 || currentDelta.z != 0 || currentDelta.y > 0) {
+                    player.setDeltaMovement(new Vec3(0, Math.min(0, currentDelta.y), 0));
+                }
             }
         }
     }
