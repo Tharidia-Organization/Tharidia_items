@@ -250,6 +250,8 @@ public class TharidiaThings {
         NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.WeightDebuffHandler.class);
         // Register the smithing handler
         NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.SmithingHandler.class);
+        // Register the freeze manager
+        NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.features.FreezeManager.class);
         // Register the pre-login name handler
         NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.PreLoginNameHandler.class);
         // Register the fatigue handler

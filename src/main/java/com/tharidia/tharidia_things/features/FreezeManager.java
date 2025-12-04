@@ -8,8 +8,8 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.entity.living.LivingKnockBackEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
-import org.slf4j.Logger;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -84,5 +84,44 @@ public class FreezeManager {
      */
     public static void unfreezeAll() {
         frozenPlayers.clear();
+    }
+
+    @SubscribeEvent
+    public static void onLivingKnockBack(LivingKnockBackEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            if (isFrozen(player.getUUID())) {
+                event.setCanceled(true);
+            }
+        }
+    }
+
+    /**
+     * Event handler to keep frozen players in place
+     */
+    @SubscribeEvent
+    public static void onPlayerTick(PlayerTickEvent.Post event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            UUID uuid = player.getUUID();
+            if (frozenPlayers.containsKey(uuid)) {
+                Vec3 frozenPos = frozenPlayers.get(uuid);
+                Vec3 currentPos = player.position();
+
+                // Check horizontal movement
+                double dx = currentPos.x - frozenPos.x;
+                double dz = currentPos.z - frozenPos.z;
+                double distSqr = dx * dx + dz * dz;
+
+                if (distSqr > 0.01) {
+                    player.teleportTo(frozenPos.x, currentPos.y, frozenPos.z);
+                    player.hurtMarked = true;
+                }
+
+                // Stop horizontal velocity and upward vertical velocity
+                Vec3 currentDelta = player.getDeltaMovement();
+                if (currentDelta.x != 0 || currentDelta.z != 0 || currentDelta.y > 0) {
+                    player.setDeltaMovement(new Vec3(0, Math.min(0, currentDelta.y), 0));
+                }
+            }
+        }
     }
 }
