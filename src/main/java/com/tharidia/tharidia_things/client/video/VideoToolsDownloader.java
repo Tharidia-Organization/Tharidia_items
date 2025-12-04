@@ -37,11 +37,11 @@ public class VideoToolsDownloader {
     }
     
     // Download URLs - using reliable sources
-    private static final String FFMPEG_DOWNLOAD_URL = "https://github.com/gyan154/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip";
+    private static final String FFMPEG_DOWNLOAD_URL = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip";
     private static final String YT_DLP_DOWNLOAD_URL = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe";
     
     // Tools directory
-    private static final String TOOLS_DIR = System.getProperty("user.home") + File.separator + ".tharidia" + File.separator + "bin";
+    private static final String TOOLS_DIR = System.getProperty("user.home") + File.separator + "AppData" + File.separator + "Roaming" + File.separator + ".minecraft" + File.separator + "tharidia" + File.separator + "bin";
     
     /**
      * Ensure the tools directory exists
@@ -105,6 +105,16 @@ public class VideoToolsDownloader {
                 return false;
             }
         });
+    }
+    
+    /**
+     * Download streamlink
+     */
+    public static CompletableFuture<Boolean> downloadStreamlink(Consumer<DownloadProgress> progressCallback) {
+        return DependencyDownloader.downloadDependency(
+            DependencyDownloader.Dependency.STREAMLINK,
+            progress -> progressCallback.accept(new DownloadProgress("streamlink", (long)(progress * 100), 100))
+        );
     }
     
     /**

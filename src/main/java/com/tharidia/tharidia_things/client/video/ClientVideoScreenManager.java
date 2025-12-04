@@ -70,7 +70,7 @@ public class ClientVideoScreenManager {
         } else if (playbackState == VideoScreen.VideoPlaybackState.PLAYING) {
             if (player == null || !player.getVideoUrl().equals(videoUrl)) {
                 // Check for required video tools before creating player
-                if (!VideoToolsManager.getInstance().checkAndInstallTools()) {
+                if (!VideoToolsManager.getInstance().checkAndInstallTools(videoUrl)) {
                     TharidiaThings.LOGGER.warn("[VIDEO] Cannot start playback - video tools not installed");
                     return;
                 }

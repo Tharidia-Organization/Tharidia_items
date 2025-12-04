@@ -6,6 +6,7 @@ import com.tharidia.tharidia_things.client.RealmBoundaryRenderer;
 import com.tharidia.tharidia_things.client.RealmClientHandler;
 import com.tharidia.tharidia_things.client.RealmOverlay;
 import com.tharidia.tharidia_things.client.ZoneMusicPlayer;
+import com.tharidia.tharidia_things.client.video.DependencyCheckHandler;
 import com.tharidia.tharidia_things.client.renderer.PietroBlockRenderer;
 import com.tharidia.tharidia_things.client.renderer.HotIronAnvilRenderer;
 import com.tharidia.tharidia_things.client.renderer.HotGoldAnvilRenderer;
@@ -47,12 +48,19 @@ public class TharidiaThingsClient {
         NeoForge.EVENT_BUS.register(RealmClientHandler.class);
         NeoForge.EVENT_BUS.register(ClientConnectionHandler.class);
         NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.client.video.VideoScreenRenderHandler.class);
+        NeoForge.EVENT_BUS.register(DependencyCheckHandler.class);
+        
+        // Debug: Verify the new code is running
+        TharidiaThings.LOGGER.info("[VIDEO DEPENDENCIES] DependencyCheckHandler registered on NeoForge EVENT_BUS");
     }
 
     @SubscribeEvent
     static void onClientSetup(FMLClientSetupEvent event) {
         // Register block entity renderers
         event.enqueueWork(() -> {
+            // Trigger dependency check immediately after client setup
+            TharidiaThings.LOGGER.info("[VIDEO DEPENDENCIES] Triggering dependency check from client setup");
+            com.tharidia.tharidia_things.client.video.DependencyCheckHandler.forceRecheck();
             BlockEntityRenderers.register(TharidiaThings.PIETRO_BLOCK_ENTITY.get(), PietroBlockRenderer::new);
             BlockEntityRenderers.register(TharidiaThings.HOT_IRON_ANVIL_ENTITY.get(), HotIronAnvilRenderer::new);
             BlockEntityRenderers.register(TharidiaThings.HOT_GOLD_ANVIL_ENTITY.get(), HotGoldAnvilRenderer::new);

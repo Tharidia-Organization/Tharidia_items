@@ -2,6 +2,7 @@ package com.tharidia.tharidia_things.client.video;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
+import com.tharidia.tharidia_things.TharidiaThings;
 import com.tharidia.tharidia_things.video.VideoScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
@@ -21,10 +22,16 @@ public class VideoScreenRenderer {
      */
     public static void renderScreens(PoseStack poseStack, Vec3 cameraPos) {
         ClientVideoScreenManager manager = ClientVideoScreenManager.getInstance();
+        
+        TharidiaThings.LOGGER.info("[RENDER] Rendering {} video screens", manager.getAllScreens().size());
 
         for (var entry : manager.getAllScreens().entrySet()) {
             VideoScreen screen = entry.getValue();
             VLCVideoPlayer player = manager.getPlayer(entry.getKey());
+            
+            TharidiaThings.LOGGER.info("[RENDER] Screen {} - Player: {}, Initialized: {}", 
+                screen.getId(), player != null ? "exists" : "null", 
+                player != null ? player.isInitialized() : "N/A");
 
             if (player != null && player.isInitialized()) {
                 renderScreen(poseStack, cameraPos, screen, player);

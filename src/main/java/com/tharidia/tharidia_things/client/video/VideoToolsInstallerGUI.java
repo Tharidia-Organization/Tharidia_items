@@ -32,19 +32,41 @@ public class VideoToolsInstallerGUI {
     }
     
     public void show() {
-        // Ensure we're on the Event Dispatch Thread
-        if (!SwingUtilities.isEventDispatchThread()) {
-            SwingUtilities.invokeLater(this::show);
-            return;
-        }
+        TharidiaThings.LOGGER.info("[VIDEO TOOLS] show() called, isEventDispatchThread: {}", SwingUtilities.isEventDispatchThread());
+        TharidiaThings.LOGGER.info("[VIDEO TOOLS] Headless mode: {}", System.getProperty("java.awt.headless"));
         
-        createAndShowGUI();
+        // Try to force synchronous execution to see if it throws errors
+        try {
+            if (!SwingUtilities.isEventDispatchThread()) {
+                TharidiaThings.LOGGER.info("[VIDEO TOOLS] Not on EDT, using invokeAndWait");
+                SwingUtilities.invokeAndWait(() -> {
+                    TharidiaThings.LOGGER.info("[VIDEO TOOLS] Inside invokeAndWait callback");
+                    createAndShowGUI();
+                });
+                TharidiaThings.LOGGER.info("[VIDEO TOOLS] invokeAndWait completed successfully");
+            } else {
+                TharidiaThings.LOGGER.info("[VIDEO TOOLS] Already on EDT, creating GUI directly");
+                createAndShowGUI();
+            }
+        } catch (Exception e) {
+            TharidiaThings.LOGGER.error("[VIDEO TOOLS] Error showing GUI: {}", e.getMessage(), e);
+        }
     }
     
     private void createAndShowGUI() {
+        // CRITICAL: Disable headless mode to allow GUI creation
+        System.setProperty("java.awt.headless", "false");
+        
+        // Fix for Linux OpenGL compositing issues
+        System.setProperty("sun.java2d.opengl", "true");
+        System.setProperty("sun.java2d.xrender", "true");
+        System.setProperty("sun.java2d.d3d", "false");
+        
+        TharidiaThings.LOGGER.info("[VIDEO TOOLS] Creating JFrame with headless={}", System.getProperty("java.awt.headless"));
+        
         frame = new JFrame("Tharidia Video Tools Installer");
         frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
-        frame.setSize(500, 450);
+        frame.setSize(550, 650);
         frame.setLocationRelativeTo(null);
         frame.setResizable(false);
         frame.setIconImage(createIcon());
@@ -77,7 +99,8 @@ public class VideoToolsInstallerGUI {
             "The following tools are required for video playback in Tharidia:<br><br>" +
             "<b>FFmpeg:</b> Video decoding and processing<br>" +
             "<b>FFplay:</b> Audio playback<br>" +
-            "<b>yt-dlp:</b> YouTube and Twitch stream extraction</body></html>");
+            "<b>yt-dlp:</b> YouTube and Twitch stream extraction<br>" +
+            "<b>streamlink:</b> Twitch stream support</body></html>");
         statusLabel.setBorder(new EmptyBorder(0, 0, 10, 0));
         statusLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
         centerPanel.add(statusLabel, BorderLayout.NORTH);
@@ -117,23 +140,29 @@ public class VideoToolsInstallerGUI {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         buttonPanel.setOpaque(false);
         
-        installButton = new JButton("Install Missing Tools");
+        // Check if all tools are already installed
+        boolean allInstalled = toolStatuses.stream().allMatch(status -> status.isInstalled);
+        
+        installButton = new JButton(allInstalled ? "All Tools Installed" : "Install Missing Tools");
         installButton.setPreferredSize(new Dimension(160, 35));
         installButton.setFont(new Font("SansSerif", Font.BOLD, 12));
         installButton.setBackground(new Color(76, 175, 80));
         installButton.setForeground(Color.WHITE);
         installButton.setFocusPainted(false);
+        installButton.setEnabled(!allInstalled); // Disable if all tools are installed
         installButton.addActionListener(new InstallActionListener());
         
-        skipButton = new JButton("Skip");
+        skipButton = new JButton(allInstalled ? "Close" : "Skip");
         skipButton.setPreferredSize(new Dimension(80, 35));
         skipButton.addActionListener(e -> {
-            TharidiaThings.LOGGER.warn("[VIDEO TOOLS] User skipped video tools installation");
-            JOptionPane.showMessageDialog(frame, 
-                "Video features will not be available until the required tools are installed.\n" +
-                "You can run the installer again later when a video screen is encountered.",
-                "Installation Skipped",
-                JOptionPane.WARNING_MESSAGE);
+            if (!allInstalled) {
+                TharidiaThings.LOGGER.warn("[VIDEO TOOLS] User skipped video tools installation");
+                JOptionPane.showMessageDialog(frame, 
+                    "Video features will not be available until the required tools are installed.\n" +
+                    "You can run the installer again later when a video screen is encountered.",
+                    "Installation Skipped",
+                    JOptionPane.WARNING_MESSAGE);
+            }
             frame.dispose();
         });
         
@@ -143,6 +172,10 @@ public class VideoToolsInstallerGUI {
         
         frame.add(mainPanel);
         frame.setVisible(true);
+        frame.setAlwaysOnTop(true);
+        frame.toFront();
+        frame.requestFocus();
+        frame.setAlwaysOnTop(false);
         
         // Prevent closing during installation
         frame.addWindowListener(new java.awt.event.WindowAdapter() {
@@ -247,11 +280,48 @@ public class VideoToolsInstallerGUI {
         
         if (totalSteps == 0) {
             SwingUtilities.invokeLater(() -> {
-                JOptionPane.showMessageDialog(frame, 
-                    "All tools are already installed!",
-                    "Info",
-                    JOptionPane.INFORMATION_MESSAGE);
-                frame.dispose();
+                // Update status to show all tools are installed
+                statusLabel.setText("<html><body style='width: 450px'>" +
+                    "<b>All Video Tools Already Installed!</b><br><br>" +
+                    "The following tools are ready for use:<br>" +
+                    "• FFmpeg: Video decoding and processing<br>" +
+                    "• FFplay: Audio playback<br>" +
+                    "• yt-dlp: YouTube and Twitch stream extraction<br>" +
+                    "<br>You can now use video features in Tharidia.</body></html>");
+                
+                // Update install button to be a close button
+                installButton.setText("Close");
+                installButton.setBackground(new Color(158, 158, 158));
+                installButton.removeActionListener(installButton.getActionListeners()[0]);
+                installButton.addActionListener(e -> frame.dispose());
+                
+                // Disable skip button
+                skipButton.setEnabled(false);
+                skipButton.setText("Already Installed");
+                
+                // Set progress bars to complete
+                overallProgressBar.setValue(100);
+                overallProgressBar.setString("All Tools Installed");
+                currentProgressBar.setValue(100);
+                currentProgressBar.setString("Ready");
+                
+                // Update details area
+                StringBuilder sb = new StringBuilder();
+                sb.append("Tool Detection Results:\n");
+                sb.append("─────────────────────────────────────\n");
+                
+                for (VideoToolsManager.ToolStatus status : toolStatuses) {
+                    sb.append(String.format("%-10s ✓ FOUND\n", status.name + ":"));
+                    sb.append(String.format("           Location: Available\n"));
+                }
+                
+                sb.append("\n");
+                sb.append("Status: All tools are ready!\n");
+                sb.append("• Video playback is fully functional\n");
+                sb.append("• Press F10 anytime to check tool status\n");
+                
+                detailsArea.setText(sb.toString());
+                detailsArea.setCaretPosition(0);
             });
             return;
         }
@@ -288,7 +358,7 @@ public class VideoToolsInstallerGUI {
         if (!toolStatuses.get(2).isInstalled) { // yt-dlp
             SwingUtilities.invokeLater(() -> {
                 statusLabel.setText("<html><body style='width: 450px'>" +
-                    "<b>Step 2/2:</b> Downloading yt-dlp<br>" +
+                    "<b>Step 2/3:</b> Downloading yt-dlp<br>" +
                     "Required for YouTube and Twitch video support<br>" +
                     "Size: ~10 MB</body></html>");
                 currentProgressBar.setString("Downloading yt-dlp...");
@@ -306,6 +376,31 @@ public class VideoToolsInstallerGUI {
                 updateOverallProgress(completedSteps, totalSteps);
             } else {
                 throw new RuntimeException("Failed to download yt-dlp");
+            }
+        }
+        
+        // Install streamlink if missing
+        if (!toolStatuses.get(3).isInstalled) { // streamlink
+            SwingUtilities.invokeLater(() -> {
+                statusLabel.setText("<html><body style='width: 450px'>" +
+                    "<b>Step 3/3:</b> Downloading streamlink<br>" +
+                    "Required for Twitch live stream support<br>" +
+                    "Size: ~15 MB</body></html>");
+                currentProgressBar.setString("Downloading streamlink...");
+            });
+            
+            boolean success = VideoToolsDownloader.downloadStreamlink(progress -> {
+                SwingUtilities.invokeLater(() -> {
+                    currentProgressBar.setValue((int) progress.percentage);
+                    currentProgressBar.setString(String.format("Downloading streamlink... %.1f%%", progress.percentage));
+                });
+            }).join();
+            
+            if (success) {
+                completedSteps++;
+                updateOverallProgress(completedSteps, totalSteps);
+            } else {
+                throw new RuntimeException("Failed to download streamlink");
             }
         }
         

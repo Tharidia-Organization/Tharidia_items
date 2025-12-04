@@ -83,26 +83,16 @@ public class DependencySetupScreen extends Screen {
         for (DependencyDownloader.Dependency dep : missingDeps) {
             DownloadState state = downloadStates.get(dep);
             
-            // Special handling for FFmpeg - use winget
-            if (dep == DependencyDownloader.Dependency.FFMPEG) {
-                DependencyDownloader.installFFmpegWithWinget().thenAccept(success -> {
-                    state.completed = true;
-                    state.failed = !success;
-                    state.progress = 1.0;
-                    checkAllCompleted();
-                });
-            } else {
-                // Download directly
-                DependencyDownloader.downloadDependency(dep, progress -> {
-                    state.progress = progress;
-                }).thenAccept(success -> {
-                    state.completed = true;
-                    state.failed = !success;
-                    state.progress = 1.0;
-                    completedDownloads++;
-                    checkAllCompleted();
-                });
-            }
+            // Download all dependencies using the same method
+            DependencyDownloader.downloadDependency(dep, progress -> {
+                state.progress = progress;
+            }).thenAccept(success -> {
+                state.completed = true;
+                state.failed = !success;
+                state.progress = 1.0;
+                completedDownloads++;
+                checkAllCompleted();
+            });
         }
     }
     
@@ -131,9 +121,15 @@ public class DependencySetupScreen extends Screen {
     }
     
     @Override
+    public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        // Override to prevent blur - render solid black background
+        graphics.fill(0, 0, this.width, this.height, 0xFF000000);
+    }
+    
+    @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        // Background
-        this.renderBackground(graphics, mouseX, mouseY, partialTick);
+        // Call parent to render background (which we've overridden above)
+        super.render(graphics, mouseX, mouseY, partialTick);
         
         int centerX = this.width / 2;
         int startY = 40;
@@ -194,13 +190,6 @@ public class DependencySetupScreen extends Screen {
             }
             
             listY += 25;
-        }
-        
-        // Special note for FFmpeg
-        if (missingDeps.contains(DependencyDownloader.Dependency.FFMPEG) && isDownloading) {
-            listY += 10;
-            graphics.drawCenteredString(this.font, "Note: FFmpeg installation requires your confirmation in CMD window", 
-                centerX, listY, 0xFFFF55);
         }
         
         // Render buttons

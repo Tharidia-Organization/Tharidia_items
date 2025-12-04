@@ -154,20 +154,27 @@ public class VideoScreenCommands {
             registry.addScreen(dimension, screen);
             
             // Sync to all players
-            PacketDistributor.sendToAllPlayers(new VideoScreenSyncPacket(
-                screen.getId(),
-                dimension,
-                corner1,
-                corner2,
-                "",
-                VideoScreen.VideoPlaybackState.STOPPED,
-                1.0f  // Default volume 100%
-            ));
-            
-            source.sendSuccess(() -> Component.literal("Video screen created! " +
-                "Size: " + screen.getWidth() + "x" + screen.getHeight() + " blocks " +
-                "(Aspect ratio: " + String.format("%.2f", screen.getAspectRatio()) + ") " +
-                "Use /videoscreen seturl <youtube_url> to set a video"), false);
+            try {
+                PacketDistributor.sendToAllPlayers(new VideoScreenSyncPacket(
+                    screen.getId(),
+                    dimension,
+                    corner1,
+                    corner2,
+                    "",
+                    VideoScreen.VideoPlaybackState.STOPPED,
+                    1.0f  // Default volume 100%
+                ));
+                source.sendSuccess(() -> Component.literal("Video screen created! " +
+                    "Size: " + screen.getWidth() + "x" + screen.getHeight() + " blocks " +
+                    "(Aspect ratio: " + String.format("%.2f", screen.getAspectRatio()) + ") " +
+                    "Use /videoscreen seturl <youtube_url> to set a video"), false);
+            } catch (Exception e) {
+                source.sendFailure(Component.literal("Failed to sync video screen to clients: " + e.getMessage()));
+                TharidiaThings.LOGGER.error("Failed to send video screen sync packet", e);
+                // Remove the screen since sync failed
+                registry.removeScreen(dimension, screen.getId());
+                return 0;
+            }
             
             playerCorner1.remove(player.getUUID());
             return 1;
@@ -211,17 +218,26 @@ public class VideoScreenCommands {
         registry.setDirty();
         
         // Sync to all players
-        PacketDistributor.sendToAllPlayers(new VideoScreenSyncPacket(
-            screen.getId(),
-            dimension,
-            screen.getCorner1(),
-            screen.getCorner2(),
-            url,
-            VideoScreen.VideoPlaybackState.PLAYING,
-            screen.getVolume()
-        ));
-        
-        source.sendSuccess(() -> Component.literal("Video URL set and playback started!"), false);
+        try {
+            PacketDistributor.sendToAllPlayers(new VideoScreenSyncPacket(
+                screen.getId(),
+                dimension,
+                screen.getCorner1(),
+                screen.getCorner2(),
+                url,
+                VideoScreen.VideoPlaybackState.PLAYING,
+                screen.getVolume()
+            ));
+            source.sendSuccess(() -> Component.literal("Video URL set and playback started!"), false);
+        } catch (Exception e) {
+            source.sendFailure(Component.literal("Failed to sync video to clients: " + e.getMessage()));
+            TharidiaThings.LOGGER.error("Failed to send video sync packet", e);
+            // Reset the screen state since sync failed
+            screen.setVideoUrl("");
+            screen.setPlaybackState(VideoScreen.VideoPlaybackState.STOPPED);
+            registry.setDirty();
+            return 0;
+        }
         return 1;
     }
     

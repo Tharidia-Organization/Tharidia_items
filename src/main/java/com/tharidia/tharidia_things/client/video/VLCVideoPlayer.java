@@ -286,6 +286,24 @@ public class VLCVideoPlayer {
     }
     
     private void startAudioProcess(String url) {
+        // Log stack trace to identify duplicate calls
+        TharidiaThings.LOGGER.info("[VIDEO] startAudioProcess called for screen {} - URL hash: {}", 
+            screen.getId(), url.hashCode());
+        Thread.dumpStack();
+        
+        // Kill any existing audio process first
+        if (audioProcess != null && audioProcess.isAlive()) {
+            TharidiaThings.LOGGER.warn("[VIDEO] Audio process already running! Killing it first.");
+            audioProcess.descendants().forEach(ph -> ph.destroyForcibly());
+            audioProcess.destroyForcibly();
+            try {
+                audioProcess.waitFor(1, java.util.concurrent.TimeUnit.SECONDS);
+            } catch (Exception e) {
+                TharidiaThings.LOGGER.warn("[VIDEO] Error waiting for old audio to die: {}", e.getMessage());
+            }
+            audioProcess = null;
+        }
+        
         try {
             String ffplay = getFfplayPath();
             
@@ -303,7 +321,8 @@ public class VLCVideoPlayer {
             pb.redirectErrorStream(true);
             audioProcess = pb.start();
             
-            TharidiaThings.LOGGER.info("[VIDEO] FFplay audio process started (volume: {})", volume);
+            TharidiaThings.LOGGER.info("[VIDEO] FFplay audio process started (volume: {}, PID: {})", 
+                volume, audioProcess.pid());
             
         } catch (Exception e) {
             TharidiaThings.LOGGER.warn("[VIDEO] Failed to start audio: {}", e.getMessage());
@@ -497,19 +516,39 @@ public class VLCVideoPlayer {
         
         // Restart audio with new volume if playing
         if (running.get() && audioProcess != null && !videoUrl.isEmpty()) {
-            audioProcess.destroyForcibly();
-            // Restart audio in background
-            new Thread(() -> {
+            // Ensure only one volume change thread runs at a time
+            synchronized (this) {
+                if (!running.get()) return; // Check again in synchronized block
+                
+                // Kill existing audio process completely
                 try {
-                    boolean isYouTubeOrTwitch = YouTubeUrlExtractor.isValidYouTubeUrl(videoUrl) || videoUrl.contains("twitch.tv");
-                    String streamUrl = isYouTubeOrTwitch ? YouTubeUrlExtractor.getBestStreamUrl(videoUrl) : videoUrl;
-                    if (streamUrl != null) {
-                        startAudioProcess(streamUrl);
+                    if (audioProcess.isAlive()) {
+                        audioProcess.descendants().forEach(ph -> ph.destroyForcibly());
+                        audioProcess.destroyForcibly();
+                        audioProcess.waitFor(2, java.util.concurrent.TimeUnit.SECONDS);
                     }
                 } catch (Exception e) {
-                    TharidiaThings.LOGGER.warn("[VIDEO] Failed to restart audio with new volume");
+                    TharidiaThings.LOGGER.warn("[VIDEO] Error stopping audio for volume change: {}", e.getMessage());
                 }
-            }, "VolumeChange").start();
+                audioProcess = null;
+                
+                // Restart audio with new volume
+                new Thread(() -> {
+                    try {
+                        // Small delay to ensure process cleanup
+                        Thread.sleep(100);
+                        if (!running.get()) return; // Don't start if stopped
+                        
+                        boolean isYouTubeOrTwitch = YouTubeUrlExtractor.isValidYouTubeUrl(videoUrl) || videoUrl.contains("twitch.tv");
+                        String streamUrl = isYouTubeOrTwitch ? YouTubeUrlExtractor.getBestStreamUrl(videoUrl) : videoUrl;
+                        if (streamUrl != null && running.get()) {
+                            startAudioProcess(streamUrl);
+                        }
+                    } catch (Exception e) {
+                        TharidiaThings.LOGGER.warn("[VIDEO] Failed to restart audio with new volume: {}", e.getMessage());
+                    }
+                }, "VolumeChange-" + System.currentTimeMillis()).start();
+            }
         }
     }
     
