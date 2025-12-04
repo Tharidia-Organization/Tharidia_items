@@ -68,10 +68,10 @@ public class PietroMenu extends AbstractContainerMenu {
     }
     
     private void layoutSlots(Inventory playerInventory) {
-        // GUI is 250x300 pixels
-        // Potato slot positioned next to info text (right side)
+        // GUI is now 300x350 pixels (PARCHMENT_WIDTH x PARCHMENT_HEIGHT)
+        // Potato slot centered horizontally at top
         if (blockEntity != null) {
-            this.addSlot(new SlotItemHandler(blockEntity.getPotatoInventory(), 0, 200, 35) {
+            this.addSlot(new SlotItemHandler(blockEntity.getPotatoInventory(), 0, 141, 35) {
                 @Override
                 public boolean mayPlace(ItemStack stack) {
                     return stack.is(Items.POTATO);
@@ -79,9 +79,9 @@ public class PietroMenu extends AbstractContainerMenu {
             });
         }
         
-        // Add player inventory slots at the bottom
-        int invStartX = 44;
-        int invStartY = 184;
+        // Move player inventory far to the right, outside main GUI
+        int invStartX = 320;  // Outside the main parchment area
+        int invStartY = 118;  // Lower by 2 slot dimensions (36 pixels)
         
         // Player inventory (9-35)
         for (int row = 0; row < 3; ++row) {
@@ -92,7 +92,7 @@ public class PietroMenu extends AbstractContainerMenu {
         
         // Player hotbar (0-8)
         for (int col = 0; col < 9; ++col) {
-            this.addSlot(new Slot(playerInventory, col, invStartX + col * 18, invStartY + 58));
+            this.addSlot(new Slot(playerInventory, col, invStartX + col * 18, invStartY + 78));
         }
     }
 
