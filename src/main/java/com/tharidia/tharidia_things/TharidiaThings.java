@@ -266,8 +266,6 @@ public class TharidiaThings {
         NeoForge.EVENT_BUS.register(LobbyProtectionHandler.class);
         NeoForge.EVENT_BUS.register(ServerCommandBlocker.class);
 
-        // Register Freeze Manager for master freeze command
-        NeoForge.EVENT_BUS.register(FreezeManager.class);
 
         BattleGauntleAttachments.register(modEventBus);
 
@@ -290,8 +288,6 @@ public class TharidiaThings {
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
 
-        // Initialize Freeze Manager system
-        FreezeManager.initialize(LOGGER);
         
     }
 
