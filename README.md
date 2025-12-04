@@ -1,6 +1,31 @@
+# Tharidia Things
 
-Installation information
-=======
+A Minecraft mod featuring video screens that can play YouTube and Twitch streams in-game.
+
+## Windows Users - IMPORTANT!
+
+This mod requires external tools to play videos.
+
+### 🚀 Automatic Setup (Easy!)
+
+The mod will **automatically detect and download** missing tools when you first launch it!
+
+Just start Minecraft and follow the on-screen instructions.
+
+### 📖 Manual Setup
+
+If you prefer manual installation, see **[WINDOWS_SETUP.md](WINDOWS_SETUP.md)**.
+
+**Quick Test:** Run `test_windows_setup.bat` to verify your installation.
+
+Required tools:
+- **FFmpeg** - Video processing
+- **yt-dlp** - YouTube support  
+- **streamlink** - Twitch support
+
+---
+
+## Development Setup
 
 This template repository can be directly cloned to get you started with a new
 mod. Simply create a new repository cloned from this one, by following the

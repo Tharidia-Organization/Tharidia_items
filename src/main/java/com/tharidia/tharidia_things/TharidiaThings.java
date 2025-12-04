@@ -260,6 +260,9 @@ public class TharidiaThings {
         if (FMLEnvironment.dist == Dist.CLIENT) {
             NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.client.HandshakeBypass.class);
             LOGGER.warn("Handshake bypass registered - you can connect to servers with different mod versions");
+            
+            // Check for video tools on Windows
+            com.tharidia.tharidia_things.client.video.VideoToolsManager.getInstance().checkAndInstallTools();
         }
         
         // Log version for debugging

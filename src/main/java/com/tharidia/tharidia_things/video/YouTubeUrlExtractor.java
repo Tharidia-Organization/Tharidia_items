@@ -5,11 +5,14 @@ import com.google.gson.JsonParser;
 import com.tharidia.tharidia_things.TharidiaThings;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -22,6 +25,12 @@ public class YouTubeUrlExtractor {
     private static final Pattern VIDEO_ID_PATTERN = Pattern.compile(
         "(?:youtube\\.com/watch\\?v=|youtu\\.be/|youtube\\.com/embed/)([a-zA-Z0-9_-]{11})"
     );
+    
+    // Cache for executable paths
+    private static String cachedYtDlpPath = null;
+    private static String cachedStreamlinkPath = null;
+    private static boolean ytDlpSearched = false;
+    private static boolean streamlinkSearched = false;
     
     /**
      * Extracts the video ID from a YouTube URL
@@ -175,6 +184,52 @@ public class YouTubeUrlExtractor {
     }
     
     /**
+     * Find executable in multiple locations (Windows-friendly)
+     */
+    private static String findExecutable(String execName, boolean isWindows) {
+        List<String> searchPaths = new ArrayList<>();
+        
+        if (isWindows) {
+            // Windows-specific paths
+            String exeName = execName + ".exe";
+            
+            // 1. Current working directory (Minecraft folder)
+            searchPaths.add(System.getProperty("user.dir") + File.separator + exeName);
+            
+            // 2. .minecraft folder
+            String minecraftDir = System.getProperty("user.home") + File.separator + "AppData" + File.separator + "Roaming" + File.separator + ".minecraft";
+            searchPaths.add(minecraftDir + File.separator + exeName);
+            searchPaths.add(minecraftDir + File.separator + "bin" + File.separator + exeName);
+            
+            // 3. Common installation paths
+            searchPaths.add("C:\\Program Files\\" + execName + "\\" + exeName);
+            searchPaths.add("C:\\Program Files (x86)\\" + execName + "\\" + exeName);
+            
+            // 4. Python Scripts folder (if installed via pip)
+            String pythonScripts = System.getProperty("user.home") + File.separator + "AppData" + File.separator + "Local" + File.separator + "Programs" + File.separator + "Python";
+            searchPaths.add(pythonScripts + File.separator + "Scripts" + File.separator + exeName);
+            
+            // 5. Try PATH (just the command name)
+            searchPaths.add(exeName);
+        } else {
+            // Linux/Mac - just try PATH
+            searchPaths.add(execName);
+        }
+        
+        // Check each path
+        for (String path : searchPaths) {
+            File file = new File(path);
+            if (file.exists() && file.canExecute()) {
+                TharidiaThings.LOGGER.info("Found {} at: {}", execName, path);
+                return path;
+            }
+        }
+        
+        // If not found in specific paths, try just the command name (relies on PATH)
+        return isWindows ? execName + ".exe" : execName;
+    }
+    
+    /**
      * Uses yt-dlp to extract stream URL (most reliable method)
      * Prefers direct URLs over HLS/DASH, but accepts HLS as fallback
      */
@@ -186,10 +241,13 @@ public class YouTubeUrlExtractor {
             String os = System.getProperty("os.name").toLowerCase();
             boolean isWindows = os.contains("win");
             
-            // Try yt-dlp first, then youtube-dl as fallback
-            String[] commands = isWindows 
-                ? new String[]{"yt-dlp.exe", "youtube-dl.exe"}
-                : new String[]{"yt-dlp", "youtube-dl"};
+            // Find yt-dlp executable
+            if (!ytDlpSearched) {
+                cachedYtDlpPath = findExecutable("yt-dlp", isWindows);
+                ytDlpSearched = true;
+            }
+            
+            String[] commands = {cachedYtDlpPath};
             
             String hlsFallbackUrl = null; // Store HLS URL as fallback
             
@@ -228,7 +286,16 @@ public class YouTubeUrlExtractor {
             }
         
             TharidiaThings.LOGGER.error("Neither yt-dlp nor youtube-dl returned valid URLs");
-            TharidiaThings.LOGGER.error("Install yt-dlp: pip install yt-dlp");
+            if (os.contains("win")) {
+                TharidiaThings.LOGGER.error("=== WINDOWS INSTALLATION INSTRUCTIONS ===");
+                TharidiaThings.LOGGER.error("1. Download yt-dlp.exe from: https://github.com/yt-dlp/yt-dlp/releases/latest");
+                TharidiaThings.LOGGER.error("2. Place it in one of these locations:");
+                TharidiaThings.LOGGER.error("   - Your Minecraft folder: {}", System.getProperty("user.dir"));
+                TharidiaThings.LOGGER.error("   - Or add to Windows PATH (search 'Environment Variables')");
+                TharidiaThings.LOGGER.error("3. Restart Minecraft");
+            } else {
+                TharidiaThings.LOGGER.error("Install yt-dlp: pip install yt-dlp");
+            }
             return null;
         
         } catch (Exception e) {
@@ -350,7 +417,15 @@ public static String getTwitchStreamUrl(String twitchUrl) {
         
         // Detect OS to use correct streamlink command
         String os = System.getProperty("os.name").toLowerCase();
-        String streamlinkCmd = os.contains("win") ? "streamlink.exe" : "streamlink";
+        boolean isWindows = os.contains("win");
+        
+        // Find streamlink executable
+        if (!streamlinkSearched) {
+            cachedStreamlinkPath = findExecutable("streamlink", isWindows);
+            streamlinkSearched = true;
+        }
+        
+        String streamlinkCmd = cachedStreamlinkPath;
         
         // Use streamlink WITHOUT --player-passthrough to get m3u8 URL that VLC can handle
         // VLC can play m3u8 URLs directly when not using callback rendering
@@ -385,7 +460,31 @@ public static String getTwitchStreamUrl(String twitchUrl) {
             return streamUrl;
         } else {
             TharidiaThings.LOGGER.error("Streamlink failed or returned no URL. Exit code: {}", exitCode);
-            TharidiaThings.LOGGER.error("Please install streamlink: pip install streamlink (or download from streamlink.github.io on Windows)");
+            
+            // Read error output for better diagnostics
+            BufferedReader errorReader = new BufferedReader(
+                new InputStreamReader(process.getErrorStream())
+            );
+            StringBuilder errorOutput = new StringBuilder();
+            String errorLine;
+            while ((errorLine = errorReader.readLine()) != null) {
+                errorOutput.append(errorLine).append("\n");
+            }
+            errorReader.close();
+            
+            if (errorOutput.length() > 0) {
+                TharidiaThings.LOGGER.error("Streamlink error output: {}", errorOutput.toString());
+            }
+            
+            if (isWindows) {
+                TharidiaThings.LOGGER.error("=== WINDOWS INSTALLATION INSTRUCTIONS ===");
+                TharidiaThings.LOGGER.error("1. Download streamlink installer from: https://streamlink.github.io/install.html#windows");
+                TharidiaThings.LOGGER.error("2. Run the installer (it will add to PATH automatically)");
+                TharidiaThings.LOGGER.error("3. OR download portable version and place streamlink.exe in: {}", System.getProperty("user.dir"));
+                TharidiaThings.LOGGER.error("4. Restart Minecraft");
+            } else {
+                TharidiaThings.LOGGER.error("Please install streamlink: pip install streamlink");
+            }
             return null;
         }
         

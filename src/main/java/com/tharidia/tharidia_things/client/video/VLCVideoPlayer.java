@@ -8,8 +8,11 @@ import net.minecraft.client.renderer.texture.DynamicTexture;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -63,9 +66,65 @@ public class VLCVideoPlayer {
     // Initialization flag
     private boolean isInitialized = false;
     
+    // Get executable paths from VideoToolsManager
+    private String getFfmpegPath() {
+        return VideoToolsManager.getInstance().getFfmpegPath();
+    }
+    
+    private String getFfplayPath() {
+        return VideoToolsManager.getInstance().getFfplayPath();
+    }
+    
+    private String getYtDlpPath() {
+        return VideoToolsManager.getInstance().getYtDlpPath();
+    }
+    
     public VLCVideoPlayer(VideoScreen screen) {
         this.screen = screen;
         initialize();
+    }
+    
+    /**
+     * Find FFmpeg/FFplay executable in multiple locations (Windows-friendly)
+     */
+    private static String findFfmpegExecutable(String execName, boolean isWindows) {
+        List<String> searchPaths = new ArrayList<>();
+        
+        if (isWindows) {
+            String exeName = execName + ".exe";
+            
+            // 1. Current working directory
+            searchPaths.add(System.getProperty("user.dir") + File.separator + exeName);
+            
+            // 2. .minecraft folder
+            String minecraftDir = System.getProperty("user.home") + File.separator + "AppData" + File.separator + "Roaming" + File.separator + ".minecraft";
+            searchPaths.add(minecraftDir + File.separator + exeName);
+            searchPaths.add(minecraftDir + File.separator + "bin" + File.separator + exeName);
+            
+            // 3. Common FFmpeg installation paths
+            searchPaths.add("C:\\ffmpeg\\bin\\" + exeName);
+            searchPaths.add("C:\\Program Files\\ffmpeg\\bin\\" + exeName);
+            searchPaths.add("C:\\Program Files (x86)\\ffmpeg\\bin\\" + exeName);
+            
+            // 4. Try PATH
+            searchPaths.add(exeName);
+        } else {
+            searchPaths.add(execName);
+        }
+        
+        // Check each path
+        for (String path : searchPaths) {
+            File file = new File(path);
+            if (file.exists() && file.canExecute()) {
+                TharidiaThings.LOGGER.info("[VIDEO] Found {} at: {}", execName, path);
+                return path;
+            }
+        }
+        
+        // If not found, return command name and hope it's in PATH
+        String fallback = isWindows ? execName + ".exe" : execName;
+        TharidiaThings.LOGGER.warn("[VIDEO] {} not found in common locations, trying PATH: {}", execName, fallback);
+        return fallback;
     }
     
     private void initialize() {
@@ -123,8 +182,8 @@ public class VLCVideoPlayer {
                     String platform = url.contains("twitch.tv") ? "Twitch" : "YouTube";
                     TharidiaThings.LOGGER.info("[VIDEO] Extracting {} stream URL...", platform);
                     
-                    // Extract URL ONCE and use for both video and audio
-                    String streamUrl = extractStreamUrl(url);
+                    // Use YouTubeUrlExtractor which has proper executable finding logic
+                    String streamUrl = YouTubeUrlExtractor.getBestStreamUrl(url);
                     if (streamUrl == null) {
                         TharidiaThings.LOGGER.error("[VIDEO] Failed to extract stream URL");
                         return;
@@ -156,54 +215,9 @@ public class VLCVideoPlayer {
         }, "VideoLoader").start();
     }
     
-    /**
-     * Extract stream URL using yt-dlp (for YouTube/Twitch)
-     * Returns a direct URL that can be used by both FFmpeg and FFplay
-     */
-    private String extractStreamUrl(String url) {
-        try {
-            String os = System.getProperty("os.name").toLowerCase();
-            boolean isWindows = os.contains("win");
-            String ytdlp = isWindows ? "yt-dlp.exe" : "yt-dlp";
-            
-            // Use format that has both video and audio
-            ProcessBuilder pb = new ProcessBuilder(
-                ytdlp,
-                "-f", "best[ext=mp4]/best",
-                "-g",  // Get URL only
-                "--no-warnings",
-                "--cookies-from-browser", "chrome",
-                url
-            );
-            pb.redirectErrorStream(false);
-            Process process = pb.start();
-            
-            BufferedReader reader = new BufferedReader(
-                new InputStreamReader(process.getInputStream())
-            );
-            String streamUrl = null;
-            String line;
-            while ((line = reader.readLine()) != null) {
-                line = line.trim();
-                if (line.startsWith("http")) {
-                    streamUrl = line;
-                    break;
-                }
-            }
-            process.waitFor();
-            reader.close();
-            
-            return streamUrl;
-            
-        } catch (Exception e) {
-            TharidiaThings.LOGGER.error("[VIDEO] Failed to extract URL: {}", e.getMessage());
-            return null;
-        }
-    }
-    
     private void startVideoProcess(String url) throws Exception {
-        String os = System.getProperty("os.name").toLowerCase();
-        String ffmpeg = os.contains("win") ? "ffmpeg.exe" : "ffmpeg";
+        // Get FFmpeg path from VideoToolsManager
+        String ffmpeg = getFfmpegPath();
         
         // FFmpeg command: decode video, scale to our resolution, output raw RGB24
         // Use -re to read input at native frame rate (prevents speedup)
@@ -232,7 +246,22 @@ public class VLCVideoPlayer {
         );
         
         pb.redirectErrorStream(false);
-        videoProcess = pb.start();
+        try {
+            videoProcess = pb.start();
+        } catch (Exception e) {
+            TharidiaThings.LOGGER.error("[VIDEO] Failed to start FFmpeg process: {}", e.getMessage());
+            String os = System.getProperty("os.name").toLowerCase();
+            boolean isWindows = os.contains("win");
+            if (isWindows) {
+                TharidiaThings.LOGGER.error("=== WINDOWS FFMPEG INSTALLATION ===");
+                TharidiaThings.LOGGER.error("1. Download FFmpeg from: https://www.gyan.dev/ffmpeg/builds/");
+                TharidiaThings.LOGGER.error("2. Extract to C:\\ffmpeg");
+                TharidiaThings.LOGGER.error("3. Add C:\\ffmpeg\\bin to Windows PATH");
+                TharidiaThings.LOGGER.error("4. Restart Minecraft");
+                TharidiaThings.LOGGER.error("See WINDOWS_SETUP.md for detailed instructions");
+            }
+            throw e;
+        }
         
         // Log FFmpeg errors in background
         Thread errorLogger = new Thread(() -> {
@@ -258,8 +287,7 @@ public class VLCVideoPlayer {
     
     private void startAudioProcess(String url) {
         try {
-            String os = System.getProperty("os.name").toLowerCase();
-            String ffplay = os.contains("win") ? "ffplay.exe" : "ffplay";
+            String ffplay = getFfplayPath();
             
             // FFplay for audio only
             ProcessBuilder pb = new ProcessBuilder(
@@ -474,7 +502,7 @@ public class VLCVideoPlayer {
             new Thread(() -> {
                 try {
                     boolean isYouTubeOrTwitch = YouTubeUrlExtractor.isValidYouTubeUrl(videoUrl) || videoUrl.contains("twitch.tv");
-                    String streamUrl = isYouTubeOrTwitch ? extractStreamUrl(videoUrl) : videoUrl;
+                    String streamUrl = isYouTubeOrTwitch ? YouTubeUrlExtractor.getBestStreamUrl(videoUrl) : videoUrl;
                     if (streamUrl != null) {
                         startAudioProcess(streamUrl);
                     }
