@@ -44,6 +44,10 @@ import com.tharidia.tharidia_things.network.SelectComponentPacket;
 import com.tharidia.tharidia_things.network.SubmitNamePacket;
 import com.tharidia.tharidia_things.network.SyncGateRestrictionsPacket;
 import com.tharidia.tharidia_things.realm.RealmManager;
+import com.tharidia.tharidia_things.servertransfer.ServerTransferManager;
+import com.tharidia.tharidia_things.servertransfer.ServerTransferCommands;
+import com.tharidia.tharidia_things.servertransfer.ServerTransferEvents;
+import com.tharidia.tharidia_things.servertransfer.TransferTokenManager;
 
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.loading.FMLEnvironment;
@@ -636,7 +640,9 @@ public class TharidiaThings {
         // Initialize database system
         initializeDatabaseSystem(event.getServer());
         
-            }
+        // Initialize server transfer system
+        initializeServerTransferSystem(event.getServer());
+    }
     
     /**
      * Initializes the database system for cross-server communication
@@ -660,6 +666,56 @@ public class TharidiaThings {
         }
     }
     
+    /**
+     * Initializes the server transfer system
+     */
+    private void initializeServerTransferSystem(net.minecraft.server.MinecraftServer server) {
+        try {
+            LOGGER.info("Initializing server transfer system...");
+            
+            // Set database manager for transfer system
+            ServerTransferManager.setDatabaseManager(databaseManager);
+            
+            // Set server configuration from config file
+            ServerTransferManager.setCurrentServerName(Config.SERVER_NAME.get());
+            ServerTransferManager.setServerAddresses(
+                Config.MAIN_SERVER_IP.get(),
+                Config.DEV_SERVER_IP.get()
+            );
+            
+            LOGGER.info("Server transfer system initialized successfully");
+            LOGGER.info("Current server: {}", Config.SERVER_NAME.get());
+            LOGGER.info("Main server: {}", Config.MAIN_SERVER_IP.get());
+            LOGGER.info("Dev server: {}", Config.DEV_SERVER_IP.get());
+            
+            // Schedule token cleanup task every 60 seconds
+            server.execute(() -> scheduleTokenCleanup(server));
+            
+        } catch (Exception e) {
+            LOGGER.error("Failed to initialize server transfer system: {}", e.getMessage(), e);
+        }
+    }
+    
+    private void scheduleTokenCleanup(net.minecraft.server.MinecraftServer server) {
+        server.execute(() -> {
+            try {
+                TransferTokenManager.cleanupExpiredTokens();
+            } catch (Exception e) {
+                LOGGER.error("Error cleaning up expired tokens: {}", e.getMessage());
+            }
+            
+            // Schedule next cleanup in 60 seconds (1200 ticks)
+            server.execute(() -> {
+                try {
+                    Thread.sleep(60000);
+                    scheduleTokenCleanup(server);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            });
+        });
+    }
+
     
 
     /**
@@ -699,6 +755,7 @@ public class TharidiaThings {
         BattleCommands.register(event.getDispatcher());
         com.tharidia.tharidia_things.command.MarketCommands.register(event.getDispatcher());
         com.tharidia.tharidia_things.command.VideoScreenCommands.register(event.getDispatcher());
+        ServerTransferCommands.register(event.getDispatcher());
     }
 
     /**

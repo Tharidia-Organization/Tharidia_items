@@ -89,5 +89,18 @@ public class Config {
             .comment("Tax rate applied to currency items in trades (0.1 = 10% tax)")
             .defineInRange("tradeTaxRate", 0.1, 0.0, 1.0);
 
+    // Server transfer configuration
+    public static final ModConfigSpec.ConfigValue<String> SERVER_NAME = BUILDER
+            .comment("Name of this server (main, dev, etc.)")
+            .define("serverName", "main");
+    
+    public static final ModConfigSpec.ConfigValue<String> MAIN_SERVER_IP = BUILDER
+            .comment("Main server IP:port for transfers")
+            .define("mainServerIp", "172.18.0.10:25772");
+    
+    public static final ModConfigSpec.ConfigValue<String> DEV_SERVER_IP = BUILDER
+            .comment("Development server IP:port for transfers")
+            .define("devServerIp", "172.18.0.10:25566");
+
     static final ModConfigSpec SPEC = BUILDER.build();
 }
