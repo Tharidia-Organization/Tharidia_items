@@ -35,26 +35,20 @@ public class BattleLogic {
             return;
 
         if (event.getEntity() instanceof Player loser) {
-            if (event.getSource().getEntity() instanceof Player winner) {
-                BattleGauntleAttachments sourceAttachments = winner
-                        .getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
-                BattleGauntleAttachments targetAttachments = loser
-                        .getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
+            BattleGauntleAttachments targetAttachments = loser.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
+            if (targetAttachments.getInBattle()) {
+                if (event.getSource().getEntity() instanceof Player winner) {
+                    BattleGauntleAttachments sourceAttachments = winner
+                            .getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
 
-                if (sourceAttachments.getInBattle() && targetAttachments.getInBattle()) {
-                    finischBattle(winner, loser);
+                    if (sourceAttachments.getInBattle() && targetAttachments.getInBattle()) {
+                        finischBattle(winner, loser);
+                        event.setCanceled(true);
+                    }
+                } else {
+                    finischBattle(null, loser);
                     event.setCanceled(true);
                 }
-            } else {
-                if (loser instanceof ServerPlayer serverPlayer) {
-                    BattleGauntleAttachments targetAttachments = loser
-                            .getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
-                    Player challengerPlayer = serverPlayer.getServer().getPlayerList()
-                            .getPlayer(targetAttachments.getChallengerUUID());
-                    exitPlayerBattle(challengerPlayer);
-                }
-                finischBattle(null, loser);
-                event.setCanceled(true);
             }
         }
     }
