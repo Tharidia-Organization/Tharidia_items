@@ -21,16 +21,25 @@ public class ServerTransferEvents {
                 boolean tokenValid = TransferTokenManager.validateAndConsumeToken(player.getUUID(), currentServer);
                 
                 if (tokenValid) {
-                    // Token valido, procedi con il ripristino
                     boolean restored = ServerTransferManager.restorePlayerData(player);
                     if (!restored) {
                         TharidiaThings.LOGGER.warn("Token valido ma ripristino dati fallito per {}", player.getName().getString());
                     }
                 } else {
                     // Nessun token valido - login normale (non da trasferimento)
+                    // Ripristina solo l'ultima posizione salvata per questo server
                     TharidiaThings.LOGGER.debug("Player {} login normale (no transfer token)", player.getName().getString());
+                    ServerTransferManager.restorePlayerPosition(player);
                 }
             });
+        }
+    }
+    
+    @SubscribeEvent
+    public static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            TharidiaThings.LOGGER.debug("Player {} disconnesso - salvataggio posizione server", player.getName().getString());
+            ServerTransferManager.savePlayerPosition(player);
         }
     }
 }

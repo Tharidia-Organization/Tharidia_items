@@ -77,6 +77,8 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
@@ -108,7 +110,12 @@ public class TharidiaThings {
 
     
     // Database system for cross-server communication
-    private static com.tharidia.tharidia_things.database.DatabaseManager databaseManager;
+    private com.tharidia.tharidia_things.database.DatabaseManager databaseManager;
+    
+    // Server transfer system
+    private net.minecraft.server.MinecraftServer currentServer;
+    private int tickCounter = 0;
+    private final int CLEANUP_INTERVAL_TICKS = 1200; // 60 seconds at 20 ticks per second
 
     // Creates a new Block with the id "tharidiathings:pietro", combining the namespace and path
     public static final DeferredBlock<PietroBlock> PIETRO = BLOCKS.register("pietro", () -> new PietroBlock(BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(3.0F, 6.0F).noOcclusion()));
@@ -688,8 +695,8 @@ public class TharidiaThings {
             LOGGER.info("Main server: {}", Config.MAIN_SERVER_IP.get());
             LOGGER.info("Dev server: {}", Config.DEV_SERVER_IP.get());
             
-            // Schedule token cleanup task every 60 seconds
-            server.execute(() -> scheduleTokenCleanup(server));
+            // Initialize tick-based cleanup scheduler
+            scheduleTokenCleanup(server);
             
         } catch (Exception e) {
             LOGGER.error("Failed to initialize server transfer system: {}", e.getMessage(), e);
@@ -697,23 +704,30 @@ public class TharidiaThings {
     }
     
     private void scheduleTokenCleanup(net.minecraft.server.MinecraftServer server) {
-        server.execute(() -> {
-            try {
-                TransferTokenManager.cleanupExpiredTokens();
-            } catch (Exception e) {
-                LOGGER.error("Error cleaning up expired tokens: {}", e.getMessage());
-            }
+        // Store server reference for tick event
+        currentServer = server;
+        tickCounter = 0;
+        LOGGER.info("Token cleanup scheduler initialized");
+    }
+    
+    @SubscribeEvent
+    public void onServerTick(ServerTickEvent.Post event) {
+        // Only run cleanup on server thread and when server is available
+        if (currentServer != null && currentServer.isSameThread()) {
+            tickCounter++;
             
-            // Schedule next cleanup in 60 seconds (1200 ticks)
-            server.execute(() -> {
+            if (tickCounter >= CLEANUP_INTERVAL_TICKS) {
                 try {
-                    Thread.sleep(60000);
-                    scheduleTokenCleanup(server);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
+                    TransferTokenManager.cleanupExpiredTokens();
+                    LOGGER.debug("Token cleanup completed");
+                } catch (Exception e) {
+                    LOGGER.error("Error cleaning up expired tokens: {}", e.getMessage());
                 }
-            });
-        });
+                
+                // Reset counter
+                tickCounter = 0;
+            }
+        }
     }
 
     
@@ -724,6 +738,9 @@ public class TharidiaThings {
     public void onServerStopping(net.neoforged.neoforge.event.server.ServerStoppingEvent event) {
         LOGGER.info("Server stopping, cleaning up resources...");
         
+        // Clear server reference
+        currentServer = null;
+        tickCounter = 0;
 
         // Then shutdown database
         if (databaseManager != null) {

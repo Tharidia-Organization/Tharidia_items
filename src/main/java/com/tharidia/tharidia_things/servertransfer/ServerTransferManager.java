@@ -51,8 +51,8 @@ public class ServerTransferManager {
             CompoundTag playerData = serializePlayerData(player);
             byte[] serializedData = playerData.toString().getBytes();
             
-            String sql = "INSERT INTO player_transfers (uuid, from_server, to_server, serialized_data, pending_transfer) " +
-                        "VALUES (?, ?, ?, ?, true) ON DUPLICATE KEY UPDATE " +
+            String sql = "INSERT INTO player_transfers (uuid, server_name, from_server, to_server, serialized_data, pending_transfer) " +
+                        "VALUES (?, ?, ?, ?, ?, true) ON DUPLICATE KEY UPDATE " +
                         "from_server = VALUES(from_server), to_server = VALUES(to_server), " +
                         "serialized_data = VALUES(serialized_data), transfer_time = CURRENT_TIMESTAMP, " +
                         "pending_transfer = VALUES(pending_transfer)";
@@ -60,9 +60,10 @@ public class ServerTransferManager {
             try (Connection conn = databaseManager.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(sql)) {
                 stmt.setString(1, player.getUUID().toString());
-                stmt.setString(2, currentServerName);
-                stmt.setString(3, targetServer);
-                stmt.setBytes(4, serializedData);
+                stmt.setString(2, targetServer);
+                stmt.setString(3, currentServerName);
+                stmt.setString(4, targetServer);
+                stmt.setBytes(5, serializedData);
                 stmt.executeUpdate();
                 
                 TharidiaThings.LOGGER.info("Dati transfer salvati per {} verso {}", player.getName().getString(), targetServer);
@@ -82,12 +83,13 @@ public class ServerTransferManager {
         
         try {
             String sql = "SELECT serialized_data, from_server, to_server FROM player_transfers " +
-                        "WHERE uuid = ? AND pending_transfer = true AND transfer_time > DATE_SUB(NOW(), INTERVAL 5 MINUTE) " +
+                        "WHERE uuid = ? AND server_name = ? AND pending_transfer = true AND transfer_time > DATE_SUB(NOW(), INTERVAL 5 MINUTE) " +
                         "ORDER BY transfer_time DESC LIMIT 1";
             
             try (Connection conn = databaseManager.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(sql)) {
                 stmt.setString(1, player.getUUID().toString());
+                stmt.setString(2, currentServerName);
                 ResultSet rs = stmt.executeQuery();
                 
                 if (rs.next()) {
@@ -131,12 +133,14 @@ public class ServerTransferManager {
     
     private static void createTransferTableIfNotExists() throws SQLException {
         String sql = "CREATE TABLE IF NOT EXISTS player_transfers (" +
-                    "uuid VARCHAR(36) PRIMARY KEY," +
+                    "uuid VARCHAR(36) NOT NULL," +
+                    "server_name VARCHAR(50) NOT NULL," +
                     "from_server VARCHAR(50)," +
                     "to_server VARCHAR(50)," +
                     "serialized_data LONGBLOB," +
                     "pending_transfer BOOLEAN DEFAULT false," +
                     "transfer_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
+                    "PRIMARY KEY (uuid, server_name)," +
                     "INDEX idx_transfer_time (transfer_time)," +
                     "INDEX idx_pending_transfer (pending_transfer)" +
                     ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
@@ -265,12 +269,99 @@ public class ServerTransferManager {
         }
     }
     
+    public static boolean savePlayerPosition(ServerPlayer player) {
+        if (databaseManager == null || !databaseManager.isInitialized()) {
+            TharidiaThings.LOGGER.warn("Database non disponibile per il salvataggio posizione");
+            return false;
+        }
+        
+        try {
+            createTransferTableIfNotExists();
+            
+            CompoundTag positionData = new CompoundTag();
+            positionData.putDouble("x", player.getX());
+            positionData.putDouble("y", player.getY());
+            positionData.putDouble("z", player.getZ());
+            positionData.putFloat("yaw", player.getYRot());
+            positionData.putFloat("pitch", player.getXRot());
+            positionData.putString("dimension", player.level().dimension().location().toString());
+            
+            byte[] serializedData = positionData.toString().getBytes();
+            
+            String sql = "INSERT INTO player_transfers (uuid, server_name, from_server, to_server, serialized_data, pending_transfer) " +
+                        "VALUES (?, ?, ?, ?, ?, false) ON DUPLICATE KEY UPDATE " +
+                        "serialized_data = VALUES(serialized_data), transfer_time = CURRENT_TIMESTAMP, " +
+                        "pending_transfer = false";
+            
+            try (Connection conn = databaseManager.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, player.getUUID().toString());
+                stmt.setString(2, currentServerName);
+                stmt.setString(3, currentServerName);
+                stmt.setString(4, currentServerName);
+                stmt.setBytes(5, serializedData);
+                stmt.executeUpdate();
+                
+                TharidiaThings.LOGGER.debug("Posizione salvata per {} sul server {}", player.getName().getString(), currentServerName);
+                return true;
+            }
+        } catch (SQLException e) {
+            TharidiaThings.LOGGER.error("Errore salvataggio posizione: {}", e.getMessage());
+            return false;
+        }
+    }
+    
+    public static boolean restorePlayerPosition(ServerPlayer player) {
+        if (databaseManager == null || !databaseManager.isInitialized()) {
+            TharidiaThings.LOGGER.warn("Database non disponibile per il ripristino posizione");
+            return false;
+        }
+        
+        try {
+            String sql = "SELECT serialized_data FROM player_transfers " +
+                        "WHERE uuid = ? AND server_name = ? AND pending_transfer = false " +
+                        "ORDER BY transfer_time DESC LIMIT 1";
+            
+            try (Connection conn = databaseManager.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, player.getUUID().toString());
+                stmt.setString(2, currentServerName);
+                ResultSet rs = stmt.executeQuery();
+                
+                if (rs.next()) {
+                    byte[] serializedData = rs.getBytes("serialized_data");
+                    String nbtString = new String(serializedData);
+                    CompoundTag positionData = TagParser.parseTag(nbtString);
+                    
+                    double x = positionData.getDouble("x");
+                    double y = positionData.getDouble("y");
+                    double z = positionData.getDouble("z");
+                    float yaw = positionData.getFloat("yaw");
+                    float pitch = positionData.getFloat("pitch");
+                    
+                    player.server.execute(() -> {
+                        player.teleportTo(x, y, z);
+                        player.setYRot(yaw);
+                        player.setXRot(pitch);
+                    });
+                    
+                    TharidiaThings.LOGGER.debug("Posizione ripristinata per {} sul server {}", player.getName().getString(), currentServerName);
+                    return true;
+                }
+            }
+        } catch (Exception e) {
+            TharidiaThings.LOGGER.error("Errore ripristino posizione: {}", e.getMessage());
+        }
+        return false;
+    }
+    
     private static void deleteTransferData(UUID playerUUID) {
         try {
-            String sql = "DELETE FROM player_transfers WHERE uuid = ?";
+            String sql = "DELETE FROM player_transfers WHERE uuid = ? AND server_name = ?";
             try (Connection conn = databaseManager.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(sql)) {
                 stmt.setString(1, playerUUID.toString());
+                stmt.setString(2, currentServerName);
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
