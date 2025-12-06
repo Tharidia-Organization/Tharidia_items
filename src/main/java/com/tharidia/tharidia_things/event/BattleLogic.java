@@ -35,7 +35,7 @@ import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 @EventBusSubscriber(modid = TharidiaThings.MODID)
 public class BattleLogic {
     private static final ResourceLocation DUNGEON_DIMENSION = ResourceLocation.fromNamespaceAndPath("tharidia", "dungeon");
-    
+
     private static boolean isInDungeonDimension(Player player) {
         return player.level().dimension().equals(ResourceKey.create(Registries.DIMENSION, DUNGEON_DIMENSION));
     }
@@ -45,31 +45,8 @@ public class BattleLogic {
             return;
 
         if (event.getEntity() instanceof Player loser) {
-            // Check if player is in dungeon dimension - skip all duel logic if true
-            if (isInDungeonDimension(loser)) {
-                return; // Let normal death handling proceed in dungeon
-            }
-            
-            if (event.getSource().getEntity() instanceof Player winner) {
-                BattleGauntleAttachments sourceAttachments = winner
-                        .getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
-                BattleGauntleAttachments targetAttachments = loser
-                        .getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
-
-                if (sourceAttachments.getInBattle() && targetAttachments.getInBattle()) {
-                    finischBattle(winner, loser);
-                    event.setCanceled(true);
-                }
-            } else {
-                if (loser instanceof ServerPlayer serverPlayer) {
-                    BattleGauntleAttachments targetAttachments = loser
-                            .getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
-                    Player challengerPlayer = serverPlayer.getServer().getPlayerList()
-                            .getPlayer(targetAttachments.getChallengerUUID());
-                    if (challengerPlayer != null) {
-                        exitPlayerBattle(challengerPlayer);
-                    }
-                }
+            BattleGauntleAttachments targetAttachments = loser.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
+            if (targetAttachments.getInBattle()) {
                 finischBattle(null, loser);
                 event.setCanceled(true);
             }
