@@ -621,6 +621,7 @@ public class TharidiaThings {
                     dimension,
                     screen.getCorner1(),
                     screen.getCorner2(),
+                    screen.getFacing(),
                     screen.getVideoUrl(),
                     screen.getPlaybackState(),
                     screen.getVolume()

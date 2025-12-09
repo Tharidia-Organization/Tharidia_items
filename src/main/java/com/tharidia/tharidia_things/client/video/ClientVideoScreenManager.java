@@ -4,6 +4,7 @@ import com.tharidia.tharidia_things.TharidiaThings;
 import com.tharidia.tharidia_things.video.VideoScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 
 import java.util.Map;
 import java.util.UUID;
@@ -18,6 +19,7 @@ public class ClientVideoScreenManager {
     
     // Map of screen UUID -> VideoScreen
     private final Map<UUID, VideoScreen> screens = new ConcurrentHashMap<>();
+    private final Map<UUID, Direction> screenFacing = new ConcurrentHashMap<>();
     
     // Map of screen UUID -> VLCVideoPlayer (handles both VLC and FFmpeg internally)
     private final Map<UUID, VLCVideoPlayer> players = new ConcurrentHashMap<>();
@@ -31,8 +33,9 @@ public class ClientVideoScreenManager {
     /**
      * Add or update a video screen
      */
-    public void addOrUpdateScreen(UUID screenId, String dimension, BlockPos corner1, BlockPos corner2, 
-                                   String videoUrl, VideoScreen.VideoPlaybackState playbackState, float volume) {
+    public void addOrUpdateScreen(UUID screenId, String dimension, BlockPos corner1, BlockPos corner2,
+                                 Direction facing, String videoUrl,
+                                 VideoScreen.VideoPlaybackState playbackState, float volume) {
         
         TharidiaThings.LOGGER.info("[VIDEO MANAGER] addOrUpdateScreen called - ScreenId: {}, URL: '{}', State: {}, Volume: {}", 
             screenId, videoUrl, playbackState, (int)(volume * 100));
@@ -50,12 +53,18 @@ public class ClientVideoScreenManager {
         
         // Create or update screen
         VideoScreen screen = screens.get(screenId);
+        Direction effectiveFacing = facing != null ? facing : screenFacing.getOrDefault(screenId, Direction.NORTH);
         if (screen == null) {
-            screen = new VideoScreen(screenId, corner1, corner2);
+            screen = new VideoScreen(screenId, corner1, corner2, effectiveFacing);
             screens.put(screenId, screen);
             TharidiaThings.LOGGER.info("Added video screen {} to client", screenId);
+        } else if (!screen.getCorner1().equals(corner1) || !screen.getCorner2().equals(corner2) || !screen.getFacing().equals(effectiveFacing)) {
+            screen = new VideoScreen(screenId, corner1, corner2, effectiveFacing);
+            screens.put(screenId, screen);
+            TharidiaThings.LOGGER.info("Updated video screen {} geometry/facing", screenId);
         }
-        
+        screenFacing.put(screenId, screen.getFacing());
+
         screen.setVideoUrl(videoUrl);
         screen.setPlaybackState(playbackState);
         screen.setVolume(volume);

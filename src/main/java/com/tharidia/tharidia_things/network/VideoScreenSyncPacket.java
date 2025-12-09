@@ -4,6 +4,7 @@ import com.tharidia.tharidia_things.TharidiaThings;
 import com.tharidia.tharidia_things.video.VideoScreen;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -20,6 +21,7 @@ public record VideoScreenSyncPacket(
     String dimension,
     BlockPos corner1,
     BlockPos corner2,
+    Direction facing,
     String videoUrl,
     VideoScreen.VideoPlaybackState playbackState,
     float volume
@@ -38,6 +40,12 @@ public record VideoScreenSyncPacket(
             ByteBufCodecs.STRING_UTF8.encode(buf, packet.videoUrl);
             ByteBufCodecs.STRING_UTF8.encode(buf, packet.playbackState.name());
             ByteBufCodecs.FLOAT.encode(buf, packet.volume);
+            if (packet.facing != null) {
+                buf.writeBoolean(true);
+                ByteBufCodecs.STRING_UTF8.encode(buf, packet.facing.getName());
+            } else {
+                buf.writeBoolean(false);
+            }
         }
         
         @Override
@@ -49,12 +57,23 @@ public record VideoScreenSyncPacket(
             String videoUrl = ByteBufCodecs.STRING_UTF8.decode(buf);
             String playbackStateStr = ByteBufCodecs.STRING_UTF8.decode(buf);
             float volume = ByteBufCodecs.FLOAT.decode(buf);
+            Direction facing = Direction.NORTH;
+            if (buf.isReadable()) {
+                boolean hasFacing = buf.readBoolean();
+                if (hasFacing && buf.isReadable()) {
+                    Direction decodedFacing = Direction.byName(ByteBufCodecs.STRING_UTF8.decode(buf));
+                    if (decodedFacing != null) {
+                        facing = decodedFacing;
+                    }
+                }
+            }
             
             return new VideoScreenSyncPacket(
                 UUID.fromString(screenIdStr),
                 dimension,
                 corner1,
                 corner2,
+                facing,
                 videoUrl,
                 VideoScreen.VideoPlaybackState.valueOf(playbackStateStr),
                 volume

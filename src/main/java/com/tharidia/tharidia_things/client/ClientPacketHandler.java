@@ -301,6 +301,7 @@ public class ClientPacketHandler {
                     packet.dimension(),
                     packet.corner1(),
                     packet.corner2(),
+                    packet.facing(),
                     packet.videoUrl(),
                     packet.playbackState(),
                     packet.volume()

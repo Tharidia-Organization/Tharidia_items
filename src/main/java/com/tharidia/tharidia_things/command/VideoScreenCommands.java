@@ -15,6 +15,8 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.network.PacketDistributor;
 
@@ -102,12 +104,13 @@ public class VideoScreenCommands {
             return 0;
         }
         
-        BlockPos targetPos = getTargetBlock(player);
-        if (targetPos == null) {
+        BlockHitResult targetHit = getTargetBlock(player);
+        if (targetHit == null) {
             source.sendFailure(Component.literal("You must be looking at a block"));
             return 0;
         }
         
+        BlockPos targetPos = targetHit.getBlockPos();
         playerCorner1.put(player.getUUID(), targetPos);
         source.sendSuccess(() -> Component.literal("First corner set at " + 
             targetPos.getX() + ", " + targetPos.getY() + ", " + targetPos.getZ()), false);
@@ -129,11 +132,12 @@ public class VideoScreenCommands {
             return 0;
         }
         
-        BlockPos corner2 = getTargetBlock(player);
-        if (corner2 == null) {
+        BlockHitResult corner2Hit = getTargetBlock(player);
+        if (corner2Hit == null) {
             source.sendFailure(Component.literal("You must be looking at a block"));
             return 0;
         }
+        BlockPos corner2 = corner2Hit.getBlockPos();
         
         // Validate that the screen is flat
         try {
@@ -148,9 +152,8 @@ public class VideoScreenCommands {
                 return 0;
             }
             
-            // Create the screen with player's facing direction
-            Direction playerFacing = player.getDirection();
-            VideoScreen screen = new VideoScreen(corner1, corner2, playerFacing);
+            Direction faceDirection = corner2Hit.getDirection();
+            VideoScreen screen = new VideoScreen(corner1, corner2, faceDirection);
             registry.addScreen(dimension, screen);
             
             // Sync to all players
@@ -160,6 +163,7 @@ public class VideoScreenCommands {
                     dimension,
                     corner1,
                     corner2,
+                    screen.getFacing(),
                     "",
                     VideoScreen.VideoPlaybackState.STOPPED,
                     1.0f  // Default volume 100%
@@ -225,6 +229,7 @@ public class VideoScreenCommands {
                 dimension,
                 screen.getCorner1(),
                 screen.getCorner2(),
+                screen.getFacing(),
                 url,
                 VideoScreen.VideoPlaybackState.PLAYING,
                 screen.getVolume()
@@ -283,6 +288,7 @@ public class VideoScreenCommands {
             dimension,
             screen.getCorner1(),
             screen.getCorner2(),
+            screen.getFacing(),
             screen.getVideoUrl(),
             VideoScreen.VideoPlaybackState.STOPPED,
             screen.getVolume()
@@ -295,6 +301,7 @@ public class VideoScreenCommands {
             dimension,
             screen.getCorner1(),
             screen.getCorner2(),
+            screen.getFacing(),
             screen.getVideoUrl(),
             VideoScreen.VideoPlaybackState.PLAYING,
             screen.getVolume()
@@ -402,6 +409,7 @@ public class VideoScreenCommands {
             dimension,
             screen.getCorner1(),
             screen.getCorner2(),
+            screen.getFacing(),
             screen.getVideoUrl(),
             state,
             screen.getVolume()
@@ -497,12 +505,12 @@ public class VideoScreenCommands {
     }
     
     // Helper method to get the block the player is looking at
-    private static BlockPos getTargetBlock(ServerPlayer player) {
+    private static BlockHitResult getTargetBlock(ServerPlayer player) {
         Vec3 eyePos = player.getEyePosition();
         Vec3 lookVec = player.getLookAngle();
         Vec3 endPos = eyePos.add(lookVec.scale(10)); // 10 blocks reach
         
-        var hitResult = player.level().clip(new net.minecraft.world.level.ClipContext(
+        BlockHitResult hitResult = player.level().clip(new net.minecraft.world.level.ClipContext(
             eyePos,
             endPos,
             net.minecraft.world.level.ClipContext.Block.OUTLINE,
@@ -510,8 +518,8 @@ public class VideoScreenCommands {
             player
         ));
         
-        if (hitResult.getType() == net.minecraft.world.phys.HitResult.Type.BLOCK) {
-            return hitResult.getBlockPos();
+        if (hitResult.getType() == HitResult.Type.BLOCK) {
+            return hitResult;
         }
         
         return null;

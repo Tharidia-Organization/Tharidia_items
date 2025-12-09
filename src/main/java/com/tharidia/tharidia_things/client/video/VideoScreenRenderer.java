@@ -84,43 +84,43 @@ public class VideoScreenRenderer {
         Direction facing = screen.getFacing();
 
         // Offset to prevent z-fighting with block textures (2 pixels = 0.002 blocks)
-        float offset = -0.002f;
+        float offset = 0.002f;
 
         switch (axis) {
             case X -> {
                 // Screen on X axis (YZ plane)
-                float x = (float) (facing == Direction.EAST ? maxX - offset : minX + offset);
+                float x = (float) (facing == Direction.EAST ? maxX + offset : minX - offset);
                 // Vertex order: bottom-left, bottom-right, top-right, top-left
                 renderQuad(bufferBuilder, matrix,
                         x, (float) minY, (float) minZ,  // bottom-left
                         x, (float) minY, (float) maxZ,  // bottom-right
                         x, (float) maxY, (float) maxZ,  // top-right
                         x, (float) maxY, (float) minZ,  // top-left
-                        facing == Direction.EAST
+                        facing == Direction.WEST
                 );
             }
             case Y -> {
                 // Screen on Y axis (XZ plane)
-                float y = (float) (facing == Direction.UP ? maxY - offset : minY + offset);
+                float y = (float) (facing == Direction.UP ? maxY + offset : minY - offset);
                 // Vertex order: bottom-left, bottom-right, top-right, top-left
                 renderQuad(bufferBuilder, matrix,
                         (float) minX, y, (float) minZ,  // bottom-left
                         (float) maxX, y, (float) minZ,  // bottom-right
                         (float) maxX, y, (float) maxZ,  // top-right
                         (float) minX, y, (float) maxZ,  // top-left
-                        facing == Direction.UP
+                        facing == Direction.DOWN
                 );
             }
             case Z -> {
                 // Screen on Z axis (XY plane)
-                float z = (float) (facing == Direction.SOUTH ? maxZ - offset : minZ + offset);
+                float z = (float) (facing == Direction.SOUTH ? maxZ + offset : minZ - offset);
                 // Vertex order: bottom-left, bottom-right, top-right, top-left
                 renderQuad(bufferBuilder, matrix,
                         (float) minX, (float) minY, z,  // bottom-left
                         (float) maxX, (float) minY, z,  // bottom-right
                         (float) maxX, (float) maxY, z,  // top-right
                         (float) minX, (float) maxY, z,  // top-left
-                        facing == Direction.SOUTH
+                        facing == Direction.NORTH
                 );
             }
         }

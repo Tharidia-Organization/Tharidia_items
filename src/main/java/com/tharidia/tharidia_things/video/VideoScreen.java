@@ -40,7 +40,7 @@ public class VideoScreen {
         this(id, corner1, corner2, null);
     }
 
-    public VideoScreen(UUID id, BlockPos corner1, BlockPos corner2, Direction playerFacing) {
+    public VideoScreen(UUID id, BlockPos corner1, BlockPos corner2, Direction customFacing) {
         this.id = id != null ? id : UUID.randomUUID();
         this.corner1 = corner1;
         this.corner2 = corner2;
@@ -51,11 +51,12 @@ public class VideoScreen {
         // Calculate which axis the screen is on
         this.axis = calculateAxis(corner1, corner2);
         
-        // Use player facing if provided and compatible with screen axis
-        if (playerFacing != null && playerFacing.getAxis() == axis) {
-            this.facing = playerFacing;
+        // Use provided facing if compatible, otherwise derive from corners
+        Direction derivedFacing = calculateFacing(corner1, corner2, axis);
+        if (customFacing != null && customFacing.getAxis() == axis) {
+            this.facing = customFacing;
         } else {
-            this.facing = calculateFacing(corner1, corner2, axis);
+            this.facing = derivedFacing;
         }
         
         // Calculate dimensions
@@ -164,6 +165,7 @@ public class VideoScreen {
         tag.putInt("corner2Z", corner2.getZ());
         tag.putString("videoUrl", videoUrl);
         tag.putString("playbackState", playbackState.name());
+        tag.putString("facing", facing.getName());
         tag.putFloat("volume", volume);
         return tag;
     }
@@ -181,7 +183,11 @@ public class VideoScreen {
         );
         
         UUID id = tag.hasUUID("id") ? tag.getUUID("id") : null;
-        VideoScreen screen = new VideoScreen(id, corner1, corner2);
+        Direction facing = tag.contains("facing") ? Direction.byName(tag.getString("facing")) : null;
+        if (facing == null) {
+            facing = calculateFacing(corner1, corner2, calculateAxis(corner1, corner2));
+        }
+        VideoScreen screen = new VideoScreen(id, corner1, corner2, facing);
         screen.setVideoUrl(tag.getString("videoUrl"));
         screen.setPlaybackState(VideoPlaybackState.valueOf(tag.getString("playbackState")));
         screen.setVolume(tag.contains("volume") ? tag.getFloat("volume") : 1.0f);
