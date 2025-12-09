@@ -5,6 +5,8 @@ import com.tharidia.tharidia_things.video.YouTubeUrlExtractor;
 
 import javax.swing.SwingUtilities;
 import java.io.File;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -230,32 +232,43 @@ public class VideoToolsManager {
     
     private List<String> getSearchPaths(String execName) {
         List<String> paths = new ArrayList<>();
-        String exeName = execName + ".exe";
+        String execFile = withExecutableExtension(execName);
+        Path workingDir = Paths.get(System.getProperty("user.dir"));
+        Path binDir = DependencyDownloader.getBinDirectory();
         
         // Current working directory
-        paths.add(System.getProperty("user.dir") + File.separator + exeName);
+        paths.add(workingDir.resolve(execFile).toString());
         
-        // Current working directory /bin subfolder (where DependencyDownloader installs)
-        paths.add(System.getProperty("user.dir") + File.separator + "bin" + File.separator + exeName);
-        
-        // Streamlink has special structure: bin/streamlink/bin/streamlink.exe
+        // bin directory inside working dir (which is also DependencyDownloader target)
+        paths.add(workingDir.resolve("bin").resolve(execFile).toString());
         if (execName.equals("streamlink")) {
-            paths.add(System.getProperty("user.dir") + File.separator + "bin" + File.separator + "streamlink" + File.separator + "bin" + File.separator + exeName);
+            paths.add(workingDir.resolve("bin").resolve("streamlink").resolve("bin").resolve(execFile).toString());
         }
         
-        // .minecraft folder
-        String minecraftDir = System.getProperty("user.home") + File.separator + "AppData" + File.separator + "Roaming" + File.separator + ".minecraft";
-        paths.add(minecraftDir + File.separator + exeName);
-        paths.add(minecraftDir + File.separator + "bin" + File.separator + exeName);
+        // Explicit DependencyDownloader bin dir in case launcher sets different user.dir
+        if (!binDir.equals(workingDir.resolve("bin"))) {
+            paths.add(binDir.resolve(execFile).toString());
+            if (execName.equals("streamlink")) {
+                paths.add(binDir.resolve("streamlink").resolve("bin").resolve(execFile).toString());
+            }
+        }
         
-        // Tharidia tools directory (use Minecraft directory)
-        String tharidiaDir = System.getProperty("user.home") + File.separator + "AppData" + File.separator + "Roaming" + File.separator + ".minecraft" + File.separator + "tharidia";
-        paths.add(tharidiaDir + File.separator + "bin" + File.separator + exeName);
-        
-        // Common installation paths
-        paths.add("C:\\ffmpeg\\bin\\" + exeName);
-        paths.add("C:\\Program Files\\ffmpeg\\bin\\" + exeName);
-        paths.add("C:\\Program Files (x86)\\ffmpeg\\bin\\" + exeName);
+        if (isWindows) {
+            String minecraftDir = System.getProperty("user.home") + File.separator + "AppData" + File.separator + "Roaming" + File.separator + ".minecraft";
+            paths.add(minecraftDir + File.separator + execFile);
+            paths.add(minecraftDir + File.separator + "bin" + File.separator + execFile);
+            String tharidiaDir = minecraftDir + File.separator + "tharidia" + File.separator + "bin" + File.separator + execFile;
+            paths.add(tharidiaDir);
+            paths.add("C:\\ffmpeg\\bin\\" + execFile);
+            paths.add("C:\\Program Files\\ffmpeg\\bin\\" + execFile);
+            paths.add("C:\\Program Files (x86)\\ffmpeg\\bin\\" + execFile);
+        } else {
+            Path home = Paths.get(System.getProperty("user.home"));
+            paths.add(home.resolve(".local").resolve("bin").resolve(execFile).toString());
+            paths.add(home.resolve("bin").resolve(execFile).toString());
+            paths.add("/usr/local/bin/" + execFile);
+            paths.add("/usr/bin/" + execFile);
+        }
         
         return paths;
     }
@@ -270,8 +283,15 @@ public class VideoToolsManager {
             }
         }
         
-        // Return just the name and hope it's in PATH
-        return execName + ".exe";
+        // Return just the name (respecting platform extension) and hope it's in PATH
+        return withExecutableExtension(execName);
+    }
+
+    private String withExecutableExtension(String execName) {
+        if (isWindows) {
+            return execName.endsWith(".exe") ? execName : execName + ".exe";
+        }
+        return execName;
     }
     
     private void showInstallationGUI() {
