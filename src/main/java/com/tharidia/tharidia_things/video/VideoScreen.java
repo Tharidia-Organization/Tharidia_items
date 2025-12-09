@@ -29,11 +29,19 @@ public class VideoScreen {
     private final double aspectRatio;
     
     public VideoScreen(BlockPos corner1, BlockPos corner2) {
-        this(corner1, corner2, null);
+        this(null, corner1, corner2, null);
     }
     
     public VideoScreen(BlockPos corner1, BlockPos corner2, Direction playerFacing) {
-        this.id = UUID.randomUUID();
+        this(null, corner1, corner2, playerFacing);
+    }
+
+    public VideoScreen(UUID id, BlockPos corner1, BlockPos corner2) {
+        this(id, corner1, corner2, null);
+    }
+
+    public VideoScreen(UUID id, BlockPos corner1, BlockPos corner2, Direction playerFacing) {
+        this.id = id != null ? id : UUID.randomUUID();
         this.corner1 = corner1;
         this.corner2 = corner2;
         this.videoUrl = "";
@@ -172,7 +180,8 @@ public class VideoScreen {
             tag.getInt("corner2Z")
         );
         
-        VideoScreen screen = new VideoScreen(corner1, corner2);
+        UUID id = tag.hasUUID("id") ? tag.getUUID("id") : null;
+        VideoScreen screen = new VideoScreen(id, corner1, corner2);
         screen.setVideoUrl(tag.getString("videoUrl"));
         screen.setPlaybackState(VideoPlaybackState.valueOf(tag.getString("playbackState")));
         screen.setVolume(tag.contains("volume") ? tag.getFloat("volume") : 1.0f);

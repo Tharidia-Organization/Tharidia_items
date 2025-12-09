@@ -34,6 +34,9 @@ public class ClientVideoScreenManager {
     public void addOrUpdateScreen(UUID screenId, String dimension, BlockPos corner1, BlockPos corner2, 
                                    String videoUrl, VideoScreen.VideoPlaybackState playbackState, float volume) {
         
+        TharidiaThings.LOGGER.info("[VIDEO MANAGER] addOrUpdateScreen called - ScreenId: {}, URL: '{}', State: {}, Volume: {}", 
+            screenId, videoUrl, playbackState, (int)(volume * 100));
+        
         // Check if we're in the correct dimension
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) return;
@@ -41,13 +44,14 @@ public class ClientVideoScreenManager {
         String currentDimension = mc.level.dimension().location().toString();
         if (!currentDimension.equals(dimension)) {
             // Screen is in a different dimension, ignore
+            TharidiaThings.LOGGER.info("[VIDEO MANAGER] Ignoring screen in different dimension: {} vs {}", dimension, currentDimension);
             return;
         }
         
         // Create or update screen
         VideoScreen screen = screens.get(screenId);
         if (screen == null) {
-            screen = new VideoScreen(corner1, corner2);
+            screen = new VideoScreen(screenId, corner1, corner2);
             screens.put(screenId, screen);
             TharidiaThings.LOGGER.info("Added video screen {} to client", screenId);
         }
@@ -70,7 +74,10 @@ public class ClientVideoScreenManager {
         } else if (playbackState == VideoScreen.VideoPlaybackState.PLAYING) {
             if (player == null || !player.getVideoUrl().equals(videoUrl)) {
                 // Check for required video tools before creating player
-                if (!VideoToolsManager.getInstance().checkAndInstallTools(videoUrl)) {
+                boolean toolsOk = VideoToolsManager.getInstance().checkAndInstallTools(videoUrl);
+                TharidiaThings.LOGGER.info("[VIDEO MANAGER] Video tools check result: {} for URL: {}", toolsOk, videoUrl);
+                
+                if (!toolsOk) {
                     TharidiaThings.LOGGER.warn("[VIDEO] Cannot start playback - video tools not installed");
                     return;
                 }
@@ -81,10 +88,12 @@ public class ClientVideoScreenManager {
                     player.release();
                 }
                 
+                TharidiaThings.LOGGER.info("[VIDEO MANAGER] Creating new VLCVideoPlayer for screen: {}", screenId);
                 player = new VLCVideoPlayer(screen);
                 players.put(screenId, player);
                 
                 if (!videoUrl.isEmpty()) {
+                    TharidiaThings.LOGGER.info("[VIDEO MANAGER] Loading video URL: {} for screen: {}", videoUrl, screenId);
                     player.setVolume(volume);
                     player.loadVideo(videoUrl);  // loadVideo already starts playback, no need to call play()
                     TharidiaThings.LOGGER.info("Started video player for screen {} with URL: {} at volume {}", screenId, videoUrl, (int)(volume * 100));

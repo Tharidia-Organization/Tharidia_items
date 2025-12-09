@@ -219,31 +219,60 @@ public class VLCVideoPlayer {
         // Get FFmpeg path from VideoToolsManager
         String ffmpeg = getFfmpegPath();
         
-        // FFmpeg command: decode video, scale to our resolution, output raw RGB24
-        // Use -re to read input at native frame rate (prevents speedup)
-        // Use -vsync cfr and -r 30 for constant 30fps output
-        ProcessBuilder pb = new ProcessBuilder(
-            ffmpeg,
-            // Input options - realtime reading
-            "-re",
-            "-reconnect", "1",
-            "-reconnect_streamed", "1", 
-            "-reconnect_delay_max", "5",
-            "-i", url,
-            // Video processing
-            "-vf", "scale=" + VIDEO_WIDTH + ":" + VIDEO_HEIGHT + ":force_original_aspect_ratio=decrease," +
-                   "pad=" + VIDEO_WIDTH + ":" + VIDEO_HEIGHT + ":(ow-iw)/2:(oh-ih)/2:black",
-            // Output framerate
-            "-r", "30",
-            "-vsync", "cfr",
-            // Output format: raw RGB24 pixels
-            "-f", "rawvideo",
-            "-pix_fmt", "rgb24",
-            // No audio in video stream
-            "-an",
-            // Output to stdout
-            "-"
-        );
+        // Check if URL is HLS (Twitch streams)
+        boolean isHls = url.contains(".m3u8");
+        
+        // Build FFmpeg command with HLS support for Twitch
+        List<String> command = new ArrayList<>();
+        command.add(ffmpeg);
+        
+        // Input options - realtime reading
+        command.add("-re");
+        command.add("-reconnect");
+        command.add("1");
+        command.add("-reconnect_streamed");
+        command.add("1");
+        command.add("-reconnect_delay_max");
+        command.add("5");
+        
+        // HLS-specific options for Twitch
+        if (isHls) {
+            command.add("-fflags");
+            command.add("nobuffer");
+            command.add("-flags");
+            command.add("low_delay");
+            command.add("-rw_timeout");
+            command.add("15000000"); // 15s read timeout
+        }
+        
+        command.add("-i");
+        command.add(url);
+        
+        // Video processing
+        command.add("-vf");
+        command.add("scale=" + VIDEO_WIDTH + ":" + VIDEO_HEIGHT + ":force_original_aspect_ratio=decrease," +
+                   "pad=" + VIDEO_WIDTH + ":" + VIDEO_HEIGHT + ":(ow-iw)/2:(oh-ih)/2:black," +
+                   "fps=30");
+        
+        // Output framerate
+        command.add("-r");
+        command.add("30");
+        command.add("-vsync");
+        command.add("cfr");
+        
+        // Output format: raw RGB24 pixels
+        command.add("-f");
+        command.add("rawvideo");
+        command.add("-pix_fmt");
+        command.add("rgb24");
+        
+        // No audio in video stream
+        command.add("-an");
+        
+        // Output to stdout
+        command.add("-");
+        
+        ProcessBuilder pb = new ProcessBuilder(command);
         
         pb.redirectErrorStream(false);
         try {
@@ -307,16 +336,32 @@ public class VLCVideoPlayer {
         try {
             String ffplay = getFfplayPath();
             
-            // FFplay for audio only
-            ProcessBuilder pb = new ProcessBuilder(
-                ffplay,
-                "-nodisp",           // No video display
-                "-autoexit",         // Exit when done
-                "-vn",               // No video
-                "-af", "volume=" + volume,
-                "-loglevel", "error",
-                "-i", url
-            );
+            // Check if URL is HLS (Twitch streams)
+            boolean isHls = url.contains(".m3u8");
+            
+            // Build FFplay command with HLS support for Twitch
+            List<String> command = new ArrayList<>();
+            command.add(ffplay);
+            command.add("-nodisp");           // No video display
+            command.add("-autoexit");         // Exit when done
+            command.add("-vn");               // No video
+            command.add("-loglevel");
+            command.add("error");
+            
+            // HLS-specific options for Twitch
+            if (isHls) {
+                command.add("-fflags");
+                command.add("nobuffer");
+                command.add("-flags");
+                command.add("low_delay");
+            }
+            
+            command.add("-af");
+            command.add("volume=" + volume);
+            command.add("-i");
+            command.add(url);
+            
+            ProcessBuilder pb = new ProcessBuilder(command);
             
             pb.redirectErrorStream(true);
             audioProcess = pb.start();

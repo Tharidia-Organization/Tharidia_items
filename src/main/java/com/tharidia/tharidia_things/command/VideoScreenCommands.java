@@ -194,12 +194,13 @@ public class VideoScreenCommands {
             return 0;
         }
         
-        // Validate URL - accept YouTube URLs or direct video URLs (http/https)
+        // Validate URL - accept YouTube URLs, Twitch URLs, or direct video URLs (http/https)
         boolean isYouTube = YouTubeUrlExtractor.isValidYouTubeUrl(url);
+        boolean isTwitch = url.contains("twitch.tv");
         boolean isDirectUrl = url.startsWith("http://") || url.startsWith("https://");
         
-        if (!isYouTube && !isDirectUrl) {
-            source.sendFailure(Component.literal("Invalid URL. Please provide a YouTube link or direct video URL (http/https)"));
+        if (!isYouTube && !isTwitch && !isDirectUrl) {
+            source.sendFailure(Component.literal("Invalid URL. Please provide a YouTube link, Twitch link, or direct video URL (http/https)"));
             return 0;
         }
         

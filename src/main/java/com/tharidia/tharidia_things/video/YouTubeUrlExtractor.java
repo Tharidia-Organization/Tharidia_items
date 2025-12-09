@@ -196,6 +196,14 @@ public class YouTubeUrlExtractor {
             // 1. Current working directory (Minecraft folder)
             searchPaths.add(System.getProperty("user.dir") + File.separator + exeName);
             
+            // 1b. DependencyDownloader installs tools under /bin
+            searchPaths.add(System.getProperty("user.dir") + File.separator + "bin" + File.separator + exeName);
+            if (execName.equals("streamlink")) {
+                // streamlink has nested bin layout: bin/streamlink/bin/streamlink.exe
+                searchPaths.add(System.getProperty("user.dir") + File.separator + "bin" + File.separator + "streamlink"
+                        + File.separator + "bin" + File.separator + exeName);
+            }
+
             // 2. .minecraft folder
             String minecraftDir = System.getProperty("user.home") + File.separator + "AppData" + File.separator + "Roaming" + File.separator + ".minecraft";
             searchPaths.add(minecraftDir + File.separator + exeName);
