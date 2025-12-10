@@ -1,8 +1,10 @@
 package com.tharidia.tharidia_things.client.gui;
 
 import com.tharidia.tharidia_things.block.entity.ClaimBlockEntity;
+import com.tharidia.tharidia_things.client.gui.components.PlayerInventoryPanelRenderer;
 import com.tharidia.tharidia_things.client.gui.medieval.MedievalGuiRenderer;
 import com.tharidia.tharidia_things.gui.ClaimMenu;
+import com.tharidia.tharidia_things.gui.inventory.PlayerInventoryPanelLayout;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -43,6 +45,13 @@ public class ClaimScreen extends AbstractContainerScreen<ClaimMenu> {
         
         // Render decorative seal in top center
         renderRoyalSeal(guiGraphics, x + this.imageWidth / 2 - 15, y + 25);
+
+        // Render shared player inventory panel on the left
+        int inventoryBgX = this.leftPos + PlayerInventoryPanelLayout.PANEL_OFFSET_X;
+        int inventoryBgY = this.topPos + PlayerInventoryPanelLayout.PANEL_OFFSET_Y;
+        int slotStartX = this.leftPos + PlayerInventoryPanelLayout.SLOT_OFFSET_X;
+        int slotStartY = this.topPos + PlayerInventoryPanelLayout.SLOT_OFFSET_Y;
+        PlayerInventoryPanelRenderer.renderPanel(guiGraphics, inventoryBgX, inventoryBgY, slotStartX, slotStartY);
     }
     
     /**
@@ -56,8 +65,6 @@ public class ClaimScreen extends AbstractContainerScreen<ClaimMenu> {
         // Inner circle
         gui.fill(x + 5, y + 5, x + 25, y + 25, MedievalGuiRenderer.DEEP_CRIMSON);
         
-        // Crown symbol
-        gui.drawString(Minecraft.getInstance().font, "♔", x + 9, y + 8, MedievalGuiRenderer.GOLD_LEAF);
     }
 
     @Override
@@ -69,25 +76,25 @@ public class ClaimScreen extends AbstractContainerScreen<ClaimMenu> {
 
     @Override
     protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        int x = (this.width - this.imageWidth) / 2;
-        int y = (this.height - this.imageHeight) / 2;
-        
-        // Render medieval title
-        MedievalGuiRenderer.renderMedievalTitle(guiGraphics, "Dominio Feudale", 
-                x + BORDER_WIDTH, y + 60, this.imageWidth - BORDER_WIDTH * 2);
-        
+        int originX = 0;
+        int originY = 0;
+
+        // Render medieval title relative to the GUI origin (already translated by AbstractContainerScreen)
+        MedievalGuiRenderer.renderMedievalTitle(guiGraphics, "Dominio Feudale",
+                originX + BORDER_WIDTH, originY + 60, this.imageWidth - BORDER_WIDTH * 2);
+
         // Render claim information with medieval styling
-        renderClaimInfo(guiGraphics, x, y);
-        
+        renderClaimInfo(guiGraphics, originX, originY);
+
         // Render decorative elements
-        renderDecorativeElements(guiGraphics, x, y);
+        renderDecorativeElements(guiGraphics, originX, originY);
     }
     
     /**
      * Renders claim information with medieval styling
      */
     private void renderClaimInfo(GuiGraphics gui, int x, int y) {
-        int yPos = y + 100;
+        int yPos = y + 90;
         int textX = x + BORDER_WIDTH + 20;
         
         // Get owner name from claim name
@@ -96,20 +103,20 @@ public class ClaimScreen extends AbstractContainerScreen<ClaimMenu> {
         
         // Owner information with medieval styling
         renderMedievalTextLine(gui, "§6§lSignore del Dominio:", textX, yPos, MedievalGuiRenderer.BROWN_INK);
-        yPos += 20;
+        yPos += 16;
         renderMedievalTextLine(gui, "§f" + ownerName, textX + 20, yPos, MedievalGuiRenderer.BLACK_INK);
-        yPos += 30;
+        yPos += 24;
         
         // Render divider
         MedievalGuiRenderer.renderMedievalDivider(gui, textX, yPos, this.imageWidth - BORDER_WIDTH * 2 - 40);
-        yPos += 20;
+        yPos += 16;
         
         // Status information
         long expirationTime = this.menu.getExpirationTime();
         boolean isRented = this.menu.isRented();
         
         renderMedievalTextLine(gui, "§6§lStato del Dominio:", textX, yPos, MedievalGuiRenderer.BROWN_INK);
-        yPos += 20;
+        yPos += 16;
         
         if (isRented && expirationTime > 0) {
             long currentTime = System.currentTimeMillis();
@@ -126,15 +133,15 @@ public class ClaimScreen extends AbstractContainerScreen<ClaimMenu> {
                 
                 // Time remaining with medieval styling
                 renderMedievalTextLine(gui, "§6Tempo Restante:", textX + 20, yPos, MedievalGuiRenderer.BROWN_INK);
-                yPos += 20;
+                yPos += 16;
                 
                 String timeText = String.format("§e§l%dh %dm %ds", hours, minutes, seconds);
                 renderMedievalTextLine(gui, timeText, textX + 40, yPos, MedievalGuiRenderer.ROYAL_GOLD);
-                yPos += 25;
+                yPos += 20;
                 
                 String expiresDate = DATE_FORMAT.format(new Date(expirationTime));
                 renderMedievalTextLine(gui, "§6Scade il:", textX + 20, yPos, MedievalGuiRenderer.BROWN_INK);
-                yPos += 20;
+                yPos += 16;
                 renderMedievalTextLine(gui, "§f" + expiresDate, textX + 40, yPos, MedievalGuiRenderer.BLACK_INK);
             }
         } else {
@@ -142,13 +149,13 @@ public class ClaimScreen extends AbstractContainerScreen<ClaimMenu> {
         }
         
         // Protection radius
-        yPos += 30;
+        yPos += 24;
         MedievalGuiRenderer.renderMedievalDivider(gui, textX, yPos, this.imageWidth - BORDER_WIDTH * 2 - 40);
-        yPos += 20;
+        yPos += 16;
         
         int protectionRadius = this.menu.getProtectionRadius();
         renderMedievalTextLine(gui, "§6§lRaggio di Protezione:", textX, yPos, MedievalGuiRenderer.BROWN_INK);
-        yPos += 20;
+        yPos += 16;
         renderMedievalTextLine(gui, "§e§l" + protectionRadius + " blocchi", textX + 20, yPos, MedievalGuiRenderer.ROYAL_GOLD);
     }
     
@@ -156,9 +163,6 @@ public class ClaimScreen extends AbstractContainerScreen<ClaimMenu> {
      * Renders text with medieval shadow effect
      */
     private void renderMedievalTextLine(GuiGraphics gui, String text, int x, int y, int color) {
-        // Shadow effect
-        gui.drawString(Minecraft.getInstance().font, text, x + 1, y + 1, MedievalGuiRenderer.SHADOW);
-        // Main text
         gui.drawString(Minecraft.getInstance().font, text, x, y, color);
     }
     

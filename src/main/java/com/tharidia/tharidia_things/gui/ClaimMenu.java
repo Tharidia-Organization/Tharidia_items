@@ -13,12 +13,14 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.neoforged.neoforge.items.SlotItemHandler;
+import com.tharidia.tharidia_things.gui.inventory.PlayerInventoryPanelLayout;
 
 public class ClaimMenu extends AbstractContainerMenu {
     private final ClaimBlockEntity blockEntity;
     private final BlockPos pos;
     private final ContainerData data;
     private final String ownerName; // Store owner name for client
+    private static final int GUI_WIDTH = 280; // Keep in sync with ClaimScreen
 
     // Constructor for server-side
     public ClaimMenu(int containerId, Inventory playerInventory, ClaimBlockEntity blockEntity) {
@@ -71,16 +73,16 @@ public class ClaimMenu extends AbstractContainerMenu {
     }
     
     private void layoutSlots(Inventory playerInventory) {
-        // GUI is 250x300 pixels
-        // Center slot horizontally: (250 / 2) - 9 = 116
+        // GUI is 280x320 pixels (matching ClaimScreen)
+        // Center slot horizontally: (GUI_WIDTH / 2) - 9 (slot is 18px wide)
         if (blockEntity != null) {
-            this.addSlot(new SlotItemHandler(blockEntity.getInventory(), 0, 116, 35));
+            int claimSlotX = GUI_WIDTH / 2 - 9 + 2; // slight right shift for visual alignment
+            this.addSlot(new SlotItemHandler(blockEntity.getInventory(), 0, claimSlotX, 32));
         }
         
-        // Add player inventory slots at the bottom
-        // Center the 9-slot width (162 pixels) horizontally: (250 - 162) / 2 = 44
-        int invStartX = 44;
-        int invStartY = 184; // Positioned in lower area with margin
+        // Align player inventory with shared left-side panel
+        int invStartX = PlayerInventoryPanelLayout.SLOT_OFFSET_X;
+        int invStartY = PlayerInventoryPanelLayout.SLOT_OFFSET_Y;
         
         // Player inventory (9-35)
         for (int row = 0; row < 3; ++row) {
@@ -91,7 +93,7 @@ public class ClaimMenu extends AbstractContainerMenu {
         
         // Player hotbar (0-8)
         for (int col = 0; col < 9; ++col) {
-            this.addSlot(new Slot(playerInventory, col, invStartX + col * 18, invStartY + 58));
+            this.addSlot(new Slot(playerInventory, col, invStartX + col * 18, invStartY + 78));
         }
     }
 

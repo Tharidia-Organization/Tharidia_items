@@ -22,8 +22,6 @@ public class VideoScreenRenderer {
      */
     public static void renderScreens(PoseStack poseStack, Vec3 cameraPos) {
         ClientVideoScreenManager manager = ClientVideoScreenManager.getInstance();
-        
-        TharidiaThings.LOGGER.info("[RENDER] Rendering {} video screens", manager.getAllScreens().size());
 
         for (var entry : manager.getAllScreens().entrySet()) {
             VideoScreen screen = entry.getValue();

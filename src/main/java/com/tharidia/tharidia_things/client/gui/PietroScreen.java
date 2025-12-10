@@ -7,6 +7,8 @@ import com.tharidia.tharidia_things.client.gui.medieval.MedievalTab;
 import com.tharidia.tharidia_things.client.gui.medieval.MedievalButton;
 import com.tharidia.tharidia_things.client.gui.medieval.MedievalProgressBar;
 import com.tharidia.tharidia_things.gui.PietroMenu;
+import com.tharidia.tharidia_things.gui.inventory.PlayerInventoryPanelLayout;
+import com.tharidia.tharidia_things.client.gui.components.PlayerInventoryPanelRenderer;
 import com.tharidia.tharidia_things.network.DungeonQueuePacket;
 import com.tharidia.tharidia_things.realm.HierarchyRank;
 import net.minecraft.client.Minecraft;
@@ -134,8 +136,12 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
         // Render special frame around potato slot at top center
         renderPotatoSlotFrame(guiGraphics, x + 141, y + 35);
         
-        // Render simple background for player inventory (far right outside main GUI)
-        renderInventoryBackground(guiGraphics, x + 315, y + 95);
+        // Render simple background for player inventory (left side outside main GUI)
+        int inventoryBgX = x + PlayerInventoryPanelLayout.PANEL_OFFSET_X;
+        int inventoryBgY = y + PlayerInventoryPanelLayout.PANEL_OFFSET_Y;
+        int slotStartX = this.leftPos + PlayerInventoryPanelLayout.SLOT_OFFSET_X;
+        int slotStartY = this.topPos + PlayerInventoryPanelLayout.SLOT_OFFSET_Y;
+        PlayerInventoryPanelRenderer.renderPanel(guiGraphics, inventoryBgX, inventoryBgY, slotStartX, slotStartY);
     }
     
     /**
@@ -153,44 +159,6 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
         gui.drawString(Minecraft.getInstance().font, "§6Monete", x - 5, y - 15, MedievalGuiRenderer.ROYAL_GOLD);
     }
     
-    /**
-     * Renders a simple background for the player inventory
-     */
-    private void renderInventoryBackground(GuiGraphics gui, int x, int y) {
-        // Simple dark wood background for full inventory
-        gui.fill(x, y, x + 170, y + 140, MedievalGuiRenderer.WOOD_DARK);
-        // Border with bronze
-        gui.renderOutline(x, y, 170, 140, MedievalGuiRenderer.BRONZE);
-        
-        // Title for inventory
-        gui.drawString(Minecraft.getInstance().font, "§6Inventario", x + 50, y + 5, MedievalGuiRenderer.ROYAL_GOLD);
-        
-        // Render medieval borders around each slot at actual positions
-        // Main inventory: 3 rows starting at (320, 118)
-        renderInventorySlotBorders(gui, this.leftPos + 320, this.topPos + 118, 3);
-        // Hotbar: 1 row starting at (320, 118 + 78)
-        renderInventorySlotBorders(gui, this.leftPos + 320, this.topPos + 118 + 78, 1);
-    }
-    
-    /**
-     * Renders medieval-style borders around inventory slots at exact positions
-     */
-    private void renderInventorySlotBorders(GuiGraphics gui, int startX, int startY, int rows) {
-        // Render borders for slots
-        for (int row = 0; row < rows; row++) {
-            for (int col = 0; col < 9; col++) {
-                int slotX = startX + col * 18;
-                int slotY = startY + row * 18;
-                
-                // Outer bronze border
-                gui.fill(slotX - 1, slotY - 1, slotX + 17, slotY + 17, MedievalGuiRenderer.BRONZE);
-                // Inner gold border
-                gui.fill(slotX, slotY, slotX + 16, slotY + 16, MedievalGuiRenderer.WOOD_DARK);
-                // Inner dark line
-                gui.fill(slotX + 1, slotY + 1, slotX + 15, slotY + 15, MedievalGuiRenderer.BLACK_INK);
-            }
-        }
-    }
     
     /**
      * Renders a decorative royal crest

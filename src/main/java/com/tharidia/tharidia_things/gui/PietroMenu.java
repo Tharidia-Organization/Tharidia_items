@@ -14,6 +14,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.neoforged.neoforge.items.SlotItemHandler;
+import com.tharidia.tharidia_things.gui.inventory.PlayerInventoryPanelLayout;
 
 public class PietroMenu extends AbstractContainerMenu {
     private final PietroBlockEntity blockEntity;
@@ -79,9 +80,9 @@ public class PietroMenu extends AbstractContainerMenu {
             });
         }
         
-        // Move player inventory far to the right, outside main GUI
-        int invStartX = 320;  // Outside the main parchment area
-        int invStartY = 118;  // Lower by 2 slot dimensions (36 pixels)
+        // Move player inventory to shared left panel location
+        int invStartX = PlayerInventoryPanelLayout.SLOT_OFFSET_X;
+        int invStartY = PlayerInventoryPanelLayout.SLOT_OFFSET_Y;
         
         // Player inventory (9-35)
         for (int row = 0; row < 3; ++row) {
