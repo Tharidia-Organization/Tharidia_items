@@ -220,7 +220,25 @@ public class YouTubeUrlExtractor {
             // 5. Try PATH (just the command name)
             searchPaths.add(exeName);
         } else {
-            // Linux/Mac - just try PATH
+            // Linux/Mac - check common installation paths first, then PATH
+            String homeDir = System.getProperty("user.home");
+            
+            // Common system paths
+            searchPaths.add("/usr/bin/" + execName);
+            searchPaths.add("/usr/local/bin/" + execName);
+            
+            // User local paths
+            searchPaths.add(homeDir + "/.local/bin/" + execName);
+            searchPaths.add(homeDir + "/bin/" + execName);
+            
+            // Snap packages
+            searchPaths.add("/snap/bin/" + execName);
+            
+            // Flatpak
+            searchPaths.add("/var/lib/flatpak/exports/bin/" + execName);
+            searchPaths.add(homeDir + "/.local/share/flatpak/exports/bin/" + execName);
+            
+            // Finally try PATH (just the command name)
             searchPaths.add(execName);
         }
         

@@ -131,6 +131,19 @@ public class VideoToolsManager {
     }
     
     private boolean isExecutableAvailable(String execName) {
+        // On Linux, try 'which' command FIRST - this is the most reliable way to find tools
+        if (!isWindows) {
+            String pathFromWhich = findExecutableWithWhich(execName);
+            if (pathFromWhich != null) {
+                TharidiaThings.LOGGER.info("[VIDEO TOOLS] Found {} via 'which' at: {}", execName, pathFromWhich);
+                // Verify it works
+                if (verifyExecutableWorks(pathFromWhich, execName)) {
+                    return true;
+                }
+            }
+        }
+        
+        // Check hardcoded paths
         List<String> searchPaths = getSearchPaths(execName);
         String foundPath = null;
         
@@ -153,16 +166,29 @@ public class VideoToolsManager {
             }
         }
         
-        // Try PATH as last resort
+        // Try PATH as last resort (Windows uses 'where', Linux uses 'which')
         if (foundPath == null) {
             TharidiaThings.LOGGER.info("[VIDEO TOOLS] Checking PATH for {}", execName);
             try {
-                ProcessBuilder pb = new ProcessBuilder("where", execName + ".exe");
+                ProcessBuilder pb;
+                if (isWindows) {
+                    pb = new ProcessBuilder("where", execName + ".exe");
+                } else {
+                    pb = new ProcessBuilder("which", execName);
+                }
                 Process process = pb.start();
                 int exitCode = process.waitFor();
                 if (exitCode == 0) {
-                    TharidiaThings.LOGGER.info("[VIDEO TOOLS] Found {} in PATH", execName);
-                    foundPath = execName + ".exe";
+                    // Read the path from output
+                    String output = new String(process.getInputStream().readAllBytes()).trim();
+                    if (!output.isEmpty()) {
+                        String firstPath = output.split("\n")[0].trim();
+                        TharidiaThings.LOGGER.info("[VIDEO TOOLS] Found {} in PATH at: {}", execName, firstPath);
+                        foundPath = firstPath;
+                    } else {
+                        TharidiaThings.LOGGER.info("[VIDEO TOOLS] Found {} in PATH", execName);
+                        foundPath = isWindows ? execName + ".exe" : execName;
+                    }
                 } else {
                     TharidiaThings.LOGGER.warn("[VIDEO TOOLS] {} not found in PATH (exit code: {})", execName, exitCode);
                 }
@@ -185,6 +211,33 @@ public class VideoToolsManager {
             TharidiaThings.LOGGER.warn("[VIDEO TOOLS] {} found but failed verification test", execName);
             return false;
         }
+    }
+    
+    /**
+     * Use 'which' command to find executable in PATH (Linux/Mac only)
+     */
+    private String findExecutableWithWhich(String execName) {
+        try {
+            ProcessBuilder pb = new ProcessBuilder("which", execName);
+            pb.redirectErrorStream(true);
+            Process process = pb.start();
+            
+            boolean finished = process.waitFor(5, java.util.concurrent.TimeUnit.SECONDS);
+            if (!finished) {
+                process.destroyForcibly();
+                return null;
+            }
+            
+            if (process.exitValue() == 0) {
+                String output = new String(process.getInputStream().readAllBytes()).trim();
+                if (!output.isEmpty()) {
+                    return output.split("\n")[0].trim();
+                }
+            }
+        } catch (Exception e) {
+            TharidiaThings.LOGGER.debug("[VIDEO TOOLS] 'which' command failed for {}: {}", execName, e.getMessage());
+        }
+        return null;
     }
     
     private boolean verifyExecutableWorks(String path, String execName) {
