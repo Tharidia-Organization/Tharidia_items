@@ -718,6 +718,7 @@ public class TharidiaThings {
 
             // Set database manager for transfer system
             ServerTransferManager.setDatabaseManager(databaseManager);
+            TransferTokenManager.setDatabaseManager(databaseManager);
 
             // Set server configuration from config file
             ServerTransferManager.setCurrentServerName(Config.SERVER_NAME.get());

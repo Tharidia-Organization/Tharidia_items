@@ -96,10 +96,37 @@ public class DatabaseManager {
      * Create necessary database tables
      */
     private void createTables() {
-        // No cross-server communication tables needed - lobby system removed
-        
         try (Connection conn = getConnection();
              Statement stmt = conn.createStatement()) {
+            
+            // Create transfer_tokens table
+            String createTransferTokensTable = """
+                CREATE TABLE IF NOT EXISTS transfer_tokens (
+                    player_uuid VARCHAR(36) PRIMARY KEY,
+                    target_server VARCHAR(50) NOT NULL,
+                    expiration_time BIGINT NOT NULL,
+                    INDEX idx_expiration (expiration_time)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+                """;
+            
+            // Create player_transfers table
+            String createPlayerTransfersTable = """
+                CREATE TABLE IF NOT EXISTS player_transfers (
+                    uuid VARCHAR(36) NOT NULL,
+                    server_name VARCHAR(50) NOT NULL,
+                    from_server VARCHAR(50),
+                    to_server VARCHAR(50),
+                    serialized_data LONGBLOB,
+                    pending_transfer BOOLEAN DEFAULT false,
+                    transfer_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (uuid, server_name),
+                    INDEX idx_transfer_time (transfer_time),
+                    INDEX idx_pending_transfer (pending_transfer)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+                """;
+            
+            stmt.execute(createTransferTokensTable);
+            stmt.execute(createPlayerTransfersTable);
             
             logger.info("Database tables created/verified successfully");
             

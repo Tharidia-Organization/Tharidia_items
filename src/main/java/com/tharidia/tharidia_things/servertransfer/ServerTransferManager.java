@@ -98,12 +98,17 @@ public class ServerTransferManager {
                  PreparedStatement stmt = conn.prepareStatement(sql)) {
                 stmt.setString(1, player.getUUID().toString());
                 stmt.setString(2, currentServerName);
+                TharidiaThings.LOGGER.info("Checking transfer data for {} on server {}", 
+                    player.getName().getString(), currentServerName);
                 ResultSet rs = stmt.executeQuery();
                 
                 if (rs.next()) {
                     byte[] serializedData = rs.getBytes("serialized_data");
                     String fromServer = rs.getString("from_server");
                     String toServer = rs.getString("to_server");
+                    
+                    TharidiaThings.LOGGER.info("Found transfer data for {}: from {} to {}", 
+                        player.getName().getString(), fromServer, toServer);
                     
                     // Verifica che il server corrente sia il server di destinazione
                     if (!currentServerName.equalsIgnoreCase(toServer)) {
@@ -123,6 +128,9 @@ public class ServerTransferManager {
                     deleteTransferData(player.getUUID());
                     player.sendSystemMessage(Component.literal("§aDati ripristinati dal server: " + fromServer));
                     return true;
+                } else {
+                    TharidiaThings.LOGGER.info("No transfer data found for {} on server {}", 
+                        player.getName().getString(), currentServerName);
                 }
             }
         } catch (Exception e) {
@@ -166,12 +174,8 @@ public class ServerTransferManager {
         tag.putDouble("health", player.getHealth());
         tag.putFloat("food", player.getFoodData().getFoodLevel());
         tag.putFloat("saturation", player.getFoodData().getSaturationLevel());
-        tag.putDouble("x", player.getX());
-        tag.putDouble("y", player.getY());
-        tag.putDouble("z", player.getZ());
-        tag.putFloat("yaw", player.getYRot());
-        tag.putFloat("pitch", player.getXRot());
-        tag.putString("dimension", player.level().dimension().location().toString());
+        // NOTA: La posizione non viene salvata nel trasferimento
+        // Verrà ripristinata dalla posizione salvata del server di destinazione
         
         // Inventario
         ListTag inventoryList = new ListTag();
@@ -227,18 +231,8 @@ public class ServerTransferManager {
             player.getFoodData().setFoodLevel((int)tag.getFloat("food"));
             player.getFoodData().setSaturation(tag.getFloat("saturation"));
             
-            // Ripristinare posizione
-            double x = tag.getDouble("x");
-            double y = tag.getDouble("y");
-            double z = tag.getDouble("z");
-            float yaw = tag.getFloat("yaw");
-            float pitch = tag.getFloat("pitch");
-            
-            player.server.execute(() -> {
-                player.teleportTo(x, y, z);
-                player.setYRot(yaw);
-                player.setXRot(pitch);
-            });
+            // NOTA: La posizione non viene ripristinata dai dati di trasferimento
+            // Verrà ripristinata dalla posizione salvata del server corrente
             
             // Ripristinare inventario
             ListTag inventoryList = tag.getList("inventory", 10);
@@ -271,6 +265,9 @@ public class ServerTransferManager {
             // Ripristinare dati Tharidia
             CompoundTag tharidiaData = tag.getCompound("tharidia_data");
             // Implementare ripristino dati specifici
+            
+            // Ripristina la posizione salvata del server corrente
+            restorePlayerPosition(player);
             
         } catch (Exception e) {
             TharidiaThings.LOGGER.error("Errore durante il ripristino dati giocatore: {}", e.getMessage());
@@ -334,6 +331,8 @@ public class ServerTransferManager {
                  PreparedStatement stmt = conn.prepareStatement(sql)) {
                 stmt.setString(1, player.getUUID().toString());
                 stmt.setString(2, currentServerName);
+                TharidiaThings.LOGGER.info("Querying position for player {} on server {}", 
+                    player.getName().getString(), currentServerName);
                 ResultSet rs = stmt.executeQuery();
                 
                 if (rs.next()) {
@@ -347,6 +346,9 @@ public class ServerTransferManager {
                     float yaw = positionData.getFloat("yaw");
                     float pitch = positionData.getFloat("pitch");
                     
+                    TharidiaThings.LOGGER.info("Found position for {}: ({}, {}, {}) on server {}", 
+                        player.getName().getString(), x, y, z, currentServerName);
+                    
                     player.server.execute(() -> {
                         player.teleportTo(x, y, z);
                         player.setYRot(yaw);
@@ -355,12 +357,35 @@ public class ServerTransferManager {
                     
                     TharidiaThings.LOGGER.debug("Posizione ripristinata per {} sul server {}", player.getName().getString(), currentServerName);
                     return true;
+                } else {
+                    TharidiaThings.LOGGER.warn("No saved position found for player {} on server {}", 
+                        player.getName().getString(), currentServerName);
                 }
             }
         } catch (Exception e) {
             TharidiaThings.LOGGER.error("Errore ripristino posizione: {}", e.getMessage());
         }
         return false;
+    }
+    
+    public static void cleanOldTransferData() {
+        if (databaseManager == null || !databaseManager.isInitialized()) {
+            TharidiaThings.LOGGER.warn("Database non disponibile per la pulizia dati");
+            return;
+        }
+        
+        try {
+            // Delete all transfer data older than 1 hour
+            String sql = "DELETE FROM player_transfers WHERE transfer_time < DATE_SUB(NOW(), INTERVAL 1 HOUR)";
+            
+            try (Connection conn = databaseManager.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                int deleted = stmt.executeUpdate();
+                TharidiaThings.LOGGER.info("Puliti {} vecchi record di transfer", deleted);
+            }
+        } catch (SQLException e) {
+            TharidiaThings.LOGGER.error("Errore pulizia vecchi dati transfer: {}", e.getMessage());
+        }
     }
     
     private static void deleteTransferData(UUID playerUUID) {
