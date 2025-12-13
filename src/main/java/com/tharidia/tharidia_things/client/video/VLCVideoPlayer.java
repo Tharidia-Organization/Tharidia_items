@@ -6,11 +6,19 @@ import com.tharidia.tharidia_things.video.VideoScreen;
 import com.tharidia.tharidia_things.video.YouTubeUrlExtractor;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.DataLine;
+import javax.sound.sampled.SourceDataLine;
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -35,10 +43,17 @@ public class VLCVideoPlayer {
     
     // Video processing
     private Process videoProcess;
-    private Process audioProcess;
+    private Process windowsAudioProcess;  // Separate audio process for Windows
     private Thread readerThread;
+    private Thread audioThread;
     private DynamicTexture texture;
     private NativeImage image;
+    
+    // Audio playback
+    private SourceDataLine audioLine;
+    private volatile boolean audioRunning = false;
+    private Path videoPipe;
+    private Path audioPipe;
     
     // State
     private final AtomicBoolean running = new AtomicBoolean(false);
@@ -57,6 +72,19 @@ public class VLCVideoPlayer {
     private static final int VIDEO_WIDTH = 854;
     private static final int VIDEO_HEIGHT = 480;
     private static final int FRAME_SIZE = VIDEO_WIDTH * VIDEO_HEIGHT * 3; // RGB24
+    
+    // Audio format - 48kHz 16-bit stereo
+    private static final AudioFormat AUDIO_FORMAT = new AudioFormat(
+        48000, 16, 2, true, false
+    );
+    private static final int AUDIO_BUFFER_SIZE = 4800; // 100ms at 48kHz
+    
+    // Performance monitoring
+    private long lastFpsTime = 0;
+    private int frameCounter = 0;
+    private double currentFps = 0;
+    private long lastCpuCheck = 0;
+    private double cpuUsage = 0;
     
     // Frame timing
     private long lastFrameTime = 0;
@@ -191,21 +219,16 @@ public class VLCVideoPlayer {
                     
                     TharidiaThings.LOGGER.info("[VIDEO] Stream URL ready, starting synchronized playback");
                     
-                    // Start both processes at the same time with the same URL
-                    startVideoProcess(streamUrl);
-                    startAudioProcess(streamUrl);
+                    // Start unified process with both video and audio
+                    startUnifiedProcess(streamUrl);
                 } else {
                     // Direct URL - use FFmpeg directly
                     TharidiaThings.LOGGER.info("[VIDEO] Using direct URL");
-                    startVideoProcess(url);
-                    startAudioProcess(url);
+                    startUnifiedProcess(url);
                 }
                 
-                // Start frame reader thread
-                running.set(true);
-                readerThread = new Thread(this::readFrames, "VideoReader-" + screen.getId());
-                readerThread.setDaemon(true);
-                readerThread.start();
+                // Note: startUnifiedProcess() calls startPipeReaders() which starts all threads
+                // and sets running.set(true) internally
                 
                 TharidiaThings.LOGGER.info("[VIDEO] Playback started");
                 
@@ -215,19 +238,37 @@ public class VLCVideoPlayer {
         }, "VideoLoader").start();
     }
     
-    private void startVideoProcess(String url) throws Exception {
+    private void startUnifiedProcess(String url) throws Exception {
+        // Check OS for platform-specific handling
+        String os = System.getProperty("os.name").toLowerCase();
+        boolean isWindows = os.contains("win");
+        
+        // Create named pipes for synchronized output
+        createNamedPipes();
+        
         // Get FFmpeg path from VideoToolsManager
         String ffmpeg = getFfmpegPath();
         
         // Check if URL is HLS (Twitch streams)
         boolean isHls = url.contains(".m3u8");
         
-        // Build FFmpeg command with HLS support for Twitch
+        // Build FFmpeg command with optimized parameters
         List<String> command = new ArrayList<>();
         command.add(ffmpeg);
         
-        // Input options - realtime reading
-        command.add("-re");
+        // Performance optimizations - remove throttling
+        command.add("-threads");
+        command.add("0");  // Use all CPU threads
+        command.add("-probesize");
+        command.add("32");  // Faster probing
+        command.add("-analyzeduration");
+        command.add("0");  // No analysis delay
+        
+        // Input options - optimized for live streams
+        if (!isHls) {
+            // Only use -re for non-live content
+            command.add("-re");
+        }
         command.add("-reconnect");
         command.add("1");
         command.add("-reconnect_streamed");
@@ -235,42 +276,87 @@ public class VLCVideoPlayer {
         command.add("-reconnect_delay_max");
         command.add("5");
         
-        // HLS-specific options for Twitch
+        // HLS-specific optimizations for Twitch
         if (isHls) {
             command.add("-fflags");
             command.add("nobuffer");
             command.add("-flags");
             command.add("low_delay");
             command.add("-rw_timeout");
-            command.add("15000000"); // 15s read timeout
+            command.add("15000000");  // 15s read timeout
+            command.add("-hls_time");
+            command.add("2");  // Shorter segments
+            command.add("-max_interleave_delta");
+            command.add("0");  // No interleaving
         }
+        
+        // Sync options to prevent desync
+        command.add("-sync");
+        command.add("audio");
+        command.add("-vsync");
+        command.add("1");  // VFR with timestamps
+        command.add("-max_delay");
+        command.add("500000");  // 0.5s max delay
         
         command.add("-i");
         command.add(url);
         
-        // Video processing
-        command.add("-vf");
-        command.add("scale=" + VIDEO_WIDTH + ":" + VIDEO_HEIGHT + ":force_original_aspect_ratio=decrease," +
-                   "pad=" + VIDEO_WIDTH + ":" + VIDEO_HEIGHT + ":(ow-iw)/2:(oh-ih)/2:black," +
-                   "fps=30");
-        
-        // Output framerate
-        command.add("-r");
-        command.add("30");
-        command.add("-vsync");
-        command.add("cfr");
-        
-        // Output format: raw RGB24 pixels
-        command.add("-f");
-        command.add("rawvideo");
-        command.add("-pix_fmt");
-        command.add("rgb24");
-        
-        // No audio in video stream
-        command.add("-an");
-        
-        // Output to stdout
-        command.add("-");
+        // Check if Windows for output format
+        if (isWindows) {
+            // Windows: Output raw video to stdout (no NUT demuxing implemented)
+            TharidiaThings.LOGGER.info("[VIDEO] Using raw video stdout for Windows (sync limited)");
+            
+            // Video processing with optimized scaling
+            command.add("-vf");
+            command.add("scale=" + VIDEO_WIDTH + ":" + VIDEO_HEIGHT + ":force_original_aspect_ratio=decrease," +
+                       "pad=" + VIDEO_WIDTH + ":" + VIDEO_HEIGHT + ":(ow-iw)/2:(oh-ih)/2:black," +
+                       "fps=30");
+            
+            // Output raw video only to stdout
+            command.add("-c:v");
+            command.add("rawvideo");
+            command.add("-pix_fmt");
+            command.add("rgb24");
+            command.add("-f");
+            command.add("rawvideo");
+            command.add("-an");  // No audio in main process
+            command.add("-");
+        } else {
+            // Unix/Linux/macOS: Use named pipes
+            // Video processing with optimized scaling
+            command.add("-vf");
+            command.add("scale=" + VIDEO_WIDTH + ":" + VIDEO_HEIGHT + ":force_original_aspect_ratio=decrease," +
+                       "pad=" + VIDEO_WIDTH + ":" + VIDEO_HEIGHT + ":(ow-iw)/2:(oh-ih)/2:black," +
+                       "fps=30");
+            
+            // Video output to pipe
+            command.add("-map");
+            command.add("0:v:0");
+            command.add("-c:v");
+            command.add("rawvideo");
+            command.add("-pix_fmt");
+            command.add("rgb24");
+            command.add("-f");
+            command.add("rawvideo");
+            command.add("-y");
+            command.add(videoPipe.toString());
+            
+            // Audio output to pipe
+            command.add("-map");
+            command.add("0:a:0");
+            command.add("-c:a");
+            command.add("pcm_s16le");
+            command.add("-ar");
+            command.add("48000");
+            command.add("-ac");
+            command.add("2");
+            command.add("-af");
+            command.add("volume=" + volume);
+            command.add("-f");
+            command.add("s16le");
+            command.add("-y");
+            command.add(audioPipe.toString());
+        }
         
         ProcessBuilder pb = new ProcessBuilder(command);
         
@@ -278,9 +364,8 @@ public class VLCVideoPlayer {
         try {
             videoProcess = pb.start();
         } catch (Exception e) {
+            cleanupPipes();
             TharidiaThings.LOGGER.error("[VIDEO] Failed to start FFmpeg process: {}", e.getMessage());
-            String os = System.getProperty("os.name").toLowerCase();
-            boolean isWindows = os.contains("win");
             if (isWindows) {
                 TharidiaThings.LOGGER.error("=== WINDOWS FFMPEG INSTALLATION ===");
                 TharidiaThings.LOGGER.error("1. Download FFmpeg from: https://www.gyan.dev/ffmpeg/builds/");
@@ -291,6 +376,12 @@ public class VLCVideoPlayer {
             }
             throw e;
         }
+        
+        // Initialize audio line
+        initializeAudioLine();
+        
+        // Start pipe readers
+        startPipeReaders();
         
         // Log FFmpeg errors in background
         Thread errorLogger = new Thread(() -> {
@@ -311,73 +402,110 @@ public class VLCVideoPlayer {
         errorLogger.setDaemon(true);
         errorLogger.start();
         
-        TharidiaThings.LOGGER.info("[VIDEO] FFmpeg video process started");
+        TharidiaThings.LOGGER.info("[VIDEO] Unified FFmpeg process started with synchronized pipes");
     }
     
-    private void startAudioProcess(String url) {
-        // Log stack trace to identify duplicate calls
-        TharidiaThings.LOGGER.info("[VIDEO] startAudioProcess called for screen {} - URL hash: {}", 
-            screen.getId(), url.hashCode());
-        Thread.dumpStack();
-        
-        // Kill any existing audio process first
-        if (audioProcess != null && audioProcess.isAlive()) {
-            TharidiaThings.LOGGER.warn("[VIDEO] Audio process already running! Killing it first.");
-            audioProcess.descendants().forEach(ph -> ph.destroyForcibly());
-            audioProcess.destroyForcibly();
-            try {
-                audioProcess.waitFor(1, java.util.concurrent.TimeUnit.SECONDS);
-            } catch (Exception e) {
-                TharidiaThings.LOGGER.warn("[VIDEO] Error waiting for old audio to die: {}", e.getMessage());
+    private void initializeAudioLine() throws Exception {
+        try {
+            DataLine.Info info = new DataLine.Info(SourceDataLine.class, AUDIO_FORMAT);
+            if (!AudioSystem.isLineSupported(info)) {
+                TharidiaThings.LOGGER.warn("[VIDEO] Audio line not supported, audio will be disabled");
+                return;
             }
-            audioProcess = null;
+            audioLine = (SourceDataLine) AudioSystem.getLine(info);
+            audioLine.open(AUDIO_FORMAT, AUDIO_BUFFER_SIZE * 2);
+            audioLine.start();
+            TharidiaThings.LOGGER.info("[VIDEO] Audio line initialized: {}", AUDIO_FORMAT);
+        } catch (Exception e) {
+            TharidiaThings.LOGGER.warn("[VIDEO] Failed to initialize audio line: {}", e.getMessage());
+            audioLine = null;
         }
+    }
+    
+    private void createNamedPipes() throws Exception {
+        String os = System.getProperty("os.name").toLowerCase();
+        boolean isWindows = os.contains("win");
+        
+        if (isWindows) {
+            // Windows named pipes use \.\pipe\ prefix
+            videoPipe = Paths.get("\\\\.\\pipe\\tharidia_video_" + screen.getId());
+            audioPipe = Paths.get("\\\\.\\pipe\\tharidia_audio_" + screen.getId());
+            
+            // Windows named pipes are created by the first process that opens them
+            // No need to create beforehand
+            TharidiaThings.LOGGER.info("[VIDEO] Using Windows named pipes: {}, {}", videoPipe, audioPipe);
+        } else {
+            // Unix/Linux/macOS - use named pipes (FIFO)
+            Path tempDir = Paths.get(System.getProperty("java.io.tmpdir"));
+            videoPipe = tempDir.resolve("tharidia_video_" + screen.getId() + ".pipe");
+            audioPipe = tempDir.resolve("tharidia_audio_" + screen.getId() + ".pipe");
+            
+            // Create FIFOs
+            Files.deleteIfExists(videoPipe);
+            Files.deleteIfExists(audioPipe);
+            
+            ProcessBuilder pbVideo = new ProcessBuilder("mkfifo", videoPipe.toString());
+            ProcessBuilder pbAudio = new ProcessBuilder("mkfifo", audioPipe.toString());
+            
+            pbVideo.inheritIO().start().waitFor();
+            pbAudio.inheritIO().start().waitFor();
+            
+            TharidiaThings.LOGGER.info("[VIDEO] Created named pipes: {}, {}", videoPipe, audioPipe);
+        }
+    }
+    
+    private void cleanupPipes() {
+        String os = System.getProperty("os.name").toLowerCase();
+        boolean isWindows = os.contains("win");
+        
+        if (!isWindows) {
+            // Only Unix pipes need cleanup
+            try {
+                if (videoPipe != null) {
+                    Files.deleteIfExists(videoPipe);
+                }
+                if (audioPipe != null) {
+                    Files.deleteIfExists(audioPipe);
+                }
+            } catch (Exception e) {
+                TharidiaThings.LOGGER.warn("[VIDEO] Error cleaning up pipes: {}", e.getMessage());
+            }
+        }
+        // Windows named pipes are automatically cleaned up when all handles are closed
+    }
+    
+    private void startPipeReaders() {
+        // Set running state
+        running.set(true);
+        
+        // Start video reader thread
+        readerThread = new Thread(this::readFramesFromPipe, "VideoReader-" + screen.getId());
+        readerThread.setDaemon(true);
+        readerThread.start();
+        
+        // Start audio reader thread
+        audioThread = new Thread(this::readAudioFromPipe, "AudioReader-" + screen.getId());
+        audioThread.setDaemon(true);
+        audioThread.start();
+        audioRunning = true;
+    }
+    
+    private void readFramesFromPipe() {
+        TharidiaThings.LOGGER.info("[VIDEO] Frame reader thread started from pipe");
         
         try {
-            String ffplay = getFfplayPath();
+            InputStream is;
+            String os = System.getProperty("os.name").toLowerCase();
+            boolean isWindows = os.contains("win");
             
-            // Check if URL is HLS (Twitch streams)
-            boolean isHls = url.contains(".m3u8");
-            
-            // Build FFplay command with HLS support for Twitch
-            List<String> command = new ArrayList<>();
-            command.add(ffplay);
-            command.add("-nodisp");           // No video display
-            command.add("-autoexit");         // Exit when done
-            command.add("-vn");               // No video
-            command.add("-loglevel");
-            command.add("error");
-            
-            // HLS-specific options for Twitch
-            if (isHls) {
-                command.add("-fflags");
-                command.add("nobuffer");
-                command.add("-flags");
-                command.add("low_delay");
+            if (isWindows) {
+                // Windows: Read raw video from stdout
+                is = new BufferedInputStream(videoProcess.getInputStream(), FRAME_SIZE * 4);
+                TharidiaThings.LOGGER.info("[VIDEO] Reading raw video from stdout (Windows sync limited)");
+            } else {
+                is = new BufferedInputStream(new FileInputStream(videoPipe.toFile()), FRAME_SIZE * 4);
             }
             
-            command.add("-af");
-            command.add("volume=" + volume);
-            command.add("-i");
-            command.add(url);
-            
-            ProcessBuilder pb = new ProcessBuilder(command);
-            
-            pb.redirectErrorStream(true);
-            audioProcess = pb.start();
-            
-            TharidiaThings.LOGGER.info("[VIDEO] FFplay audio process started (volume: {}, PID: {})", 
-                volume, audioProcess.pid());
-            
-        } catch (Exception e) {
-            TharidiaThings.LOGGER.warn("[VIDEO] Failed to start audio: {}", e.getMessage());
-        }
-    }
-    
-    private void readFrames() {
-        TharidiaThings.LOGGER.info("[VIDEO] Frame reader thread started");
-        
-        try (InputStream is = new BufferedInputStream(videoProcess.getInputStream(), FRAME_SIZE * 4)) {
             byte[] readBuffer = frameBuffer1;
             int localFrameCount = 0;
             
@@ -413,11 +541,10 @@ public class VLCVideoPlayer {
                     }
                     
                     localFrameCount++;
-                    if (localFrameCount == 1 || localFrameCount % 100 == 0) {
-                        TharidiaThings.LOGGER.info("[VIDEO] Read frame {}", localFrameCount);
-                    }
                 }
             }
+            
+            is.close();
         } catch (InterruptedException e) {
             TharidiaThings.LOGGER.info("[VIDEO] Reader thread interrupted");
             Thread.currentThread().interrupt();
@@ -430,13 +557,103 @@ public class VLCVideoPlayer {
         TharidiaThings.LOGGER.info("[VIDEO] Frame reader thread ended");
     }
     
+    private void readAudioFromPipe() {
+        TharidiaThings.LOGGER.info("[VIDEO] Audio reader thread started from pipe");
+        
+        try {
+            InputStream is;
+            String os = System.getProperty("os.name").toLowerCase();
+            boolean isWindows = os.contains("win");
+            
+            if (isWindows) {
+                // For Windows, we need to use a separate FFmpeg process for audio
+                // since Java can't easily read from Windows named pipes
+                TharidiaThings.LOGGER.info("[VIDEO] Using separate audio process for Windows");
+                
+                // Need to extract stream URL again for Windows audio
+                String audioUrl = videoUrl;
+                if (YouTubeUrlExtractor.isValidYouTubeUrl(videoUrl) || videoUrl.contains("twitch.tv")) {
+                    String extractedUrl = YouTubeUrlExtractor.getBestStreamUrl(videoUrl);
+                    if (extractedUrl != null) {
+                        audioUrl = extractedUrl;
+                    }
+                }
+                
+                String ffmpeg = getFfmpegPath();
+                List<String> command = new ArrayList<>();
+                command.add(ffmpeg);
+                command.add("-i");
+                command.add(audioUrl);
+                command.add("-f");
+                command.add("s16le");
+                command.add("-acodec");
+                command.add("pcm_s16le");
+                command.add("-ar");
+                command.add("48000");
+                command.add("-ac");
+                command.add("2");
+                command.add("-af");
+                command.add("volume=" + volume);
+                command.add("-");
+                
+                ProcessBuilder pb = new ProcessBuilder(command);
+                pb.redirectErrorStream(true);
+                windowsAudioProcess = pb.start();
+                
+                is = new BufferedInputStream(windowsAudioProcess.getInputStream(), AUDIO_BUFFER_SIZE * 2);
+                
+                // Store process for cleanup
+                // Note: This breaks perfect sync on Windows but is unavoidable
+                // without complex NUT demuxing
+            } else {
+                is = new BufferedInputStream(new FileInputStream(audioPipe.toFile()), AUDIO_BUFFER_SIZE * 2);
+            }
+            
+            byte[] audioBuffer = new byte[AUDIO_BUFFER_SIZE];
+            
+            while (audioRunning && !Thread.currentThread().isInterrupted()) {
+                int read = is.read(audioBuffer);
+                if (read == -1) {
+                    break;
+                }
+                if (read > 0 && audioLine != null) {
+                    audioLine.write(audioBuffer, 0, read);
+                }
+            }
+            
+            is.close();
+        } catch (Exception e) {
+            if (audioRunning) {
+                TharidiaThings.LOGGER.error("[VIDEO] Audio reading error: {}", e.getMessage());
+            }
+        }
+        
+        TharidiaThings.LOGGER.info("[VIDEO] Audio reader thread ended");
+    }
+    
     public void update() {
         if (isReleased.get() || !isInitialized || image == null || texture == null) {
             return;
         }
         
-        // Frame rate limiting
+        // Performance monitoring
+        frameCounter++;
         long now = System.currentTimeMillis();
+        
+        if (now - lastFpsTime > 5000) {  // Update every 5 seconds
+            currentFps = frameCounter * 1000.0 / (now - lastFpsTime);
+            TharidiaThings.LOGGER.info("[VIDEO] Performance: {} FPS", 
+                String.format("%.1f", currentFps));
+            frameCounter = 0;
+            lastFpsTime = now;
+            
+            // Adaptive quality check
+            if (currentFps < 25 && VIDEO_WIDTH > 640) {
+                TharidiaThings.LOGGER.warn("[VIDEO] Low FPS detected, consider lowering resolution");
+            }
+        }
+        
+        // Frame rate limiting
         if (now - lastFrameTime < FRAME_DELAY_MS) {
             return;
         }
@@ -476,10 +693,6 @@ public class VLCVideoPlayer {
             // Upload to GPU
             texture.upload();
             
-            if (frameCount == 1 || frameCount % 100 == 0) {
-                TharidiaThings.LOGGER.info("[VIDEO] Rendered frame {}", frameCount);
-            }
-            
         } catch (Exception e) {
             TharidiaThings.LOGGER.error("[VIDEO] Texture update error: {}", e.getMessage());
         }
@@ -507,6 +720,7 @@ public class VLCVideoPlayer {
     
     private void stopInternal() {
         running.set(false);
+        audioRunning = false;
         
         TharidiaThings.LOGGER.info("[VIDEO] Stopping playback for screen {}", screen.getId());
         
@@ -521,36 +735,54 @@ public class VLCVideoPlayer {
             readerThread = null;
         }
         
+        // Stop audio thread
+        if (audioThread != null) {
+            audioThread.interrupt();
+            try {
+                audioThread.join(1000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            audioThread = null;
+        }
+        
+        // Close audio line
+        if (audioLine != null) {
+            try {
+                audioLine.drain();
+                audioLine.close();
+            } catch (Exception e) {
+                TharidiaThings.LOGGER.warn("[VIDEO] Error closing audio line: {}", e.getMessage());
+            }
+            audioLine = null;
+        }
+        
         // Stop video process forcefully
         if (videoProcess != null) {
             try {
                 videoProcess.destroyForcibly();
                 videoProcess.waitFor(2, java.util.concurrent.TimeUnit.SECONDS);
-                TharidiaThings.LOGGER.info("[VIDEO] FFmpeg video process terminated");
+                TharidiaThings.LOGGER.info("[VIDEO] FFmpeg process terminated");
             } catch (Exception e) {
                 TharidiaThings.LOGGER.warn("[VIDEO] Error stopping video process: {}", e.getMessage());
             }
             videoProcess = null;
         }
         
-        // Stop audio process forcefully and ensure it's killed
-        if (audioProcess != null) {
+        // Stop Windows audio process if exists
+        if (windowsAudioProcess != null) {
             try {
-                // Kill all descendants (important for shell-spawned processes)
-                if (audioProcess.isAlive()) {
-                    audioProcess.descendants().forEach(ph -> {
-                        ph.destroyForcibly();
-                        TharidiaThings.LOGGER.debug("[VIDEO] Killed audio subprocess");
-                    });
-                    audioProcess.destroyForcibly();
-                    audioProcess.waitFor(2, java.util.concurrent.TimeUnit.SECONDS);
-                    TharidiaThings.LOGGER.info("[VIDEO] FFplay audio process terminated");
-                }
+                windowsAudioProcess.destroyForcibly();
+                windowsAudioProcess.waitFor(2, java.util.concurrent.TimeUnit.SECONDS);
+                TharidiaThings.LOGGER.info("[VIDEO] Windows audio process terminated");
             } catch (Exception e) {
-                TharidiaThings.LOGGER.warn("[VIDEO] Error stopping audio process: {}", e.getMessage());
+                TharidiaThings.LOGGER.warn("[VIDEO] Error stopping Windows audio process: {}", e.getMessage());
             }
-            audioProcess = null;
+            windowsAudioProcess = null;
         }
+        
+        // Clean up pipes
+        cleanupPipes();
         
         hasNewFrame = false;
         readyFrame.set(null);
@@ -559,42 +791,23 @@ public class VLCVideoPlayer {
     public void setVolume(float vol) {
         this.volume = Math.max(0.0f, Math.min(1.0f, vol));
         
-        // Restart audio with new volume if playing
-        if (running.get() && audioProcess != null && !videoUrl.isEmpty()) {
-            // Ensure only one volume change thread runs at a time
-            synchronized (this) {
-                if (!running.get()) return; // Check again in synchronized block
-                
-                // Kill existing audio process completely
-                try {
-                    if (audioProcess.isAlive()) {
-                        audioProcess.descendants().forEach(ph -> ph.destroyForcibly());
-                        audioProcess.destroyForcibly();
-                        audioProcess.waitFor(2, java.util.concurrent.TimeUnit.SECONDS);
-                    }
-                } catch (Exception e) {
-                    TharidiaThings.LOGGER.warn("[VIDEO] Error stopping audio for volume change: {}", e.getMessage());
-                }
-                audioProcess = null;
-                
-                // Restart audio with new volume
-                new Thread(() -> {
-                    try {
-                        // Small delay to ensure process cleanup
-                        Thread.sleep(100);
-                        if (!running.get()) return; // Don't start if stopped
-                        
-                        boolean isYouTubeOrTwitch = YouTubeUrlExtractor.isValidYouTubeUrl(videoUrl) || videoUrl.contains("twitch.tv");
-                        String streamUrl = isYouTubeOrTwitch ? YouTubeUrlExtractor.getBestStreamUrl(videoUrl) : videoUrl;
-                        if (streamUrl != null && running.get()) {
-                            startAudioProcess(streamUrl);
-                        }
-                    } catch (Exception e) {
-                        TharidiaThings.LOGGER.warn("[VIDEO] Failed to restart audio with new volume: {}", e.getMessage());
-                    }
-                }, "VolumeChange-" + System.currentTimeMillis()).start();
+        // Update volume in real-time if playing
+        if (audioLine != null && audioRunning) {
+            // Java audio line volume control
+            if (audioLine.isControlSupported(javax.sound.sampled.FloatControl.Type.MASTER_GAIN)) {
+                javax.sound.sampled.FloatControl gain = 
+                    (javax.sound.sampled.FloatControl) audioLine.getControl(
+                        javax.sound.sampled.FloatControl.Type.MASTER_GAIN);
+                float min = gain.getMinimum();
+                float max = gain.getMaximum();
+                // Prevent log(0) = -Infinity
+                float safeVolume = Math.max(0.0001f, this.volume);
+                float dB = (float) (20 * Math.log10(safeVolume));
+                gain.setValue(Math.max(min, Math.min(max, dB)));
             }
         }
+        
+        TharidiaThings.LOGGER.info("[VIDEO] Volume set to {}%", (int)(this.volume * 100));
     }
     
     public float getVolume() {

@@ -384,7 +384,12 @@ public class YouTubeUrlExtractor {
                 }
             }
             
-            process.waitFor();
+            // Wait with timeout to prevent hanging
+            boolean finished = process.waitFor(60, java.util.concurrent.TimeUnit.SECONDS);
+            if (!finished) {
+                TharidiaThings.LOGGER.warn("yt-dlp process timeout, destroying...");
+                process.destroyForcibly();
+            }
             reader.close();
             
             return streamUrl;
@@ -459,7 +464,7 @@ public static String getTwitchStreamUrl(String twitchUrl) {
             streamlinkCmd,
             "--stream-url",
             twitchUrl,
-            "720p60,720p,480p,worst"
+            "best"  // Use 'best' instead of complex quality selector to avoid parsing issues
         );
         pb.redirectErrorStream(false);
         Process process = pb.start();
@@ -468,10 +473,19 @@ public static String getTwitchStreamUrl(String twitchUrl) {
             new InputStreamReader(process.getInputStream())
         );
         
-        // Read the stream URL
+        // Read the stream URL with timeout
         String streamUrl = null;
         String line;
+        
+        // Use a timeout for reading - streamlink can hang
+        long startTime = System.currentTimeMillis();
+        long timeout = 30000; // 30 second timeout
+        
         while ((line = reader.readLine()) != null) {
+            if (System.currentTimeMillis() - startTime > timeout) {
+                TharidiaThings.LOGGER.warn("Streamlink read timeout, using partial result");
+                break;
+            }
             line = line.trim();
             if (line.startsWith("http://") || line.startsWith("https://")) {
                 streamUrl = line;
@@ -479,7 +493,14 @@ public static String getTwitchStreamUrl(String twitchUrl) {
             }
         }
         
-        int exitCode = process.waitFor();
+        // Wait for process with timeout
+        boolean finished = process.waitFor(30, java.util.concurrent.TimeUnit.SECONDS);
+        if (!finished) {
+            TharidiaThings.LOGGER.warn("Streamlink process timeout, destroying...");
+            process.destroyForcibly();
+        }
+        
+        int exitCode = finished ? process.exitValue() : -1;
         
         if (exitCode == 0 && streamUrl != null && !streamUrl.isEmpty()) {
             TharidiaThings.LOGGER.info("Successfully extracted Twitch stream URL using streamlink");

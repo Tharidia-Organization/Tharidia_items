@@ -48,6 +48,14 @@ public class ServerTransferManager {
         try {
             createTransferTableIfNotExists();
             
+            // First, save the current position for the current server
+            // This ensures we don't lose the position when transferring
+            if (savePlayerPosition(player)) {
+                TharidiaThings.LOGGER.debug("Correctly saved current player position");
+            } else {
+                TharidiaThings.LOGGER.error("Failed to save current player position");
+            }
+            
             CompoundTag playerData = serializePlayerData(player);
             byte[] serializedData = playerData.toString().getBytes();
             

@@ -27,9 +27,9 @@ public class VideoScreenRenderer {
             VideoScreen screen = entry.getValue();
             VLCVideoPlayer player = manager.getPlayer(entry.getKey());
             
-            TharidiaThings.LOGGER.info("[RENDER] Screen {} - Player: {}, Initialized: {}", 
-                screen.getId(), player != null ? "exists" : "null", 
-                player != null ? player.isInitialized() : "N/A");
+            //TharidiaThings.LOGGER.info("[RENDER] Screen {} - Player: {}, Initialized: {}",
+            //    screen.getId(), player != null ? "exists" : "null",
+            //    player != null ? player.isInitialized() : "N/A");
 
             if (player != null && player.isInitialized()) {
                 renderScreen(poseStack, cameraPos, screen, player);
@@ -47,9 +47,6 @@ public class VideoScreenRenderer {
             com.tharidia.tharidia_things.TharidiaThings.LOGGER.warn("[RENDER] Screen {} has null texture", screen.getId());
             return;
         }
-
-        com.tharidia.tharidia_things.TharidiaThings.LOGGER.debug("[RENDER] Rendering screen {} at {},{}",
-                screen.getId(), screen.getCorner1(), screen.getCorner2());
 
         poseStack.pushPose();
 
