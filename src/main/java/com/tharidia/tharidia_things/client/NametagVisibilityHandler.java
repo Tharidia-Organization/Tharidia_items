@@ -38,6 +38,12 @@ public class NametagVisibilityHandler {
         // In client-side, we check if the player has permission to use commands
         boolean isAdmin = viewer.hasPermissions(4);
         
+        // Debug logging to check if event fires behind walls
+        if (!isAdmin && event.getEntity() instanceof Player) {
+            System.out.println("[NametagDebug] RenderNameTagEvent fired for player: " + 
+                event.getEntity().getName().getString());
+        }
+        
         if (!isAdmin) {
             // Non-admin players cannot see ANY nametags - deny rendering completely
             event.setCanRender(TriState.FALSE);
