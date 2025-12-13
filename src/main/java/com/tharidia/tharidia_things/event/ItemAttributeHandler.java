@@ -48,6 +48,9 @@ public class ItemAttributeHandler {
 
     @SubscribeEvent
     public void onPlayerTick(PlayerTickEvent.Post event) {
+        if (event.getEntity().level().isClientSide())
+            return; // Only run on server side
+
         Player player = event.getEntity();
         ItemStack mainHandItem = player.getMainHandItem();
 
