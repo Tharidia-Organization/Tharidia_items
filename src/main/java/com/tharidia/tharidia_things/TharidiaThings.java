@@ -27,10 +27,13 @@ import com.tharidia.tharidia_things.item.BattleGauntlet;
 import com.tharidia.tharidia_things.item.CopperElsaItem;
 import com.tharidia.tharidia_things.client.ClientPacketHandler;
 import com.tharidia.tharidia_things.command.BattleCommands;
+import com.tharidia.tharidia_things.command.CharacterCommands;
 import com.tharidia.tharidia_things.command.ClaimCommands;
+import com.tharidia.tharidia_things.entity.ModEntities;
 import com.tharidia.tharidia_things.command.FatigueCommands;
 import com.tharidia.tharidia_things.command.ItemCatalogueCommand;
 import com.tharidia.tharidia_things.compoundTag.BattleGauntleAttachments;
+import com.tharidia.tharidia_things.character.CharacterAttachments;
 import com.tharidia.tharidia_things.config.ItemAttributesConfig;
 import com.tharidia.tharidia_things.event.ClaimProtectionHandler;
 import com.tharidia.tharidia_things.event.ItemAttributeHandler;
@@ -271,9 +274,10 @@ public class TharidiaThings {
         BLOCKS.register(modEventBus);
         // Register the Deferred Register to the mod event bus so items get registered
         ITEMS.register(modEventBus);
-        // Register the Deferred Register to the mod event bus so block entities get
-        // registered
+        // Register the Deferred Register to the mod event bus so block entities get registered
         BLOCK_ENTITIES.register(modEventBus);
+        // Register the Deferred Register to the mod event bus so entities get registered
+        ModEntities.ENTITIES.register(modEventBus);
         // Register the Deferred Register to the mod event bus so tabs get registered
         CREATIVE_MODE_TABS.register(modEventBus);
         // Register the Deferred Register to the mod event bus so menus get registered
@@ -281,6 +285,7 @@ public class TharidiaThings {
         // Register the Deferred Register to the mod event bus so attachment types get
         // registered
         FatigueAttachments.ATTACHMENT_TYPES.register(modEventBus);
+        CharacterAttachments.ATTACHMENT_TYPES.register(modEventBus);
 
         // Register ourselves for server and other game events we are interested in.
         // Note that this is necessary if and only if we want *this* class
@@ -384,6 +389,16 @@ public class TharidiaThings {
                     com.tharidia.tharidia_things.network.RequestNamePacket.TYPE,
                     com.tharidia.tharidia_things.network.RequestNamePacket.STREAM_CODEC,
                     ClientPacketHandler::handleRequestName);
+            // Race GUI packet
+            registrar.playToClient(
+                    com.tharidia.tharidia_things.network.OpenRaceGuiPacket.TYPE,
+                    com.tharidia.tharidia_things.network.OpenRaceGuiPacket.STREAM_CODEC,
+                    com.tharidia.tharidia_things.network.OpenRaceGuiPacket::handle);
+            // Race selection packet
+            registrar.playToServer(
+                    com.tharidia.tharidia_things.network.SelectRacePacket.TYPE,
+                    com.tharidia.tharidia_things.network.SelectRacePacket.STREAM_CODEC,
+                    com.tharidia.tharidia_things.network.SelectRacePacket::handle);
             // Zone music packet from tharidiatweaks
             registrar.playToClient(
                     com.tharidia.tharidia_things.network.ZoneMusicPacket.TYPE,
@@ -805,6 +820,7 @@ public class TharidiaThings {
         ClaimCommands.register(event.getDispatcher());
         com.tharidia.tharidia_things.command.ClaimAdminCommands.register(event.getDispatcher());
         FatigueCommands.register(event.getDispatcher());
+        CharacterCommands.register(event.getDispatcher());
         com.tharidia.tharidia_things.command.TradeCommands.register(event.getDispatcher());
         BattleCommands.register(event.getDispatcher());
         com.tharidia.tharidia_things.command.MarketCommands.register(event.getDispatcher());

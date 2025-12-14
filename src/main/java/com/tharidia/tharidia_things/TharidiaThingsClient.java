@@ -21,6 +21,7 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
+import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.ModelEvent;
 import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
@@ -61,17 +62,25 @@ public class TharidiaThingsClient {
             // Trigger dependency check immediately after client setup
             TharidiaThings.LOGGER.info("[VIDEO DEPENDENCIES] Triggering dependency check from client setup");
             com.tharidia.tharidia_things.client.video.DependencyCheckHandler.forceRecheck();
-            BlockEntityRenderers.register(TharidiaThings.PIETRO_BLOCK_ENTITY.get(), PietroBlockRenderer::new);
-            BlockEntityRenderers.register(TharidiaThings.HOT_IRON_ANVIL_ENTITY.get(), HotIronAnvilRenderer::new);
-            BlockEntityRenderers.register(TharidiaThings.HOT_GOLD_ANVIL_ENTITY.get(), HotGoldAnvilRenderer::new);
-            BlockEntityRenderers.register(TharidiaThings.HOT_COPPER_ANVIL_ENTITY.get(), HotCopperAnvilRenderer::new);
-            
-            // Set render type for Pietro block to support transparency
-            net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(
-                TharidiaThings.PIETRO.get(), 
-                RenderType.cutout()
-            );
         });
+    }
+    
+    @SubscribeEvent
+    static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
+        // Register block entity renderers using the event method
+        event.registerBlockEntityRenderer(TharidiaThings.PIETRO_BLOCK_ENTITY.get(), PietroBlockRenderer::new);
+        event.registerBlockEntityRenderer(TharidiaThings.HOT_IRON_ANVIL_ENTITY.get(), HotIronAnvilRenderer::new);
+        event.registerBlockEntityRenderer(TharidiaThings.HOT_GOLD_ANVIL_ENTITY.get(), HotGoldAnvilRenderer::new);
+        event.registerBlockEntityRenderer(TharidiaThings.HOT_COPPER_ANVIL_ENTITY.get(), HotCopperAnvilRenderer::new);
+    }
+    
+    @SubscribeEvent
+    static void onRegisterLayerDefinitions(EntityRenderersEvent.RegisterLayerDefinitions event) {
+        // Set render type for Pietro block to support transparency
+        net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(
+            TharidiaThings.PIETRO.get(), 
+            RenderType.cutout()
+        );
     }
 
     @SubscribeEvent
