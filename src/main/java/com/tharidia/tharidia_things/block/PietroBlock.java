@@ -7,8 +7,11 @@ import com.tharidia.tharidia_things.realm.RealmManager;
 import org.slf4j.Logger;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -28,6 +31,7 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
+import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -40,18 +44,19 @@ public class PietroBlock extends BaseEntityBlock {
     private static final Logger LOGGER = LogUtils.getLogger();
     public static final MapCodec<PietroBlock> CODEC = simpleCodec(PietroBlock::new);
     public static final EnumProperty<DoubleBlockHalf> HALF = BlockStateProperties.DOUBLE_BLOCK_HALF;
+    public static final IntegerProperty REALM_LEVEL = IntegerProperty.create("level", 0, 4);
     // Minimum distance is 9 chunks (2 * max_radius where max_radius = 5)
     // This allows both realms to expand to 9x9 and just touch at the edges
     public static final int MIN_DISTANCE_CHUNKS = 50;
 
     public PietroBlock(Properties properties) {
         super(properties);
-        this.registerDefaultState(this.stateDefinition.any().setValue(HALF, DoubleBlockHalf.LOWER));
+        this.registerDefaultState(this.stateDefinition.any().setValue(HALF, DoubleBlockHalf.LOWER).setValue(REALM_LEVEL, 0));
     }
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(HALF);
+        builder.add(HALF, REALM_LEVEL);
     }
 
     @Override
@@ -71,7 +76,7 @@ public class PietroBlock extends BaseEntityBlock {
         BlockPos blockpos = context.getClickedPos();
         Level level = context.getLevel();
         if (blockpos.getY() < level.getMaxBuildHeight() - 1 && level.getBlockState(blockpos.above()).canBeReplaced(context)) {
-            return this.defaultBlockState().setValue(HALF, DoubleBlockHalf.LOWER);
+            return this.defaultBlockState().setValue(HALF, DoubleBlockHalf.LOWER).setValue(REALM_LEVEL, 0);
         }
         return null;
     }
@@ -89,10 +94,66 @@ public class PietroBlock extends BaseEntityBlock {
                 String chosenName = com.tharidia.tharidia_things.util.PlayerNameHelper.getChosenName(serverPlayer);
                 pietroBlockEntity.setOwner(chosenName, serverPlayer.getUUID());
                 
+                // Update block state with initial level
+                updateBlockStateLevel(level, pos, pietroBlockEntity.getRealmSize());
+                
                 // Sync the new realm to all online players
                 if (level instanceof ServerLevel serverLevel) {
                     syncNewRealmToAllPlayers(serverLevel, pietroBlockEntity);
                 }
+            }
+        }
+    }
+    
+    /**
+     * Updates the block state based on realm size
+     * Level mapping: 3,5->1 | 7,9->2 | 11,13->3 | 15->4 (max 4, but we allow 5 for future)
+     */
+    public void updateBlockStateLevel(Level level, BlockPos pos, int realmSize) {
+        int realmLevel = calculateRealmLevel(realmSize);
+        
+        // Update both lower and upper blocks
+        BlockState lowerState = level.getBlockState(pos).setValue(REALM_LEVEL, realmLevel);
+        level.setBlock(pos, lowerState, 3);
+        
+        BlockPos upperPos = pos.above();
+        BlockState upperState = level.getBlockState(upperPos).setValue(REALM_LEVEL, realmLevel);
+        level.setBlock(upperPos, upperState, 3);
+    }
+    
+    /**
+     * Calculates the visual level from realm size
+     * Level mapping: 3->0 | 5->1 | 7,9->2 | 11,13->3 | 15->4 (max 4, but we allow 5 for future)
+     */
+    private int calculateRealmLevel(int realmSize) {
+        if (realmSize == 3) return 0;
+        if (realmSize == 5) return 1;
+        if (realmSize == 7 || realmSize == 9) return 2;
+        if (realmSize == 11 || realmSize == 13) return 3;
+        if (realmSize == 15) return 4;
+        return 0; // fallback
+    }
+    
+    /**
+     * Plays upgrade effects when realm levels up
+     */
+    public void playUpgradeEffects(Level level, BlockPos pos, int oldLevel, int newLevel) {
+        if (newLevel <= oldLevel || level.isClientSide) return;
+        
+        // Play achievement sound
+        level.playSound(null, pos, SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.BLOCKS, 1.0F, 1.0F);
+        
+        // Spawn happy villager particles around the block
+        if (level instanceof ServerLevel serverLevel) {
+            for (int i = 0; i < 20; i++) {
+                double x = pos.getX() + 0.5 + (level.random.nextDouble() - 0.5) * 2.0;
+                double y = pos.getY() + level.random.nextDouble() * 2.0;
+                double z = pos.getZ() + 0.5 + (level.random.nextDouble() - 0.5) * 2.0;
+                double vx = (level.random.nextDouble() - 0.5) * 0.1;
+                double vy = level.random.nextDouble() * 0.1;
+                double vz = (level.random.nextDouble() - 0.5) * 0.1;
+                
+                serverLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, x, y, z, 1, vx, vy, vz, 0.1);
             }
         }
     }

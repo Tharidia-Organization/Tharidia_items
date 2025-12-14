@@ -357,10 +357,24 @@ public class PietroBlockEntity extends BlockEntity implements MenuProvider {
             }
         }
 
+        int oldSize = realmSize;
+        int oldLevel = calculateRealmLevel(oldSize);
+        
         realmSize+=2;
+        int newLevel = calculateRealmLevel(realmSize);
+        
         setChanged();
         if (level != null && !level.isClientSide) {
             level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+            
+            // Update block state if level changed
+            if (newLevel > oldLevel) {
+                net.minecraft.world.level.block.Block block = level.getBlockState(getBlockPos()).getBlock();
+                if (block instanceof com.tharidia.tharidia_things.block.PietroBlock pietroBlock) {
+                    pietroBlock.updateBlockStateLevel(level, getBlockPos(), realmSize);
+                    pietroBlock.playUpgradeEffects(level, getBlockPos(), oldLevel, newLevel);
+                }
+            }
             
             // Sync the updated realm data to all nearby players
             if (level instanceof ServerLevel serverLevel) {
@@ -368,6 +382,30 @@ public class PietroBlockEntity extends BlockEntity implements MenuProvider {
             }
         }
         return true;
+    }
+    
+    /**
+     * Calculates the visual level from realm size
+     */
+    private int calculateRealmLevel(int realmSize) {
+        if (realmSize == 3) return 0;
+        if (realmSize == 5) return 1;
+        if (realmSize == 7 || realmSize == 9) return 2;
+        if (realmSize == 11 || realmSize == 13) return 3;
+        if (realmSize == 15) return 4;
+        return 0; // fallback
+    }
+    
+    /**
+     * Updates the block state to match the current realm size
+     */
+    private void updateBlockStateFromSize() {
+        if (level != null && !level.isClientSide) {
+            net.minecraft.world.level.block.Block block = level.getBlockState(getBlockPos()).getBlock();
+            if (block instanceof com.tharidia.tharidia_things.block.PietroBlock pietroBlock) {
+                pietroBlock.updateBlockStateLevel(level, getBlockPos(), realmSize);
+            }
+        }
     }
     
     /**
@@ -603,6 +641,9 @@ public class PietroBlockEntity extends BlockEntity implements MenuProvider {
                 }
             }
         }
+        
+        // Update block state after loading (will be applied in onLoad)
+        // Don't do it here as level might not be ready yet
     }
     
     @Override
@@ -622,6 +663,9 @@ public class PietroBlockEntity extends BlockEntity implements MenuProvider {
         // Register this realm when it's loaded
         if (level != null && !level.isClientSide && level instanceof ServerLevel serverLevel) {
             RealmManager.registerRealm(serverLevel, this);
+            
+            // Update block state to match current realm size
+            updateBlockStateFromSize();
         }
     }
 
