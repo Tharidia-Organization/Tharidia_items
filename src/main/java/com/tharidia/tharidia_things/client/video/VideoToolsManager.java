@@ -65,18 +65,19 @@ public class VideoToolsManager {
         // Determine if streamlink is needed (only for Twitch URLs)
         boolean needsStreamlink = videoUrl != null && videoUrl.contains("twitch.tv");
         
-        // Always show installation GUI on startup
-        TharidiaThings.LOGGER.info("[VIDEO TOOLS] Startup check - showing installation GUI");
-        showInstallationGUI();
-        
         // Set tool status based on what we found
         if (!ffmpegFound || !ffplayFound || !ytDlpFound || (needsStreamlink && !streamlinkFound)) {
             TharidiaThings.LOGGER.warn("[VIDEO TOOLS] Missing tools detected - FFmpeg: {}, FFplay: {}, yt-dlp: {}, streamlink: {} (needed: {})", 
                 ffmpegFound, ffplayFound, ytDlpFound, streamlinkFound, needsStreamlink);
             allToolsPresent.set(false);
+            
+            // Only show installation GUI if tools are missing
+            TharidiaThings.LOGGER.info("[VIDEO TOOLS] Missing tools detected - showing installation GUI");
+            showInstallationGUI();
         } else {
             TharidiaThings.LOGGER.info("[VIDEO TOOLS] All required tools found");
             allToolsPresent.set(true);
+            // Don't show GUI when all tools are present
         }
         
         hasChecked.set(true);
