@@ -48,6 +48,9 @@ import com.tharidia.tharidia_things.network.SubmitNamePacket;
 import com.tharidia.tharidia_things.network.SyncGateRestrictionsPacket;
 import com.tharidia.tharidia_things.realm.RealmManager;
 import com.tharidia.tharidia_things.registry.ModAttributes;
+import com.tharidia.tharidia_things.registry.ModStats;
+import net.minecraft.stats.Stats;
+import net.minecraft.stats.StatFormatter;
 import com.tharidia.tharidia_things.servertransfer.ServerTransferManager;
 import com.tharidia.tharidia_things.servertransfer.ServerTransferCommands;
 import com.tharidia.tharidia_things.servertransfer.ServerTransferEvents;
@@ -282,6 +285,9 @@ public class TharidiaThings {
         // registered
         FatigueAttachments.ATTACHMENT_TYPES.register(modEventBus);
 
+        // Register custom stats
+        ModStats.register(modEventBus);
+
         // Register ourselves for server and other game events we are interested in.
         // Note that this is necessary if and only if we want *this* class
         // (TharidiaThings) to respond directly to events.
@@ -292,6 +298,8 @@ public class TharidiaThings {
         NeoForge.EVENT_BUS.addListener(this::onServerStopping);
         // Register the claim protection handler
         NeoForge.EVENT_BUS.register(ClaimProtectionHandler.class);
+        // Register the player kill handler
+        NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.PlayerKillHandler.class);
         // Register the claim expiration handler
         NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.ClaimExpirationHandler.class);
         // Register the realm placement handler
@@ -344,6 +352,10 @@ public class TharidiaThings {
     private void commonSetup(FMLCommonSetupEvent event) {
         // Common setup
         LOGGER.info("HELLO FROM COMMON SETUP");
+
+        event.enqueueWork(() -> {
+            Stats.CUSTOM.get(ModStats.LAMA_CORTA_KILL.get(), StatFormatter.DEFAULT);
+        });
     }
 
     private void registerPayloads(RegisterPayloadHandlersEvent event) {
