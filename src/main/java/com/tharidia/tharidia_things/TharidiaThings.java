@@ -90,6 +90,10 @@ import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
+import net.neoforged.neoforge.attachment.AttachmentType;
+import net.neoforged.neoforge.registries.NeoForgeRegistries;
+import com.tharidia.tharidia_things.inventory.SecondLayerInventory;
+import java.util.function.Supplier;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -101,6 +105,15 @@ public class TharidiaThings {
     public static final String MODID = "tharidiathings";
     // Directly reference a slf4j logger
     public static final Logger LOGGER = LogUtils.getLogger();
+
+    public static final DeferredRegister<AttachmentType<?>> ATTACHMENT_TYPES = DeferredRegister
+            .create(NeoForgeRegistries.ATTACHMENT_TYPES, MODID);
+
+    public static final Supplier<AttachmentType<SecondLayerInventory>> SECOND_LAYER_INVENTORY = ATTACHMENT_TYPES
+            .register(
+                    "second_layer_inventory",
+                    () -> AttachmentType.serializable(holder -> new SecondLayerInventory(holder)).build());
+
     // Create a Deferred Register to hold Blocks which will all be registered under
     // the "tharidiathings" namespace
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(MODID);
@@ -278,6 +291,7 @@ public class TharidiaThings {
         CREATIVE_MODE_TABS.register(modEventBus);
         // Register the Deferred Register to the mod event bus so menus get registered
         MENU_TYPES.register(modEventBus);
+        ATTACHMENT_TYPES.register(modEventBus);
         // Register the Deferred Register to the mod event bus so attachment types get
         // registered
         FatigueAttachments.ATTACHMENT_TYPES.register(modEventBus);
@@ -438,6 +452,11 @@ public class TharidiaThings {
                     com.tharidia.tharidia_things.network.VideoScreenVolumePacket.STREAM_CODEC,
                     com.tharidia.tharidia_things.network.VideoScreenVolumePacket::handle);
 
+            registrar.playToClient(
+                    com.tharidia.tharidia_things.network.SecondLayerSyncPacket.TYPE,
+                    com.tharidia.tharidia_things.network.SecondLayerSyncPacket.STREAM_CODEC,
+                    com.tharidia.tharidia_things.network.SecondLayerSyncPacket::handle);
+
             LOGGER.info("Client packet handlers registered");
         } else {
 
@@ -541,6 +560,12 @@ public class TharidiaThings {
                     (packet, context) -> {
                     });
 
+            registrar.playToClient(
+                    com.tharidia.tharidia_things.network.SecondLayerSyncPacket.TYPE,
+                    com.tharidia.tharidia_things.network.SecondLayerSyncPacket.STREAM_CODEC,
+                    (packet, context) -> {
+                    });
+
             LOGGER.info("Server-side packet registration completed (dummy handlers)");
         }
 
@@ -610,6 +635,12 @@ public class TharidiaThings {
 
             // Sync all video screens to the player
             syncAllVideoScreensToPlayer((ServerPlayer) event.getEntity(), serverLevel);
+        }
+
+        if (event.getEntity() instanceof ServerPlayer serverPlayer) {
+            SecondLayerInventory inventory = serverPlayer.getData(SECOND_LAYER_INVENTORY.get());
+            PacketDistributor.sendToPlayer(serverPlayer, new com.tharidia.tharidia_things.network.SecondLayerSyncPacket(
+                    inventory.serializeNBT(serverPlayer.registryAccess())));
         }
     }
 
@@ -744,6 +775,32 @@ public class TharidiaThings {
         currentServer = server;
         tickCounter = 0;
         LOGGER.info("Token cleanup scheduler initialized");
+    }
+
+    @SubscribeEvent
+    public void onLivingDrops(net.neoforged.neoforge.event.entity.living.LivingDropsEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            if (!player.level().getGameRules().getBoolean(net.minecraft.world.level.GameRules.RULE_KEEPINVENTORY)) {
+                SecondLayerInventory inventory = player.getData(SECOND_LAYER_INVENTORY.get());
+                for (int i = 0; i < SecondLayerInventory.SIZE; i++) {
+                    net.minecraft.world.item.ItemStack stack = inventory.getStackInSlot(i);
+                    if (!stack.isEmpty()) {
+                        player.drop(stack, true, false);
+                        inventory.setStackInSlot(i, net.minecraft.world.item.ItemStack.EMPTY);
+                    }
+                }
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public void onPlayerClone(net.neoforged.neoforge.event.entity.player.PlayerEvent.Clone event) {
+        SecondLayerInventory oldInv = event.getOriginal().getData(SECOND_LAYER_INVENTORY.get());
+        SecondLayerInventory newInv = event.getEntity().getData(SECOND_LAYER_INVENTORY.get());
+
+        for (int i = 0; i < SecondLayerInventory.SIZE; i++) {
+            newInv.setStackInSlot(i, oldInv.getStackInSlot(i));
+        }
     }
 
     @SubscribeEvent

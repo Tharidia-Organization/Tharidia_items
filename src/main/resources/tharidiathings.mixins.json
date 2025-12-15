@@ -1,0 +1,13 @@
+{
+    "required": true,
+    "minVersion": "0.8",
+    "package": "com.tharidia.tharidia_things.mixin",
+    "compatibilityLevel": "JAVA_21",
+    "mixins": [
+        "InventoryMenuMixin"
+    ],
+    "client": [],
+    "injectors": {
+        "defaultRequire": 1
+    }
+}
