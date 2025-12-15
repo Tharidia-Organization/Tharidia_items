@@ -30,6 +30,7 @@ import com.tharidia.tharidia_things.command.BattleCommands;
 import com.tharidia.tharidia_things.command.ClaimCommands;
 import com.tharidia.tharidia_things.command.FatigueCommands;
 import com.tharidia.tharidia_things.command.ItemCatalogueCommand;
+import com.tharidia.tharidia_things.command.StatsCommand;
 import com.tharidia.tharidia_things.compoundTag.BattleGauntleAttachments;
 import com.tharidia.tharidia_things.config.ItemCatalogueConfig;
 import com.tharidia.tharidia_things.event.ClaimProtectionHandler;
@@ -834,6 +835,7 @@ public class TharidiaThings {
         com.tharidia.tharidia_things.command.VideoScreenCommands.register(event.getDispatcher());
         ServerTransferCommands.register(event.getDispatcher());
         ItemCatalogueCommand.register(event.getDispatcher());
+        StatsCommand.register(event.getDispatcher());
     }
 
     /**

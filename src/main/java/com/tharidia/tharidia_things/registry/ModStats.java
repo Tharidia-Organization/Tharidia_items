@@ -50,4 +50,18 @@ public class ModStats {
     public static void register(IEventBus eventBus) {
         CUSTOM_STATS.register(eventBus);
     }
+
+    public static String[] getAllStatNames() {
+        return new String[] {
+                "lama_corta_kill",
+                "lancia_kill",
+                "martelli_kill",
+                "mazze_kill",
+                "spade_2_mani_kill",
+                "asce_kill",
+                "socchi_kill",
+                "archi_kill",
+                "armi_da_fuoco_kill"
+        };        
+    }
 }
