@@ -17,7 +17,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.tharidia.tharidia_things.config.ItemAttributesConfig;
+import com.tharidia.tharidia_things.config.ItemCatalogueConfig;
 import com.tharidia.tharidia_things.registry.ModAttributes;
 
 public class ItemAttributeHandler {
@@ -26,23 +26,23 @@ public class ItemAttributeHandler {
 
     public static void reload() {
         WEAPON_ATTRIBUTES.clear();
-        WEAPON_ATTRIBUTES.put(ItemAttributesConfig.config.LAMA_CORTA_ITEMS.get("Value"),
+        WEAPON_ATTRIBUTES.put(ItemCatalogueConfig.config.LAMA_CORTA_ITEMS.get("Value"),
                 ModAttributes.LAMA_CORTA_ATTACK_DAMAGE);
-        WEAPON_ATTRIBUTES.put(ItemAttributesConfig.config.LANCIA_ITEMS.get("Value"),
+        WEAPON_ATTRIBUTES.put(ItemCatalogueConfig.config.LANCIA_ITEMS.get("Value"),
                 ModAttributes.LANCIA_ATTACK_DAMAGE);
-        WEAPON_ATTRIBUTES.put(ItemAttributesConfig.config.MARTELLI_ITEMS.get("Value"),
+        WEAPON_ATTRIBUTES.put(ItemCatalogueConfig.config.MARTELLI_ITEMS.get("Value"),
                 ModAttributes.MARTELLI_ATTACK_DAMAGE);
-        WEAPON_ATTRIBUTES.put(ItemAttributesConfig.config.MAZZE_ITEMS.get("Value"),
+        WEAPON_ATTRIBUTES.put(ItemCatalogueConfig.config.MAZZE_ITEMS.get("Value"),
                 ModAttributes.MAZZE_ATTACK_DAMAGE);
-        WEAPON_ATTRIBUTES.put(ItemAttributesConfig.config.SPADE_2_MANI_ITEMS.get("Value"),
+        WEAPON_ATTRIBUTES.put(ItemCatalogueConfig.config.SPADE_2_MANI_ITEMS.get("Value"),
                 ModAttributes.SPADE_2_MANI_ATTACK_DAMAGE);
-        WEAPON_ATTRIBUTES.put(ItemAttributesConfig.config.ASCE_ITEMS.get("Value"),
+        WEAPON_ATTRIBUTES.put(ItemCatalogueConfig.config.ASCE_ITEMS.get("Value"),
                 ModAttributes.ASCE_ATTACK_DAMAGE);
-        WEAPON_ATTRIBUTES.put(ItemAttributesConfig.config.SOCCHI_ITEMS.get("Value"),
+        WEAPON_ATTRIBUTES.put(ItemCatalogueConfig.config.SOCCHI_ITEMS.get("Value"),
                 ModAttributes.SOCCHI_ATTACK_DAMAGE);
-        WEAPON_ATTRIBUTES.put(ItemAttributesConfig.config.ARCHI_ITEMS.get("Value"),
+        WEAPON_ATTRIBUTES.put(ItemCatalogueConfig.config.ARCHI_ITEMS.get("Value"),
                 ModAttributes.ARCHI_ATTACK_DAMAGE);
-        WEAPON_ATTRIBUTES.put(ItemAttributesConfig.config.ARMI_DA_FUOCO_ITEMS.get("Value"),
+        WEAPON_ATTRIBUTES.put(ItemCatalogueConfig.config.ARMI_DA_FUOCO_ITEMS.get("Value"),
                 ModAttributes.ARMI_DA_FUOCO_ATTACK_DAMAGE);
     }
 

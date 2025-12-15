@@ -31,9 +31,10 @@ import com.tharidia.tharidia_things.command.ClaimCommands;
 import com.tharidia.tharidia_things.command.FatigueCommands;
 import com.tharidia.tharidia_things.command.ItemCatalogueCommand;
 import com.tharidia.tharidia_things.compoundTag.BattleGauntleAttachments;
-import com.tharidia.tharidia_things.config.ItemAttributesConfig;
+import com.tharidia.tharidia_things.config.ItemCatalogueConfig;
 import com.tharidia.tharidia_things.event.ClaimProtectionHandler;
 import com.tharidia.tharidia_things.event.ItemAttributeHandler;
+import com.tharidia.tharidia_things.event.PlayerStatsIncrementHandler;
 import com.tharidia.tharidia_things.fatigue.FatigueAttachments;
 import com.tharidia.tharidia_things.features.FreezeManager;
 import com.tharidia.tharidia_things.network.BattlePackets;
@@ -299,7 +300,7 @@ public class TharidiaThings {
         // Register the claim protection handler
         NeoForge.EVENT_BUS.register(ClaimProtectionHandler.class);
         // Register the player kill handler
-        NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.PlayerKillHandler.class);
+        NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.PlayerStatsIncrementHandler.class);
         // Register the claim expiration handler
         NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.ClaimExpirationHandler.class);
         // Register the realm placement handler
@@ -355,6 +356,14 @@ public class TharidiaThings {
 
         event.enqueueWork(() -> {
             Stats.CUSTOM.get(ModStats.LAMA_CORTA_KILL.get(), StatFormatter.DEFAULT);
+            Stats.CUSTOM.get(ModStats.LANCIA_KILL.get(), StatFormatter.DEFAULT);
+            Stats.CUSTOM.get(ModStats.MARTELLI_KILL.get(), StatFormatter.DEFAULT);
+            Stats.CUSTOM.get(ModStats.MAZZE_KILL.get(), StatFormatter.DEFAULT);
+            Stats.CUSTOM.get(ModStats.SPADE_2_MANI_KILL.get(), StatFormatter.DEFAULT);
+            Stats.CUSTOM.get(ModStats.ASCE_KILL.get(), StatFormatter.DEFAULT);
+            Stats.CUSTOM.get(ModStats.SOCCHI_KILL.get(), StatFormatter.DEFAULT);
+            Stats.CUSTOM.get(ModStats.ARCHI_KILL.get(), StatFormatter.DEFAULT);
+            Stats.CUSTOM.get(ModStats.ARMI_DA_FUOCO_KILL.get(), StatFormatter.DEFAULT);
         });
     }
 
@@ -686,8 +695,9 @@ public class TharidiaThings {
             LOGGER.error("Could not load claim registry: overworld is null");
         }
 
-        ItemAttributesConfig.reload();
+        ItemCatalogueConfig.reload();
         ItemAttributeHandler.reload();
+        PlayerStatsIncrementHandler.reload();
 
         // Register weight data loader
         event.getServer().getResourceManager();
@@ -808,8 +818,9 @@ public class TharidiaThings {
         event.addListener(new com.tharidia.tharidia_things.config.CropProtectionConfig());
         event.addListener(new com.tharidia.tharidia_things.config.FatigueConfig());
 
-        ItemAttributesConfig.reload();
+        ItemCatalogueConfig.reload();
         ItemAttributeHandler.reload();
+        PlayerStatsIncrementHandler.reload();
     }
 
     @SubscribeEvent
