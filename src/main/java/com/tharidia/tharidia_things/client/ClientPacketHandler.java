@@ -263,6 +263,16 @@ public class ClientPacketHandler {
     }
     
     /**
+     * Handles opening the race selection GUI
+     */
+    public static void handleOpenRaceGui(com.tharidia.tharidia_things.network.OpenRaceGuiPacket packet, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            // Open the race GUI on client
+            Minecraft.getInstance().setScreen(new com.tharidia.tharidia_things.client.screen.RaceSelectionScreen(packet.raceName()));
+        });
+    }
+
+    /**
      * Handles zone music packet from tharidiatweaks mod
      */
     public static void handleZoneMusic(ZoneMusicPacket packet, IPayloadContext context) {

@@ -1,6 +1,5 @@
 package com.tharidia.tharidia_things.network;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -28,9 +27,6 @@ public record OpenRaceGuiPacket(String raceName) implements CustomPacketPayload 
     }
     
     public static void handle(OpenRaceGuiPacket packet, IPayloadContext context) {
-        context.enqueueWork(() -> {
-            // Open the race GUI on client
-            Minecraft.getInstance().setScreen(new com.tharidia.tharidia_things.client.screen.RaceSelectionScreen(packet.raceName));
-        });
+        // Handler is in ClientPacketHandler to avoid loading client classes on server
     }
 }

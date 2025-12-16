@@ -5,6 +5,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.ClientboundTransferPacket;
 import net.minecraft.server.level.ServerPlayer;
@@ -12,7 +13,7 @@ import net.minecraft.server.level.ServerPlayer;
 public class ServerTransferCommands {
     
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
-        // Comando /tharidiathings transfer <server>
+        // Comando /tharidiathings transfer <server> [player]
         dispatcher.register(Commands.literal("tharidia")
                 .then(Commands.literal("transfer")
                         .requires(source -> source.hasPermission(4))
@@ -22,6 +23,13 @@ public class ServerTransferCommands {
                                     builder.suggest("dev");
                                     return builder.buildFuture();
                                 })
+                                .then(Commands.argument("player", EntityArgument.player())
+                                        .executes(context -> {
+                                            String targetServer = StringArgumentType.getString(context, "server");
+                                            ServerPlayer targetPlayer = EntityArgument.getPlayer(context, "player");
+                                            return transferPlayerToServer(context.getSource(), targetServer, targetPlayer);
+                                        })
+                                )
                                 .executes(context -> {
                                     String targetServer = StringArgumentType.getString(context, "server");
                                     return transferToServer(context.getSource(), targetServer);
@@ -100,6 +108,73 @@ public class ServerTransferCommands {
         
         // Invia il pacchetto di trasferimento al client
         player.connection.send(new ClientboundTransferPacket(host, port));
+        
+        return 1;
+    }
+    
+    private static int transferPlayerToServer(CommandSourceStack source, String targetServer, ServerPlayer targetPlayer) {
+        // Verifica che il server sia valido
+        if (!targetServer.equalsIgnoreCase("main") && !targetServer.equalsIgnoreCase("dev")) {
+            source.sendFailure(Component.literal("§cServer non valido. Server disponibili: main, dev"));
+            return 0;
+        }
+        
+        // Verifica che non si stia già trasferendo a se stesso
+        String currentServer = ServerTransferManager.getCurrentServerName();
+        if (targetServer.equalsIgnoreCase(currentServer)) {
+            source.sendFailure(Component.literal("§cIl giocatore " + targetPlayer.getName().getString() + " è già connesso al server " + targetServer));
+            return 0;
+        }
+        
+        // Crea token di trasferimento
+        TransferTokenManager.createToken(targetPlayer.getUUID(), targetServer);
+        
+        // Salva i dati del giocatore
+        if (!ServerTransferManager.savePlayerDataForTransfer(targetPlayer, targetServer)) {
+            source.sendFailure(Component.literal("§cErrore durante il salvataggio dei dati del giocatore. Riprova più tardi."));
+            return 0;
+        }
+        
+        // Ottieni l'indirizzo del server di destinazione
+        String serverAddress = ServerTransferManager.getServerAddress(targetServer);
+        if (serverAddress == null) {
+            source.sendFailure(Component.literal("§cServer di destinazione non configurato"));
+            return 0;
+        }
+        
+        // Parse the address to get host and port
+        String[] parts = serverAddress.split(":");
+        if (parts.length != 2) {
+            source.sendFailure(Component.literal("§cIndirizzo server non valido: " + serverAddress));
+            return 0;
+        }
+        
+        String host = parts[0];
+        int port;
+        try {
+            port = Integer.parseInt(parts[1]);
+        } catch (NumberFormatException e) {
+            source.sendFailure(Component.literal("§cPorta server non valida: " + parts[1]));
+            return 0;
+        }
+        
+        // Invia messaggio di conferma al command sender
+        source.sendSuccess(() -> Component.literal("§aTrasferimento di " + targetPlayer.getName().getString() + " verso " + targetServer + " in corso..."), true);
+        
+        // Invia messaggio al giocatore target
+        targetPlayer.sendSystemMessage(Component.literal(""));
+        targetPlayer.sendSystemMessage(Component.literal("§6=== Trasferimento Server ==="));
+        targetPlayer.sendSystemMessage(Component.literal("§eDati salvati correttamente!"));
+        targetPlayer.sendSystemMessage(Component.literal("§aTrasferimento in corso verso: §f" + targetServer));
+        targetPlayer.sendSystemMessage(Component.literal("§7Indirizzo: §b" + serverAddress));
+        targetPlayer.sendSystemMessage(Component.literal(""));
+        
+        // Log the full address for debugging
+        TharidiaThings.LOGGER.info("Player {} being transferred to server {} with address {}:{} by {}", 
+                targetPlayer.getName().getString(), targetServer, host, port, source.getTextName());
+        
+        // Invia il pacchetto di trasferimento al client del giocatore target
+        targetPlayer.connection.send(new ClientboundTransferPacket(host, port));
         
         return 1;
     }

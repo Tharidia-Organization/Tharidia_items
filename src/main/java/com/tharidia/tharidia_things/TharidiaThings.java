@@ -393,7 +393,7 @@ public class TharidiaThings {
             registrar.playToClient(
                     com.tharidia.tharidia_things.network.OpenRaceGuiPacket.TYPE,
                     com.tharidia.tharidia_things.network.OpenRaceGuiPacket.STREAM_CODEC,
-                    com.tharidia.tharidia_things.network.OpenRaceGuiPacket::handle);
+                    ClientPacketHandler::handleOpenRaceGui);
             // Race selection packet
             registrar.playToServer(
                     com.tharidia.tharidia_things.network.SelectRacePacket.TYPE,
@@ -453,6 +453,46 @@ public class TharidiaThings {
                     com.tharidia.tharidia_things.network.VideoScreenVolumePacket.STREAM_CODEC,
                     com.tharidia.tharidia_things.network.VideoScreenVolumePacket::handle);
 
+            // Register dummy handlers for server-bound packets (client-side only for handshake)
+            registrar.playToServer(
+                    UpdateHierarchyPacket.TYPE,
+                    UpdateHierarchyPacket.STREAM_CODEC,
+                    (packet, context) -> {});
+            registrar.playToServer(
+                    DungeonQueuePacket.TYPE,
+                    DungeonQueuePacket.STREAM_CODEC,
+                    (packet, context) -> {});
+            registrar.playToServer(
+                    SelectComponentPacket.TYPE,
+                    SelectComponentPacket.STREAM_CODEC,
+                    (packet, context) -> {});
+            registrar.playToServer(
+                    SubmitNamePacket.TYPE,
+                    SubmitNamePacket.STREAM_CODEC,
+                    (packet, context) -> {});
+            // Trade packets (server-bound, dummy handlers)
+            registrar.playToServer(
+                    com.tharidia.tharidia_things.network.TradeResponsePacket.TYPE,
+                    com.tharidia.tharidia_things.network.TradeResponsePacket.STREAM_CODEC,
+                    (packet, context) -> {});
+            registrar.playToServer(
+                    com.tharidia.tharidia_things.network.TradeUpdatePacket.TYPE,
+                    com.tharidia.tharidia_things.network.TradeUpdatePacket.STREAM_CODEC,
+                    (packet, context) -> {});
+            registrar.playToServer(
+                    com.tharidia.tharidia_things.network.TradeCancelPacket.TYPE,
+                    com.tharidia.tharidia_things.network.TradeCancelPacket.STREAM_CODEC,
+                    (packet, context) -> {});
+            registrar.playToServer(
+                    com.tharidia.tharidia_things.network.TradeFinalConfirmPacket.TYPE,
+                    com.tharidia.tharidia_things.network.TradeFinalConfirmPacket.STREAM_CODEC,
+                    (packet, context) -> {});
+            // Music file request packet (server-bound, dummy handler)
+            registrar.playToServer(
+                    com.tharidia.tharidia_things.network.RequestMusicFilePacket.TYPE,
+                    com.tharidia.tharidia_things.network.RequestMusicFilePacket.STREAM_CODEC,
+                    (packet, context) -> {});
+
             LOGGER.info("Client packet handlers registered");
         } else {
 
@@ -496,6 +536,17 @@ public class TharidiaThings {
                     com.tharidia.tharidia_things.network.RequestNamePacket.STREAM_CODEC,
                     (packet, context) -> {
                     });
+            // Race GUI packet (server-side dummy handler for handshake)
+            registrar.playToClient(
+                    com.tharidia.tharidia_things.network.OpenRaceGuiPacket.TYPE,
+                    com.tharidia.tharidia_things.network.OpenRaceGuiPacket.STREAM_CODEC,
+                    (packet, context) -> {
+                    });
+            // Race selection packet (server-side handler)
+            registrar.playToServer(
+                    com.tharidia.tharidia_things.network.SelectRacePacket.TYPE,
+                    com.tharidia.tharidia_things.network.SelectRacePacket.STREAM_CODEC,
+                    com.tharidia.tharidia_things.network.SelectRacePacket::handle);
             // Zone music packet (dummy handler)
             registrar.playToClient(
                     com.tharidia.tharidia_things.network.ZoneMusicPacket.TYPE,

@@ -197,11 +197,9 @@ public class CharacterEventHandler {
     }
     
     /**
-     * Spawns 5 race points in pentacle formation around the center
+     * Spawns a single selection point at the center
      */
     private static void spawnRacePoints(ServerLevel level, BlockPos center) {
-        RaceData.loadRaceData();
-        
         // Remove existing race point entities - use fixed center to catch all entities
         BlockPos fixedCenter = new BlockPos(0, 100, 0);
         level.getEntitiesOfClass(RacePointEntity.class, 
@@ -211,22 +209,9 @@ public class CharacterEventHandler {
                 entity.discard();
             });
         
-        // Race names and their colors
-        String[] races = {"umano", "elfo", "nano", "dragonide", "orcho"};
-        int[] colors = {0xFFFFFF, 0x55FF55, 0xFFAA55, 0xFF5555, 0x5555FF};
-        
-        // Calculate pentacle positions
-        double radius = 8.0;
-        for (int i = 0; i < 5; i++) {
-            // Pentagon angles: 90°, 162°, 234°, 306°, 18° (in radians)
-            double angle = Math.toRadians(90 + i * 72);
-            double x = center.getX() + Math.cos(angle) * radius;
-            double z = center.getZ() + Math.sin(angle) * radius;
-            double y = center.getY();
-            
-            RacePointEntity racePoint = new RacePointEntity(level, x, y, z, races[i], colors[i]);
-            level.addFreshEntity(racePoint);
-        }
+        // Spawn a single selection point at the center
+        RacePointEntity selectionPoint = new RacePointEntity(level, center.getX(), center.getY(), center.getZ(), "scegli il tuo percorso", 0xFFFFFF);
+        level.addFreshEntity(selectionPoint);
     }
     
     /**
