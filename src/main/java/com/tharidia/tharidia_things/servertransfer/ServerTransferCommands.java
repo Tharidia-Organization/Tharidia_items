@@ -1,6 +1,7 @@
 package com.tharidia.tharidia_things.servertransfer;
 
 import com.tharidia.tharidia_things.TharidiaThings;
+import com.tharidia.tharidia_things.network.TransferInitiatedPacket;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import net.minecraft.commands.CommandSourceStack;
@@ -9,6 +10,7 @@ import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.ClientboundTransferPacket;
 import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 public class ServerTransferCommands {
     
@@ -106,6 +108,9 @@ public class ServerTransferCommands {
         TharidiaThings.LOGGER.info("Player {} transferring to server {} with address {}:{}", 
                 player.getName().getString(), targetServer, host, port);
         
+        // Notify client about transfer for fallback support
+        PacketDistributor.sendToPlayer(player, new TransferInitiatedPacket(currentServer, targetServer));
+        
         // Invia il pacchetto di trasferimento al client
         player.connection.send(new ClientboundTransferPacket(host, port));
         
@@ -172,6 +177,9 @@ public class ServerTransferCommands {
         // Log the full address for debugging
         TharidiaThings.LOGGER.info("Player {} being transferred to server {} with address {}:{} by {}", 
                 targetPlayer.getName().getString(), targetServer, host, port, source.getTextName());
+        
+        // Notify client about transfer for fallback support
+        PacketDistributor.sendToPlayer(targetPlayer, new TransferInitiatedPacket(currentServer, targetServer));
         
         // Invia il pacchetto di trasferimento al client del giocatore target
         targetPlayer.connection.send(new ClientboundTransferPacket(host, port));

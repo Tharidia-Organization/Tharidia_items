@@ -263,6 +263,16 @@ public class ClientPacketHandler {
     }
     
     /**
+     * Handles transfer initiated notification
+     */
+    public static void handleTransferInitiated(com.tharidia.tharidia_things.network.TransferInitiatedPacket packet, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            // Set fallback state on client
+            com.tharidia.tharidia_things.client.ServerTransferFallback.setTransferring(true, packet.fromServer(), packet.toServer());
+        });
+    }
+
+    /**
      * Handles opening the race selection GUI
      */
     public static void handleOpenRaceGui(com.tharidia.tharidia_things.network.OpenRaceGuiPacket packet, IPayloadContext context) {
