@@ -26,9 +26,6 @@ public class RacePointRenderer extends EntityRenderer<RacePointEntity> {
     @Override
     public void render(RacePointEntity entity, float entityYaw, float partialTick, PoseStack poseStack, 
                       MultiBufferSource bufferSource, int packedLight) {
-        // Debug: Log that renderer is being called
-        System.out.println("Rendering RacePointEntity at " + entity.getX() + ", " + entity.getY() + ", " + entity.getZ());
-        
         poseStack.pushPose();
         
         // Position at entity location
