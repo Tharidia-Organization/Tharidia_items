@@ -454,44 +454,8 @@ public class TharidiaThings {
                     com.tharidia.tharidia_things.network.VideoScreenVolumePacket::handle);
 
             // Register dummy handlers for server-bound packets (client-side only for handshake)
-            registrar.playToServer(
-                    UpdateHierarchyPacket.TYPE,
-                    UpdateHierarchyPacket.STREAM_CODEC,
-                    (packet, context) -> {});
-            registrar.playToServer(
-                    DungeonQueuePacket.TYPE,
-                    DungeonQueuePacket.STREAM_CODEC,
-                    (packet, context) -> {});
-            registrar.playToServer(
-                    SelectComponentPacket.TYPE,
-                    SelectComponentPacket.STREAM_CODEC,
-                    (packet, context) -> {});
-            registrar.playToServer(
-                    SubmitNamePacket.TYPE,
-                    SubmitNamePacket.STREAM_CODEC,
-                    (packet, context) -> {});
-            // Trade packets (server-bound, dummy handlers)
-            registrar.playToServer(
-                    com.tharidia.tharidia_things.network.TradeResponsePacket.TYPE,
-                    com.tharidia.tharidia_things.network.TradeResponsePacket.STREAM_CODEC,
-                    (packet, context) -> {});
-            registrar.playToServer(
-                    com.tharidia.tharidia_things.network.TradeUpdatePacket.TYPE,
-                    com.tharidia.tharidia_things.network.TradeUpdatePacket.STREAM_CODEC,
-                    (packet, context) -> {});
-            registrar.playToServer(
-                    com.tharidia.tharidia_things.network.TradeCancelPacket.TYPE,
-                    com.tharidia.tharidia_things.network.TradeCancelPacket.STREAM_CODEC,
-                    (packet, context) -> {});
-            registrar.playToServer(
-                    com.tharidia.tharidia_things.network.TradeFinalConfirmPacket.TYPE,
-                    com.tharidia.tharidia_things.network.TradeFinalConfirmPacket.STREAM_CODEC,
-                    (packet, context) -> {});
-            // Music file request packet (server-bound, dummy handler)
-            registrar.playToServer(
-                    com.tharidia.tharidia_things.network.RequestMusicFilePacket.TYPE,
-                    com.tharidia.tharidia_things.network.RequestMusicFilePacket.STREAM_CODEC,
-                    (packet, context) -> {});
+            // Note: All server-bound packets are registered below with actual handlers
+            // No dummy handlers needed here as they're registered with real handlers
 
             LOGGER.info("Client packet handlers registered");
         } else {
