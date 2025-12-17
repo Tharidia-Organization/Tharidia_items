@@ -20,8 +20,8 @@ public class BattleInviteScreen extends AbstractContainerScreen<BattleInviteMenu
         super(menu, playerInventory, title);
 
         // Set the size of our small GUI window
-        this.imageWidth = 176;
-        this.imageHeight = 80;
+        this.imageWidth = 2000;
+        this.imageHeight = 1000;
     }
 
     @Override
