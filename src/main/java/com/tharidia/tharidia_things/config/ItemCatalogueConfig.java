@@ -14,14 +14,14 @@ import com.tharidia.tharidia_things.TharidiaThings;
 
 import net.neoforged.fml.loading.FMLPaths;
 
-public class ItemAttributesConfig {
-    public static ItemAttributesConfig config;
+public class ItemCatalogueConfig {
+    public static ItemCatalogueConfig config;
 
     public static void reload() {
         config = load(FMLPaths.CONFIGDIR.get()
-                .resolve(TharidiaThings.MODID + "-item_attributes" + ".json").toFile());
+                .resolve(TharidiaThings.MODID + "-item_catalogue" + ".json").toFile());
     }
-    
+
     private static final Gson GSON = new GsonBuilder()
             .setPrettyPrinting()
             .excludeFieldsWithoutExposeAnnotation()
@@ -100,11 +100,11 @@ public class ItemAttributesConfig {
         }
     };
 
-    public static ItemAttributesConfig load(File configFile) {
-        ItemAttributesConfig config = new ItemAttributesConfig();
+    public static ItemCatalogueConfig load(File configFile) {
+        ItemCatalogueConfig config = new ItemCatalogueConfig();
         if (configFile.exists()) {
             try (FileReader reader = new FileReader(configFile)) {
-                config = GSON.fromJson(reader, ItemAttributesConfig.class);
+                config = GSON.fromJson(reader, ItemCatalogueConfig.class);
             } catch (Exception e) {
             }
         } else {

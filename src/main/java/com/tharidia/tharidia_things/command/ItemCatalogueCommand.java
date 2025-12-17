@@ -2,7 +2,7 @@ package com.tharidia.tharidia_things.command;
 
 import java.util.List;
 
-import com.tharidia.tharidia_things.config.ItemAttributesConfig;
+import com.tharidia.tharidia_things.config.ItemCatalogueConfig;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.context.CommandContext;
 
@@ -37,15 +37,15 @@ public class ItemCatalogueCommand {
     private static int getItemCatalogue(CommandContext<CommandSourceStack> context, String catalogue) {
         CommandSourceStack source = context.getSource();
         List<?> items = switch (catalogue) {
-            case "LAMA_CORTA" -> (List<?>) ItemAttributesConfig.config.LAMA_CORTA_ITEMS.get("Value");
-            case "LANCIA" -> (List<?>) ItemAttributesConfig.config.LANCIA_ITEMS.get("Value");
-            case "MARTELLI" -> (List<?>) ItemAttributesConfig.config.MARTELLI_ITEMS.get("Value");
-            case "MAZZE" -> (List<?>) ItemAttributesConfig.config.MAZZE_ITEMS.get("Value");
-            case "SPADE_2_MANI" -> (List<?>) ItemAttributesConfig.config.SPADE_2_MANI_ITEMS.get("Value");
-            case "ASCE" -> (List<?>) ItemAttributesConfig.config.ASCE_ITEMS.get("Value");
-            case "SOCCHI" -> (List<?>) ItemAttributesConfig.config.SOCCHI_ITEMS.get("Value");
-            case "ARCHI" -> (List<?>) ItemAttributesConfig.config.ARCHI_ITEMS.get("Value");
-            case "ARMI_DA_FUOCO" -> (List<?>) ItemAttributesConfig.config.ARMI_DA_FUOCO_ITEMS.get("Value");
+            case "LAMA_CORTA" -> (List<?>) ItemCatalogueConfig.config.LAMA_CORTA_ITEMS.get("Value");
+            case "LANCIA" -> (List<?>) ItemCatalogueConfig.config.LANCIA_ITEMS.get("Value");
+            case "MARTELLI" -> (List<?>) ItemCatalogueConfig.config.MARTELLI_ITEMS.get("Value");
+            case "MAZZE" -> (List<?>) ItemCatalogueConfig.config.MAZZE_ITEMS.get("Value");
+            case "SPADE_2_MANI" -> (List<?>) ItemCatalogueConfig.config.SPADE_2_MANI_ITEMS.get("Value");
+            case "ASCE" -> (List<?>) ItemCatalogueConfig.config.ASCE_ITEMS.get("Value");
+            case "SOCCHI" -> (List<?>) ItemCatalogueConfig.config.SOCCHI_ITEMS.get("Value");
+            case "ARCHI" -> (List<?>) ItemCatalogueConfig.config.ARCHI_ITEMS.get("Value");
+            case "ARMI_DA_FUOCO" -> (List<?>) ItemCatalogueConfig.config.ARMI_DA_FUOCO_ITEMS.get("Value");
             default -> null;
         };
 

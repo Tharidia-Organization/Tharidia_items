@@ -32,11 +32,13 @@ import com.tharidia.tharidia_things.command.ClaimCommands;
 import com.tharidia.tharidia_things.entity.ModEntities;
 import com.tharidia.tharidia_things.command.FatigueCommands;
 import com.tharidia.tharidia_things.command.ItemCatalogueCommand;
+import com.tharidia.tharidia_things.command.StatsCommand;
 import com.tharidia.tharidia_things.compoundTag.BattleGauntleAttachments;
 import com.tharidia.tharidia_things.character.CharacterAttachments;
-import com.tharidia.tharidia_things.config.ItemAttributesConfig;
+import com.tharidia.tharidia_things.config.ItemCatalogueConfig;
 import com.tharidia.tharidia_things.event.ClaimProtectionHandler;
 import com.tharidia.tharidia_things.event.ItemAttributeHandler;
+import com.tharidia.tharidia_things.event.PlayerStatsIncrementHandler;
 import com.tharidia.tharidia_things.fatigue.FatigueAttachments;
 import com.tharidia.tharidia_things.features.FreezeManager;
 import com.tharidia.tharidia_things.network.BattlePackets;
@@ -51,6 +53,9 @@ import com.tharidia.tharidia_things.network.SubmitNamePacket;
 import com.tharidia.tharidia_things.network.SyncGateRestrictionsPacket;
 import com.tharidia.tharidia_things.realm.RealmManager;
 import com.tharidia.tharidia_things.registry.ModAttributes;
+import com.tharidia.tharidia_things.registry.ModStats;
+import net.minecraft.stats.Stats;
+import net.minecraft.stats.StatFormatter;
 import com.tharidia.tharidia_things.servertransfer.ServerTransferManager;
 import com.tharidia.tharidia_things.servertransfer.ServerTransferCommands;
 import com.tharidia.tharidia_things.servertransfer.ServerTransferEvents;
@@ -287,6 +292,9 @@ public class TharidiaThings {
         FatigueAttachments.ATTACHMENT_TYPES.register(modEventBus);
         CharacterAttachments.ATTACHMENT_TYPES.register(modEventBus);
 
+        // Register custom stats
+        ModStats.register(modEventBus);
+
         // Register ourselves for server and other game events we are interested in.
         // Note that this is necessary if and only if we want *this* class
         // (TharidiaThings) to respond directly to events.
@@ -297,6 +305,8 @@ public class TharidiaThings {
         NeoForge.EVENT_BUS.addListener(this::onServerStopping);
         // Register the claim protection handler
         NeoForge.EVENT_BUS.register(ClaimProtectionHandler.class);
+        // Register the player kill handler
+        NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.PlayerStatsIncrementHandler.class);
         // Register the claim expiration handler
         NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.ClaimExpirationHandler.class);
         // Register the realm placement handler
@@ -349,6 +359,18 @@ public class TharidiaThings {
     private void commonSetup(FMLCommonSetupEvent event) {
         // Common setup
         LOGGER.info("HELLO FROM COMMON SETUP");
+
+        event.enqueueWork(() -> {
+            Stats.CUSTOM.get(ModStats.LAMA_CORTA_KILL.get(), StatFormatter.DEFAULT);
+            Stats.CUSTOM.get(ModStats.LANCIA_KILL.get(), StatFormatter.DEFAULT);
+            Stats.CUSTOM.get(ModStats.MARTELLI_KILL.get(), StatFormatter.DEFAULT);
+            Stats.CUSTOM.get(ModStats.MAZZE_KILL.get(), StatFormatter.DEFAULT);
+            Stats.CUSTOM.get(ModStats.SPADE_2_MANI_KILL.get(), StatFormatter.DEFAULT);
+            Stats.CUSTOM.get(ModStats.ASCE_KILL.get(), StatFormatter.DEFAULT);
+            Stats.CUSTOM.get(ModStats.SOCCHI_KILL.get(), StatFormatter.DEFAULT);
+            Stats.CUSTOM.get(ModStats.ARCHI_KILL.get(), StatFormatter.DEFAULT);
+            Stats.CUSTOM.get(ModStats.ARMI_DA_FUOCO_KILL.get(), StatFormatter.DEFAULT);
+        });
     }
 
     private void registerPayloads(RegisterPayloadHandlersEvent event) {
@@ -704,8 +726,9 @@ public class TharidiaThings {
             LOGGER.error("Could not load claim registry: overworld is null");
         }
 
-        ItemAttributesConfig.reload();
+        ItemCatalogueConfig.reload();
         ItemAttributeHandler.reload();
+        PlayerStatsIncrementHandler.reload();
 
         // Register weight data loader
         event.getServer().getResourceManager();
@@ -826,8 +849,9 @@ public class TharidiaThings {
         event.addListener(new com.tharidia.tharidia_things.config.CropProtectionConfig());
         event.addListener(new com.tharidia.tharidia_things.config.FatigueConfig());
 
-        ItemAttributesConfig.reload();
+        ItemCatalogueConfig.reload();
         ItemAttributeHandler.reload();
+        PlayerStatsIncrementHandler.reload();
     }
 
     @SubscribeEvent
@@ -842,6 +866,7 @@ public class TharidiaThings {
         com.tharidia.tharidia_things.command.VideoScreenCommands.register(event.getDispatcher());
         ServerTransferCommands.register(event.getDispatcher());
         ItemCatalogueCommand.register(event.getDispatcher());
+        StatsCommand.register(event.getDispatcher());
     }
 
     /**
