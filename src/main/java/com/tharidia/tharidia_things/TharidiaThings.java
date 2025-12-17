@@ -389,11 +389,6 @@ public class TharidiaThings {
                     com.tharidia.tharidia_things.network.RequestNamePacket.TYPE,
                     com.tharidia.tharidia_things.network.RequestNamePacket.STREAM_CODEC,
                     ClientPacketHandler::handleRequestName);
-            // Transfer initiated packet
-            registrar.playToClient(
-                    com.tharidia.tharidia_things.network.TransferInitiatedPacket.TYPE,
-                    com.tharidia.tharidia_things.network.TransferInitiatedPacket.STREAM_CODEC,
-                    ClientPacketHandler::handleTransferInitiated);
             // Race GUI packet
             registrar.playToClient(
                     com.tharidia.tharidia_things.network.OpenRaceGuiPacket.TYPE,
@@ -458,8 +453,45 @@ public class TharidiaThings {
                     com.tharidia.tharidia_things.network.VideoScreenVolumePacket.STREAM_CODEC,
                     com.tharidia.tharidia_things.network.VideoScreenVolumePacket::handle);
 
-            // NOTE: Server-bound packets are registered after the if/else block
-            // No need to register dummy handlers here as they're handled below
+            // Register dummy handlers for server-bound packets (client-side only for handshake)
+            registrar.playToServer(
+                    UpdateHierarchyPacket.TYPE,
+                    UpdateHierarchyPacket.STREAM_CODEC,
+                    (packet, context) -> {});
+            registrar.playToServer(
+                    DungeonQueuePacket.TYPE,
+                    DungeonQueuePacket.STREAM_CODEC,
+                    (packet, context) -> {});
+            registrar.playToServer(
+                    SelectComponentPacket.TYPE,
+                    SelectComponentPacket.STREAM_CODEC,
+                    (packet, context) -> {});
+            registrar.playToServer(
+                    SubmitNamePacket.TYPE,
+                    SubmitNamePacket.STREAM_CODEC,
+                    (packet, context) -> {});
+            // Trade packets (server-bound, dummy handlers)
+            registrar.playToServer(
+                    com.tharidia.tharidia_things.network.TradeResponsePacket.TYPE,
+                    com.tharidia.tharidia_things.network.TradeResponsePacket.STREAM_CODEC,
+                    (packet, context) -> {});
+            registrar.playToServer(
+                    com.tharidia.tharidia_things.network.TradeUpdatePacket.TYPE,
+                    com.tharidia.tharidia_things.network.TradeUpdatePacket.STREAM_CODEC,
+                    (packet, context) -> {});
+            registrar.playToServer(
+                    com.tharidia.tharidia_things.network.TradeCancelPacket.TYPE,
+                    com.tharidia.tharidia_things.network.TradeCancelPacket.STREAM_CODEC,
+                    (packet, context) -> {});
+            registrar.playToServer(
+                    com.tharidia.tharidia_things.network.TradeFinalConfirmPacket.TYPE,
+                    com.tharidia.tharidia_things.network.TradeFinalConfirmPacket.STREAM_CODEC,
+                    (packet, context) -> {});
+            // Music file request packet (server-bound, dummy handler)
+            registrar.playToServer(
+                    com.tharidia.tharidia_things.network.RequestMusicFilePacket.TYPE,
+                    com.tharidia.tharidia_things.network.RequestMusicFilePacket.STREAM_CODEC,
+                    (packet, context) -> {});
 
             LOGGER.info("Client packet handlers registered");
         } else {
@@ -502,12 +534,6 @@ public class TharidiaThings {
             registrar.playToClient(
                     com.tharidia.tharidia_things.network.RequestNamePacket.TYPE,
                     com.tharidia.tharidia_things.network.RequestNamePacket.STREAM_CODEC,
-                    (packet, context) -> {
-                    });
-            // Transfer initiated packet (server-side dummy handler for handshake)
-            registrar.playToClient(
-                    com.tharidia.tharidia_things.network.TransferInitiatedPacket.TYPE,
-                    com.tharidia.tharidia_things.network.TransferInitiatedPacket.STREAM_CODEC,
                     (packet, context) -> {
                     });
             // Race GUI packet (server-side dummy handler for handshake)
