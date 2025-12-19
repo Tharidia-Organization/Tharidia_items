@@ -8,10 +8,13 @@ import net.neoforged.neoforge.common.util.INBTSerializable;
  * Stores per-player diet state (six categories plus decay tracking).
  */
 public class DietData implements INBTSerializable<CompoundTag> {
+    public static final float DEFAULT_START_PERCENT = 0.8f;
     private final float[] values = new float[DietCategory.COUNT];
     private long lastDecayTimeMs = System.currentTimeMillis();
     private boolean dirty = false;
     private boolean initialized = false;
+
+    public DietData() {}
 
     public float get(DietCategory category) {
         return values[category.ordinal()];
@@ -70,12 +73,7 @@ public class DietData implements INBTSerializable<CompoundTag> {
         if (initialized) {
             return;
         }
-        float clampedPercent = Math.max(0.0f, Math.min(1.0f, percent));
-        for (DietCategory category : DietCategory.VALUES) {
-            int idx = category.ordinal();
-            float max = maxValues.get(category);
-            values[idx] = clamp(max * clampedPercent, max);
-        }
+        preload(maxValues, percent);
         initialized = true;
         dirty = true;
     }
@@ -127,6 +125,21 @@ public class DietData implements INBTSerializable<CompoundTag> {
         this.initialized = true;
     }
 
+    private void preloadDefaults(float percent) {
+        preload(DietRegistry.getMaxValues(), percent);
+        this.initialized = false;
+        this.dirty = false;
+    }
+
+    private void preload(DietProfile maxValues, float percent) {
+        float clampedPercent = Math.max(0.0f, Math.min(1.0f, percent));
+        for (DietCategory category : DietCategory.VALUES) {
+            int idx = category.ordinal();
+            float max = maxValues.get(category);
+            values[idx] = clamp(max * clampedPercent, max);
+        }
+    }
+
     public boolean consumeDirty() {
         if (dirty) {
             dirty = false;
@@ -157,15 +170,6 @@ public class DietData implements INBTSerializable<CompoundTag> {
         lastDecayTimeMs = tag.contains("lastDecayTimeMs")
                 ? tag.getLong("lastDecayTimeMs")
                 : System.currentTimeMillis();
-        if (tag.contains("initialized")) {
-            initialized = tag.getBoolean("initialized");
-        } else {
-            for (float value : values) {
-                if (value > 0.0f) {
-                    initialized = true;
-                    break;
-                }
-            }
-        }
+        initialized = tag.getBoolean("initialized");
     }
 }

@@ -40,8 +40,10 @@ public class DietaScreen extends Screen {
     @Override
     public void render(GuiGraphics gui, int mouseX, int mouseY, float partialTick) {
         // Calculate positions
-        int guiLeft = (this.width - 174) / 2;
-        int guiTop = (this.height - 166) / 2;
+        int inventoryLeft = (this.width - 176) / 2;
+        int inventoryTop = (this.height - 166) / 2;
+        int guiLeft = inventoryLeft + 1;
+        int guiTop = inventoryTop + 2;
         
         // Render the parent inventory screen in the background
         // Pass fake mouse position to prevent hover effects in overlay area
@@ -64,7 +66,7 @@ public class DietaScreen extends Screen {
         gui.pose().pushPose();
         gui.pose().translate(0, 0, 400); // Move to front
         
-        // Draw completely opaque background to cover everything underneath
+        // Draw opaque background
         gui.fill(guiLeft, guiTop, guiLeft + OVERLAY_WIDTH, guiTop + OVERLAY_HEIGHT, 0xFFC6C6C6);
         
         // Draw 3D border effect like vanilla GUI
@@ -113,7 +115,7 @@ public class DietaScreen extends Screen {
         double rawMouseX = mcInstance.mouseHandler.xpos() * this.width / mcInstance.getWindow().getScreenWidth();
         double rawMouseY = mcInstance.mouseHandler.ypos() * this.height / mcInstance.getWindow().getScreenHeight();
         boolean mouseDown = mcInstance.mouseHandler.isLeftPressed();
-        DietaInventoryOverlay.renderFeatureButtons(gui, guiLeft, guiTop, rawMouseX, rawMouseY, mouseDown);
+        DietaInventoryOverlay.renderFeatureButtons(gui, inventoryLeft, inventoryTop, rawMouseX, rawMouseY, mouseDown);
         
         for (int i = 0; i < barCount; i++) {
             int barY = Math.round(barsStartY + i * spacing);

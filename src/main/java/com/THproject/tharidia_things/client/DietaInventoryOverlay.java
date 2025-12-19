@@ -21,7 +21,7 @@ public class DietaInventoryOverlay {
     // Feature button layout
     private static final int FEATURE_SLOT_SIZE = 18;
     private static final int FEATURE_SLOT_SPACING = 4;
-    private static final int HEAD_SLOT_X_OFFSET = 8;
+    private static final int HEAD_SLOT_X_OFFSET = 7;
     private static final int HEAD_SLOT_Y_OFFSET = 8;
     private static final int FEATURE_VERTICAL_GAP = 4;
     private static final int FEATURE_VERTICAL_OFFSET = 5;
@@ -73,24 +73,36 @@ public class DietaInventoryOverlay {
         
         for (int i = 0; i < icons.length; i++) {
             SlotBounds bounds = getFeatureButtonBounds(guiLeft, guiTop, i);
-            boolean pressed = mouseDown && bounds.contains((int) mouseX, (int) mouseY);
-            renderSlotButton(gui, bounds.x(), bounds.y(), bounds.size(), icons[i], pressed);
+            boolean hovered = bounds.contains((int) mouseX, (int) mouseY);
+            boolean pressed = mouseDown && hovered;
+            renderSlotButton(gui, bounds.x(), bounds.y(), bounds.size(), icons[i], hovered, pressed);
         }
     }
     
     /**
      * Draws a vanilla-styled inventory slot button with the given icon.
      */
-    private static void renderSlotButton(GuiGraphics gui, int x, int y, int size, ItemStack icon, boolean pressed) {
-        int innerColor = pressed ? 0xFF6E6E6E : 0xFF8B8B8B;
-        
-        gui.fill(x, y, x + size, y + size, 0xFFC6C6C6);
-        gui.fill(x, y, x + size, y + 1, 0xFFFFFFFF);
-        gui.fill(x, y, x + 1, y + size, 0xFFFFFFFF);
-        gui.fill(x, y + size - 1, x + size, y + size, 0xFF555555);
-        gui.fill(x + size - 1, y, x + size, y + size, 0xFF555555);
+    private static void renderSlotButton(GuiGraphics gui, int x, int y, int size, ItemStack icon, boolean hovered, boolean pressed) {
+        int backgroundColor = 0xE0C6C6C6;
+        int topHighlight = 0xE0FFFFFF;
+        int sideShadow = 0xE0555555;
+        int innerColor = pressed ? 0xCC6E6E6E : hovered ? 0xCC9D9D9D : 0xCC8B8B8B;
+
+        gui.fill(x, y, x + size, y + size, backgroundColor);
+        gui.fill(x, y, x + size, y + 1, topHighlight);
+        gui.fill(x, y, x + 1, y + size, topHighlight);
+        gui.fill(x, y + size - 1, x + size, y + size, sideShadow);
+        gui.fill(x + size - 1, y, x + size, y + size, sideShadow);
         gui.fill(x + 1, y + 1, x + size - 1, y + size - 1, innerColor);
-        gui.renderItem(icon, x + 1, y + 1);
+
+        if (hovered && !pressed) {
+            gui.fill(x + 1, y + 1, x + size - 1, y + size - 1, 0x30FFFFFF);
+        } else if (pressed) {
+            gui.fill(x + 1, y + 1, x + size - 1, y + size - 1, 0x40000000);
+        }
+
+        int iconOffset = pressed ? 2 : 1;
+        gui.renderItem(icon, x + iconOffset, y + iconOffset);
     }
     
     /**

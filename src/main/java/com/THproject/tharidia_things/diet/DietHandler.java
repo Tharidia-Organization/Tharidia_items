@@ -54,16 +54,22 @@ public class DietHandler {
 
         DietData data = player.getData(DietAttachments.DIET_DATA);
         initializeIfNeeded(serverPlayer, data);
+        DietEffectApplier.apply(serverPlayer, data);
+        
         DietSystemSettings settings = DietRegistry.getSettings();
         long decayIntervalMs = settings.decayIntervalMillis();
         long now = System.currentTimeMillis();
         long lastDecay = data.getLastDecayTimeMs();
-        if (now - lastDecay < decayIntervalMs) {
+        long timeSinceDecay = now - lastDecay;
+        
+        if (timeSinceDecay < decayIntervalMs) {
             return;
         }
-
-        float deltaSeconds = (now - lastDecay) / 1000.0f;
-        boolean changed = data.applyDecay(DietRegistry.getDecayRates(), deltaSeconds);
+        
+        float elapsedSeconds = timeSinceDecay / 1000.0f;
+        float intervalSeconds = Math.max(1.0f, decayIntervalMs / 1000.0f);
+        float intervalUnits = elapsedSeconds / intervalSeconds;
+        boolean changed = data.applyDecay(DietRegistry.getDecayRates(), intervalUnits);
         data.setLastDecayTimeMs(now);
 
         if (changed) {
@@ -76,8 +82,13 @@ public class DietHandler {
         if (!(event.getEntity() instanceof ServerPlayer serverPlayer)) {
             return;
         }
+        
+        // Set server reference for recipe analysis
+        DietRegistry.setServer(serverPlayer.getServer());
+        
         DietData data = serverPlayer.getData(DietAttachments.DIET_DATA);
         initializeIfNeeded(serverPlayer, data);
+        DietEffectApplier.apply(serverPlayer, data);
     }
 
     private static void syncIfNeeded(ServerPlayer player, DietData data, boolean force) {

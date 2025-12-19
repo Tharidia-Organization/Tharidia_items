@@ -2,8 +2,6 @@ package com.THproject.tharidia_things.character;
 
 import com.THproject.tharidia_things.TharidiaThings;
 import com.THproject.tharidia_things.entity.RacePointEntity;
-import com.THproject.tharidia_features.worldborder.WorldBorderData;
-import com.THproject.tharidia_features.worldborder.CustomBorder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
@@ -15,8 +13,12 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent;
+
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 
 /**
  * Handles character creation events
@@ -24,9 +26,16 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEve
 @EventBusSubscriber(modid = "tharidiathings")
 public class CharacterEventHandler {
     
-    // The character creation dimension
-    private static final ResourceKey<Level> CHARACTER_DIMENSION = 
-        ResourceKey.create(Registries.DIMENSION, ResourceLocation.fromNamespaceAndPath("tharidiathings", "character_creation"));
+    private static final String THARIDIA_FEATURES_MODID = "tharidia_features";
+    private static final ResourceKey<Level> CHARACTER_DIMENSION =
+            ResourceKey.create(Registries.DIMENSION, ResourceLocation.fromNamespaceAndPath("tharidiathings", "character_creation"));
+
+    private static Constructor<?> customBorderConstructor;
+    private static Method worldBorderGetMethod;
+    private static Method worldBorderAddBorderMethod;
+    private static Method worldBorderRemoveBorderMethod;
+    private static boolean worldBorderReflectionInitialized = false;
+    private static boolean worldBorderReflectionAvailable = false;
     
     @SubscribeEvent
     public static void onPlayerLogout(PlayerLoggedOutEvent event) {
@@ -169,25 +178,15 @@ public class CharacterEventHandler {
         // Set game mode to adventure (delayed to ensure it applies after teleport)
         player.server.execute(() -> {
             player.setGameMode(net.minecraft.world.level.GameType.ADVENTURE);
-            // Make player invulnerable in character creation
             player.setInvulnerable(true);
-            // Clear any negative effects
             player.removeAllEffects();
-            // Create custom border around character creation area
-            createCharacterCreationBorder(player, finalSpawnPos);
-            TharidiaThings.LOGGER.info("Border created using finalSpawnPos: {}", finalSpawnPos);
-            
-            // Verify border exists before spawning entities
-            String borderName = "character_creation_" + player.getUUID().toString().substring(0, 8);
-            ResourceLocation dimension = CHARACTER_DIMENSION.location();
-            CustomBorder border = WorldBorderData.get().getBorder(dimension, borderName);
-            if (border != null) {
-                TharidiaThings.LOGGER.info("Border verified, spawning race points");
-                // Spawn race point entity after border is verified to exist
-                spawnRacePoints(finalCharacterLevel, finalSpawnPos.above(1));
-            } else {
-                TharidiaThings.LOGGER.error("Border not found after creation! Cannot spawn race points.");
+
+            boolean borderCreated = createCharacterCreationBorder(player, finalSpawnPos);
+            if (!borderCreated) {
+                TharidiaThings.LOGGER.warn("Unable to create character border for {}; tharidia_features integration unavailable or failed.", player.getGameProfile().getName());
             }
+
+            spawnRacePoints(finalCharacterLevel, finalSpawnPos.above(1));
         });
         
         player.sendSystemMessage(net.minecraft.network.chat.Component.literal("§eWelcome! Please create your character before proceeding."));
@@ -305,42 +304,76 @@ public class CharacterEventHandler {
                          player.getYRot(), player.getXRot());
     }
     
-    private static void createCharacterCreationBorder(ServerPlayer player, BlockPos platformCenter) {
-        ServerLevel characterLevel = player.server.getLevel(CHARACTER_DIMENSION);
-        if (characterLevel == null) return;
-        
-        // Use the actual platform center coordinates
-        // Create border with platform radius + 1 (11 blocks)
+    private static boolean createCharacterCreationBorder(ServerPlayer player, BlockPos platformCenter) {
+        if (!ensureWorldBorderReflection()) {
+            return false;
+        }
+
         double borderMinX = platformCenter.getX() - 11;
         double borderMinZ = platformCenter.getZ() - 11;
         double borderMaxX = platformCenter.getX() + 11;
         double borderMaxZ = platformCenter.getZ() + 11;
-        
-        // Create unique border name for this player
+
         String borderName = "character_creation_" + player.getUUID().toString().substring(0, 8);
         ResourceLocation dimension = CHARACTER_DIMENSION.location();
-        
-        TharidiaThings.LOGGER.info("Creating border in dimension: {} with name: {}", dimension, borderName);
-        
-        // Add the border
-        CustomBorder border = new CustomBorder(borderMinX, borderMinZ, borderMaxX, borderMaxZ);
-        WorldBorderData.get().addBorder(dimension, borderName, border);
-        
-        // Force save the data
-        WorldBorderData.get().setDirty();
-        
-        TharidiaThings.LOGGER.info("Created character creation border '{}' at ({}, {}) to ({}, {}) for player {}", 
-            borderName, borderMinX, borderMinZ, borderMaxX, borderMaxZ, player.getName().getString());
+
+        try {
+            Object data = worldBorderGetMethod.invoke(null);
+            Object border = customBorderConstructor.newInstance(borderMinX, borderMinZ, borderMaxX, borderMaxZ);
+            worldBorderAddBorderMethod.invoke(data, dimension, borderName, border);
+            TharidiaThings.LOGGER.info("Created character creation border '{}' at ({}, {}) to ({}, {}) for player {}",
+                    borderName, borderMinX, borderMinZ, borderMaxX, borderMaxZ, player.getName().getString());
+            return true;
+        } catch (Exception ex) {
+            TharidiaThings.LOGGER.warn("Failed to create character creation border for {}", player.getName().getString(), ex);
+            return false;
+        }
     }
     
     private static void removeCharacterCreationBorder(ServerPlayer player) {
-        // Create unique border name for this player
+        if (!ensureWorldBorderReflection()) {
+            return;
+        }
+
         String borderName = "character_creation_" + player.getUUID().toString().substring(0, 8);
         ResourceLocation dimension = CHARACTER_DIMENSION.location();
-        
-        // Remove the border
-        WorldBorderData.get().removeBorder(dimension, borderName);
-        
-        TharidiaThings.LOGGER.info("Removed character creation border '{}' for player {}", borderName, player.getName().getString());
+
+        try {
+            Object data = worldBorderGetMethod.invoke(null);
+            worldBorderRemoveBorderMethod.invoke(data, dimension, borderName);
+            TharidiaThings.LOGGER.info("Removed character creation border '{}' for player {}", borderName, player.getName().getString());
+        } catch (Exception ex) {
+            TharidiaThings.LOGGER.warn("Failed to remove character creation border for {}", player.getName().getString(), ex);
+        }
+    }
+
+    private static boolean ensureWorldBorderReflection() {
+        if (worldBorderReflectionInitialized) {
+            return worldBorderReflectionAvailable;
+        }
+
+        worldBorderReflectionInitialized = true;
+
+        if (!ModList.get().isLoaded(THARIDIA_FEATURES_MODID)) {
+            TharidiaThings.LOGGER.warn("Tharidia Features mod not detected; character borders will be disabled.");
+            worldBorderReflectionAvailable = false;
+            return false;
+        }
+
+        try {
+            Class<?> dataClass = Class.forName("com.THproject.tharidia_features.worldborder.WorldBorderData");
+            Class<?> borderClass = Class.forName("com.THproject.tharidia_features.worldborder.CustomBorder");
+            customBorderConstructor = borderClass.getConstructor(double.class, double.class, double.class, double.class);
+            worldBorderGetMethod = dataClass.getMethod("get");
+            worldBorderAddBorderMethod = dataClass.getMethod("addBorder", ResourceLocation.class, String.class, borderClass);
+            worldBorderRemoveBorderMethod = dataClass.getMethod("removeBorder", ResourceLocation.class, String.class);
+            worldBorderReflectionAvailable = true;
+            TharidiaThings.LOGGER.info("Tharidia Features integration enabled for character borders.");
+        } catch (ClassNotFoundException | NoSuchMethodException ex) {
+            TharidiaThings.LOGGER.warn("Failed to initialize Tharidia Features integration; character borders disabled.", ex);
+            worldBorderReflectionAvailable = false;
+        }
+
+        return worldBorderReflectionAvailable;
     }
 }

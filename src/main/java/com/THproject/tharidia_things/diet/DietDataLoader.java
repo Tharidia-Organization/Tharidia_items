@@ -29,6 +29,7 @@ public class DietDataLoader extends SimpleJsonResourceReloadListener {
     @Override
     protected void apply(Map<ResourceLocation, JsonElement> data, ResourceManager resourceManager, ProfilerFiller profiler) {
         LOGGER.info("Loading diet configuration...");
+        LOGGER.debug("Found {} diet config files", data.size());
         DietRegistry.reset();
 
         if (data.isEmpty()) {
@@ -52,7 +53,7 @@ public class DietDataLoader extends SimpleJsonResourceReloadListener {
                     selectedId = entry.getKey();
                 }
             } catch (Exception ex) {
-                LOGGER.error("Error loading diet config {}: {}", entry.getKey(), ex.getMessage());
+                LOGGER.error("Error loading diet config {}: {}", entry.getKey(), ex.getMessage(), ex);
             }
         }
 

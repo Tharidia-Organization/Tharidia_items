@@ -378,7 +378,7 @@
         "water": 100.0
     },
     "settings": {
-        "decay_interval_seconds": 1.0,
+        "decay_interval_seconds": 120.0,
         "saturation_scale": 2.0,
         "fast_food_saturation_threshold": 2.0,
         "grain_nutrition_multiplier": 0.4,

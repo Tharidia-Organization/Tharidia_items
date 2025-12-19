@@ -1,11 +1,12 @@
 package com.THproject.tharidia_things.command;
 
 import com.THproject.tharidia_things.character.CharacterAttachments;
+import com.THproject.tharidia_things.character.CharacterEventHandler;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import com.THproject.tharidia_things.character.CharacterEventHandler;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
@@ -24,7 +25,7 @@ public class CharacterCommands {
                             CharacterEventHandler.completeCharacterCreation(player);
                             return 1;
                         } catch (CommandSyntaxException e) {
-                            context.getSource().sendFailure(net.minecraft.network.chat.Component.literal("This command can only be run by a player"));
+                            context.getSource().sendFailure(Component.literal("This command can only be run by a player"));
                             return 0;
                         }
                     })
@@ -35,10 +36,10 @@ public class CharacterCommands {
                             ServerPlayer player = context.getSource().getPlayerOrException();
                             player.getData(CharacterAttachments.CHARACTER_DATA)
                                   .setCharacterCreated(false);
-                            context.getSource().sendSuccess(() -> net.minecraft.network.chat.Component.literal("Character creation status reset"), true);
+                            context.getSource().sendSuccess(() -> Component.literal("Character creation status reset"), true);
                             return 1;
                         } catch (CommandSyntaxException e) {
-                            context.getSource().sendFailure(net.minecraft.network.chat.Component.literal("This command can only be run by a player"));
+                            context.getSource().sendFailure(Component.literal("This command can only be run by a player"));
                             return 0;
                         }
                     })
