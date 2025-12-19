@@ -13,19 +13,21 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ScreenEvent;
 
 /**
- * Renders the dieta button on the player inventory screen
+ * Renders feature buttons tied to the Dieta screen on the player inventory.
  */
 @EventBusSubscriber(value = Dist.CLIENT)
 public class DietaInventoryOverlay {
     
-    // Button dimensions and position
-    private static final int BUTTON_WIDTH = 10;
-    private static final int BUTTON_HEIGHT = 10;
-    private static final int BUTTON_X_OFFSET = 25;
-    private static final int BUTTON_Y_OFFSET = 69; // In player render area
+    // Feature button layout
+    private static final int FEATURE_SLOT_SIZE = 18;
+    private static final int FEATURE_SLOT_SPACING = 4;
+    private static final int HEAD_SLOT_X_OFFSET = 8;
+    private static final int HEAD_SLOT_Y_OFFSET = 8;
+    private static final int FEATURE_VERTICAL_GAP = 4;
+    private static final int FEATURE_VERTICAL_OFFSET = 5;
     
     /**
-     * Renders the dieta button on inventory screens
+     * Renders feature buttons on inventory screens
      */
     @SubscribeEvent
     public static void onScreenRender(ScreenEvent.Render.Post event) {
@@ -48,34 +50,47 @@ public class DietaInventoryOverlay {
         int guiLeft = (screen.width - 176) / 2; // Standard inventory width is 176
         int guiTop = (screen.height - 166) / 2; // Standard inventory height is 166
         
-        // Position the button in player render area
-        int buttonX = guiLeft + BUTTON_X_OFFSET;
-        int buttonY = guiTop + BUTTON_Y_OFFSET;
+        // Mouse info for shading/press state
+        Minecraft mcInstance = Minecraft.getInstance();
+        double rawMouseX = mcInstance.mouseHandler.xpos() * screen.width / mcInstance.getWindow().getScreenWidth();
+        double rawMouseY = mcInstance.mouseHandler.ypos() * screen.height / mcInstance.getWindow().getScreenHeight();
+        boolean mouseDown = mcInstance.mouseHandler.isLeftPressed();
         
-        // Draw the dieta button
-        renderDietaButton(guiGraphics, buttonX, buttonY);
+        // Draw feature buttons aligned with the player inventory
+        renderFeatureButtons(guiGraphics, guiLeft, guiTop, rawMouseX, rawMouseY, mouseDown);
     }
     
     /**
-     * Renders the dieta button
+     * Renders the three feature buttons above the armor/head slot column.
      */
-    private static void renderDietaButton(GuiGraphics gui, int x, int y) {
-        // Use vanilla button colors
-        // Background
-        gui.fill(x, y, x + BUTTON_WIDTH, y + BUTTON_HEIGHT, 0xFF808080);
+    public static void renderFeatureButtons(GuiGraphics gui, int guiLeft, int guiTop, double mouseX, double mouseY, boolean mouseDown) {
+        ItemStack[] icons = new ItemStack[] {
+            new ItemStack(Items.BOOK),
+            new ItemStack(Items.IRON_CHESTPLATE),
+            new ItemStack(Items.COOKED_BEEF),
+            new ItemStack(Items.IRON_SWORD)
+        };
         
-        // Border
-        gui.renderOutline(x, y, BUTTON_WIDTH, BUTTON_HEIGHT, 0xFFC0C0C0);
+        for (int i = 0; i < icons.length; i++) {
+            SlotBounds bounds = getFeatureButtonBounds(guiLeft, guiTop, i);
+            boolean pressed = mouseDown && bounds.contains((int) mouseX, (int) mouseY);
+            renderSlotButton(gui, bounds.x(), bounds.y(), bounds.size(), icons[i], pressed);
+        }
+    }
+    
+    /**
+     * Draws a vanilla-styled inventory slot button with the given icon.
+     */
+    private static void renderSlotButton(GuiGraphics gui, int x, int y, int size, ItemStack icon, boolean pressed) {
+        int innerColor = pressed ? 0xFF6E6E6E : 0xFF8B8B8B;
         
-        // Inner border for depth
-        gui.fill(x + 1, y + 1, x + BUTTON_WIDTH - 1, y + BUTTON_HEIGHT - 1, 0xFF606060);
-        
-        // Render chicken item icon (scaled down to fit button)
-        gui.pose().pushPose();
-        gui.pose().translate(x + 1, y + 1, 0);
-        gui.pose().scale(0.5f, 0.5f, 1.0f);
-        gui.renderItem(new ItemStack(Items.COOKED_CHICKEN), 0, 0);
-        gui.pose().popPose();
+        gui.fill(x, y, x + size, y + size, 0xFFC6C6C6);
+        gui.fill(x, y, x + size, y + 1, 0xFFFFFFFF);
+        gui.fill(x, y, x + 1, y + size, 0xFFFFFFFF);
+        gui.fill(x, y + size - 1, x + size, y + size, 0xFF555555);
+        gui.fill(x + size - 1, y, x + size, y + size, 0xFF555555);
+        gui.fill(x + 1, y + 1, x + size - 1, y + size - 1, innerColor);
+        gui.renderItem(icon, x + 1, y + 1);
     }
     
     /**
@@ -99,20 +114,29 @@ public class DietaInventoryOverlay {
         int guiLeft = (screen.width - 176) / 2;
         int guiTop = (screen.height - 166) / 2;
         
-        // Button position
-        int buttonX = guiLeft + BUTTON_X_OFFSET;
-        int buttonY = guiTop + BUTTON_Y_OFFSET;
-        
-        // Check if click is within button bounds
         int mouseX = (int) event.getMouseX();
         int mouseY = (int) event.getMouseY();
         
-        if (mouseX >= buttonX && mouseX <= buttonX + BUTTON_WIDTH &&
-            mouseY >= buttonY && mouseY <= buttonY + BUTTON_HEIGHT) {
+        SlotBounds dietaButton = getFeatureButtonBounds(guiLeft, guiTop, 2);
+        
+        if (dietaButton.contains(mouseX, mouseY)) {
             
             // Open dieta screen
             Minecraft.getInstance().setScreen(new DietaScreen(screen));
             event.setCanceled(true); // Prevent the click from propagating
+        }
+    }
+    
+    private static SlotBounds getFeatureButtonBounds(int guiLeft, int guiTop, int index) {
+        int startX = guiLeft + HEAD_SLOT_X_OFFSET;
+        int y = guiTop + HEAD_SLOT_Y_OFFSET - FEATURE_SLOT_SIZE - FEATURE_VERTICAL_GAP - FEATURE_VERTICAL_OFFSET;
+        int x = startX + index * (FEATURE_SLOT_SIZE + FEATURE_SLOT_SPACING);
+        return new SlotBounds(x, y, FEATURE_SLOT_SIZE);
+    }
+    
+    private record SlotBounds(int x, int y, int size) {
+        boolean contains(int px, int py) {
+            return px >= x && px <= x + size && py >= y && py <= y + size;
         }
     }
 }

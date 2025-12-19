@@ -1,6 +1,7 @@
 package com.tharidia.tharidia_things.client.gui;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.tharidia.tharidia_things.client.DietaInventoryOverlay;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -16,9 +17,9 @@ import net.minecraft.world.item.Items;
 public class DietaScreen extends Screen {
     private final InventoryScreen parentScreen;
     
-    // Overlay dimensions
-    private static final int OVERLAY_WIDTH = 176;
-    private static final int OVERLAY_HEIGHT = 83;
+    // Overlay dimensions (slightly smaller than inventory area)
+    private static final int OVERLAY_WIDTH = 174;
+    private static final int OVERLAY_HEIGHT = 81;
     
     public DietaScreen(InventoryScreen parentScreen) {
         super(Component.literal("Dieta"));
@@ -37,7 +38,7 @@ public class DietaScreen extends Screen {
     @Override
     public void render(GuiGraphics gui, int mouseX, int mouseY, float partialTick) {
         // Calculate positions
-        int guiLeft = (this.width - 176) / 2;
+        int guiLeft = (this.width - 174) / 2;
         int guiTop = (this.height - 166) / 2;
         
         // Render the parent inventory screen in the background
@@ -65,59 +66,63 @@ public class DietaScreen extends Screen {
         gui.fill(guiLeft, guiTop, guiLeft + OVERLAY_WIDTH, guiTop + OVERLAY_HEIGHT, 0xFFC6C6C6);
         
         // Draw 3D border effect like vanilla GUI
-        // Top and left highlight
+        // Top highlight (two-pixel thickness)
         gui.fill(guiLeft, guiTop, guiLeft + OVERLAY_WIDTH, guiTop + 1, 0xFFFFFFFF);
+        gui.fill(guiLeft, guiTop + 1, guiLeft + OVERLAY_WIDTH, guiTop + 2, 0xFFFFFFFF);
+        // Left highlight (two-pixel thickness)
         gui.fill(guiLeft, guiTop, guiLeft + 1, guiTop + OVERLAY_HEIGHT, 0xFFFFFFFF);
-        // Bottom and right shadow
-        gui.fill(guiLeft, guiTop + OVERLAY_HEIGHT - 1, guiLeft + OVERLAY_WIDTH, guiTop + OVERLAY_HEIGHT, 0xFF555555);
-        gui.fill(guiLeft + OVERLAY_WIDTH - 1, guiTop, guiLeft + OVERLAY_WIDTH, guiTop + OVERLAY_HEIGHT, 0xFF555555);
+        gui.fill(guiLeft + 1, guiTop, guiLeft + 2, guiTop + OVERLAY_HEIGHT, 0xFFFFFFFF);
+
+        // Bottom and right shadow with black outer line + two inner colored lines
+        int shadowColor = 0xFF777777;
+        int shadowBlack = 0xFF000000;
         
-        // Draw the chicken leg button with item icon
-        int buttonX = guiLeft + 25;
-        int buttonY = guiTop + 69;
-        int buttonWidth = 10;
-        int buttonHeight = 10;
+        // Bottom outer shadow
+        gui.fill(guiLeft, guiTop + OVERLAY_HEIGHT, guiLeft + OVERLAY_WIDTH, guiTop + OVERLAY_HEIGHT + 1, shadowBlack);
+        // Bottom inner shadow lines
+        gui.fill(guiLeft, guiTop + OVERLAY_HEIGHT - 1, guiLeft + OVERLAY_WIDTH, guiTop + OVERLAY_HEIGHT, shadowColor);
+        gui.fill(guiLeft, guiTop + OVERLAY_HEIGHT - 2, guiLeft + OVERLAY_WIDTH, guiTop + OVERLAY_HEIGHT - 1, shadowColor);
         
-        // Button background
-        gui.fill(buttonX, buttonY, buttonX + buttonWidth, buttonY + buttonHeight, 0xFF808080);
-        gui.renderOutline(buttonX, buttonY, buttonWidth, buttonHeight, 0xFFC0C0C0);
-        gui.fill(buttonX + 1, buttonY + 1, buttonX + buttonWidth - 1, buttonY + buttonHeight - 1, 0xFF606060);
+        // Right outer shadow
+        gui.fill(guiLeft + OVERLAY_WIDTH, guiTop + 2, guiLeft + OVERLAY_WIDTH + 1, guiTop + OVERLAY_HEIGHT + 1, shadowBlack);
+        // Right inner shadow lines
+        gui.fill(guiLeft + OVERLAY_WIDTH - 1, guiTop, guiLeft + OVERLAY_WIDTH, guiTop + OVERLAY_HEIGHT, shadowColor);
+        gui.fill(guiLeft + OVERLAY_WIDTH - 2, guiTop, guiLeft + OVERLAY_WIDTH - 1, guiTop + OVERLAY_HEIGHT, shadowColor);
+
         
-        // Render chicken item icon (scaled down to fit button)
-        gui.pose().pushPose();
-        gui.pose().translate(buttonX + 1, buttonY + 1, 0);
-        gui.pose().scale(0.5f, 0.5f, 1.0f);
-        gui.renderItem(new ItemStack(Items.COOKED_CHICKEN), 0, 0);
-        gui.pose().popPose();
-        
-        // Draw 5 horizontal bars for food categories using fatigue bar style
+        // Draw horizontal bars for food categories using fatigue bar style
         int barHeight = 3;
-        int barSpacing = 11; // Increased by 1 pixel
         int barWidth = 80;
         int labelX = guiLeft + 8;
         int barX = guiLeft + 55;
-        int startY = guiTop + 6;
+        int paddingTop = 8;
+        int paddingBottom = 6;
+        int barsStartY = guiTop + paddingTop;
         
-        // Bar colors for each category
-        int grainColor = 0xFFDAA520;     // Gold
-        int proteinColor = 0xFFCD5C5C;   // Indian Red
-        int vegetableColor = 0xFF228B22; // Forest Green
-        int fruitColor = 0xFFFF6347;     // Tomato
-        int sugarColor = 0xFFFFB6C1;     // Light Pink
+        java.util.List<BarInfo> bars = java.util.List.of(
+            new BarInfo("Grain", 0.0f, 0xFFDAA520),
+            new BarInfo("Protein", 0.0f, 0xFFCD5C5C),
+            new BarInfo("Vegetable", 0.0f, 0xFF228B22),
+            new BarInfo("Fruit", 0.0f, 0xFFFF6347),
+            new BarInfo("Sugar", 0.0f, 0xFFFFB6C1),
+            new BarInfo("Water", 0.0f, 0xFF1E90FF)
+        );
         
-        // All bars at 0% by default
-        float grainPercent = 0.0f;
-        float proteinPercent = 0.0f;
-        float vegetablePercent = 0.0f;
-        float fruitPercent = 0.0f;
-        float sugarPercent = 0.0f;
+        int barCount = bars.size();
+        float usableHeight = (guiTop + OVERLAY_HEIGHT - paddingBottom - barHeight) - barsStartY;
+        float spacing = barCount > 1 ? usableHeight / (barCount - 1) : 0.0f;
         
-        // Render each bar with percentage
-        renderDietBar(gui, "Grain", labelX, barX, startY, barWidth, barHeight, grainPercent, grainColor);
-        renderDietBar(gui, "Protein", labelX, barX, startY + barSpacing, barWidth, barHeight, proteinPercent, proteinColor);
-        renderDietBar(gui, "Vegetable", labelX, barX, startY + barSpacing * 2, barWidth, barHeight, vegetablePercent, vegetableColor);
-        renderDietBar(gui, "Fruit", labelX, barX, startY + barSpacing * 3, barWidth, barHeight, fruitPercent, fruitColor);
-        renderDietBar(gui, "Sugar", labelX, barX, startY + barSpacing * 4, barWidth, barHeight, sugarPercent, sugarColor);
+        Minecraft mcInstance = Minecraft.getInstance();
+        double rawMouseX = mcInstance.mouseHandler.xpos() * this.width / mcInstance.getWindow().getScreenWidth();
+        double rawMouseY = mcInstance.mouseHandler.ypos() * this.height / mcInstance.getWindow().getScreenHeight();
+        boolean mouseDown = mcInstance.mouseHandler.isLeftPressed();
+        DietaInventoryOverlay.renderFeatureButtons(gui, guiLeft, guiTop, rawMouseX, rawMouseY, mouseDown);
+        
+        for (int i = 0; i < barCount; i++) {
+            int barY = Math.round(barsStartY + i * spacing);
+            BarInfo bar = bars.get(i);
+            renderDietBar(gui, bar.label(), labelX, barX, barY, barWidth, barHeight, bar.percentage(), bar.color());
+        }
         
         gui.pose().popPose();
     }
@@ -205,4 +210,6 @@ public class DietaScreen extends Screen {
         gui.drawString(this.font, percentText, 0, 0, 0xFF404040, false);
         gui.pose().popPose();
     }
+    
+    private record BarInfo(String label, float percentage, int color) {}
 }
