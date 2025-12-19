@@ -1,15 +1,17 @@
 package com.tharidia.tharidia_things.client.gui;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.tharidia.tharidia_things.client.DietaInventoryOverlay;
+import com.tharidia.tharidia_things.diet.DietAttachments;
+import com.tharidia.tharidia_things.diet.DietCategory;
+import com.tharidia.tharidia_things.diet.DietData;
+import com.tharidia.tharidia_things.diet.DietRegistry;
+import com.tharidia.tharidia_things.diet.DietProfile;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
+import net.minecraft.world.entity.player.Player;
 
 /**
  * Modal screen for dieta that overlays the inventory
@@ -90,6 +92,10 @@ public class DietaScreen extends Screen {
         gui.fill(guiLeft + OVERLAY_WIDTH - 2, guiTop, guiLeft + OVERLAY_WIDTH - 1, guiTop + OVERLAY_HEIGHT, shadowColor);
 
         
+        Player player = Minecraft.getInstance().player;
+        DietData dietData = player != null ? player.getData(DietAttachments.DIET_DATA) : null;
+        java.util.List<BarInfo> bars = buildBars(dietData);
+
         // Draw horizontal bars for food categories using fatigue bar style
         int barHeight = 3;
         int barWidth = 80;
@@ -98,15 +104,6 @@ public class DietaScreen extends Screen {
         int paddingTop = 8;
         int paddingBottom = 6;
         int barsStartY = guiTop + paddingTop;
-        
-        java.util.List<BarInfo> bars = java.util.List.of(
-            new BarInfo("Grain", 0.0f, 0xFFDAA520),
-            new BarInfo("Protein", 0.0f, 0xFFCD5C5C),
-            new BarInfo("Vegetable", 0.0f, 0xFF228B22),
-            new BarInfo("Fruit", 0.0f, 0xFFFF6347),
-            new BarInfo("Sugar", 0.0f, 0xFFFFB6C1),
-            new BarInfo("Water", 0.0f, 0xFF1E90FF)
-        );
         
         int barCount = bars.size();
         float usableHeight = (guiTop + OVERLAY_HEIGHT - paddingBottom - barHeight) - barsStartY;
@@ -209,6 +206,29 @@ public class DietaScreen extends Screen {
         String percentText = (int)(percentage * 100) + "%";
         gui.drawString(this.font, percentText, 0, 0, 0xFF404040, false);
         gui.pose().popPose();
+    }
+
+    private java.util.List<BarInfo> buildBars(DietData dietData) {
+        java.util.List<BarInfo> bars = new java.util.ArrayList<>(DietCategory.COUNT);
+        DietProfile maxProfile = DietRegistry.getMaxValues();
+
+        addBar(bars, "Cereali", DietCategory.GRAIN, 0xFFDAA520, dietData, maxProfile);
+        addBar(bars, "Proteine", DietCategory.PROTEIN, 0xFFCD5C5C, dietData, maxProfile);
+        addBar(bars, "Verdure", DietCategory.VEGETABLE, 0xFF228B22, dietData, maxProfile);
+        addBar(bars, "Frutta", DietCategory.FRUIT, 0xFFFF6347, dietData, maxProfile);
+        addBar(bars, "Zuccheri", DietCategory.SUGAR, 0xFFFFB6C1, dietData, maxProfile);
+        addBar(bars, "Idratazione", DietCategory.WATER, 0xFF1E90FF, dietData, maxProfile);
+
+        return bars;
+    }
+
+    private void addBar(java.util.List<BarInfo> bars, String label, DietCategory category, int color, DietData data, DietProfile maxProfile) {
+        float value = data != null ? data.get(category) : 0.0f;
+        float max = maxProfile.get(category);
+        float percentage = max > 0.0f ? value / max : 0.0f;
+        percentage = Math.min(1.0f, Math.max(0.0f, percentage));
+
+        bars.add(new BarInfo(label, percentage, color));
     }
     
     private record BarInfo(String label, float percentage, int color) {}

@@ -8,7 +8,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import org.lwjgl.glfw.GLFW;
 
-@EventBusSubscriber(modid = "tharidiathings", bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
+@EventBusSubscriber(modid = "tharidiathings", value = Dist.CLIENT)
 public class ClientKeyHandler {
     private static long lastPress = 0;
     

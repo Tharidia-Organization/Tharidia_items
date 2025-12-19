@@ -5,6 +5,7 @@ import com.tharidia.tharidia_things.block.entity.PietroBlockEntity;
 import com.tharidia.tharidia_things.network.ClaimOwnerSyncPacket;
 import com.tharidia.tharidia_things.network.FatigueSyncPacket;
 import com.tharidia.tharidia_things.network.FatigueWarningPacket;
+import com.tharidia.tharidia_things.network.DietSyncPacket;
 import com.tharidia.tharidia_things.network.HierarchySyncPacket;
 import com.tharidia.tharidia_things.network.RealmSyncPacket;
 import com.tharidia.tharidia_things.network.SyncGateRestrictionsPacket;
@@ -231,6 +232,15 @@ public class ClientPacketHandler {
             Player player = Minecraft.getInstance().player;
             if (player != null) {
                 FatigueSyncPacket.handle(packet, player);
+            }
+        });
+    }
+
+    public static void handleDietSync(DietSyncPacket packet, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            Player player = Minecraft.getInstance().player;
+            if (player != null) {
+                DietSyncPacket.handle(packet, player);
             }
         });
     }

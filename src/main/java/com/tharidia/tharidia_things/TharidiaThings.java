@@ -290,6 +290,7 @@ public class TharidiaThings {
         // Register the Deferred Register to the mod event bus so attachment types get
         // registered
         FatigueAttachments.ATTACHMENT_TYPES.register(modEventBus);
+        com.tharidia.tharidia_things.diet.DietAttachments.ATTACHMENT_TYPES.register(modEventBus);
         CharacterAttachments.ATTACHMENT_TYPES.register(modEventBus);
 
         // Register custom stats
@@ -321,6 +322,7 @@ public class TharidiaThings {
         NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.PreLoginNameHandler.class);
         // Register the fatigue handler
         NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.FatigueHandler.class);
+        NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.diet.DietHandler.class);
         // Register the trade interaction handler
         NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.event.TradeInteractionHandler.class);
         // Register the trade inventory blocker
@@ -397,6 +399,10 @@ public class TharidiaThings {
                     FatigueSyncPacket.TYPE,
                     FatigueSyncPacket.STREAM_CODEC,
                     ClientPacketHandler::handleFatigueSync);
+            registrar.playToClient(
+                    com.tharidia.tharidia_things.network.DietSyncPacket.TYPE,
+                    com.tharidia.tharidia_things.network.DietSyncPacket.STREAM_CODEC,
+                    ClientPacketHandler::handleDietSync);
             registrar.playToClient(
                     com.tharidia.tharidia_things.network.FatigueWarningPacket.TYPE,
                     com.tharidia.tharidia_things.network.FatigueWarningPacket.STREAM_CODEC,
@@ -503,6 +509,11 @@ public class TharidiaThings {
             registrar.playToClient(
                     FatigueSyncPacket.TYPE,
                     FatigueSyncPacket.STREAM_CODEC,
+                    (packet, context) -> {
+                    });
+            registrar.playToClient(
+                    com.tharidia.tharidia_things.network.DietSyncPacket.TYPE,
+                    com.tharidia.tharidia_things.network.DietSyncPacket.STREAM_CODEC,
                     (packet, context) -> {
                     });
             registrar.playToClient(
@@ -846,6 +857,7 @@ public class TharidiaThings {
     @SubscribeEvent
     public void onAddReloadListeners(net.neoforged.neoforge.event.AddReloadListenerEvent event) {
         event.addListener(new com.tharidia.tharidia_things.weight.WeightDataLoader());
+        event.addListener(new com.tharidia.tharidia_things.diet.DietDataLoader());
         event.addListener(new com.tharidia.tharidia_things.config.CropProtectionConfig());
         event.addListener(new com.tharidia.tharidia_things.config.FatigueConfig());
 
