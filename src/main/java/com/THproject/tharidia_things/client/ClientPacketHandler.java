@@ -239,6 +239,15 @@ public class ClientPacketHandler {
         });
     }
     
+    public static void handleDietProfileSync(DietProfileSyncPacket packet, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            Player player = Minecraft.getInstance().player;
+            if (player != null) {
+                DietProfileSyncPacket.handle(packet, player);
+            }
+        });
+    }
+    
     public static void handleFatigueWarning(FatigueWarningPacket packet, IPayloadContext context) {
         context.enqueueWork(() -> {
             // Show the warning overlay on screen

@@ -127,8 +127,38 @@ public class DietHeuristics {
     private static final Map<String, ModHeuristics> MOD_HEURISTICS = new HashMap<>();
     
     static {
+        // Farmer's Delight - balanced meals with good variety
         MOD_HEURISTICS.put("farmersdelight", new ModHeuristics(1.2f, 1.3f, 1.4f, 1.3f, 1.1f, 1.0f));
+        
+        // Croptopia - lots of crops and fruits
         MOD_HEURISTICS.put("croptopia", new ModHeuristics(1.1f, 1.1f, 1.5f, 1.4f, 1.2f, 1.0f));
+        
+        // Let's Do series - bakery, brewery, candlelight, vinery, etc.
+        MOD_HEURISTICS.put("bakery", new ModHeuristics(1.4f, 1.0f, 1.0f, 1.1f, 1.3f, 0.8f));
+        MOD_HEURISTICS.put("brewery", new ModHeuristics(1.0f, 1.0f, 1.0f, 1.2f, 1.2f, 1.4f));
+        MOD_HEURISTICS.put("candlelight", new ModHeuristics(1.3f, 1.3f, 1.2f, 1.1f, 1.2f, 1.0f));
+        MOD_HEURISTICS.put("vinery", new ModHeuristics(1.0f, 1.0f, 1.0f, 1.4f, 1.2f, 1.3f));
+        MOD_HEURISTICS.put("meadow", new ModHeuristics(1.1f, 1.1f, 1.2f, 1.3f, 1.2f, 1.0f));
+        MOD_HEURISTICS.put("beachparty", new ModHeuristics(1.0f, 1.2f, 1.1f, 1.3f, 1.2f, 1.1f));
+        MOD_HEURISTICS.put("herbalbrews", new ModHeuristics(1.0f, 1.0f, 1.3f, 1.2f, 1.1f, 1.4f));
+        MOD_HEURISTICS.put("farm_and_charm", new ModHeuristics(1.2f, 1.1f, 1.3f, 1.2f, 1.1f, 1.0f));
+        
+        // Cultural/Regional food mods
+        MOD_HEURISTICS.put("culturaldelights", new ModHeuristics(1.2f, 1.2f, 1.3f, 1.2f, 1.1f, 1.0f));
+        MOD_HEURISTICS.put("cuisinedelight", new ModHeuristics(1.3f, 1.2f, 1.3f, 1.2f, 1.1f, 1.0f));
+        MOD_HEURISTICS.put("rusticdelight", new ModHeuristics(1.2f, 1.2f, 1.3f, 1.2f, 1.1f, 1.0f));
+        
+        // Delight addons
+        MOD_HEURISTICS.put("cratedelight", new ModHeuristics(1.2f, 1.2f, 1.3f, 1.2f, 1.1f, 1.0f));
+        MOD_HEURISTICS.put("croptopiadelight", new ModHeuristics(1.2f, 1.1f, 1.4f, 1.3f, 1.2f, 1.0f));
+        MOD_HEURISTICS.put("expandeddelight", new ModHeuristics(1.2f, 1.2f, 1.3f, 1.2f, 1.1f, 1.0f));
+        MOD_HEURISTICS.put("extradelight", new ModHeuristics(1.2f, 1.2f, 1.3f, 1.2f, 1.1f, 1.0f));
+        MOD_HEURISTICS.put("dumplings_delight", new ModHeuristics(1.3f, 1.2f, 1.2f, 1.1f, 1.1f, 1.0f));
+        MOD_HEURISTICS.put("seeddelight", new ModHeuristics(1.2f, 1.1f, 1.3f, 1.2f, 1.1f, 1.0f));
+        MOD_HEURISTICS.put("storagedelight", new ModHeuristics(1.2f, 1.2f, 1.3f, 1.2f, 1.1f, 1.0f));
+        
+        // Other food mods
+        MOD_HEURISTICS.put("butchery", new ModHeuristics(1.0f, 1.5f, 1.0f, 1.0f, 1.0f, 0.9f));
         MOD_HEURISTICS.put("pamhc2foodcore", new ModHeuristics(1.1f, 1.1f, 1.3f, 1.3f, 1.2f, 1.0f));
         MOD_HEURISTICS.put("cuisine", new ModHeuristics(1.3f, 1.2f, 1.3f, 1.2f, 1.1f, 1.0f));
         MOD_HEURISTICS.put("brew", new ModHeuristics(1.0f, 1.0f, 1.0f, 1.0f, 1.2f, 1.3f));
@@ -202,6 +232,20 @@ public class DietHeuristics {
                 LOGGER.debug("[DIET] Applying {} mod heuristics (partial match) to {}", entry.getKey(), itemId);
                 return applyHeuristics(profile, entry.getValue());
             }
+        }
+        
+        // Let's Do series pattern matching
+        if (modId.contains("doapi") || modId.contains("wildernature")) {
+            LOGGER.debug("[DIET] Applying Let's Do heuristics to {}", itemId);
+            ModHeuristics letsDoHeuristics = new ModHeuristics(1.2f, 1.2f, 1.2f, 1.2f, 1.1f, 1.0f);
+            return applyHeuristics(profile, letsDoHeuristics);
+        }
+        
+        // Delight series pattern matching
+        if (modId.contains("delight")) {
+            LOGGER.debug("[DIET] Applying delight heuristics to {}", itemId);
+            ModHeuristics delightHeuristics = new ModHeuristics(1.2f, 1.2f, 1.3f, 1.2f, 1.1f, 1.0f);
+            return applyHeuristics(profile, delightHeuristics);
         }
         
         if (modId.contains("farm") || modId.contains("harvest") || modId.contains("grow") || modId.contains("agricraft")) {

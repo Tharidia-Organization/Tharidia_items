@@ -134,6 +134,10 @@ public final class DietRegistry {
         return config.decayRates();
     }
 
+    public static DietProfileCache getPersistentCache() {
+        return persistentCache;
+    }
+
     public static DietProfile getMaxValues() {
         return config.maxValues();
     }

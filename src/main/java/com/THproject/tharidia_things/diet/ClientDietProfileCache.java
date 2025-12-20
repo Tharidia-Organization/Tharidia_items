@@ -209,6 +209,15 @@ public class ClientDietProfileCache {
     }
     
     /**
+     * Updates profiles from server sync packet
+     */
+    public void updateFromServer(Map<ResourceLocation, DietProfile> serverProfiles) {
+        profiles.putAll(serverProfiles);
+        knownItems.addAll(serverProfiles.keySet());
+        LOGGER.info("[DIET CLIENT] Updated {} profiles from server", serverProfiles.size());
+    }
+    
+    /**
      * Checks if cache needs recalculation
      */
     public boolean needsRecalculation() {

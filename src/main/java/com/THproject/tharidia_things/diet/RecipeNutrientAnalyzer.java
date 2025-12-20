@@ -38,14 +38,36 @@ public class RecipeNutrientAnalyzer {
     private static final Map<String, DietProfile> NON_FOOD_NUTRIENTS = new HashMap<>();
     
     static {
-        // Initialize non-food component nutrients
-        NON_FOOD_NUTRIENTS.put("sugar", DietProfile.of(0, 0, 0, 0, 1.0f, 0));
-        NON_FOOD_NUTRIENTS.put("milk", DietProfile.of(0, 0.2f, 0, 0, 0, 1.0f));
-        NON_FOOD_NUTRIENTS.put("egg", DietProfile.of(0, 1.0f, 0, 0, 0, 0));
+        // Initialize non-food component nutrients (NO WATER for solid ingredients)
+        
+        // Grains and flours
         NON_FOOD_NUTRIENTS.put("wheat", DietProfile.of(1.0f, 0, 0, 0, 0, 0));
-        NON_FOOD_NUTRIENTS.put("pancake", DietProfile.of(0, 0, 0, 0, 1.0f, 0));
         NON_FOOD_NUTRIENTS.put("flour", DietProfile.of(1.0f, 0, 0, 0, 0, 0));
+        NON_FOOD_NUTRIENTS.put("dough", DietProfile.of(1.0f, 0, 0, 0, 0, 0));
+        NON_FOOD_NUTRIENTS.put("rice", DietProfile.of(1.0f, 0, 0, 0, 0, 0));
+        NON_FOOD_NUTRIENTS.put("corn", DietProfile.of(1.0f, 0, 0, 0, 0, 0));
+        NON_FOOD_NUTRIENTS.put("oat", DietProfile.of(1.0f, 0, 0, 0, 0, 0));
+        NON_FOOD_NUTRIENTS.put("barley", DietProfile.of(1.0f, 0, 0, 0, 0, 0));
+        NON_FOOD_NUTRIENTS.put("rye", DietProfile.of(1.0f, 0, 0, 0, 0, 0));
+        
+        // Proteins
+        NON_FOOD_NUTRIENTS.put("egg", DietProfile.of(0, 1.0f, 0, 0, 0, 0));
         NON_FOOD_NUTRIENTS.put("butter", DietProfile.of(0, 0.5f, 0, 0, 0, 0));
+        NON_FOOD_NUTRIENTS.put("cheese", DietProfile.of(0, 0.8f, 0, 0, 0, 0));
+        NON_FOOD_NUTRIENTS.put("cream", DietProfile.of(0, 0.3f, 0, 0, 0, 0));
+        
+        // Sugars
+        NON_FOOD_NUTRIENTS.put("sugar", DietProfile.of(0, 0, 0, 0, 1.0f, 0));
+        NON_FOOD_NUTRIENTS.put("honey", DietProfile.of(0, 0, 0, 0, 1.0f, 0));
+        NON_FOOD_NUTRIENTS.put("syrup", DietProfile.of(0, 0, 0, 0, 1.0f, 0));
+        NON_FOOD_NUTRIENTS.put("chocolate", DietProfile.of(0, 0, 0, 0, 0.8f, 0));
+        NON_FOOD_NUTRIENTS.put("cocoa", DietProfile.of(0, 0, 0, 0, 0.5f, 0));
+        
+        // Liquids (these SHOULD have water)
+        NON_FOOD_NUTRIENTS.put("milk", DietProfile.of(0, 0.2f, 0, 0, 0, 1.0f));
+        NON_FOOD_NUTRIENTS.put("water", DietProfile.of(0, 0, 0, 0, 0, 1.0f));
+        NON_FOOD_NUTRIENTS.put("broth", DietProfile.of(0, 0.1f, 0, 0, 0, 1.0f));
+        NON_FOOD_NUTRIENTS.put("stock", DietProfile.of(0, 0.1f, 0, 0, 0, 1.0f));
     }
     
     public static void setServer(MinecraftServer server) {
@@ -130,15 +152,14 @@ public class RecipeNutrientAnalyzer {
             return new AnalysisResult(heuristicProfile, AnalysisMethod.HEURISTIC);
         }
         
-        // Non-food item without recipe - give minimal hydration as fallback
-        DietProfile fallbackProfile = DietProfile.of(0, 0, 0, 0, 0, 0.5f);
-        return new AnalysisResult(fallbackProfile, AnalysisMethod.NOT_FOOD);
+        // Non-food item without recipe - return empty (no nutrients)
+        return new AnalysisResult(DietProfile.EMPTY, AnalysisMethod.NOT_FOOD);
     }
     
     /**
      * Analyzes an item by examining its crafting recipe and recursively analyzing ingredients.
      * Returns null if no suitable recipe is found.
-     * Priority: recipe with highest total nutrient values.
+     * Priority: recipe with highest total nutrient values (excluding water to avoid bias).
      */
     private static DietProfile analyzeFromRecipe(Item item, RecipeManager recipeManager, Set<Item> visitedItems, int depth, DietSystemSettings settings) {
         ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(item);
@@ -174,9 +195,13 @@ public class RecipeNutrientAnalyzer {
                 Item ingredientItem = ingredientStack.getItem();
                 int count = ingredientStack.getCount();
                 
+                // Skip if this ingredient is the same as what we're analyzing (circular reference)
+                if (visitedItems.contains(ingredientItem)) {
+                    continue;
+                }
+                
                 // Recursively analyze this ingredient
-                Set<Item> newVisited = new HashSet<>(visitedItems);
-                AnalysisResult ingredientResult = analyzeRecursive(ingredientItem, newVisited, depth + 1, settings);
+                AnalysisResult ingredientResult = analyzeRecursive(ingredientItem, visitedItems, depth + 1, settings);
                 
                 if (!ingredientResult.profile.isEmpty()) {
                     componentNutrients.add(new ComponentNutrients(ingredientResult.profile, count));
@@ -199,13 +224,23 @@ public class RecipeNutrientAnalyzer {
                 resultCount = 1;
             }
             
+            // IMPORTANT: If recipe produces multiple food items, keep values per-item
+            // Don't divide further - the combination already accounts for this
+            // Example: 3 wheat → 3 bread means each bread gets (3 grain / 3) = 1 grain
+            
             // Combine nutrients from all components
             DietProfile profile = combineComponentNutrients(componentNutrients, resultCount);
             
-            // Calculate total nutrient value for this recipe
+            // Apply rounding: values < 0.1 become 0.0
+            profile = roundProfile(profile);
+            
+            // Calculate total nutrient value for this recipe (EXCLUDING water to avoid bias)
+            // Water can come from heuristics and shouldn't influence recipe selection
             float totalValue = 0.0f;
             for (DietCategory category : DietCategory.VALUES) {
-                totalValue += profile.get(category);
+                if (category != DietCategory.WATER) {
+                    totalValue += profile.get(category);
+                }
             }
             
             // Keep the recipe with highest total nutrient value
@@ -249,6 +284,24 @@ public class RecipeNutrientAnalyzer {
                 totalSugar / divisor,
                 totalWater / divisor
         );
+    }
+    
+    /**
+     * Gets nutrient profile for known non-food components.
+     * Returns null if not a known component.
+     */
+    private static DietProfile getNonFoodNutrients(Item item) {
+        ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(item);
+        String path = itemId.getPath().toLowerCase();
+        
+        // Check exact matches first
+        for (Map.Entry<String, DietProfile> entry : NON_FOOD_NUTRIENTS.entrySet()) {
+            if (path.contains(entry.getKey())) {
+                return entry.getValue();
+            }
+        }
+        
+        return null;
     }
     
     /**
@@ -378,6 +431,27 @@ public class RecipeNutrientAnalyzer {
     }
     
     /**
+     * Rounds a profile: values < 0.1 become 0.0 to avoid noise from complex recipes.
+     */
+    private static DietProfile roundProfile(DietProfile profile) {
+        float grain = profile.get(DietCategory.GRAIN);
+        float protein = profile.get(DietCategory.PROTEIN);
+        float vegetable = profile.get(DietCategory.VEGETABLE);
+        float fruit = profile.get(DietCategory.FRUIT);
+        float sugar = profile.get(DietCategory.SUGAR);
+        float water = profile.get(DietCategory.WATER);
+        
+        return DietProfile.of(
+            grain < 0.1f ? 0.0f : grain,
+            protein < 0.1f ? 0.0f : protein,
+            vegetable < 0.1f ? 0.0f : vegetable,
+            fruit < 0.1f ? 0.0f : fruit,
+            sugar < 0.1f ? 0.0f : sugar,
+            water < 0.1f ? 0.0f : water
+        );
+    }
+    
+    /**
      * Represents nutrients from a component with its quantity.
      */
     private static record ComponentNutrients(DietProfile profile, int count) {}
@@ -399,20 +473,4 @@ public class RecipeNutrientAnalyzer {
         FAILED               // Analysis failed
     }
     
-    /**
-     * Gets nutrient profile for non-food components (sugar, milk, egg, etc.)
-     */
-    private static DietProfile getNonFoodNutrients(Item item) {
-        ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(item);
-        String itemName = itemId.getPath().toLowerCase();
-        
-        // Check exact matches and partial matches
-        for (Map.Entry<String, DietProfile> entry : NON_FOOD_NUTRIENTS.entrySet()) {
-            if (itemName.contains(entry.getKey())) {
-                return entry.getValue();
-            }
-        }
-        
-        return null;
-    }
 }

@@ -30,8 +30,12 @@ public class DietProfileCache {
     private static final Logger LOGGER = LoggerFactory.getLogger(DietProfileCache.class);
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     
-    private static final String CACHE_VERSION = "1.1";
+    private static final String CACHE_VERSION = "1.2";
     private static final String CACHE_FILENAME = "diet_profiles_cache.json";
+    
+    // Hash of the analysis logic - change this when you modify RecipeNutrientAnalyzer or DietHeuristics
+    // This will automatically invalidate the cache when the mod's analysis logic changes
+    private static final String ANALYSIS_LOGIC_VERSION = "v2.0-recipe-priority-water-fix";
     
     private final Path cacheFile;
     private final Map<ResourceLocation, DietProfile> profiles = new ConcurrentHashMap<>();
@@ -58,9 +62,15 @@ public class DietProfileCache {
             
             String version = root.has("version") ? root.get("version").getAsString() : "";
             String modListHash = root.has("mod_list_hash") ? root.get("mod_list_hash").getAsString() : "";
+            String analysisVersion = root.has("analysis_version") ? root.get("analysis_version").getAsString() : "";
             
             if (!CACHE_VERSION.equals(version)) {
                 LOGGER.info("[DIET CACHE] Cache version mismatch (expected {}, got {}), will recalculate", CACHE_VERSION, version);
+                return;
+            }
+            
+            if (!ANALYSIS_LOGIC_VERSION.equals(analysisVersion)) {
+                LOGGER.info("[DIET CACHE] Analysis logic changed (expected {}, got {}), will recalculate", ANALYSIS_LOGIC_VERSION, analysisVersion);
                 return;
             }
             
@@ -104,6 +114,7 @@ public class DietProfileCache {
         try {
             JsonObject root = new JsonObject();
             root.addProperty("version", CACHE_VERSION);
+            root.addProperty("analysis_version", ANALYSIS_LOGIC_VERSION);
             root.addProperty("mod_list_hash", lastModListHash);
             root.addProperty("calculated_at", System.currentTimeMillis());
             
@@ -204,11 +215,25 @@ public class DietProfileCache {
     }
     
     /**
-     * Checks if cache needs recalculation (mod list changed)
+     * Gets all cached profiles for syncing to clients
+     */
+    public Map<ResourceLocation, DietProfile> getAllProfiles() {
+        return new HashMap<>(profiles);
+    }
+    
+    /**
+     * Checks if cache needs recalculation (mod list changed or analysis logic updated)
      */
     public boolean needsRecalculation() {
         String currentHash = calculateModListHash();
         return !currentHash.equals(lastModListHash) || profiles.isEmpty();
+    }
+    
+    /**
+     * Gets the current analysis logic version for debugging
+     */
+    public static String getAnalysisVersion() {
+        return ANALYSIS_LOGIC_VERSION;
     }
     
     /**

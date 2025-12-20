@@ -4,6 +4,7 @@ import com.THproject.tharidia_things.diet.DietAttachments;
 import com.THproject.tharidia_things.diet.DietCategory;
 import com.THproject.tharidia_things.diet.DietData;
 import com.THproject.tharidia_things.diet.DietProfile;
+import com.THproject.tharidia_things.diet.DietProfileCache;
 import com.THproject.tharidia_things.diet.DietRegistry;
 import com.THproject.tharidia_things.network.DietSyncPacket;
 import com.mojang.brigadier.CommandDispatcher;
@@ -30,7 +31,11 @@ public class DietCommands {
                         .executes(DietCommands::resetDiet)))
                 .then(Commands.literal("check")
                     .then(Commands.argument("player", EntityArgument.player())
-                        .executes(DietCommands::checkDiet)))));
+                        .executes(DietCommands::checkDiet)))
+                .then(Commands.literal("recalculate")
+                    .executes(DietCommands::recalculateCache))
+                .then(Commands.literal("version")
+                    .executes(DietCommands::showVersion))));
     }
     
     private static int resetDiet(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
@@ -76,5 +81,34 @@ public class DietCommands {
     
     private static Component formatDietLine(String label, float value, float max) {
         return Component.literal(String.format("%s%.1f / %.1f%n", label, value, max));
+    }
+    
+    private static int recalculateCache(CommandContext<CommandSourceStack> context) {
+        CommandSourceStack source = context.getSource();
+        
+        source.sendSuccess(() -> Component.literal("Starting diet profile recalculation..."), true);
+        
+        // Clear and recalculate cache
+        DietProfileCache cache = DietRegistry.getPersistentCache();
+        if (cache != null) {
+            cache.clear();
+            cache.calculateAsync(source.getServer(), DietRegistry.getSettings())
+                .thenRun(() -> {
+                    source.sendSuccess(() -> Component.literal("Diet profile recalculation completed!"), true);
+                });
+        } else {
+            source.sendFailure(Component.literal("Diet cache not initialized!"));
+        }
+        
+        return 1;
+    }
+    
+    private static int showVersion(CommandContext<CommandSourceStack> context) {
+        CommandSourceStack source = context.getSource();
+        
+        String version = DietProfileCache.getAnalysisVersion();
+        source.sendSuccess(() -> Component.literal("Diet Analysis Version: " + version), false);
+        
+        return 1;
     }
 }

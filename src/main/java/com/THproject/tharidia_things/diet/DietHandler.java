@@ -1,7 +1,9 @@
 package com.THproject.tharidia_things.diet;
 
 import com.THproject.tharidia_things.TharidiaThings;
+import com.THproject.tharidia_things.network.DietProfileSyncPacket;
 import com.THproject.tharidia_things.network.DietSyncPacket;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -12,6 +14,8 @@ import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
+
+import java.util.Map;
 
 /**
  * Handles diet gain from food consumption and periodic decay.
@@ -89,6 +93,20 @@ public class DietHandler {
         DietData data = serverPlayer.getData(DietAttachments.DIET_DATA);
         initializeIfNeeded(serverPlayer, data);
         DietEffectApplier.apply(serverPlayer, data);
+        
+        // Sync diet profiles from server to client
+        syncDietProfilesToClient(serverPlayer);
+    }
+    
+    private static void syncDietProfilesToClient(ServerPlayer player) {
+        // Get all cached profiles from server
+        DietProfileCache serverCache = DietRegistry.getPersistentCache();
+        if (serverCache != null) {
+            Map<ResourceLocation, DietProfile> profiles = serverCache.getAllProfiles();
+            if (!profiles.isEmpty()) {
+                PacketDistributor.sendToPlayer(player, new DietProfileSyncPacket(profiles));
+            }
+        }
     }
 
     private static void syncIfNeeded(ServerPlayer player, DietData data, boolean force) {

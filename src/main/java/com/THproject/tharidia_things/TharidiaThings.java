@@ -488,6 +488,12 @@ public class TharidiaThings {
                     VideoScreenVolumePacket.STREAM_CODEC,
                     VideoScreenVolumePacket::handle);
 
+            // Diet profile sync packet
+            registrar.playToClient(
+                    DietProfileSyncPacket.TYPE,
+                    DietProfileSyncPacket.STREAM_CODEC,
+                    ClientPacketHandler::handleDietProfileSync);
+
             // Register dummy handlers for server-bound packets (client-side only for handshake)
             // Note: All server-bound packets are registered below with actual handlers
             // No dummy handlers needed here as they're registered with real handlers
@@ -611,6 +617,11 @@ public class TharidiaThings {
                     (packet, context) -> {
                     });
 
+            // Ensure diet profile sync channel exists server-side so clients can connect
+            registrar.playToClient(
+                    DietProfileSyncPacket.TYPE,
+                    DietProfileSyncPacket.STREAM_CODEC,
+                    (packet, context) -> {});
             LOGGER.info("Server-side packet registration completed (dummy handlers)");
         }
 
