@@ -77,6 +77,12 @@ public class DietData implements INBTSerializable<CompoundTag> {
         initialized = true;
         dirty = true;
     }
+    
+    public void reset(DietProfile maxValues, float percent) {
+        preload(maxValues, percent);
+        initialized = true;
+        markDirty();
+    }
 
     public float[] copyValues() {
         float[] copy = new float[values.length];

@@ -19,7 +19,7 @@ public class PlayerNameHelper {
      */
     public static String getChosenName(ServerPlayer player) {
         try {
-            Class<?> nameServiceClass = Class.forName("com.tharidia.tharidia_tweaks.name.NameService");
+            Class<?> nameServiceClass = Class.forName("com.THproject.tharidia_tweaks.name.NameService");
             java.lang.reflect.Method getChosenNameMethod = nameServiceClass.getMethod("getChosenName", ServerPlayer.class);
             String chosenName = (String) getChosenNameMethod.invoke(null, player);
             
@@ -48,7 +48,7 @@ public class PlayerNameHelper {
         
         // Player is offline, try to get from NameService storage
         try {
-            Class<?> nameServiceClass = Class.forName("com.tharidia.tharidia_tweaks.name.NameService");
+            Class<?> nameServiceClass = Class.forName("com.THproject.tharidia_tweaks.name.NameService");
             java.lang.reflect.Method getChosenNameByUUIDMethod = nameServiceClass.getMethod("getChosenNameByUUID", UUID.class);
             String chosenName = (String) getChosenNameByUUIDMethod.invoke(null, playerUUID);
             

@@ -205,7 +205,7 @@ public class DietaScreen extends Screen {
         gui.pose().pushPose();
         gui.pose().translate(barX + barWidth + 4, y - 1, 0);
         gui.pose().scale(scale, scale, 1.0f);
-        String percentText = (int)(percentage * 100) + "%";
+        String percentText = String.format("%.1f%%", percentage * 100);
         gui.drawString(this.font, percentText, 0, 0, 0xFF404040, false);
         gui.pose().popPose();
     }

@@ -1,6 +1,8 @@
 package com.THproject.tharidia_things.client;
 
 import com.THproject.tharidia_things.TharidiaThings;
+import com.THproject.tharidia_things.TharidiaThingsClient;
+import com.THproject.tharidia_things.diet.ClientDietProfileCache;
 import com.THproject.tharidia_things.diet.DietCategory;
 import com.THproject.tharidia_things.diet.DietProfile;
 import com.THproject.tharidia_things.diet.DietRegistry;
@@ -60,7 +62,20 @@ public class DietTooltipHandler {
     }
 
     private static List<Component> buildTooltipLines(ItemStack stack) {
-        DietProfile profile = DietRegistry.getProfile(stack);
+        // Try to get from client cache first (pre-calculated, no lag)
+        ClientDietProfileCache clientCache = TharidiaThingsClient.getClientDietCache();
+        DietProfile profile = null;
+        
+        if (clientCache != null) {
+            ResourceLocation itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem());
+            profile = clientCache.getProfile(itemId);
+        }
+        
+        // Fallback to DietRegistry if not in client cache
+        if (profile == null) {
+            profile = DietRegistry.getProfile(stack);
+        }
+        
         if (profile.isEmpty()) {
             return List.of();
         }

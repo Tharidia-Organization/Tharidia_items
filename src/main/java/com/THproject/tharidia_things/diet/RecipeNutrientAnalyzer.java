@@ -34,6 +34,20 @@ public class RecipeNutrientAnalyzer {
     // Maximum depth to prevent infinite recursion (safety limit)
     private static final int MAX_SAFETY_DEPTH = 50;
     
+    // Nutrient profiles for non-food components that contribute to recipes
+    private static final Map<String, DietProfile> NON_FOOD_NUTRIENTS = new HashMap<>();
+    
+    static {
+        // Initialize non-food component nutrients
+        NON_FOOD_NUTRIENTS.put("sugar", DietProfile.of(0, 0, 0, 0, 1.0f, 0));
+        NON_FOOD_NUTRIENTS.put("milk", DietProfile.of(0, 0.2f, 0, 0, 0, 1.0f));
+        NON_FOOD_NUTRIENTS.put("egg", DietProfile.of(0, 1.0f, 0, 0, 0, 0));
+        NON_FOOD_NUTRIENTS.put("wheat", DietProfile.of(1.0f, 0, 0, 0, 0, 0));
+        NON_FOOD_NUTRIENTS.put("pancake", DietProfile.of(0, 0, 0, 0, 1.0f, 0));
+        NON_FOOD_NUTRIENTS.put("flour", DietProfile.of(1.0f, 0, 0, 0, 0, 0));
+        NON_FOOD_NUTRIENTS.put("butter", DietProfile.of(0, 0.5f, 0, 0, 0, 0));
+    }
+    
     public static void setServer(MinecraftServer server) {
         currentServer = server;
         if (server != null) {
@@ -72,6 +86,7 @@ public class RecipeNutrientAnalyzer {
      * Only uses heuristics for base-level items without recipes.
      */
     private static AnalysisResult analyzeRecursive(Item item, Set<Item> visitedItems, int depth, DietSystemSettings settings) {
+        ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(item);
         // Safety check: prevent infinite recursion
         if (depth > MAX_SAFETY_DEPTH) {
             LOGGER.warn("[DIET] Max recursion depth reached for {}", BuiltInRegistries.ITEM.getKey(item));
@@ -82,8 +97,7 @@ public class RecipeNutrientAnalyzer {
         if (visitedItems.contains(item)) {
             return new AnalysisResult(DietProfile.EMPTY, AnalysisMethod.CIRCULAR);
         }
-        
-        ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(item);
+
         visitedItems.add(item);
         
         // Check if it's a food item
@@ -102,6 +116,13 @@ public class RecipeNutrientAnalyzer {
             }
         }
         
+        // Check if this is a known non-food component with nutrients
+        DietProfile nonFoodProfile = getNonFoodNutrients(item);
+        if (nonFoodProfile != null && !nonFoodProfile.isEmpty()) {
+            LOGGER.debug("[DIET] {} analyzed as non-food component", itemId);
+            return new AnalysisResult(nonFoodProfile, AnalysisMethod.NON_FOOD_COMPONENT);
+        }
+        
         // No recipe found - use heuristics for base components (FALLBACK)
         if (isFood) {
             DietProfile heuristicProfile = analyzeFromHeuristics(item, food, settings);
@@ -109,15 +130,18 @@ public class RecipeNutrientAnalyzer {
             return new AnalysisResult(heuristicProfile, AnalysisMethod.HEURISTIC);
         }
         
-        // Non-food item without recipe
-        return new AnalysisResult(DietProfile.EMPTY, AnalysisMethod.NOT_FOOD);
+        // Non-food item without recipe - give minimal hydration as fallback
+        DietProfile fallbackProfile = DietProfile.of(0, 0, 0, 0, 0, 0.5f);
+        return new AnalysisResult(fallbackProfile, AnalysisMethod.NOT_FOOD);
     }
     
     /**
      * Analyzes an item by examining its crafting recipe and recursively analyzing ingredients.
      * Returns null if no suitable recipe is found.
+     * Priority: recipe with highest total nutrient values.
      */
     private static DietProfile analyzeFromRecipe(Item item, RecipeManager recipeManager, Set<Item> visitedItems, int depth, DietSystemSettings settings) {
+        ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(item);
         // Find all recipes that produce this item
         List<RecipeHolder<?>> matchingRecipes = findRecipesForItem(recipeManager, item);
         
@@ -125,53 +149,79 @@ public class RecipeNutrientAnalyzer {
             return null;
         }
         
-        // Select the best recipe (prioritize crafting over smelting)
-        RecipeHolder<?> bestRecipe = selectBestRecipe(matchingRecipes);
-        assert bestRecipe != null;
-        Recipe<?> recipe = bestRecipe.value();
+        // Analyze all recipes and select the one with highest nutrient values
+        DietProfile bestProfile = null;
+        float bestTotalValue = 0.0f;
         
-        // Extract ingredients
-        List<Ingredient> ingredients = safeGetIngredients(recipe);
-        if (ingredients.isEmpty()) {
-            return null;
-        }
-        
-        // Recursively analyze each ingredient
-        List<ComponentNutrients> componentNutrients = new ArrayList<>();
-        
-        for (Ingredient ingredient : ingredients) {
-            ItemStack[] possibleItems = ingredient.getItems();
-            if (possibleItems.length == 0) continue;
+        for (RecipeHolder<?> recipeHolder : matchingRecipes) {
+            Recipe<?> recipe = recipeHolder.value();
             
-            // Use first item as representative (most recipes have single-item ingredients)
-            ItemStack ingredientStack = possibleItems[0];
-            Item ingredientItem = ingredientStack.getItem();
-            int count = ingredientStack.getCount();
+            // Extract ingredients
+            List<Ingredient> ingredients = safeGetIngredients(recipe);
+            if (ingredients.isEmpty()) {
+                continue;
+            }
             
-            // Recursively analyze this ingredient
-            Set<Item> newVisited = new HashSet<>(visitedItems);
-            AnalysisResult ingredientResult = analyzeRecursive(ingredientItem, newVisited, depth + 1, settings);
+            // Recursively analyze each ingredient
+            List<ComponentNutrients> componentNutrients = new ArrayList<>();
             
-            if (!ingredientResult.profile.isEmpty()) {
-                componentNutrients.add(new ComponentNutrients(ingredientResult.profile, count));
+            for (Ingredient ingredient : ingredients) {
+                ItemStack[] possibleItems = ingredient.getItems();
+                if (possibleItems.length == 0) continue;
+                
+                // Use first item as representative (most recipes have single-item ingredients)
+                ItemStack ingredientStack = possibleItems[0];
+                Item ingredientItem = ingredientStack.getItem();
+                int count = ingredientStack.getCount();
+                
+                // Recursively analyze this ingredient
+                Set<Item> newVisited = new HashSet<>(visitedItems);
+                AnalysisResult ingredientResult = analyzeRecursive(ingredientItem, newVisited, depth + 1, settings);
+                
+                if (!ingredientResult.profile.isEmpty()) {
+                    componentNutrients.add(new ComponentNutrients(ingredientResult.profile, count));
+                }
+            }
+            
+            if (componentNutrients.isEmpty()) {
+                continue;
+            }
+            
+            // Calculate result count from recipe
+            ItemStack result = safeGetRecipeResult(recipe);
+            int resultCount = result.isEmpty() ? 1 : result.getCount();
+            
+            // Special case: For smelting/cooking recipes, don't divide by result count
+            // because vanilla recipes often have incorrect count values
+            String recipeType = recipe.getClass().getSimpleName().toLowerCase();
+            if (recipeType.contains("smelt") || recipeType.contains("cook") || 
+                recipeType.contains("campfire") || recipe instanceof SmeltingRecipe) {
+                resultCount = 1;
+            }
+            
+            // Combine nutrients from all components
+            DietProfile profile = combineComponentNutrients(componentNutrients, resultCount);
+            
+            // Calculate total nutrient value for this recipe
+            float totalValue = 0.0f;
+            for (DietCategory category : DietCategory.VALUES) {
+                totalValue += profile.get(category);
+            }
+            
+            // Keep the recipe with highest total nutrient value
+            if (totalValue > bestTotalValue) {
+                bestTotalValue = totalValue;
+                bestProfile = profile;
             }
         }
         
-        if (componentNutrients.isEmpty()) {
-            return null;
-        }
-        
-        // Calculate result count from recipe
-        ItemStack result = safeGetRecipeResult(recipe);
-        int resultCount = result.isEmpty() ? 1 : result.getCount();
-        
-        // Combine nutrients from all components
-        return combineComponentNutrients(componentNutrients, resultCount);
+        return bestProfile;
     }
     
     /**
      * Combines nutrients from multiple components, accounting for quantities.
      * Formula: sum all component nutrients, then divide by result count.
+     * Nutrients are summed exactly without any processing loss.
      */
     private static DietProfile combineComponentNutrients(List<ComponentNutrients> components, int resultCount) {
         float totalGrain = 0, totalProtein = 0, totalVegetable = 0, totalFruit = 0, totalSugar = 0, totalWater = 0;
@@ -191,24 +241,22 @@ public class RecipeNutrientAnalyzer {
         // Divide by result count to get per-item nutrients
         float divisor = Math.max(1, resultCount);
         
-        // Apply slight reduction for processing (crafting reduces nutrients slightly)
-        float processingFactor = 0.95f;
-        
         return DietProfile.of(
-                (totalGrain / divisor) * processingFactor,
-                (totalProtein / divisor) * processingFactor,
-                (totalVegetable / divisor) * processingFactor,
-                (totalFruit / divisor) * processingFactor,
-                (totalSugar / divisor) * processingFactor,
-                (totalWater / divisor) * processingFactor
+                totalGrain / divisor,
+                totalProtein / divisor,
+                totalVegetable / divisor,
+                totalFruit / divisor,
+                totalSugar / divisor,
+                totalWater / divisor
         );
     }
     
     /**
      * Analyzes an item using heuristics (tags, name patterns).
      * Only used for base-level components without recipes.
+     * Public for client-side cache usage.
      */
-    private static DietProfile analyzeFromHeuristics(Item item, FoodProperties food, DietSystemSettings settings) {
+    public static DietProfile analyzeFromHeuristics(Item item, FoodProperties food, DietSystemSettings settings) {
         float nutrition = food.nutrition();
         float saturation = food.saturation() * settings.saturationScale();
         boolean fast = food.saturation() <= settings.fastFoodSaturationThreshold();
@@ -293,41 +341,6 @@ public class RecipeNutrientAnalyzer {
     }
     
     /**
-     * Selects the best recipe from a list, prioritizing crafting recipes.
-     */
-    private static RecipeHolder<?> selectBestRecipe(List<RecipeHolder<?>> recipes) {
-        if (recipes.isEmpty()) {
-            return null;
-        }
-        
-        RecipeHolder<?> craftingRecipe = null;
-        RecipeHolder<?> smeltingRecipe = null;
-        RecipeHolder<?> firstRecipe = recipes.getFirst();
-        
-        for (RecipeHolder<?> holder : recipes) {
-            Recipe<?> recipe = holder.value();
-            String recipeType = recipe.getClass().getSimpleName().toLowerCase();
-            
-            // Prioritize crafting recipes
-            if (recipeType.contains("craft") || recipe instanceof CraftingRecipe) {
-                craftingRecipe = holder;
-                break;
-            }
-            
-            // Second priority: smelting/cooking
-            if (smeltingRecipe == null && (recipeType.contains("smelt") || 
-                recipeType.contains("cook") || recipeType.contains("campfire") ||
-                recipe instanceof SmeltingRecipe)) {
-                smeltingRecipe = holder;
-            }
-        }
-        
-        if (craftingRecipe != null) return craftingRecipe;
-        if (smeltingRecipe != null) return smeltingRecipe;
-        return firstRecipe;
-    }
-    
-    /**
      * Safely extracts recipe result.
      */
     private static ItemStack safeGetRecipeResult(Recipe<?> recipe) {
@@ -378,10 +391,28 @@ public class RecipeNutrientAnalyzer {
      * Method used to determine nutrients.
      */
     private enum AnalysisMethod {
-        RECIPE,      // Analyzed from crafting recipe
-        HEURISTIC,   // Analyzed from tags/name patterns
-        CIRCULAR,    // Circular dependency detected
-        NOT_FOOD,    // Not a food item
-        FAILED       // Analysis failed
+        RECIPE,              // Analyzed from crafting recipe
+        HEURISTIC,           // Analyzed from tags/name patterns
+        NON_FOOD_COMPONENT,  // Non-food component with known nutrients
+        CIRCULAR,            // Circular dependency detected
+        NOT_FOOD,            // Not a food item
+        FAILED               // Analysis failed
+    }
+    
+    /**
+     * Gets nutrient profile for non-food components (sugar, milk, egg, etc.)
+     */
+    private static DietProfile getNonFoodNutrients(Item item) {
+        ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(item);
+        String itemName = itemId.getPath().toLowerCase();
+        
+        // Check exact matches and partial matches
+        for (Map.Entry<String, DietProfile> entry : NON_FOOD_NUTRIENTS.entrySet()) {
+            if (itemName.contains(entry.getKey())) {
+                return entry.getValue();
+            }
+        }
+        
+        return null;
     }
 }

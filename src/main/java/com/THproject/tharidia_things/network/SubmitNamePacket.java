@@ -40,7 +40,7 @@ public record SubmitNamePacket(String chosenName) implements CustomPacketPayload
             if (context.player() instanceof ServerPlayer serverPlayer) {
                 try {
                     // Use reflection to call NameService (server-side only dependency)
-                    Class<?> nameServiceClass = Class.forName("com.tharidia.tharidia_tweaks.name.NameService");
+                    Class<?> nameServiceClass = Class.forName("com.THproject.tharidia_tweaks.name.NameService");
                     java.lang.reflect.Method submitMethod = nameServiceClass.getMethod("submitDisplayName", ServerPlayer.class, String.class);
                     
                     Object result = submitMethod.invoke(null, serverPlayer, packet.chosenName);

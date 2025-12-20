@@ -79,7 +79,7 @@ pietroBlockEntity.setOwner(player.getName().getString(), player.getUUID());
 
 **Dopo**:
 ```java
-String chosenName = com.tharidia.tharidia_things.util.PlayerNameHelper.getChosenName(serverPlayer);
+String chosenName = com.THproject.tharidia_things.util.PlayerNameHelper.getChosenName(serverPlayer);
 pietroBlockEntity.setOwner(chosenName, serverPlayer.getUUID());
 ```
 
@@ -299,7 +299,7 @@ build/libs/tharidiathings-1.1.4.jar
 Il codice usa reflection per chiamare `NameService` da `tharidia_tweaks`:
 
 ```java
-Class<?> nameServiceClass = Class.forName("com.tharidia.tharidia_tweaks.name.NameService");
+Class<?> nameServiceClass = Class.forName("com.THproject.tharidia_tweaks.name.NameService");
 Method getChosenNameMethod = nameServiceClass.getMethod("getChosenName", ServerPlayer.class);
 String chosenName = (String) getChosenNameMethod.invoke(null, player);
 ```

@@ -13,6 +13,8 @@ import com.THproject.tharidia_things.client.renderer.PietroBlockRenderer;
 import com.THproject.tharidia_things.client.renderer.HotIronAnvilRenderer;
 import com.THproject.tharidia_things.client.renderer.HotGoldAnvilRenderer;
 import com.THproject.tharidia_things.client.renderer.HotCopperAnvilRenderer;
+import com.THproject.tharidia_things.diet.ClientDietProfileCache;
+import com.THproject.tharidia_things.diet.DietRegistry;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.api.distmarker.Dist;
@@ -34,6 +36,8 @@ import net.neoforged.neoforge.common.NeoForge;
 // You can use EventBusSubscriber to automatically register all static methods in the class annotated with @SubscribeEvent
 @EventBusSubscriber(modid = TharidiaThings.MODID, value = Dist.CLIENT)
 public class TharidiaThingsClient {
+    private static ClientDietProfileCache clientDietCache = null;
+    
     public TharidiaThingsClient(ModContainer container) {
         // Allows NeoForge to create a config screen for this mod's configs.
         // The config screen is accessed by going to the Mods screen > clicking on your mod > clicking on config.
@@ -62,7 +66,32 @@ public class TharidiaThingsClient {
             // Trigger dependency check immediately after client setup
             TharidiaThings.LOGGER.info("[VIDEO DEPENDENCIES] Triggering dependency check from client setup");
             DependencyCheckHandler.forceRecheck();
+            
+            // Initialize client diet profile cache
+            initializeClientDietCache();
         });
+    }
+    
+    private static void initializeClientDietCache() {
+        try {
+            clientDietCache = new ClientDietProfileCache();
+            clientDietCache.load();
+            
+            // Start background calculation if needed
+            if (clientDietCache.needsRecalculation()) {
+                TharidiaThings.LOGGER.info("[DIET CLIENT] Starting background calculation of diet profiles...");
+                clientDietCache.calculateAsync(DietRegistry.getSettings());
+            } else {
+                TharidiaThings.LOGGER.info("[DIET CLIENT] Using cached diet profiles");
+            }
+        } catch (Exception e) {
+            TharidiaThings.LOGGER.error("[DIET CLIENT] Failed to initialize client diet cache", e);
+            clientDietCache = null;
+        }
+    }
+    
+    public static ClientDietProfileCache getClientDietCache() {
+        return clientDietCache;
     }
     
     @SubscribeEvent

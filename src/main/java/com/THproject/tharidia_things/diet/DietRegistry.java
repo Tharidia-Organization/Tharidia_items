@@ -29,6 +29,9 @@ public final class DietRegistry {
                     .expireAfterAccess(10, TimeUnit.MINUTES)
                     .build();
     
+    // Persistent cache for pre-calculated profiles
+    private static volatile DietProfileCache persistentCache = null;
+    
     // Server reference for recipe access
     private static volatile MinecraftServer currentServer = null;
 
@@ -40,6 +43,34 @@ public final class DietRegistry {
         if (server != null) {
             PROFILE_CACHE.invalidateAll();
             RecipeNutrientAnalyzer.clearCache();
+            
+            // Initialize persistent cache
+            initializePersistentCache(server);
+        } else {
+            // Server shutting down, save cache
+            if (persistentCache != null) {
+                persistentCache.save();
+                persistentCache = null;
+            }
+        }
+    }
+    
+    private static void initializePersistentCache(MinecraftServer server) {
+        try {
+            java.nio.file.Path worldDir = server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT);
+            persistentCache = new DietProfileCache(worldDir);
+            persistentCache.load();
+            
+            // Start background calculation if needed
+            if (persistentCache.needsRecalculation()) {
+                LOGGER.info("[DIET] Starting background calculation of diet profiles...");
+                persistentCache.calculateAsync(server, config.settings());
+            } else {
+                LOGGER.info("[DIET] Using cached diet profiles");
+            }
+        } catch (Exception e) {
+            LOGGER.error("[DIET] Failed to initialize persistent cache", e);
+            persistentCache = null;
         }
     }
 
@@ -59,6 +90,9 @@ public final class DietRegistry {
     public static void reset() {
         config = DietPackConfig.DEFAULT;
         PROFILE_CACHE.invalidateAll();
+        if (persistentCache != null) {
+            persistentCache.clear();
+        }
     }
 
     public static DietProfile getProfile(ItemStack stack) {
@@ -68,7 +102,7 @@ public final class DietRegistry {
         Item item = stack.getItem();
         ResourceLocation id = BuiltInRegistries.ITEM.getKey(item);
 
-        // Check cache first
+        // Check memory cache first (fastest)
         DietProfile cached = PROFILE_CACHE.getIfPresent(id);
         if (cached != null) {
             return cached;
@@ -81,7 +115,16 @@ public final class DietRegistry {
             return profile;
         }
         
-        // Use new crafting-first analysis system
+        // Check persistent cache (pre-calculated)
+        if (persistentCache != null) {
+            profile = persistentCache.getProfile(id);
+            if (profile != null) {
+                PROFILE_CACHE.put(id, profile);
+                return profile;
+            }
+        }
+        
+        // Fallback: calculate on-demand (only if not in persistent cache)
         profile = deriveProfile(item);
         PROFILE_CACHE.put(id, profile);
         return profile;

@@ -877,6 +877,7 @@ public class TharidiaThings {
     public void onRegisterCommands(RegisterCommandsEvent event) {
         ClaimCommands.register(event.getDispatcher());
         ClaimAdminCommands.register(event.getDispatcher());
+        DietCommands.register(event.getDispatcher());
         FatigueCommands.register(event.getDispatcher());
         CharacterCommands.register(event.getDispatcher());
         TradeCommands.register(event.getDispatcher());

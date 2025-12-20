@@ -90,13 +90,22 @@ public class CharacterEventHandler {
     @SubscribeEvent
     public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
+            // Add null check for player data
+            if (player == null || player.server == null) {
+                TharidiaThings.LOGGER.warn("Player or server is null during login event");
+                return;
+            }
+            
             CharacterData characterData = player.getData(CharacterAttachments.CHARACTER_DATA);
             
-            if (!characterData.hasCreatedCharacter()) {
+            if (characterData != null && !characterData.hasCreatedCharacter()) {
                 // Delay teleportation by 2 ticks to ensure dimension and player are fully initialized
                 player.server.execute(() -> {
                     player.server.execute(() -> {
-                        teleportToCharacterDimension(player);
+                        // Double check player is still valid and connected
+                        if (!player.isRemoved() && player.connection != null) {
+                            teleportToCharacterDimension(player);
+                        }
                     });
                 });
             }
@@ -132,9 +141,25 @@ public class CharacterEventHandler {
         ServerLevel characterLevel = player.server.getLevel(CHARACTER_DIMENSION);
         
         if (characterLevel == null) {
-            // Dimension not found, use overworld as fallback
-            characterLevel = player.server.overworld();
+            TharidiaThings.LOGGER.error("Character creation dimension not found! Cannot teleport player {}", player.getName().getString());
             player.sendSystemMessage(net.minecraft.network.chat.Component.literal("§cCharacter creation dimension not found! Please contact an administrator."));
+            
+            // Set character as created to prevent infinite loop
+            CharacterData characterData = player.getData(CharacterAttachments.CHARACTER_DATA);
+            if (characterData != null) {
+                characterData.setCharacterCreated(true);
+            }
+            
+            // Teleport to overworld spawn as fallback
+            ServerLevel overworld = player.server.overworld();
+            if (overworld != null) {
+                BlockPos spawnPos = overworld.getSharedSpawnPos();
+                player.teleportTo(overworld, spawnPos.getX() + 0.5, spawnPos.getY() + 1, spawnPos.getZ() + 0.5, 0, 0);
+                player.setHealth(player.getMaxHealth());
+                player.getFoodData().setFoodLevel(20);
+                player.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+            }
+            return;
         }
         
         // Calculate player's area based on UUID
@@ -180,6 +205,11 @@ public class CharacterEventHandler {
             player.setGameMode(net.minecraft.world.level.GameType.ADVENTURE);
             player.setInvulnerable(true);
             player.removeAllEffects();
+            
+            // Restore full health and food
+            player.setHealth(player.getMaxHealth());
+            player.getFoodData().setFoodLevel(20);
+            player.getFoodData().setSaturation(20.0f);
 
             boolean borderCreated = createCharacterCreationBorder(player, finalSpawnPos);
             if (!borderCreated) {
@@ -279,8 +309,17 @@ public class CharacterEventHandler {
             
             // If player hasn't created character, teleport them back to character creation
             if (!characterData.hasCreatedCharacter()) {
-                // Teleport immediately without delay to avoid coordinate mismatch
-                teleportToCharacterDimension(player);
+                // Delay teleport to ensure player is fully respawned
+                player.server.execute(() -> {
+                    player.server.execute(() -> {
+                        // Restore health before teleporting
+                        player.setHealth(player.getMaxHealth());
+                        player.getFoodData().setFoodLevel(20);
+                        player.getFoodData().setSaturation(20.0f);
+                        
+                        teleportToCharacterDimension(player);
+                    });
+                });
             }
         }
     }

@@ -36,7 +36,7 @@ public record RequestNamePacket(boolean needsName) implements CustomPacketPayloa
      */
     public static boolean checkIfPlayerNeedsName(ServerPlayer serverPlayer) {
         try {
-            Class<?> nameServiceClass = Class.forName("com.tharidia.tharidia_tweaks.name.NameService");
+            Class<?> nameServiceClass = Class.forName("com.THproject.tharidia_tweaks.name.NameService");
             java.lang.reflect.Method needsToChooseNameMethod = nameServiceClass.getMethod("needsToChooseName", ServerPlayer.class);
             return (boolean) needsToChooseNameMethod.invoke(null, serverPlayer);
         } catch (ClassNotFoundException e) {
