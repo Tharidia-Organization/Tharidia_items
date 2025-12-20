@@ -95,12 +95,10 @@ public class RecipeNutrientAnalyzer {
         MinecraftServer server = currentServer;
         if (server != null) {
             RecipeManager recipeManager = server.getRecipeManager();
-            if (recipeManager != null) {
-                DietProfile recipeProfile = analyzeFromRecipe(item, recipeManager, visitedItems, depth, settings);
-                if (recipeProfile != null && !recipeProfile.isEmpty()) {
-                    LOGGER.debug("[DIET] {} analyzed from recipe (depth {})", itemId, depth);
-                    return new AnalysisResult(recipeProfile, AnalysisMethod.RECIPE);
-                }
+            DietProfile recipeProfile = analyzeFromRecipe(item, recipeManager, visitedItems, depth, settings);
+            if (recipeProfile != null && !recipeProfile.isEmpty()) {
+                LOGGER.debug("[DIET] {} analyzed from recipe (depth {})", itemId, depth);
+                return new AnalysisResult(recipeProfile, AnalysisMethod.RECIPE);
             }
         }
         
@@ -129,6 +127,7 @@ public class RecipeNutrientAnalyzer {
         
         // Select the best recipe (prioritize crafting over smelting)
         RecipeHolder<?> bestRecipe = selectBestRecipe(matchingRecipes);
+        assert bestRecipe != null;
         Recipe<?> recipe = bestRecipe.value();
         
         // Extract ingredients
@@ -284,7 +283,6 @@ public class RecipeNutrientAnalyzer {
                     }
                 } catch (Exception e) {
                     // Skip problematic recipes
-                    continue;
                 }
             }
         } catch (Exception e) {
@@ -304,7 +302,7 @@ public class RecipeNutrientAnalyzer {
         
         RecipeHolder<?> craftingRecipe = null;
         RecipeHolder<?> smeltingRecipe = null;
-        RecipeHolder<?> firstRecipe = recipes.get(0);
+        RecipeHolder<?> firstRecipe = recipes.getFirst();
         
         for (RecipeHolder<?> holder : recipes) {
             Recipe<?> recipe = holder.value();
