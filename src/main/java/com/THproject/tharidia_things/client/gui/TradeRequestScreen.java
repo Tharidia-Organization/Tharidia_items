@@ -1,10 +1,12 @@
 package com.THproject.tharidia_things.client.gui;
 
+import com.THproject.tharidia_things.TharidiaThings;
 import com.THproject.tharidia_things.network.TradeResponsePacket;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.UUID;
@@ -17,6 +19,10 @@ public class TradeRequestScreen extends Screen {
     private final String requesterName;
     private static final int PANEL_WIDTH = 200;
     private static final int PANEL_HEIGHT = 120;
+    private static final int TEXTURE_WIDTH = 2000;
+    private static final int TEXTURE_HEIGHT = 1200;
+    private static final ResourceLocation BACKGROUND_TEXTURE =
+        ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, "textures/gui/trade_acceptation.png");
 
     public TradeRequestScreen(UUID requesterId, String requesterName) {
         super(Component.literal("Richiesta di Scambio"));
@@ -53,15 +59,7 @@ public class TradeRequestScreen extends Screen {
         int panelX = centerX - PANEL_WIDTH / 2;
         int panelY = centerY - PANEL_HEIGHT / 2;
         
-        // Draw panel background
-        guiGraphics.fill(panelX, panelY, panelX + PANEL_WIDTH, panelY + PANEL_HEIGHT, 0xCC8B4513); // Dark brown
-        guiGraphics.fill(panelX + 2, panelY + 2, panelX + PANEL_WIDTH - 2, panelY + PANEL_HEIGHT - 2, 0xCCD2691E); // Lighter brown
-        
-        // Draw border
-        guiGraphics.fill(panelX, panelY, panelX + PANEL_WIDTH, panelY + 2, 0xFF654321); // Top
-        guiGraphics.fill(panelX, panelY + PANEL_HEIGHT - 2, panelX + PANEL_WIDTH, panelY + PANEL_HEIGHT, 0xFF654321); // Bottom
-        guiGraphics.fill(panelX, panelY, panelX + 2, panelY + PANEL_HEIGHT, 0xFF654321); // Left
-        guiGraphics.fill(panelX + PANEL_WIDTH - 2, panelY, panelX + PANEL_WIDTH, panelY + PANEL_HEIGHT, 0xFF654321); // Right
+        renderPanelTexture(guiGraphics, panelX, panelY);
         
         // Draw title
         Component title = Component.literal("§6§l⚜ Richiesta di Scambio ⚜");
@@ -82,6 +80,20 @@ public class TradeRequestScreen extends Screen {
         guiGraphics.drawString(this.font, message3, centerX - msg3Width / 2, panelY + 70, 0xFFFFFF, false);
         
         super.render(guiGraphics, mouseX, mouseY, partialTick);
+    }
+
+    private void renderPanelTexture(GuiGraphics guiGraphics, int panelX, int panelY) {
+        guiGraphics.blit(
+            BACKGROUND_TEXTURE,
+            panelX,
+            panelY,
+            0,
+            0,
+            PANEL_WIDTH,
+            PANEL_HEIGHT,
+            TEXTURE_WIDTH,
+            TEXTURE_HEIGHT
+        );
     }
 
     private void acceptTrade() {

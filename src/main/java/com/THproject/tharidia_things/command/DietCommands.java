@@ -94,13 +94,28 @@ public class DietCommands {
             cache.clear();
             cache.calculateAsync(source.getServer(), DietRegistry.getSettings())
                 .thenRun(() -> {
-                    source.sendSuccess(() -> Component.literal("Diet profile recalculation completed!"), true);
+                    source.sendSuccess(() -> Component.literal("Diet profile recalculation completed! Syncing to online players..."), true);
+                    
+                    // Sync updated profiles to all online players
+                    syncProfilesToAllPlayers(source.getServer(), cache);
                 });
         } else {
             source.sendFailure(Component.literal("Diet cache not initialized!"));
         }
         
         return 1;
+    }
+    
+    private static void syncProfilesToAllPlayers(net.minecraft.server.MinecraftServer server, DietProfileCache cache) {
+        java.util.Map<net.minecraft.resources.ResourceLocation, DietProfile> profiles = cache.getAllProfiles();
+        if (!profiles.isEmpty()) {
+            for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+                net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(
+                    player, 
+                    new com.THproject.tharidia_things.network.DietProfileSyncPacket(profiles)
+                );
+            }
+        }
     }
     
     private static int showVersion(CommandContext<CommandSourceStack> context) {

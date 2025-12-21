@@ -33,9 +33,9 @@ public class DietProfileCache {
     private static final String CACHE_VERSION = "1.2";
     private static final String CACHE_FILENAME = "diet_profiles_cache.json";
     
-    // Hash of the analysis logic - change this when you modify RecipeNutrientAnalyzer or DietHeuristics
-    // This will automatically invalidate the cache when the mod's analysis logic changes
-    private static final String ANALYSIS_LOGIC_VERSION = "v2.0-recipe-priority-water-fix";
+    // Analysis logic version - automatically generated from class signatures
+    // This will automatically invalidate the cache when RecipeNutrientAnalyzer or DietHeuristics change
+    private static final String ANALYSIS_LOGIC_VERSION = generateAnalysisVersion();
     
     private final Path cacheFile;
     private final Map<ResourceLocation, DietProfile> profiles = new ConcurrentHashMap<>();
@@ -295,5 +295,24 @@ public class DietProfileCache {
             }
         }
         return new DietProfile(values);
+    }
+    
+    /**
+     * Generates a version string based on the analysis classes.
+     * This automatically changes when RecipeNutrientAnalyzer or DietHeuristics are modified.
+     */
+    private static String generateAnalysisVersion() {
+        try {
+            // Get class signatures - these change when methods are added/modified
+            String analyzerHash = String.valueOf(RecipeNutrientAnalyzer.class.getDeclaredMethods().length);
+            String heuristicsHash = String.valueOf(DietHeuristics.class.getDeclaredMethods().length);
+            String fieldsHash = String.valueOf(RecipeNutrientAnalyzer.class.getDeclaredFields().length);
+            
+            // Combine into version string
+            return "auto-" + analyzerHash + "-" + heuristicsHash + "-" + fieldsHash;
+        } catch (Exception e) {
+            LOGGER.warn("[DIET CACHE] Failed to generate automatic version, using fallback", e);
+            return "fallback-v1";
+        }
     }
 }

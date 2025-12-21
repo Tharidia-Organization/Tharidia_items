@@ -14,14 +14,14 @@ import net.neoforged.neoforge.network.PacketDistributor;
 
 public class BattleInviteScreen extends AbstractContainerScreen<BattleInviteMenu> {
     private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID,
-            "textures/gui/battle_invitation_gui.png");
+            "textures/gui/trade_acceptation.png");
 
     public BattleInviteScreen(BattleInviteMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
 
         // Set the size of our small GUI window
-        this.imageWidth = 2000;
-        this.imageHeight = 1000;
+        this.imageWidth = 176;
+        this.imageHeight = 80;
     }
 
     @Override

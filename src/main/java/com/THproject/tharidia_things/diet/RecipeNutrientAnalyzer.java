@@ -37,13 +37,16 @@ public class RecipeNutrientAnalyzer {
     // Nutrient profiles for non-food components that contribute to recipes
     private static final Map<String, DietProfile> NON_FOOD_NUTRIENTS = new HashMap<>();
     
+    // Blacklist of crafted items that should NOT match NON_FOOD_NUTRIENTS patterns
+    // These items have recipes and should be analyzed via recipe, not as base components
+    private static final Set<String> CRAFTED_ITEMS_BLACKLIST = new HashSet<>();
+    
     static {
         // Initialize non-food component nutrients (NO WATER for solid ingredients)
         
-        // Grains and flours
+        // Grains and flours (base ingredients only, not crafted items)
         NON_FOOD_NUTRIENTS.put("wheat", DietProfile.of(1.0f, 0, 0, 0, 0, 0));
         NON_FOOD_NUTRIENTS.put("flour", DietProfile.of(1.0f, 0, 0, 0, 0, 0));
-        NON_FOOD_NUTRIENTS.put("dough", DietProfile.of(1.0f, 0, 0, 0, 0, 0));
         NON_FOOD_NUTRIENTS.put("rice", DietProfile.of(1.0f, 0, 0, 0, 0, 0));
         NON_FOOD_NUTRIENTS.put("corn", DietProfile.of(1.0f, 0, 0, 0, 0, 0));
         NON_FOOD_NUTRIENTS.put("oat", DietProfile.of(1.0f, 0, 0, 0, 0, 0));
@@ -68,6 +71,106 @@ public class RecipeNutrientAnalyzer {
         NON_FOOD_NUTRIENTS.put("water", DietProfile.of(0, 0, 0, 0, 0, 1.0f));
         NON_FOOD_NUTRIENTS.put("broth", DietProfile.of(0, 0.1f, 0, 0, 0, 1.0f));
         NON_FOOD_NUTRIENTS.put("stock", DietProfile.of(0, 0.1f, 0, 0, 0, 1.0f));
+        
+        // Initialize blacklist of crafted items that should NOT match base component patterns
+        // These items have recipes and must be analyzed via recipe, not as NON_FOOD_COMPONENT
+        
+        // Dough variants (all crafted)
+        CRAFTED_ITEMS_BLACKLIST.add("wheat_dough");
+        CRAFTED_ITEMS_BLACKLIST.add("dough");
+        CRAFTED_ITEMS_BLACKLIST.add("pie_dough");
+        CRAFTED_ITEMS_BLACKLIST.add("pastry_dough");
+        
+        // Flour variants (crafted from grains)
+        CRAFTED_ITEMS_BLACKLIST.add("wheat_flour");
+        CRAFTED_ITEMS_BLACKLIST.add("corn_flour");
+        CRAFTED_ITEMS_BLACKLIST.add("rice_flour");
+        CRAFTED_ITEMS_BLACKLIST.add("oat_flour");
+        CRAFTED_ITEMS_BLACKLIST.add("barley_flour");
+        CRAFTED_ITEMS_BLACKLIST.add("rye_flour");
+        
+        // Butter variants (crafted)
+        CRAFTED_ITEMS_BLACKLIST.add("peanut_butter");
+        CRAFTED_ITEMS_BLACKLIST.add("apple_butter");
+        CRAFTED_ITEMS_BLACKLIST.add("almond_butter");
+        
+        // Cream variants (crafted)
+        CRAFTED_ITEMS_BLACKLIST.add("whipping_cream");
+        CRAFTED_ITEMS_BLACKLIST.add("sour_cream");
+        CRAFTED_ITEMS_BLACKLIST.add("ice_cream");
+        CRAFTED_ITEMS_BLACKLIST.add("heavy_cream");
+        
+        // Chocolate variants (crafted)
+        CRAFTED_ITEMS_BLACKLIST.add("chocolate_bar");
+        CRAFTED_ITEMS_BLACKLIST.add("chocolate_cake");
+        CRAFTED_ITEMS_BLACKLIST.add("chocolate_chip");
+        CRAFTED_ITEMS_BLACKLIST.add("hot_chocolate");
+        CRAFTED_ITEMS_BLACKLIST.add("chocolate_cookie");
+        CRAFTED_ITEMS_BLACKLIST.add("milk_chocolate");
+        CRAFTED_ITEMS_BLACKLIST.add("dark_chocolate");
+        CRAFTED_ITEMS_BLACKLIST.add("white_chocolate");
+        
+        // Cheese variants (crafted)
+        CRAFTED_ITEMS_BLACKLIST.add("blue_cheese");
+        CRAFTED_ITEMS_BLACKLIST.add("cheddar_cheese");
+        CRAFTED_ITEMS_BLACKLIST.add("cheese_wheel");
+        CRAFTED_ITEMS_BLACKLIST.add("cheese_slice");
+        
+        // Sugar variants (crafted)
+        CRAFTED_ITEMS_BLACKLIST.add("brown_sugar");
+        CRAFTED_ITEMS_BLACKLIST.add("sugar_cane");
+        
+        // Honey variants (crafted/processed)
+        CRAFTED_ITEMS_BLACKLIST.add("honey_bottle");
+        CRAFTED_ITEMS_BLACKLIST.add("honeycomb");
+        
+        // Milk variants (crafted/processed)
+        CRAFTED_ITEMS_BLACKLIST.add("milk_bottle");
+        CRAFTED_ITEMS_BLACKLIST.add("coconut_milk");
+        CRAFTED_ITEMS_BLACKLIST.add("almond_milk");
+        CRAFTED_ITEMS_BLACKLIST.add("soy_milk");
+        
+        // Common food mod items that should be recipe-analyzed
+        // Farmer's Delight / Croptopia / Similar mods
+        CRAFTED_ITEMS_BLACKLIST.add("rice_ball");
+        CRAFTED_ITEMS_BLACKLIST.add("rice_cake");
+        CRAFTED_ITEMS_BLACKLIST.add("corn_bread");
+        CRAFTED_ITEMS_BLACKLIST.add("cornbread");
+        CRAFTED_ITEMS_BLACKLIST.add("oat_cookie");
+        CRAFTED_ITEMS_BLACKLIST.add("oatmeal");
+        CRAFTED_ITEMS_BLACKLIST.add("barley_soup");
+        CRAFTED_ITEMS_BLACKLIST.add("rye_bread");
+        
+        // Egg-based dishes (should use recipe, not base egg)
+        CRAFTED_ITEMS_BLACKLIST.add("fried_egg");
+        CRAFTED_ITEMS_BLACKLIST.add("scrambled_eggs");
+        CRAFTED_ITEMS_BLACKLIST.add("boiled_egg");
+        CRAFTED_ITEMS_BLACKLIST.add("egg_sandwich");
+        CRAFTED_ITEMS_BLACKLIST.add("egg_salad");
+        
+        // Syrup variants
+        CRAFTED_ITEMS_BLACKLIST.add("maple_syrup");
+        CRAFTED_ITEMS_BLACKLIST.add("chocolate_syrup");
+        CRAFTED_ITEMS_BLACKLIST.add("caramel_syrup");
+        
+        // Cocoa/Chocolate drinks
+        CRAFTED_ITEMS_BLACKLIST.add("cocoa_powder");
+        CRAFTED_ITEMS_BLACKLIST.add("hot_cocoa");
+        
+        // Broth/Stock variants (crafted soups)
+        CRAFTED_ITEMS_BLACKLIST.add("chicken_broth");
+        CRAFTED_ITEMS_BLACKLIST.add("beef_broth");
+        CRAFTED_ITEMS_BLACKLIST.add("vegetable_broth");
+        CRAFTED_ITEMS_BLACKLIST.add("fish_broth");
+        CRAFTED_ITEMS_BLACKLIST.add("bone_broth");
+        CRAFTED_ITEMS_BLACKLIST.add("chicken_stock");
+        CRAFTED_ITEMS_BLACKLIST.add("beef_stock");
+        CRAFTED_ITEMS_BLACKLIST.add("vegetable_stock");
+        
+        // Water-based items (processed)
+        CRAFTED_ITEMS_BLACKLIST.add("water_bottle");
+        CRAFTED_ITEMS_BLACKLIST.add("salt_water");
+        CRAFTED_ITEMS_BLACKLIST.add("sugar_water");
     }
     
     public static void setServer(MinecraftServer server) {
@@ -127,7 +230,15 @@ public class RecipeNutrientAnalyzer {
         FoodProperties food = item.getFoodProperties(stack, null);
         boolean isFood = food != null;
         
-        // Try to find crafting recipe first (PRIORITY #1)
+        // PRIORITY #1: Check if this is a known non-food component with nutrients (e.g., wheat, egg, flour)
+        // These base ingredients should ALWAYS use their defined values, not recipes
+        DietProfile nonFoodProfile = getNonFoodNutrients(item);
+        if (nonFoodProfile != null && !nonFoodProfile.isEmpty()) {
+            LOGGER.debug("[DIET] {} analyzed as non-food component", itemId);
+            return new AnalysisResult(nonFoodProfile, AnalysisMethod.NON_FOOD_COMPONENT);
+        }
+        
+        // PRIORITY #2: Try to find crafting recipe for crafted items
         MinecraftServer server = currentServer;
         if (server != null) {
             RecipeManager recipeManager = server.getRecipeManager();
@@ -136,13 +247,6 @@ public class RecipeNutrientAnalyzer {
                 LOGGER.debug("[DIET] {} analyzed from recipe (depth {})", itemId, depth);
                 return new AnalysisResult(recipeProfile, AnalysisMethod.RECIPE);
             }
-        }
-        
-        // Check if this is a known non-food component with nutrients
-        DietProfile nonFoodProfile = getNonFoodNutrients(item);
-        if (nonFoodProfile != null && !nonFoodProfile.isEmpty()) {
-            LOGGER.debug("[DIET] {} analyzed as non-food component", itemId);
-            return new AnalysisResult(nonFoodProfile, AnalysisMethod.NON_FOOD_COMPONENT);
         }
         
         // No recipe found - use heuristics for base components (FALLBACK)
@@ -170,6 +274,8 @@ public class RecipeNutrientAnalyzer {
             return null;
         }
         
+        LOGGER.info("[DIET DEBUG] Analyzing {} - found {} recipes", itemId, matchingRecipes.size());
+        
         // Analyze all recipes and select the one with highest nutrient values
         DietProfile bestProfile = null;
         float bestTotalValue = 0.0f;
@@ -195,13 +301,21 @@ public class RecipeNutrientAnalyzer {
                 Item ingredientItem = ingredientStack.getItem();
                 int count = ingredientStack.getCount();
                 
+                ResourceLocation ingredientId = BuiltInRegistries.ITEM.getKey(ingredientItem);
+                LOGGER.info("[DIET DEBUG]     Ingredient: {} x{}", ingredientId, count);
+                
                 // Skip if this ingredient is the same as what we're analyzing (circular reference)
                 if (visitedItems.contains(ingredientItem)) {
+                    LOGGER.info("[DIET DEBUG]     Skipped (circular)");
                     continue;
                 }
                 
                 // Recursively analyze this ingredient
                 AnalysisResult ingredientResult = analyzeRecursive(ingredientItem, visitedItems, depth + 1, settings);
+                
+                LOGGER.info("[DIET DEBUG]     Result: {} (method: {})", 
+                    ingredientResult.profile.isEmpty() ? "EMPTY" : "grain=" + ingredientResult.profile.get(DietCategory.GRAIN), 
+                    ingredientResult.method);
                 
                 if (!ingredientResult.profile.isEmpty()) {
                     componentNutrients.add(new ComponentNutrients(ingredientResult.profile, count));
@@ -216,11 +330,14 @@ public class RecipeNutrientAnalyzer {
             ItemStack result = safeGetRecipeResult(recipe);
             int resultCount = result.isEmpty() ? 1 : result.getCount();
             
+            LOGGER.info("[DIET DEBUG]   Recipe {} produces {} items", recipeHolder.id(), resultCount);
+            
             // Special case: For smelting/cooking recipes, don't divide by result count
             // because vanilla recipes often have incorrect count values
             String recipeType = recipe.getClass().getSimpleName().toLowerCase();
             if (recipeType.contains("smelt") || recipeType.contains("cook") || 
                 recipeType.contains("campfire") || recipe instanceof SmeltingRecipe) {
+                LOGGER.info("[DIET DEBUG]   Smelting/cooking recipe detected, forcing resultCount=1");
                 resultCount = 1;
             }
             
@@ -231,9 +348,13 @@ public class RecipeNutrientAnalyzer {
             // Combine nutrients from all components
             DietProfile profile = combineComponentNutrients(componentNutrients, resultCount);
             
+            LOGGER.info("[DIET DEBUG]   Combined profile before rounding: grain={}", profile.get(DietCategory.GRAIN));
+            
             // Apply rounding: values < 0.1 become 0.0
             profile = roundProfile(profile);
             
+            LOGGER.info("[DIET DEBUG]   After rounding: grain={}", profile.get(DietCategory.GRAIN));
+
             // Calculate total nutrient value for this recipe (EXCLUDING water to avoid bias)
             // Water can come from heuristics and shouldn't influence recipe selection
             float totalValue = 0.0f;
@@ -243,13 +364,19 @@ public class RecipeNutrientAnalyzer {
                 }
             }
             
+            LOGGER.info("[DIET DEBUG]   Total value: {} (best so far: {})", totalValue, bestTotalValue);
+            
             // Keep the recipe with highest total nutrient value
             if (totalValue > bestTotalValue) {
                 bestTotalValue = totalValue;
                 bestProfile = profile;
+                LOGGER.info("[DIET DEBUG]   NEW BEST RECIPE!");
             }
         }
         
+        if (bestProfile != null) {
+            LOGGER.info("[DIET DEBUG] Final profile for {}: grain={}", itemId, bestProfile.get(DietCategory.GRAIN));
+        }
         return bestProfile;
     }
     
@@ -288,20 +415,79 @@ public class RecipeNutrientAnalyzer {
     
     /**
      * Gets nutrient profile for known non-food components.
-     * Returns null if not a known component.
+     * Uses intelligent matching with word boundaries and blacklist to avoid false positives.
+     * Returns null if not a known component or if it's a crafted item.
      */
     private static DietProfile getNonFoodNutrients(Item item) {
         ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(item);
         String path = itemId.getPath().toLowerCase();
         
-        // Check exact matches first
+        // First check: if item is in blacklist, it's a crafted item - return null immediately
+        if (CRAFTED_ITEMS_BLACKLIST.contains(path)) {
+            return null;
+        }
+        
+        // Second check: exact match (highest priority)
+        // e.g., "minecraft:wheat" matches "wheat" exactly
+        if (NON_FOOD_NUTRIENTS.containsKey(path)) {
+            return NON_FOOD_NUTRIENTS.get(path);
+        }
+        
+        // Third check: word boundary matching to avoid false positives
+        // Only match if the keyword appears as a complete word or at word boundaries
         for (Map.Entry<String, DietProfile> entry : NON_FOOD_NUTRIENTS.entrySet()) {
-            if (path.contains(entry.getKey())) {
+            String keyword = entry.getKey();
+            
+            // Check if keyword matches with word boundaries:
+            // - At start: "wheat" matches "wheat_seeds" but not "buckwheat"
+            // - At end: "egg" matches "fried_egg" but not "eggplant"
+            // - Standalone: "milk" matches "milk" exactly
+            // - With separators: "sugar" matches "brown_sugar" or "sugar_cane"
+            
+            if (matchesWithWordBoundary(path, keyword)) {
                 return entry.getValue();
             }
         }
         
         return null;
+    }
+    
+    /**
+     * Checks if a keyword matches in the path with proper word boundaries.
+     * This prevents false positives like "egg" matching "eggplant" or "butter" matching "butterfly".
+     * 
+     * @param path The item path (e.g., "wheat_dough", "fried_egg")
+     * @param keyword The keyword to match (e.g., "wheat", "egg")
+     * @return true if keyword matches with word boundaries
+     */
+    private static boolean matchesWithWordBoundary(String path, String keyword) {
+        // Exact match
+        if (path.equals(keyword)) {
+            return true;
+        }
+        
+        // Match at start with separator: "wheat_" in "wheat_seeds"
+        if (path.startsWith(keyword + "_")) {
+            return true;
+        }
+        
+        // Match at end with separator: "_egg" in "fried_egg"
+        if (path.endsWith("_" + keyword)) {
+            return true;
+        }
+        
+        // Match in middle with separators: "_milk_" in "coconut_milk_bottle"
+        if (path.contains("_" + keyword + "_")) {
+            return true;
+        }
+        
+        // Special case: match "bottle" suffix for liquids (e.g., "honey_bottle" should match "honey")
+        // This handles vanilla items like "minecraft:honey_bottle"
+        if (path.equals(keyword + "_bottle")) {
+            return true;
+        }
+        
+        return false;
     }
     
     /**
@@ -349,8 +535,8 @@ public class RecipeNutrientAnalyzer {
             primaryWater = always ? settings.waterAlwaysEatBonus() : 1.0f;
         }
         
-        // Add sugar for fast foods (but NOT for pure proteins like meat)
-        if (fast && !grainHint && !meatLike) {
+        // Add sugar for fast foods (but NOT for pure proteins like meat or pure vegetables)
+        if (fast && !grainHint && !meatLike && !vegetableHint) {
             primarySugar += settings.fastSugarFlatBonus() + saturation * settings.fastSugarSaturationMultiplier();
         }
         

@@ -233,9 +233,22 @@ public class RealmBoundaryRenderer {
 
         Matrix4f matrix = poseStack.last().pose();
         
-        // Get buffers for different render layers (Sodium-compatible)
-        VertexConsumer translucentBuffer = bufferSource.getBuffer(REALM_BOUNDARY_TRANSLUCENT);
-        VertexConsumer linesBuffer = bufferSource.getBuffer(REALM_BOUNDARY_LINES);
+        // Get buffers for different render layers - use try-catch for safety
+        VertexConsumer translucentBuffer = null;
+        VertexConsumer linesBuffer = null;
+        
+        try {
+            translucentBuffer = bufferSource.getBuffer(REALM_BOUNDARY_TRANSLUCENT);
+            linesBuffer = bufferSource.getBuffer(REALM_BOUNDARY_LINES);
+        } catch (Exception e) {
+            LOGGER.error("Failed to get render buffers for realm boundary", e);
+            return;
+        }
+        
+        // Safety check
+        if (translucentBuffer == null || linesBuffer == null) {
+            return;
+        }
 
         // Render main realm boundary
         ChunkPos minChunk = realm.getMinChunk();
@@ -333,6 +346,8 @@ public class RealmBoundaryRenderer {
             int x1, int z1, int x2, int z2, int minY, int maxY,
             double offsetX, double offsetY, double offsetZ,
             float r, float g, float b, float alpha) {
+        // Safety check
+        if (buffer == null) return;
         
         // Simple vertical wall with no fancy effects
         int segments = 8; // Fewer segments for simpler look
@@ -342,15 +357,20 @@ public class RealmBoundaryRenderer {
             float y1 = minY + i * heightPerSegment;
             float y2 = minY + (i + 1) * heightPerSegment;
             
-            // Simple quad
-            buffer.addVertex(matrix, (float) (x1 + offsetX), (float) (y1 + offsetY), (float) (z1 + offsetZ))
-                    .setColor(r, g, b, alpha);
-            buffer.addVertex(matrix, (float) (x2 + offsetX), (float) (y1 + offsetY), (float) (z2 + offsetZ))
-                    .setColor(r, g, b, alpha);
-            buffer.addVertex(matrix, (float) (x2 + offsetX), (float) (y2 + offsetY), (float) (z2 + offsetZ))
-                    .setColor(r, g, b, alpha * 0.5f);
-            buffer.addVertex(matrix, (float) (x1 + offsetX), (float) (y2 + offsetY), (float) (z1 + offsetZ))
-                    .setColor(r, g, b, alpha * 0.5f);
+            // Simple quad with try-catch for safety
+            try {
+                buffer.addVertex(matrix, (float) (x1 + offsetX), (float) (y1 + offsetY), (float) (z1 + offsetZ))
+                        .setColor(r, g, b, alpha);
+                buffer.addVertex(matrix, (float) (x2 + offsetX), (float) (y1 + offsetY), (float) (z2 + offsetZ))
+                        .setColor(r, g, b, alpha);
+                buffer.addVertex(matrix, (float) (x2 + offsetX), (float) (y2 + offsetY), (float) (z2 + offsetZ))
+                        .setColor(r, g, b, alpha * 0.5f);
+                buffer.addVertex(matrix, (float) (x1 + offsetX), (float) (y2 + offsetY), (float) (z1 + offsetZ))
+                        .setColor(r, g, b, alpha * 0.5f);
+            } catch (IllegalStateException e) {
+                // Buffer not in building state - skip this segment
+                return;
+            }
         }
     }
     
@@ -361,49 +381,55 @@ public class RealmBoundaryRenderer {
             int minX, int minZ, int maxX, int maxZ, int groundY,
             double offsetX, double offsetY, double offsetZ,
             float r, float g, float b) {
+        // Safety check
+        if (buffer == null) return;
         
         float lineThickness = 0.1f;
         float alpha = 0.6f;
         
-        // North line
-        buffer.addVertex(matrix, (float) (minX + offsetX), (float) (groundY + offsetY), (float) (minZ + offsetZ))
-                .setColor(r, g, b, alpha);
-        buffer.addVertex(matrix, (float) (maxX + offsetX), (float) (groundY + offsetY), (float) (minZ + offsetZ))
-                .setColor(r, g, b, alpha);
-        buffer.addVertex(matrix, (float) (maxX + offsetX), (float) (groundY + lineThickness + offsetY), (float) (minZ + offsetZ))
-                .setColor(r, g, b, alpha);
-        buffer.addVertex(matrix, (float) (minX + offsetX), (float) (groundY + lineThickness + offsetY), (float) (minZ + offsetZ))
-                .setColor(r, g, b, alpha);
-        
-        // South line
-        buffer.addVertex(matrix, (float) (minX + offsetX), (float) (groundY + offsetY), (float) (maxZ + offsetZ))
-                .setColor(r, g, b, alpha);
-        buffer.addVertex(matrix, (float) (maxX + offsetX), (float) (groundY + offsetY), (float) (maxZ + offsetZ))
-                .setColor(r, g, b, alpha);
-        buffer.addVertex(matrix, (float) (maxX + offsetX), (float) (groundY + lineThickness + offsetY), (float) (maxZ + offsetZ))
-                .setColor(r, g, b, alpha);
-        buffer.addVertex(matrix, (float) (minX + offsetX), (float) (groundY + lineThickness + offsetY), (float) (maxZ + offsetZ))
-                .setColor(r, g, b, alpha);
-        
-        // West line
-        buffer.addVertex(matrix, (float) (minX + offsetX), (float) (groundY + offsetY), (float) (minZ + offsetZ))
-                .setColor(r, g, b, alpha);
-        buffer.addVertex(matrix, (float) (minX + offsetX), (float) (groundY + offsetY), (float) (maxZ + offsetZ))
-                .setColor(r, g, b, alpha);
-        buffer.addVertex(matrix, (float) (minX + offsetX), (float) (groundY + lineThickness + offsetY), (float) (maxZ + offsetZ))
-                .setColor(r, g, b, alpha);
-        buffer.addVertex(matrix, (float) (minX + offsetX), (float) (groundY + lineThickness + offsetY), (float) (minZ + offsetZ))
-                .setColor(r, g, b, alpha);
-        
-        // East line
-        buffer.addVertex(matrix, (float) (maxX + offsetX), (float) (groundY + offsetY), (float) (minZ + offsetZ))
-                .setColor(r, g, b, alpha);
-        buffer.addVertex(matrix, (float) (maxX + offsetX), (float) (groundY + offsetY), (float) (maxZ + offsetZ))
-                .setColor(r, g, b, alpha);
-        buffer.addVertex(matrix, (float) (maxX + offsetX), (float) (groundY + lineThickness + offsetY), (float) (maxZ + offsetZ))
-                .setColor(r, g, b, alpha);
-        buffer.addVertex(matrix, (float) (maxX + offsetX), (float) (groundY + lineThickness + offsetY), (float) (minZ + offsetZ))
-                .setColor(r, g, b, alpha);
+        try {
+            // North line
+            buffer.addVertex(matrix, (float) (minX + offsetX), (float) (groundY + offsetY), (float) (minZ + offsetZ))
+                    .setColor(r, g, b, alpha);
+            buffer.addVertex(matrix, (float) (maxX + offsetX), (float) (groundY + offsetY), (float) (minZ + offsetZ))
+                    .setColor(r, g, b, alpha);
+            buffer.addVertex(matrix, (float) (maxX + offsetX), (float) (groundY + lineThickness + offsetY), (float) (minZ + offsetZ))
+                    .setColor(r, g, b, alpha);
+            buffer.addVertex(matrix, (float) (minX + offsetX), (float) (groundY + lineThickness + offsetY), (float) (minZ + offsetZ))
+                    .setColor(r, g, b, alpha);
+            
+            // South line
+            buffer.addVertex(matrix, (float) (minX + offsetX), (float) (groundY + offsetY), (float) (maxZ + offsetZ))
+                    .setColor(r, g, b, alpha);
+            buffer.addVertex(matrix, (float) (maxX + offsetX), (float) (groundY + offsetY), (float) (maxZ + offsetZ))
+                    .setColor(r, g, b, alpha);
+            buffer.addVertex(matrix, (float) (maxX + offsetX), (float) (groundY + lineThickness + offsetY), (float) (maxZ + offsetZ))
+                    .setColor(r, g, b, alpha);
+            buffer.addVertex(matrix, (float) (minX + offsetX), (float) (groundY + lineThickness + offsetY), (float) (maxZ + offsetZ))
+                    .setColor(r, g, b, alpha);
+            
+            // West line
+            buffer.addVertex(matrix, (float) (minX + offsetX), (float) (groundY + offsetY), (float) (minZ + offsetZ))
+                    .setColor(r, g, b, alpha);
+            buffer.addVertex(matrix, (float) (minX + offsetX), (float) (groundY + offsetY), (float) (maxZ + offsetZ))
+                    .setColor(r, g, b, alpha);
+            buffer.addVertex(matrix, (float) (minX + offsetX), (float) (groundY + lineThickness + offsetY), (float) (maxZ + offsetZ))
+                    .setColor(r, g, b, alpha);
+            buffer.addVertex(matrix, (float) (minX + offsetX), (float) (groundY + lineThickness + offsetY), (float) (minZ + offsetZ))
+                    .setColor(r, g, b, alpha);
+            
+            // East line
+            buffer.addVertex(matrix, (float) (maxX + offsetX), (float) (groundY + offsetY), (float) (minZ + offsetZ))
+                    .setColor(r, g, b, alpha);
+            buffer.addVertex(matrix, (float) (maxX + offsetX), (float) (groundY + offsetY), (float) (maxZ + offsetZ))
+                    .setColor(r, g, b, alpha);
+            buffer.addVertex(matrix, (float) (maxX + offsetX), (float) (groundY + lineThickness + offsetY), (float) (maxZ + offsetZ))
+                    .setColor(r, g, b, alpha);
+            buffer.addVertex(matrix, (float) (maxX + offsetX), (float) (groundY + lineThickness + offsetY), (float) (minZ + offsetZ))
+                    .setColor(r, g, b, alpha);
+        } catch (IllegalStateException e) {
+            // Buffer not in building state - skip
+        }
     }
     
     private static void renderEnhancedWall(VertexConsumer buffer, Matrix4f matrix, net.minecraft.world.level.Level level,
@@ -411,6 +437,9 @@ public class RealmBoundaryRenderer {
                                            int minY, int maxY,
                                            double offsetX, double offsetY, double offsetZ,
                                            float baseR, float baseG, float baseB, float time) {
+        // Safety check to prevent "Not building!" crash
+        if (buffer == null) return;
+        
         int segments = 16; // Number of vertical segments for smooth fade
         double yStep = (maxY - minY) / (double) segments;
         
@@ -431,15 +460,20 @@ public class RealmBoundaryRenderer {
             alpha1 = Math.max(0.0f, Math.min(1.0f, alpha1 + wave));
             alpha2 = Math.max(0.0f, Math.min(1.0f, alpha2 + wave));
             
-            // Add the quad segment
-            buffer.addVertex(matrix, (float) (x1 + offsetX), (float) (y1 + offsetY), (float) (z1 + offsetZ))
-                    .setColor(baseR, baseG, baseB, alpha1);
-            buffer.addVertex(matrix, (float) (x2 + offsetX), (float) (y1 + offsetY), (float) (z2 + offsetZ))
-                    .setColor(baseR, baseG, baseB, alpha1);
-            buffer.addVertex(matrix, (float) (x2 + offsetX), (float) (y2 + offsetY), (float) (z2 + offsetZ))
-                    .setColor(baseR, baseG, baseB, alpha2);
-            buffer.addVertex(matrix, (float) (x1 + offsetX), (float) (y2 + offsetY), (float) (z1 + offsetZ))
-                    .setColor(baseR, baseG, baseB, alpha2);
+            // Add the quad segment with try-catch for safety
+            try {
+                buffer.addVertex(matrix, (float) (x1 + offsetX), (float) (y1 + offsetY), (float) (z1 + offsetZ))
+                        .setColor(baseR, baseG, baseB, alpha1);
+                buffer.addVertex(matrix, (float) (x2 + offsetX), (float) (y1 + offsetY), (float) (z2 + offsetZ))
+                        .setColor(baseR, baseG, baseB, alpha1);
+                buffer.addVertex(matrix, (float) (x2 + offsetX), (float) (y2 + offsetY), (float) (z2 + offsetZ))
+                        .setColor(baseR, baseG, baseB, alpha2);
+                buffer.addVertex(matrix, (float) (x1 + offsetX), (float) (y2 + offsetY), (float) (z1 + offsetZ))
+                        .setColor(baseR, baseG, baseB, alpha2);
+            } catch (IllegalStateException e) {
+                // Buffer not in building state - skip this segment
+                return;
+            }
         }
     }
     
@@ -478,6 +512,9 @@ public class RealmBoundaryRenderer {
                                               int minY, int maxY,
                                               double offsetX, double offsetY, double offsetZ,
                                               float time, float baseR, float baseG, float baseB) {
+        // Safety check
+        if (buffer == null) return;
+        
         // Bubble-like particles rising from each wall
         int particlesPerWall = 80;
         
@@ -504,6 +541,9 @@ public class RealmBoundaryRenderer {
                                           double offsetX, double offsetY, double offsetZ,
                                           float time, float baseR, float baseG, float baseB,
                                           int particleCount, int seedOffset) {
+        // Safety check
+        if (buffer == null) return;
+        
         float heightRange = maxY - minY;
         float particleSize = 0.25f; // Larger, more visible particles
         
@@ -568,6 +608,9 @@ public class RealmBoundaryRenderer {
                                           int minY,
                                           double offsetX, double offsetY, double offsetZ,
                                           float baseR, float baseG, float baseB) {
+        // Safety check
+        if (buffer == null) return;
+        
         // Bright ground contact lines
         float lineHeight = 0.1f;
         float lineAlpha = 1.0f; // Fully opaque for clear visibility
@@ -599,15 +642,22 @@ public class RealmBoundaryRenderer {
                                       int y, float height,
                                       double offsetX, double offsetY, double offsetZ,
                                       float r, float g, float b, float a) {
+        // Safety check
+        if (buffer == null) return;
+        
         // Create a bright line at ground level
-        buffer.addVertex(matrix, (float) (x1 + offsetX), (float) (y + offsetY), (float) (z1 + offsetZ))
-                .setColor(r, g, b, a);
-        buffer.addVertex(matrix, (float) (x2 + offsetX), (float) (y + offsetY), (float) (z2 + offsetZ))
-                .setColor(r, g, b, a);
-        buffer.addVertex(matrix, (float) (x2 + offsetX), (float) (y + height + offsetY), (float) (z2 + offsetZ))
-                .setColor(r, g, b, a * 0.3f);
-        buffer.addVertex(matrix, (float) (x1 + offsetX), (float) (y + height + offsetY), (float) (z1 + offsetZ))
-                .setColor(r, g, b, a * 0.3f);
+        try {
+            buffer.addVertex(matrix, (float) (x1 + offsetX), (float) (y + offsetY), (float) (z1 + offsetZ))
+                    .setColor(r, g, b, a);
+            buffer.addVertex(matrix, (float) (x2 + offsetX), (float) (y + offsetY), (float) (z2 + offsetZ))
+                    .setColor(r, g, b, a);
+            buffer.addVertex(matrix, (float) (x2 + offsetX), (float) (y + height + offsetY), (float) (z2 + offsetZ))
+                    .setColor(r, g, b, a * 0.3f);
+            buffer.addVertex(matrix, (float) (x1 + offsetX), (float) (y + height + offsetY), (float) (z1 + offsetZ))
+                    .setColor(r, g, b, a * 0.3f);
+        } catch (IllegalStateException e) {
+            // Buffer not in building state - skip
+        }
     }
     
     private static void renderVerticalEdges(VertexConsumer buffer, Matrix4f matrix,
@@ -615,6 +665,9 @@ public class RealmBoundaryRenderer {
                                             int minY, int maxY,
                                             double offsetX, double offsetY, double offsetZ,
                                             float baseR, float baseG, float baseB) {
+        // Safety check
+        if (buffer == null) return;
+        
         // Brighter color for edges
         float r = Math.min(1.0f, baseR * 1.8f);
         float g = Math.min(1.0f, baseG * 1.5f);
@@ -644,25 +697,39 @@ public class RealmBoundaryRenderer {
                                            double x, double z, int minY, int maxY, float width,
                                            double offsetX, double offsetY, double offsetZ,
                                            float r, float g, float b, float a) {
+        // Safety check
+        if (buffer == null) return;
+        
         // Vertical edge line as a thin quad
-        buffer.addVertex(matrix, (float) (x - width + offsetX), (float) (minY + offsetY), (float) (z + offsetZ))
-                .setColor(r, g, b, a);
-        buffer.addVertex(matrix, (float) (x + width + offsetX), (float) (minY + offsetY), (float) (z + offsetZ))
-                .setColor(r, g, b, a);
-        buffer.addVertex(matrix, (float) (x + width + offsetX), (float) (maxY + offsetY), (float) (z + offsetZ))
-                .setColor(r, g, b, a);
-        buffer.addVertex(matrix, (float) (x - width + offsetX), (float) (maxY + offsetY), (float) (z + offsetZ))
-                .setColor(r, g, b, a);
+        try {
+            buffer.addVertex(matrix, (float) (x - width + offsetX), (float) (minY + offsetY), (float) (z + offsetZ))
+                    .setColor(r, g, b, a);
+            buffer.addVertex(matrix, (float) (x + width + offsetX), (float) (minY + offsetY), (float) (z + offsetZ))
+                    .setColor(r, g, b, a);
+            buffer.addVertex(matrix, (float) (x + width + offsetX), (float) (maxY + offsetY), (float) (z + offsetZ))
+                    .setColor(r, g, b, a);
+            buffer.addVertex(matrix, (float) (x - width + offsetX), (float) (maxY + offsetY), (float) (z + offsetZ))
+                    .setColor(r, g, b, a);
+        } catch (IllegalStateException e) {
+            // Buffer not in building state - skip
+        }
     }
     
     private static void addSparkle(VertexConsumer buffer, Matrix4f matrix,
                                    double x, double y, double z, float size,
                                    float r, float g, float b, float a) {
+        // Safety check
+        if (buffer == null) return;
+        
         // Create a small quad for sparkle (billboard-like effect)
-        buffer.addVertex(matrix, (float) (x - size), (float) (y - size), (float) z).setColor(r, g, b, a);
-        buffer.addVertex(matrix, (float) (x + size), (float) (y - size), (float) z).setColor(r, g, b, a);
-        buffer.addVertex(matrix, (float) (x + size), (float) (y + size), (float) z).setColor(r, g, b, a);
-        buffer.addVertex(matrix, (float) (x - size), (float) (y + size), (float) z).setColor(r, g, b, a);
+        try {
+            buffer.addVertex(matrix, (float) (x - size), (float) (y - size), (float) z).setColor(r, g, b, a);
+            buffer.addVertex(matrix, (float) (x + size), (float) (y - size), (float) z).setColor(r, g, b, a);
+            buffer.addVertex(matrix, (float) (x + size), (float) (y + size), (float) z).setColor(r, g, b, a);
+            buffer.addVertex(matrix, (float) (x - size), (float) (y + size), (float) z).setColor(r, g, b, a);
+        } catch (IllegalStateException e) {
+            // Buffer not in building state - skip
+        }
     }
 
     private static void addQuad(BufferBuilder bufferBuilder, Matrix4f matrix,
