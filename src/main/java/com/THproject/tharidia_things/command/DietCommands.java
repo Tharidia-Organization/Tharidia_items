@@ -24,18 +24,21 @@ public class DietCommands {
     
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("tharidia")
-            .requires(source -> source.hasPermission(4)) // OP level 2
             .then(Commands.literal("diet")
                 .then(Commands.literal("reset")
                     .executes(DietCommands::resetDietSelf)
                     .then(Commands.argument("player", EntityArgument.player())
+                        .requires(source -> source.hasPermission(4))
                         .executes(DietCommands::resetDiet)))
                 .then(Commands.literal("check")
+                    .requires(source -> source.hasPermission(4))
                     .then(Commands.argument("player", EntityArgument.player())
                         .executes(DietCommands::checkDiet)))
                 .then(Commands.literal("recalculate")
+                    .requires(source -> source.hasPermission(4))
                     .executes(DietCommands::recalculateCache))
                 .then(Commands.literal("version")
+                    .requires(source -> source.hasPermission(4))
                     .executes(DietCommands::showVersion))));
     }
     

@@ -14,7 +14,9 @@ public class DietData implements INBTSerializable<CompoundTag> {
     private boolean dirty = false;
     private boolean initialized = false;
 
-    public DietData() {}
+    public DietData() {
+        preloadDefaults(DEFAULT_START_PERCENT);
+    }
 
     public float get(DietCategory category) {
         return values[category.ordinal()];
