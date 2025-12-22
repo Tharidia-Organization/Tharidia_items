@@ -27,6 +27,7 @@ public class DietCommands {
             .requires(source -> source.hasPermission(4)) // OP level 2
             .then(Commands.literal("diet")
                 .then(Commands.literal("reset")
+                    .executes(DietCommands::resetDietSelf)
                     .then(Commands.argument("player", EntityArgument.player())
                         .executes(DietCommands::resetDiet)))
                 .then(Commands.literal("check")
@@ -38,9 +39,17 @@ public class DietCommands {
                     .executes(DietCommands::showVersion))));
     }
     
+    private static int resetDietSelf(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer target = context.getSource().getPlayerOrException();
+        return performDietReset(context.getSource(), target);
+    }
+
     private static int resetDiet(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         ServerPlayer target = EntityArgument.getPlayer(context, "player");
-        CommandSourceStack source = context.getSource();
+        return performDietReset(context.getSource(), target);
+    }
+
+    private static int performDietReset(CommandSourceStack source, ServerPlayer target) {
         
         // Get player's diet data
         DietData dietData = target.getData(DietAttachments.DIET_DATA);

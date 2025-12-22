@@ -93,6 +93,7 @@ public class DietHandler {
         DietData data = serverPlayer.getData(DietAttachments.DIET_DATA);
         initializeIfNeeded(serverPlayer, data);
         DietEffectApplier.apply(serverPlayer, data);
+        syncIfNeeded(serverPlayer, data, true);
         
         // Sync diet profiles from server to client
         syncDietProfilesToClient(serverPlayer);

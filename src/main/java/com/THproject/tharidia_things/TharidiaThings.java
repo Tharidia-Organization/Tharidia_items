@@ -71,6 +71,7 @@ import net.minecraft.stats.StatFormatter;
 import com.THproject.tharidia_things.servertransfer.ServerTransferManager;
 import com.THproject.tharidia_things.servertransfer.ServerTransferCommands;
 import com.THproject.tharidia_things.servertransfer.TransferTokenManager;
+import com.THproject.tharidia_things.servertransfer.DevWhitelistManager;
 
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.loading.FMLEnvironment;
@@ -801,6 +802,7 @@ public class TharidiaThings {
             // Set database manager for transfer system
             ServerTransferManager.setDatabaseManager(databaseManager);
             TransferTokenManager.setDatabaseManager(databaseManager);
+            DevWhitelistManager.setDatabaseManager(databaseManager);
 
             // Set server configuration from config file
             ServerTransferManager.setCurrentServerName(Config.SERVER_NAME.get());

@@ -10,36 +10,76 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.ClientboundTransferPacket;
 import net.minecraft.server.level.ServerPlayer;
 
+import java.util.List;
+
 public class ServerTransferCommands {
     
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         // Comando /tharidiathings transfer <server> [player]
         dispatcher.register(Commands.literal("tharidia")
-                .then(Commands.literal("transfer")
-                        .requires(source -> source.hasPermission(4))
-                        .then(Commands.argument("server", StringArgumentType.word())
-                                .suggests((context, builder) -> {
-                                    builder.suggest("main");
-                                    builder.suggest("dev");
-                                    return builder.buildFuture();
-                                })
-                                .then(Commands.argument("player", EntityArgument.player())
-                                        .executes(context -> {
-                                            String targetServer = StringArgumentType.getString(context, "server");
-                                            ServerPlayer targetPlayer = EntityArgument.getPlayer(context, "player");
-                                            return transferPlayerToServer(context.getSource(), targetServer, targetPlayer);
-                                        })
-                                )
-                                .executes(context -> {
-                                    String targetServer = StringArgumentType.getString(context, "server");
-                                    return transferToServer(context.getSource(), targetServer);
-                                })
-                        )
+            .then(Commands.literal("transfer")
+                .requires(source -> source.hasPermission(4))
+                .then(Commands.argument("server", StringArgumentType.word())
+                    .suggests((context, builder) -> {
+                        builder.suggest("main");
+                        builder.suggest("dev");
+                        return builder.buildFuture();
+                    })
+                    .then(Commands.argument("player", EntityArgument.player())
                         .executes(context -> {
-                            showServerList(context.getSource());
-                            return 1;
+                            String targetServer = StringArgumentType.getString(context, "server");
+                            ServerPlayer targetPlayer = EntityArgument.getPlayer(context, "player");
+                            return transferPlayerToServer(context.getSource(), targetServer, targetPlayer);
                         })
+                    )
+                    .executes(context -> {
+                        String targetServer = StringArgumentType.getString(context, "server");
+                        return transferToServer(context.getSource(), targetServer);
+                    })
                 )
+                .executes(context -> {
+                    showServerList(context.getSource());
+                    return 1;
+                })
+            )
+            .then(Commands.literal("devaccess")
+                .requires(source -> source.hasPermission(4))
+                .then(Commands.literal("add")
+                    .then(Commands.argument("player", EntityArgument.player())
+                        .then(Commands.argument("reason", StringArgumentType.greedyString())
+                            .executes(context -> addToDevWhitelist(
+                                context.getSource(),
+                                EntityArgument.getPlayer(context, "player"),
+                                StringArgumentType.getString(context, "reason")
+                            ))
+                        )
+                        .executes(context -> addToDevWhitelist(
+                            context.getSource(),
+                            EntityArgument.getPlayer(context, "player"),
+                            "Nessuna motivazione fornita"
+                        ))
+                    )
+                )
+                .then(Commands.literal("remove")
+                    .then(Commands.argument("player", EntityArgument.player())
+                        .executes(context -> removeFromDevWhitelist(
+                            context.getSource(),
+                            EntityArgument.getPlayer(context, "player")
+                        ))
+                    )
+                )
+                .then(Commands.literal("check")
+                    .then(Commands.argument("player", EntityArgument.player())
+                        .executes(context -> checkDevWhitelist(
+                            context.getSource(),
+                            EntityArgument.getPlayer(context, "player")
+                        ))
+                    )
+                )
+                .then(Commands.literal("list")
+                    .executes(context -> listDevWhitelist(context.getSource()))
+                )
+            )
         );
     }
     
@@ -204,5 +244,89 @@ public class ServerTransferCommands {
         
         player.sendSystemMessage(Component.literal(""));
         player.sendSystemMessage(Component.literal("§7Usa /tharidiathings transfer <server> per iniziare il trasferimento"));
+    }
+
+    private static int addToDevWhitelist(CommandSourceStack source, ServerPlayer targetPlayer, String reason) {
+        UUIDWrapper executor = UUIDWrapper.fromSource(source);
+        boolean success = DevWhitelistManager.addToWhitelist(
+            targetPlayer.getUUID(),
+            targetPlayer.getName().getString(),
+            executor.uuid(),
+            executor.name(),
+            reason
+        );
+
+        if (success) {
+            source.sendSuccess(() -> Component.literal(
+                "§a✓ " + targetPlayer.getName().getString() + " aggiunto alla whitelist dev.\n" +
+                "§7Motivo: " + reason
+            ), true);
+            targetPlayer.sendSystemMessage(Component.literal(
+                "§a✓ Sei stato autorizzato ad accedere al server dev.\n" +
+                "§7Puoi connetterti direttamente se hai l'IP configurato."
+            ));
+            return 1;
+        } else {
+            source.sendFailure(Component.literal("§cErrore durante l'aggiunta alla dev whitelist"));
+            return 0;
+        }
+    }
+
+    private static int removeFromDevWhitelist(CommandSourceStack source, ServerPlayer targetPlayer) {
+        boolean success = DevWhitelistManager.removeFromWhitelist(targetPlayer.getUUID());
+        if (success) {
+            source.sendSuccess(() -> Component.literal(
+                "§c✗ " + targetPlayer.getName().getString() + " rimosso dalla whitelist dev."
+            ), true);
+            targetPlayer.sendSystemMessage(Component.literal(
+                "§c✗ Il tuo accesso diretto al server dev è stato revocato."
+            ));
+            return 1;
+        } else {
+            source.sendFailure(Component.literal("§cQuel giocatore non è nella whitelist dev"));
+            return 0;
+        }
+    }
+
+    private static int checkDevWhitelist(CommandSourceStack source, ServerPlayer targetPlayer) {
+        boolean whitelisted = DevWhitelistManager.isWhitelisted(targetPlayer.getUUID());
+        if (whitelisted) {
+            source.sendSuccess(() -> Component.literal(
+                "§a✓ " + targetPlayer.getName().getString() + " è autorizzato per l'accesso dev."
+            ), false);
+        } else {
+            source.sendSuccess(() -> Component.literal(
+                "§c✗ " + targetPlayer.getName().getString() + " NON è nella dev whitelist."
+            ), false);
+        }
+        return 1;
+    }
+
+    private static int listDevWhitelist(CommandSourceStack source) {
+        List<DevWhitelistManager.WhitelistEntry> entries = DevWhitelistManager.listEntries();
+        source.sendSuccess(() -> Component.literal(
+            "§6=== Dev Whitelist (" + entries.size() + ") ==="
+        ), false);
+        if (entries.isEmpty()) {
+            source.sendSuccess(() -> Component.literal("§7(La whitelist è vuota)"), false);
+            return 1;
+        }
+        for (DevWhitelistManager.WhitelistEntry entry : entries) {
+            source.sendSuccess(() -> Component.literal(
+                "§7• §f" + entry.username() +
+                " §8(aggiunto da " + (entry.addedByName() != null ? entry.addedByName() : "sconosciuto") + ")" +
+                (entry.reason() != null && !entry.reason().isEmpty() ? " §7- " + entry.reason() : "")
+            ), false);
+        }
+        return 1;
+    }
+
+    private record UUIDWrapper(String name, java.util.UUID uuid) {
+        static UUIDWrapper fromSource(CommandSourceStack source) {
+            if (source.getEntity() instanceof ServerPlayer sp) {
+                return new UUIDWrapper(sp.getName().getString(), sp.getUUID());
+            }
+            return new UUIDWrapper(source.getTextName(), null);
+        }
     }
 }

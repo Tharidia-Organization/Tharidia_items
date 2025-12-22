@@ -124,8 +124,21 @@ public class DatabaseManager {
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
                 """;
             
+            String createDevWhitelistTable = """
+                CREATE TABLE IF NOT EXISTS dev_whitelist (
+                    uuid VARCHAR(36) PRIMARY KEY,
+                    username VARCHAR(16) NOT NULL,
+                    added_by VARCHAR(36),
+                    added_by_name VARCHAR(16),
+                    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    reason VARCHAR(255),
+                    INDEX idx_username (username)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+                """;
+            
             stmt.execute(createTransferTokensTable);
             stmt.execute(createPlayerTransfersTable);
+            stmt.execute(createDevWhitelistTable);
             
             logger.info("Database tables created/verified successfully");
             

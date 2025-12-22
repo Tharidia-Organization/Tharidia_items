@@ -87,10 +87,12 @@ public class TradeRequestScreen extends Screen {
             BACKGROUND_TEXTURE,
             panelX,
             panelY,
-            0,
-            0,
             PANEL_WIDTH,
             PANEL_HEIGHT,
+            0,
+            0,
+            TEXTURE_WIDTH,
+            TEXTURE_HEIGHT,
             TEXTURE_WIDTH,
             TEXTURE_HEIGHT
         );

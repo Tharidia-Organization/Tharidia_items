@@ -101,6 +101,10 @@ public class Config {
     public static final ModConfigSpec.ConfigValue<String> DEV_SERVER_IP = BUILDER
             .comment("Development server IP:port for transfers")
             .define("devServerIp", "172.18.0.10:25566");
+    
+    public static final ModConfigSpec.BooleanValue DEV_DIRECT_ACCESS_ENABLED = BUILDER
+            .comment("If true, players in the dev whitelist can connect directly to the dev server without using transfer tokens")
+            .define("devDirectAccessEnabled", true);
 
     static final ModConfigSpec SPEC = BUILDER.build();
 }
