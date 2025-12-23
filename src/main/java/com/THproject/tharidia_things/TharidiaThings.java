@@ -46,6 +46,7 @@ import com.THproject.tharidia_things.item.BattleGauntlet;
 import com.THproject.tharidia_things.item.CopperElsaItem;
 import com.THproject.tharidia_things.client.ClientPacketHandler;
 import com.THproject.tharidia_things.entity.ModEntities;
+import com.THproject.tharidia_things.item.TrebuchetItem;
 import com.THproject.tharidia_things.compoundTag.BattleGauntleAttachments;
 import com.THproject.tharidia_things.character.CharacterAttachments;
 import com.THproject.tharidia_things.config.ItemCatalogueConfig;
@@ -233,6 +234,8 @@ public class TharidiaThings {
             () -> new CopperLamaCortaItem(new Item.Properties()));
     public static final DeferredItem<Item> COPPER_ELSA = ITEMS.register("copper_elsa",
             () -> new CopperElsaItem(new Item.Properties()));
+    public static final DeferredItem<Item> TREBUCHET_ITEM = ITEMS.register("trebuchet",
+            () -> new TrebuchetItem(new Item.Properties().stacksTo(1)));
 
     // Battle Gauntlet
     public static final DeferredItem<Item> BATTLE_GAUNTLE = ITEMS.register("battle_gauntlet",
@@ -262,6 +265,7 @@ public class TharidiaThings {
                         output.accept(COPPER_LAMA_CORTA.get());
                         output.accept(COPPER_ELSA.get());
                         output.accept(BATTLE_GAUNTLE.get());
+                        output.accept(TREBUCHET_ITEM.get());
                     }).build());
 
     // The constructor for the mod class is the first code that is run when your mod

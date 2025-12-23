@@ -1,0 +1,58 @@
+{
+	"format_version": "1.12.0",
+	"minecraft:geometry": [
+		{
+			"description": {
+				"identifier": "geometry.unknown",
+				"texture_width": 256,
+				"texture_height": 256,
+				"visible_bounds_width": 5,
+				"visible_bounds_height": 4.5,
+				"visible_bounds_offset": [0, 1.75, 0]
+			},
+			"bones": [
+				{
+					"name": "FixedBody",
+					"pivot": [0, 0, 0],
+					"cubes": [
+						{"origin": [4, 0.3, 7.5], "size": [2, 40, 2], "pivot": [5, 0.3, 8.5], "rotation": [22.5, 0, 0], "uv": [40, 111]},
+						{"origin": [-5, 37.3, -4.1], "size": [2, 40, 2], "pivot": [-4, 37.3, -3.1], "rotation": [157.5, 0, 0], "uv": [64, 111]},
+						{"origin": [4, 37.3, -4.1], "size": [2, 40, 2], "pivot": [5, 37.3, -3.1], "rotation": [157.5, 0, 0], "uv": [56, 111]},
+						{"origin": [-5, 0.3, 7.5], "size": [2, 40, 2], "pivot": [-4, 0.3, 8.5], "rotation": [22.5, 0, 0], "uv": [48, 111]},
+						{"origin": [-5, 0, -24], "size": [11, 2, 48], "uv": [0, 61]},
+						{"origin": [-14.7, 0, 9.9], "size": [9.7, 0.5, 11.9], "uv": [0, 111]},
+						{"origin": [-3, 33, -5.9], "size": [7.7, 2, 2], "uv": [72, 111]}
+					],
+					"locators": {
+						"_null_Harm_Controller": [0, 33.9, -4.8]
+					}
+				},
+				{
+					"name": "Harm",
+					"parent": "FixedBody",
+					"pivot": [0, 33, -4.75],
+					"cubes": [
+						{"origin": [-1, 33, -19.65], "size": [2, 2, 59.6], "pivot": [0, 33, -4.75], "rotation": [-45, 0, 0], "uv": [0, 0]}
+					],
+					"locators": {
+						"locator": [0, 33.8, -4.9],
+						"_null_Hand_Controller": [0, 2.4, 26.9]
+					}
+				},
+				{
+					"name": "Hand",
+					"parent": "Harm",
+					"pivot": [0, 33, -4.75],
+					"cubes": [
+						{"origin": [-0.5, -6.1, 23.65], "size": [1, 9.5, 0], "pivot": [-0.5, 1.4, 24.65], "rotation": [-112.5, 0, 0], "uv": [90, 111]},
+						{"origin": [-0.5, -5.6, 23.65], "size": [1, 9.5, 0], "pivot": [-0.5, 1.9, 24.65], "rotation": [-126.5, 0, 0], "uv": [92, 111]},
+						{"origin": [-1, 4.7, 17.25], "size": [2, 3.2, 1.4], "pivot": [0, 5, 18.25], "rotation": [-22.5, 0, 0], "uv": [94, 111]}
+					],
+					"locators": {
+						"locator2": [0, 2.5, 26.8]
+					}
+				}
+			]
+		}
+	]
+}

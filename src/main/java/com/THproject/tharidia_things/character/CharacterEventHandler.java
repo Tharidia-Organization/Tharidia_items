@@ -11,11 +11,16 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.InteractionHand;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import com.THproject.tharidia_things.entity.TrebuchetEntity;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
@@ -384,6 +389,35 @@ public class CharacterEventHandler {
         } catch (Exception ex) {
             TharidiaThings.LOGGER.warn("Failed to remove character creation border for {}", player.getName().getString(), ex);
         }
+    }
+
+    @SubscribeEvent
+    public static void onPlayerRightClickEmpty(PlayerInteractEvent.RightClickEmpty event) {
+        Player player = event.getEntity();
+        
+        // Check if player is riding a trebuchet
+        if (player.getVehicle() instanceof TrebuchetEntity trebuchet && trebuchet.hasAmmo()) {
+            trebuchet.beginFiring(player);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onPlayerRightClickItem(PlayerInteractEvent.RightClickItem event) {
+        Player player = event.getEntity();
+        ItemStack held = player.getItemInHand(event.getHand());
+        
+        // Check if player is riding a trebuchet
+        if (player.getVehicle() instanceof TrebuchetEntity trebuchet) {
+            // If holding ammo and trebuchet has no ammo, load it
+            if (!held.isEmpty() && isAmmoItem(held) && !trebuchet.hasAmmo()) {
+                trebuchet.loadAmmo(held, player);
+                event.setCanceled(true); // Prevent normal item use
+            }
+        }
+    }
+    
+    private static boolean isAmmoItem(ItemStack stack) {
+        return stack.getItem() == net.minecraft.world.item.Items.STONE;
     }
 
     private static boolean ensureWorldBorderReflection() {
