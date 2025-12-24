@@ -42,6 +42,7 @@ public class DietProfileCache {
     private final Set<ResourceLocation> knownItems = ConcurrentHashMap.newKeySet();
     private final AtomicBoolean isCalculating = new AtomicBoolean(false);
     private String lastModListHash = "";
+    private volatile boolean autoGenerationCompleted = false;
     
     public DietProfileCache(Path worldDirectory) {
         this.cacheFile = worldDirectory.resolve(CACHE_FILENAME);
@@ -63,20 +64,27 @@ public class DietProfileCache {
             String version = root.has("version") ? root.get("version").getAsString() : "";
             String modListHash = root.has("mod_list_hash") ? root.get("mod_list_hash").getAsString() : "";
             String analysisVersion = root.has("analysis_version") ? root.get("analysis_version").getAsString() : "";
+            autoGenerationCompleted = root.has("auto_generated") ? root.get("auto_generated").getAsBoolean() : true;
             
+            boolean validCache = true;
             if (!CACHE_VERSION.equals(version)) {
                 LOGGER.info("[DIET CACHE] Cache version mismatch (expected {}, got {}), will recalculate", CACHE_VERSION, version);
-                return;
-            }
-            
-            if (!ANALYSIS_LOGIC_VERSION.equals(analysisVersion)) {
+                validCache = false;
+            } else if (!ANALYSIS_LOGIC_VERSION.equals(analysisVersion)) {
                 LOGGER.info("[DIET CACHE] Analysis logic changed (expected {}, got {}), will recalculate", ANALYSIS_LOGIC_VERSION, analysisVersion);
-                return;
+                validCache = false;
+            } else {
+                String currentModListHash = calculateModListHash();
+                if (!currentModListHash.equals(modListHash)) {
+                    LOGGER.info("[DIET CACHE] Mod list changed, will recalculate profiles");
+                    validCache = false;
+                }
             }
             
-            String currentModListHash = calculateModListHash();
-            if (!currentModListHash.equals(modListHash)) {
-                LOGGER.info("[DIET CACHE] Mod list changed, will recalculate profiles");
+            if (!validCache) {
+                profiles.clear();
+                knownItems.clear();
+                lastModListHash = "";
                 return;
             }
             
@@ -101,6 +109,7 @@ public class DietProfileCache {
             LOGGER.info("[DIET CACHE] Loaded {} pre-calculated profiles from cache", loadedCount);
             
         } catch (Exception e) {
+            autoGenerationCompleted = true;
             LOGGER.error("[DIET CACHE] Failed to load cache file: {}", e.getMessage());
             profiles.clear();
             knownItems.clear();
@@ -117,6 +126,7 @@ public class DietProfileCache {
             root.addProperty("analysis_version", ANALYSIS_LOGIC_VERSION);
             root.addProperty("mod_list_hash", lastModListHash);
             root.addProperty("calculated_at", System.currentTimeMillis());
+            root.addProperty("auto_generated", autoGenerationCompleted);
             
             JsonObject profilesObj = new JsonObject();
             for (Map.Entry<ResourceLocation, DietProfile> entry : profiles.entrySet()) {
@@ -191,6 +201,7 @@ public class DietProfileCache {
                 
                 knownItems.addAll(currentItems);
                 lastModListHash = calculateModListHash();
+                autoGenerationCompleted = true;
                 
                 long duration = System.currentTimeMillis() - startTime;
                 LOGGER.info("[DIET CACHE] Calculation complete in {}ms: {} new, {} cached, {} removed", 
@@ -212,6 +223,20 @@ public class DietProfileCache {
      */
     public DietProfile getProfile(ResourceLocation itemId) {
         return profiles.get(itemId);
+    }
+
+    /**
+     * Returns true once the automatic generation has been completed.
+     */
+    public boolean hasCompletedInitialGeneration() {
+        return autoGenerationCompleted;
+    }
+
+    /**
+     * Determines whether startup should auto-generate profiles.
+     */
+    public boolean shouldAutoGenerateOnStartup() {
+        return !autoGenerationCompleted || profiles.isEmpty();
     }
     
     /**

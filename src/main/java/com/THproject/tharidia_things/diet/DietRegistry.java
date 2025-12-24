@@ -61,10 +61,11 @@ public final class DietRegistry {
             persistentCache = new DietProfileCache(worldDir);
             persistentCache.load();
             
-            // Start background calculation if needed
-            if (persistentCache.needsRecalculation()) {
-                LOGGER.info("[DIET] Starting background calculation of diet profiles...");
+            if (!persistentCache.hasCompletedInitialGeneration()) {
+                LOGGER.info("[DIET] No persisted diet profiles detected. Running one-time generation...");
                 persistentCache.calculateAsync(server, config.settings());
+            } else if (persistentCache.needsRecalculation()) {
+                LOGGER.warn("[DIET] Diet data is outdated, but automatic regeneration is disabled. Run /tharidia diet recalculate to refresh.");
             } else {
                 LOGGER.info("[DIET] Using cached diet profiles");
             }
