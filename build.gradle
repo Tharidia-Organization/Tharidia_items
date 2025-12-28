@@ -212,7 +212,7 @@ dependencies {
     // SLF4J API is already provided by Minecraft/NeoForge - no need to include it
 
     // Paladins mod dependency for stone great hammer
-    implementation "maven.modrinth:paladins-and-priests:2.6.3+1.21.1-neoforge"
+    //implementation "maven.modrinth:paladins-and-priests:2.6.3+1.21.1-neoforge"
     
     // Example optional mod dependency with JEI
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
