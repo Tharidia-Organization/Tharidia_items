@@ -44,6 +44,7 @@ import com.THproject.tharidia_things.item.CopperLamaLungaItem;
 import com.THproject.tharidia_things.item.CopperLamaCortaItem;
 import com.THproject.tharidia_things.item.BattleGauntlet;
 import com.THproject.tharidia_things.item.CopperElsaItem;
+import com.THproject.tharidia_things.item.DiceItem;
 import com.THproject.tharidia_things.client.ClientPacketHandler;
 import com.THproject.tharidia_things.entity.ModEntities;
 import com.THproject.tharidia_things.compoundTag.BattleGauntleAttachments;
@@ -233,6 +234,8 @@ public class TharidiaThings {
             () -> new CopperLamaCortaItem(new Item.Properties()));
     public static final DeferredItem<Item> COPPER_ELSA = ITEMS.register("copper_elsa",
             () -> new CopperElsaItem(new Item.Properties()));
+    public static final DeferredItem<Item> DICE = ITEMS.register("dice",
+            () -> new DiceItem(new Item.Properties().stacksTo(16)));
 
     // Battle Gauntlet
     public static final DeferredItem<Item> BATTLE_GAUNTLE = ITEMS.register("battle_gauntlet",
@@ -261,6 +264,7 @@ public class TharidiaThings {
                         output.accept(COPPER_LAMA_LUNGA.get());
                         output.accept(COPPER_LAMA_CORTA.get());
                         output.accept(COPPER_ELSA.get());
+                        output.accept(DICE.get());
                         output.accept(BATTLE_GAUNTLE.get());
                     }).build());
 

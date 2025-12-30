@@ -21,4 +21,12 @@ public class ModEntities {
             .updateInterval(1)
             .fireImmune()
             .build("race_point"));
+
+    public static final DeferredHolder<EntityType<?>, EntityType<com.THproject.tharidia_things.entity.DiceEntity>> DICE =
+        ENTITIES.register("dice", () -> EntityType.Builder
+            .<com.THproject.tharidia_things.entity.DiceEntity>of(com.THproject.tharidia_things.entity.DiceEntity::new, MobCategory.MISC)
+            .sized(0.35f, 0.35f)
+            .clientTrackingRange(8)
+            .updateInterval(2)
+            .build("dice"));
 }
