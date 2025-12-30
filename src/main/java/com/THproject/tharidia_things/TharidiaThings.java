@@ -26,11 +26,14 @@ import com.THproject.tharidia_things.block.ClaimBlock;
 import com.THproject.tharidia_things.block.HotIronMarkerBlock;
 import com.THproject.tharidia_things.block.HotGoldMarkerBlock;
 import com.THproject.tharidia_things.block.HotCopperMarkerBlock;
+import com.THproject.tharidia_things.block.StableBlock;
+import com.THproject.tharidia_things.block.StableDummyBlock;
 import com.THproject.tharidia_things.block.entity.PietroBlockEntity;
 import com.THproject.tharidia_things.block.entity.ClaimBlockEntity;
 import com.THproject.tharidia_things.block.entity.HotIronAnvilEntity;
 import com.THproject.tharidia_things.block.entity.HotGoldAnvilEntity;
 import com.THproject.tharidia_things.block.entity.HotCopperAnvilEntity;
+import com.THproject.tharidia_things.block.entity.StableBlockEntity;
 import com.THproject.tharidia_things.item.HotIronItem;
 import com.THproject.tharidia_things.item.HotGoldItem;
 import com.THproject.tharidia_things.item.HotCopperItem;
@@ -166,6 +169,13 @@ public class TharidiaThings {
     // Hot Copper Marker Block (invisible, used for hot copper on anvil)
     public static final DeferredBlock<HotCopperMarkerBlock> HOT_COPPER_MARKER = BLOCKS.register("hot_copper_marker",
             () -> new HotCopperMarkerBlock());
+    // Stable Block
+    public static final DeferredBlock<StableBlock> STABLE = BLOCKS.register("stable",
+            () -> new StableBlock());
+    public static final DeferredItem<BlockItem> STABLE_ITEM = ITEMS.registerSimpleBlockItem("stable", STABLE);
+    // Stable Dummy Block (multiblock slave)
+    public static final DeferredBlock<StableDummyBlock> STABLE_DUMMY = BLOCKS.register("stable_dummy",
+            () -> new StableDummyBlock());
 
     // Creates a new BlockEntityType for the Pietro block
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<PietroBlockEntity>> PIETRO_BLOCK_ENTITY = BLOCK_ENTITIES
@@ -185,6 +195,10 @@ public class TharidiaThings {
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<HotCopperAnvilEntity>> HOT_COPPER_ANVIL_ENTITY = BLOCK_ENTITIES
             .register("hot_copper_anvil",
                     () -> BlockEntityType.Builder.of(HotCopperAnvilEntity::new, HOT_COPPER_MARKER.get()).build(null));
+    // Creates a new BlockEntityType for the Stable
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<StableBlockEntity>> STABLE_BLOCK_ENTITY = BLOCK_ENTITIES
+            .register("stable",
+                    () -> BlockEntityType.Builder.of(StableBlockEntity::new, STABLE.get()).build(null));
 
     // Creates a MenuType for the Claim GUI
     public static final DeferredHolder<net.minecraft.world.inventory.MenuType<?>, net.minecraft.world.inventory.MenuType<ClaimMenu>> CLAIM_MENU = MENU_TYPES
@@ -236,6 +250,12 @@ public class TharidiaThings {
             () -> new CopperElsaItem(new Item.Properties()));
     public static final DeferredItem<Item> DICE = ITEMS.register("dice",
             () -> new DiceItem(new Item.Properties().stacksTo(16)));
+    
+    // Temporary baby animal items
+    public static final DeferredItem<Item> BABY_COW = ITEMS.register("baby_cow",
+            () -> new Item(new Item.Properties().stacksTo(16)));
+    public static final DeferredItem<Item> BABY_CHICKEN = ITEMS.register("baby_chicken",
+            () -> new Item(new Item.Properties().stacksTo(16)));
 
     // Battle Gauntlet
     public static final DeferredItem<Item> BATTLE_GAUNTLE = ITEMS.register("battle_gauntlet",
@@ -266,6 +286,9 @@ public class TharidiaThings {
                         output.accept(COPPER_ELSA.get());
                         output.accept(DICE.get());
                         output.accept(BATTLE_GAUNTLE.get());
+                        output.accept(STABLE_ITEM.get());
+                        output.accept(BABY_COW.get());
+                        output.accept(BABY_CHICKEN.get());
                     }).build());
 
     // The constructor for the mod class is the first code that is run when your mod
