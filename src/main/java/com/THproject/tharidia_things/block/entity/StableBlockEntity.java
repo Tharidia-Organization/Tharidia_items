@@ -4,6 +4,8 @@ import com.THproject.tharidia_things.TharidiaThings;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
@@ -17,50 +19,101 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class StableBlockEntity extends BlockEntity {
     
-    private String animalType = ""; // "cow" or "chicken"
-    private boolean isBaby = false;
-    private int growthTicks = 0;
-    private int eggCount = 0;
-    private int eggProductionTicks = 0;
-    private boolean milkCollected = false;
-    
+    private static final int MAX_ANIMALS = 3;
+    private static final int FEED_REQUIRED = 3;
     private static final int GROWTH_TIME = 20 * 60 * 2; // 2 minutes
     private static final int EGG_PRODUCTION_TIME = 20 * 30; // 30 seconds
-    private static final int MAX_EGGS = 3;
+    private static final int MAX_EGGS_PER_CHICKEN = 3;
+    
+    private final List<AnimalData> animals = new ArrayList<>();
+    
+    public static class AnimalData {
+        public String type; // "cow" or "chicken"
+        public boolean isBaby;
+        public int growthTicks; // Time until animal grows up
+        public int feedCount; // How much food has been given (for breeding)
+        public int eggCount; // Current eggs available for collection
+        public int totalEggsProduced; // Total eggs produced in lifetime (max 3)
+        public int eggProductionTicks;
+        public boolean resourceCollected; // Milk collected or final eggs collected
+        
+        public AnimalData(String type) {
+            this.type = type;
+            this.isBaby = true;
+            this.growthTicks = 0;
+            this.feedCount = 0;
+            this.eggCount = 0;
+            this.totalEggsProduced = 0;
+            this.eggProductionTicks = 0;
+            this.resourceCollected = false;
+        }
+        
+        public AnimalData() {
+            this("");
+        }
+        
+        public void save(CompoundTag tag) {
+            tag.putString("Type", type);
+            tag.putBoolean("IsBaby", isBaby);
+            tag.putInt("GrowthTicks", growthTicks);
+            tag.putInt("FeedCount", feedCount);
+            tag.putInt("EggCount", eggCount);
+            tag.putInt("TotalEggsProduced", totalEggsProduced);
+            tag.putInt("EggProductionTicks", eggProductionTicks);
+            tag.putBoolean("ResourceCollected", resourceCollected);
+        }
+        
+        public void load(CompoundTag tag) {
+            type = tag.getString("Type");
+            isBaby = tag.getBoolean("IsBaby");
+            growthTicks = tag.getInt("GrowthTicks");
+            feedCount = tag.getInt("FeedCount");
+            eggCount = tag.getInt("EggCount");
+            totalEggsProduced = tag.getInt("TotalEggsProduced");
+            eggProductionTicks = tag.getInt("EggProductionTicks");
+            resourceCollected = tag.getBoolean("ResourceCollected");
+        }
+    }
     
     public StableBlockEntity(BlockPos pos, BlockState state) {
         super(TharidiaThings.STABLE_BLOCK_ENTITY.get(), pos, state);
     }
     
     public boolean hasAnimal() {
-        return !animalType.isEmpty();
+        return !animals.isEmpty();
+    }
+    
+    public List<AnimalData> getAnimals() {
+        return animals;
     }
     
     public String getAnimalType() {
-        return animalType;
+        return animals.isEmpty() ? "" : animals.get(0).type;
     }
     
     public boolean isBaby() {
-        return isBaby;
+        return animals.isEmpty() ? false : animals.get(0).isBaby;
     }
     
     public int getEggCount() {
-        return eggCount;
+        return animals.isEmpty() ? 0 : animals.get(0).eggCount;
     }
     
     public boolean placeAnimal(String type) {
-        if (hasAnimal()) {
+        if (animals.size() >= 2) {
             return false;
         }
         
-        this.animalType = type;
-        this.isBaby = true;
-        this.growthTicks = 0;
-        this.eggCount = 0;
-        this.eggProductionTicks = 0;
-        this.milkCollected = false;
+        if (!animals.isEmpty() && !animals.get(0).type.equals(type)) {
+            return false;
+        }
+        
+        animals.add(new AnimalData(type));
         
         setChanged();
         if (level != null) {
@@ -70,8 +123,113 @@ public class StableBlockEntity extends BlockEntity {
         return true;
     }
     
+    public boolean canFeed(ItemStack stack) {
+        if (animals.size() != 2) {
+            return false;
+        }
+        
+        String type = animals.get(0).type;
+        
+        // Check if both animals are adults
+        boolean bothAdult = true;
+        for (AnimalData animal : animals) {
+            if (animal.isBaby) {
+                bothAdult = false;
+                break;
+            }
+        }
+        
+        if (!bothAdult) {
+            return false;
+        }
+        
+        // Check if correct food type and not fully fed
+        if (type.equals("cow") && stack.is(Items.WHEAT)) {
+            for (AnimalData animal : animals) {
+                if (animal.feedCount < FEED_REQUIRED) {
+                    return true;
+                }
+            }
+        } else if (type.equals("chicken") && stack.is(Items.WHEAT_SEEDS)) {
+            for (AnimalData animal : animals) {
+                if (animal.feedCount < FEED_REQUIRED) {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
+    }
+    
+    public void feed(ItemStack stack) {
+        if (!canFeed(stack)) {
+            return;
+        }
+        
+        // Feed the first animal that needs food
+        for (AnimalData animal : animals) {
+            if (!animal.isBaby && animal.feedCount < FEED_REQUIRED) {
+                animal.feedCount++;
+                
+                if (level != null) {
+                    level.playSound(null, worldPosition, SoundEvents.GENERIC_EAT, SoundSource.BLOCKS, 0.5F, 1.0F);
+                }
+                
+                // Check if both animals are fully fed for breeding
+                checkBreeding();
+                
+                setChanged();
+                if (level != null) {
+                    level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+                }
+                break;
+            }
+        }
+    }
+    
+    private void checkBreeding() {
+        if (animals.size() != 2 || animals.size() >= MAX_ANIMALS) {
+            return;
+        }
+        
+        // Check if both animals are adults and fully fed
+        boolean bothAdultAndFed = true;
+        for (AnimalData animal : animals) {
+            if (animal.isBaby || animal.feedCount < FEED_REQUIRED) {
+                bothAdultAndFed = false;
+                break;
+            }
+        }
+        
+        if (bothAdultAndFed) {
+            // Reset feed counts
+            for (AnimalData animal : animals) {
+                animal.feedCount = 0;
+            }
+            
+            // Create baby
+            animals.add(new AnimalData(animals.get(0).type));
+            
+            setChanged();
+            if (level != null) {
+                level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+                level.playSound(null, worldPosition, SoundEvents.PLAYER_LEVELUP, SoundSource.BLOCKS, 1.0F, 2.0F);
+            }
+        }
+    }
+    
     public boolean canCollectMilk() {
-        return animalType.equals("cow") && !isBaby && !milkCollected;
+        if (animals.isEmpty() || !animals.get(0).type.equals("cow")) {
+            return false;
+        }
+        
+        for (AnimalData animal : animals) {
+            if (!animal.isBaby && !animal.resourceCollected) {
+                return true;
+            }
+        }
+        
+        return false;
     }
     
     public void collectMilk(Player player) {
@@ -79,22 +237,41 @@ public class StableBlockEntity extends BlockEntity {
             return;
         }
         
-        milkCollected = true;
-        
-        if (level != null) {
-            level.playSound(null, worldPosition, SoundEvents.COW_MILK, SoundSource.BLOCKS, 1.0F, 1.0F);
-            
-            // Drop loot: 1 beef, 2 leather
-            dropLoot(player, new ItemStack(Items.BEEF, 1));
-            dropLoot(player, new ItemStack(Items.LEATHER, 2));
+        for (int i = 0; i < animals.size(); i++) {
+            AnimalData animal = animals.get(i);
+            if (!animal.isBaby && !animal.resourceCollected) {
+                animal.resourceCollected = true;
+                
+                if (level != null) {
+                    level.playSound(null, worldPosition, SoundEvents.COW_MILK, SoundSource.BLOCKS, 1.0F, 1.0F);
+                    
+                    dropLoot(player, new ItemStack(Items.BEEF, 1));
+                    dropLoot(player, new ItemStack(Items.LEATHER, 2));
+                }
+                
+                animals.remove(i);
+                
+                setChanged();
+                if (level != null) {
+                    level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+                }
+                break;
+            }
         }
-        
-        // Remove animal
-        clearAnimal();
     }
     
     public boolean canCollectEggs() {
-        return animalType.equals("chicken") && !isBaby && eggCount > 0;
+        if (animals.isEmpty() || !animals.get(0).type.equals("chicken")) {
+            return false;
+        }
+        
+        for (AnimalData animal : animals) {
+            if (!animal.isBaby && animal.eggCount > 0) {
+                return true;
+            }
+        }
+        
+        return false;
     }
     
     public void collectEggs(Player player) {
@@ -102,30 +279,33 @@ public class StableBlockEntity extends BlockEntity {
             return;
         }
         
-        int eggs = eggCount;
-        eggCount = 0;
-        
-        if (level != null) {
-            level.playSound(null, worldPosition, SoundEvents.CHICKEN_EGG, SoundSource.BLOCKS, 1.0F, 1.0F);
-            
-            // Give eggs
-            player.addItem(new ItemStack(Items.EGG, eggs));
-            
-            // Check if reached max production
-            if (eggs == MAX_EGGS) {
-                // Drop loot: 1 chicken, 1 feather
-                dropLoot(player, new ItemStack(Items.CHICKEN, 1));
-                dropLoot(player, new ItemStack(Items.FEATHER, 1));
+        for (int i = 0; i < animals.size(); i++) {
+            AnimalData animal = animals.get(i);
+            if (!animal.isBaby && animal.eggCount > 0) {
+                int eggs = animal.eggCount;
+                animal.eggCount = 0;
+                animal.eggProductionTicks = 0;
                 
-                // Remove animal
-                clearAnimal();
-                return;
+                if (level != null) {
+                    level.playSound(null, worldPosition, SoundEvents.CHICKEN_EGG, SoundSource.BLOCKS, 1.0F, 1.0F);
+                    
+                    player.addItem(new ItemStack(Items.EGG, eggs));
+                    
+                    // Check if chicken has produced 3 eggs total in its lifetime
+                    if (animal.totalEggsProduced >= MAX_EGGS_PER_CHICKEN) {
+                        dropLoot(player, new ItemStack(Items.CHICKEN, 1));
+                        dropLoot(player, new ItemStack(Items.FEATHER, 1));
+                        
+                        animals.remove(i);
+                    }
+                }
+                
+                setChanged();
+                if (level != null) {
+                    level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+                }
+                break;
             }
-        }
-        
-        setChanged();
-        if (level != null) {
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
         }
     }
     
@@ -135,70 +315,69 @@ public class StableBlockEntity extends BlockEntity {
         }
     }
     
-    private void clearAnimal() {
-        animalType = "";
-        isBaby = false;
-        growthTicks = 0;
-        eggCount = 0;
-        eggProductionTicks = 0;
-        milkCollected = false;
-        
-        setChanged();
-        if (level != null) {
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
-        }
-    }
-    
     public static void serverTick(Level level, BlockPos pos, BlockState state, StableBlockEntity entity) {
-        if (!entity.hasAnimal()) {
+        if (entity.animals.isEmpty()) {
             return;
         }
         
-        // Handle growth
-        if (entity.isBaby) {
-            entity.growthTicks++;
-            if (entity.growthTicks >= GROWTH_TIME) {
-                entity.isBaby = false;
-                entity.growthTicks = 0;
-                entity.setChanged();
-                level.sendBlockUpdated(pos, state, state, 3);
-                level.playSound(null, pos, SoundEvents.PLAYER_LEVELUP, SoundSource.BLOCKS, 0.5F, 1.5F);
+        boolean changed = false;
+        
+        for (AnimalData animal : entity.animals) {
+            // Handle growth for baby animals
+            if (animal.isBaby) {
+                animal.growthTicks++;
+                if (animal.growthTicks >= GROWTH_TIME) {
+                    animal.isBaby = false;
+                    animal.growthTicks = 0;
+                    changed = true;
+                    level.playSound(null, pos, SoundEvents.PLAYER_LEVELUP, SoundSource.BLOCKS, 0.5F, 1.5F);
+                }
+            }
+            
+            // Handle egg production for adult chickens (max 3 eggs total in lifetime)
+            if (animal.type.equals("chicken") && !animal.isBaby && animal.totalEggsProduced < MAX_EGGS_PER_CHICKEN) {
+                animal.eggProductionTicks++;
+                if (animal.eggProductionTicks >= EGG_PRODUCTION_TIME) {
+                    animal.eggCount++;
+                    animal.totalEggsProduced++;
+                    animal.eggProductionTicks = 0;
+                    changed = true;
+                    level.playSound(null, pos, SoundEvents.CHICKEN_EGG, SoundSource.BLOCKS, 0.8F, 1.0F);
+                }
             }
         }
         
-        // Handle egg production for grown chickens
-        if (entity.animalType.equals("chicken") && !entity.isBaby && entity.eggCount < MAX_EGGS) {
-            entity.eggProductionTicks++;
-            if (entity.eggProductionTicks >= EGG_PRODUCTION_TIME) {
-                entity.eggCount++;
-                entity.eggProductionTicks = 0;
-                entity.setChanged();
-                level.sendBlockUpdated(pos, state, state, 3);
-                level.playSound(null, pos, SoundEvents.CHICKEN_EGG, SoundSource.BLOCKS, 0.8F, 1.0F);
-            }
+        if (changed) {
+            entity.setChanged();
+            level.sendBlockUpdated(pos, state, state, 3);
         }
     }
     
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
-        tag.putString("AnimalType", animalType);
-        tag.putBoolean("IsBaby", isBaby);
-        tag.putInt("GrowthTicks", growthTicks);
-        tag.putInt("EggCount", eggCount);
-        tag.putInt("EggProductionTicks", eggProductionTicks);
-        tag.putBoolean("MilkCollected", milkCollected);
+        
+        ListTag animalList = new ListTag();
+        for (AnimalData animal : animals) {
+            CompoundTag animalTag = new CompoundTag();
+            animal.save(animalTag);
+            animalList.add(animalTag);
+        }
+        tag.put("Animals", animalList);
     }
     
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
-        animalType = tag.getString("AnimalType");
-        isBaby = tag.getBoolean("IsBaby");
-        growthTicks = tag.getInt("GrowthTicks");
-        eggCount = tag.getInt("EggCount");
-        eggProductionTicks = tag.getInt("EggProductionTicks");
-        milkCollected = tag.getBoolean("MilkCollected");
+        
+        animals.clear();
+        ListTag animalList = tag.getList("Animals", Tag.TAG_COMPOUND);
+        for (int i = 0; i < animalList.size(); i++) {
+            CompoundTag animalTag = animalList.getCompound(i);
+            AnimalData animal = new AnimalData();
+            animal.load(animalTag);
+            animals.add(animal);
+        }
     }
     
     @Override

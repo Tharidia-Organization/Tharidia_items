@@ -36,56 +36,103 @@ public class StableBlockRenderer implements BlockEntityRenderer<StableBlockEntit
             return;
         }
         
-        poseStack.pushPose();
+        var animals = entity.getAnimals();
+        String animalType = entity.getAnimalType();
         
-        // Center position in the stable
-        poseStack.translate(0.5, 0.0, 0.5);
+        // Calculate time-based animation for head movement
+        long time = entity.getLevel() != null ? entity.getLevel().getGameTime() : 0;
+        float animationTime = (time + partialTick) * 0.05F;
         
-        // Render animal
-        if (entity.getAnimalType().equals("cow")) {
-            renderCow(entity, poseStack, buffer, packedLight);
-        } else if (entity.getAnimalType().equals("chicken")) {
-            renderChicken(entity, poseStack, buffer, packedLight);
+        // Render animals based on count
+        for (int i = 0; i < animals.size(); i++) {
+            var animal = animals.get(i);
+            poseStack.pushPose();
+            
+            // Position animals: first two side by side with more space, third one far in back right corner
+            if (animals.size() == 1) {
+                // Single animal - center
+                poseStack.translate(0.5, 0.0, 0.5);
+            } else if (animals.size() == 2) {
+                // Two animals - side by side with maximum space (especially for cows)
+                if (i == 0) {
+                    poseStack.translate(0.15, 0.0, 0.45);
+                } else {
+                    poseStack.translate(0.85, 0.0, 0.45);
+                }
+            } else if (animals.size() == 3) {
+                // Three animals - two adults in front with maximum spacing, baby far in back right corner
+                if (i == 0) {
+                    poseStack.translate(0.15, 0.0, 0.3);
+                } else if (i == 1) {
+                    poseStack.translate(0.85, 0.0, 0.3);
+                } else {
+                    // Third animal (baby) very far in back right corner
+                    poseStack.translate(1.5, 0.0, 1.5);
+                }
+            }
+            
+            // Render animal with animation offset per animal
+            if (animalType.equals("cow")) {
+                renderCow(animal.isBaby, animationTime + (i * 1.5F), poseStack, buffer, packedLight);
+            } else if (animalType.equals("chicken")) {
+                renderChicken(animal.isBaby, animationTime + (i * 1.5F), poseStack, buffer, packedLight);
+            }
+            
+            poseStack.popPose();
         }
         
-        poseStack.popPose();
-        
-        // Render eggs if chicken has produced them
-        if (entity.getAnimalType().equals("chicken") && !entity.isBaby() && entity.getEggCount() > 0) {
-            renderEggs(entity.getEggCount(), poseStack, buffer, packedLight);
+        // Render eggs for all chickens that have produced them
+        if (animalType.equals("chicken")) {
+            int totalEggs = 0;
+            for (var animal : animals) {
+                if (!animal.isBaby && animal.eggCount > 0) {
+                    totalEggs += animal.eggCount;
+                }
+            }
+            if (totalEggs > 0) {
+                renderEggs(totalEggs, poseStack, buffer, packedLight);
+            }
         }
     }
     
-    private void renderCow(StableBlockEntity entity, PoseStack poseStack, MultiBufferSource buffer, int packedLight) {
+    private void renderCow(boolean isBaby, float animationTime, PoseStack poseStack, MultiBufferSource buffer, int packedLight) {
         poseStack.pushPose();
 
         // Rotate 180 degrees
         poseStack.mulPose(Axis.ZP.rotationDegrees(180));
         
-        float scale = entity.isBaby() ? 0.5F : 0.8F;
+        float scale = isBaby ? 0.5F : 0.8F;
         poseStack.scale(scale, scale, scale);
         poseStack.translate(0, -1.5, 0);
         
-        // Render cow model directly
-        cowModel.young = entity.isBaby();
+        // Animate head with slight oscillation using setupAnim
+        cowModel.young = isBaby;
+        float headXRot = (float) Math.sin(animationTime) * 0.1F;
+        float headYRot = (float) Math.cos(animationTime * 0.7F) * 0.15F;
+        cowModel.setupAnim(null, 0, 0, 0, headYRot * 57.2958F, headXRot * 57.2958F);
+        
         cowModel.renderToBuffer(poseStack, buffer.getBuffer(RenderType.entityCutoutNoCull(COW_TEXTURE)), 
             packedLight, OverlayTexture.NO_OVERLAY, -1);
         
         poseStack.popPose();
     }
     
-    private void renderChicken(StableBlockEntity entity, PoseStack poseStack, MultiBufferSource buffer, int packedLight) {
+    private void renderChicken(boolean isBaby, float animationTime, PoseStack poseStack, MultiBufferSource buffer, int packedLight) {
         poseStack.pushPose();
         
         // Rotate 180 degrees
         poseStack.mulPose(Axis.ZP.rotationDegrees(180));
         
-        float scale = entity.isBaby() ? 0.5F : 0.8F;
+        float scale = isBaby ? 0.5F : 0.8F;
         poseStack.scale(scale, scale, scale);
         poseStack.translate(0, -1.51, 0);
         
-        // Render chicken model directly
-        chickenModel.young = entity.isBaby();
+        // Animate head with slight oscillation using setupAnim
+        chickenModel.young = isBaby;
+        float headXRot = (float) Math.sin(animationTime * 1.2F) * 0.12F;
+        float headYRot = (float) Math.cos(animationTime * 0.9F) * 0.2F;
+        chickenModel.setupAnim(null, 0, 0, 0, headYRot * 57.2958F, headXRot * 57.2958F);
+        
         chickenModel.renderToBuffer(poseStack, buffer.getBuffer(RenderType.entityCutoutNoCull(CHICKEN_TEXTURE)), 
             packedLight, OverlayTexture.NO_OVERLAY, -1);
         

@@ -30,11 +30,6 @@ public class StableBlock extends BaseEntityBlock {
     
     public static final MapCodec<StableBlock> CODEC = simpleCodec(StableBlock::new);
     
-    // Collision shape - 2 blocks tall to match model height
-    // Note: VoxelShape cannot reliably extend beyond single block bounds (0-1 range)
-    // For true 3x3 collision, would need multiblock structure with marker blocks
-    private static final VoxelShape COLLISION_SHAPE = Shapes.box(0, 0, 0, 1, 2, 1);
-    
     public StableBlock(BlockBehaviour.Properties properties) {
         super(properties);
     }
@@ -43,7 +38,8 @@ public class StableBlock extends BaseEntityBlock {
         this(BlockBehaviour.Properties.of()
             .mapColor(MapColor.WOOD)
             .strength(2.5F)
-            .noOcclusion());
+            .noOcclusion()
+            .noCollission());
     }
     
     @Override
@@ -52,13 +48,8 @@ public class StableBlock extends BaseEntityBlock {
     }
     
     @Override
-    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return COLLISION_SHAPE;
-    }
-    
-    @Override
     public VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return COLLISION_SHAPE;
+        return Shapes.empty();
     }
     
     @Override
@@ -83,39 +74,35 @@ public class StableBlock extends BaseEntityBlock {
     }
     
     private void formMultiblock(Level level, BlockPos masterPos) {
-        // Create 3x3x2 structure with dummy blocks
-        // Master is at center, create dummies around it
+        // Create 3x3 ground-level interaction layer only (no upper blocks)
+        // Master is at center, create dummies around it at ground level only
         for (int x = -1; x <= 1; x++) {
-            for (int y = 0; y <= 1; y++) {
-                for (int z = -1; z <= 1; z++) {
-                    // Skip center block (master)
-                    if (x == 0 && y == 0 && z == 0) continue;
-                    
-                    BlockPos dummyPos = masterPos.offset(x, y, z);
-                    BlockState existingState = level.getBlockState(dummyPos);
-                    
-                    // Only place dummy if space is empty or replaceable
-                    if (existingState.isAir() || existingState.canBeReplaced()) {
-                        level.setBlock(dummyPos, TharidiaThings.STABLE_DUMMY.get().defaultBlockState()
-                            .setValue(StableDummyBlock.FACING, net.minecraft.core.Direction.NORTH), 3);
-                    }
+            for (int z = -1; z <= 1; z++) {
+                // Skip center block (master)
+                if (x == 0 && z == 0) continue;
+                
+                BlockPos dummyPos = masterPos.offset(x, 0, z);
+                BlockState existingState = level.getBlockState(dummyPos);
+                
+                // Only place dummy if space is empty or replaceable
+                if (existingState.isAir() || existingState.canBeReplaced()) {
+                    level.setBlock(dummyPos, TharidiaThings.STABLE_DUMMY.get().defaultBlockState()
+                        .setValue(StableDummyBlock.FACING, net.minecraft.core.Direction.NORTH), 3);
                 }
             }
         }
     }
     
     private void destroyMultiblock(Level level, BlockPos masterPos) {
-        // Remove all dummy blocks in 3x3x2 area
+        // Remove all dummy blocks in 3x3 ground-level area
         for (int x = -1; x <= 1; x++) {
-            for (int y = 0; y <= 1; y++) {
-                for (int z = -1; z <= 1; z++) {
-                    if (x == 0 && y == 0 && z == 0) continue;
-                    
-                    BlockPos dummyPos = masterPos.offset(x, y, z);
-                    BlockState dummyState = level.getBlockState(dummyPos);
-                    if (dummyState.getBlock() instanceof StableDummyBlock) {
-                        level.removeBlock(dummyPos, false);
-                    }
+            for (int z = -1; z <= 1; z++) {
+                if (x == 0 && z == 0) continue;
+                
+                BlockPos dummyPos = masterPos.offset(x, 0, z);
+                BlockState dummyState = level.getBlockState(dummyPos);
+                if (dummyState.getBlock() instanceof StableDummyBlock) {
+                    level.removeBlock(dummyPos, false);
                 }
             }
         }
@@ -154,6 +141,13 @@ public class StableBlock extends BaseEntityBlock {
             return ItemInteractionResult.SUCCESS;
         }
         
+        // Check if feeding animals
+        if ((stack.is(Items.WHEAT) || stack.is(Items.WHEAT_SEEDS)) && stable.canFeed(stack)) {
+            stable.feed(stack);
+            stack.shrink(1);
+            return ItemInteractionResult.SUCCESS;
+        }
+        
         // Check if collecting milk
         if (stack.is(Items.BUCKET) && stable.canCollectMilk()) {
             stable.collectMilk(player);
@@ -187,19 +181,24 @@ public class StableBlock extends BaseEntityBlock {
     
     @Override
     public boolean canHarvestBlock(BlockState state, BlockGetter level, BlockPos pos, Player player) {
-        BlockEntity be = level.getBlockEntity(pos);
-        if (be instanceof StableBlockEntity stable) {
-            return !stable.hasAnimal();
-        }
-        return super.canHarvestBlock(state, level, pos, player);
+        return true;
     }
     
     @Override
     public float getDestroyProgress(BlockState state, Player player, BlockGetter level, BlockPos pos) {
         BlockEntity be = level.getBlockEntity(pos);
         if (be instanceof StableBlockEntity stable && stable.hasAnimal()) {
-            return -1.0F;
+            return 0.0F;
         }
         return super.getDestroyProgress(state, player, level, pos);
+    }
+    
+    @Override
+    public boolean onDestroyedByPlayer(BlockState state, Level level, BlockPos pos, Player player, boolean willHarvest, net.minecraft.world.level.material.FluidState fluid) {
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be instanceof StableBlockEntity stable && stable.hasAnimal()) {
+            return false;
+        }
+        return super.onDestroyedByPlayer(state, level, pos, player, willHarvest, fluid);
     }
 }

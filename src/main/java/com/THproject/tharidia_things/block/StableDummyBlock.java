@@ -32,9 +32,6 @@ public class StableDummyBlock extends Block {
     public static final MapCodec<StableDummyBlock> CODEC = simpleCodec(StableDummyBlock::new);
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
     
-    // Full block collision
-    private static final VoxelShape SHAPE = Shapes.block();
-    
     public StableDummyBlock(BlockBehaviour.Properties properties) {
         super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH));
@@ -45,6 +42,7 @@ public class StableDummyBlock extends Block {
             .mapColor(MapColor.WOOD)
             .strength(2.5F)
             .noOcclusion()
+            .noCollission()
             .noLootTable());
     }
     
@@ -64,13 +62,8 @@ public class StableDummyBlock extends Block {
     }
     
     @Override
-    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return SHAPE;
-    }
-    
-    @Override
     public VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return SHAPE;
+        return Shapes.empty();
     }
     
     @Override
