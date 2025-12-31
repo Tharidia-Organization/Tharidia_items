@@ -2,10 +2,12 @@ package com.THproject.tharidia_things.block;
 
 import com.THproject.tharidia_things.TharidiaThings;
 import com.THproject.tharidia_things.block.entity.StableBlockEntity;
+import com.THproject.tharidia_things.registry.BabyMobRegistry;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -133,18 +135,31 @@ public class StableBlock extends BaseEntityBlock {
         }
         
         // Check if placing baby animal
-        if (stack.is(TharidiaThings.BABY_COW.get()) && stable.placeAnimal("cow")) {
-            stack.shrink(1);
-            return ItemInteractionResult.SUCCESS;
-        } else if (stack.is(TharidiaThings.BABY_CHICKEN.get()) && stable.placeAnimal("chicken")) {
+        EntityType<?> entityType = BabyMobRegistry.getEntityTypeForItem(stack.getItem());
+        if (entityType != null && stable.placeAnimal(entityType)) {
             stack.shrink(1);
             return ItemInteractionResult.SUCCESS;
         }
         
-        // Check if feeding animals
+        // Check if adding animal feed to feeder
+        if (stack.is(TharidiaThings.ANIMAL_FEED.get()) && stable.canAddAnimalFeed()) {
+            stable.addAnimalFeed();
+            stack.shrink(1);
+            return ItemInteractionResult.SUCCESS;
+        }
+        
+        // Check if feeding animals for breeding
         if ((stack.is(Items.WHEAT) || stack.is(Items.WHEAT_SEEDS)) && stable.canFeed(stack)) {
             stable.feed(stack);
             stack.shrink(1);
+            return ItemInteractionResult.SUCCESS;
+        }
+        
+        // Check if refilling water with water bucket
+        if (stack.is(Items.WATER_BUCKET) && stable.canRefillWater()) {
+            stable.refillWater();
+            stack.shrink(1);
+            player.addItem(new ItemStack(Items.BUCKET));
             return ItemInteractionResult.SUCCESS;
         }
         

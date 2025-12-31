@@ -112,6 +112,12 @@ public class TharidiaThingsClient {
             TharidiaThings.PIETRO.get(), 
             RenderType.cutout()
         );
+        
+        // Set render type for Stable block to support transparency
+        net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(
+            TharidiaThings.STABLE.get(), 
+            RenderType.cutout()
+        );
     }
 
     @SubscribeEvent

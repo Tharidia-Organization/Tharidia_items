@@ -48,6 +48,8 @@ import com.THproject.tharidia_things.item.CopperLamaCortaItem;
 import com.THproject.tharidia_things.item.BattleGauntlet;
 import com.THproject.tharidia_things.item.CopperElsaItem;
 import com.THproject.tharidia_things.item.DiceItem;
+import com.THproject.tharidia_things.item.AnimalFeedItem;
+import com.THproject.tharidia_things.registry.BabyMobRegistry;
 import com.THproject.tharidia_things.client.ClientPacketHandler;
 import com.THproject.tharidia_things.entity.ModEntities;
 import com.THproject.tharidia_things.compoundTag.BattleGauntleAttachments;
@@ -250,12 +252,8 @@ public class TharidiaThings {
             () -> new CopperElsaItem(new Item.Properties()));
     public static final DeferredItem<Item> DICE = ITEMS.register("dice",
             () -> new DiceItem(new Item.Properties().stacksTo(16)));
-    
-    // Temporary baby animal items
-    public static final DeferredItem<Item> BABY_COW = ITEMS.register("baby_cow",
-            () -> new Item(new Item.Properties().stacksTo(16)));
-    public static final DeferredItem<Item> BABY_CHICKEN = ITEMS.register("baby_chicken",
-            () -> new Item(new Item.Properties().stacksTo(16)));
+    public static final DeferredItem<Item> ANIMAL_FEED = ITEMS.register("animal_feed",
+            () -> new AnimalFeedItem(new Item.Properties().stacksTo(64)));
 
     // Battle Gauntlet
     public static final DeferredItem<Item> BATTLE_GAUNTLE = ITEMS.register("battle_gauntlet",
@@ -285,10 +283,12 @@ public class TharidiaThings {
                         output.accept(COPPER_LAMA_CORTA.get());
                         output.accept(COPPER_ELSA.get());
                         output.accept(DICE.get());
+                        output.accept(ANIMAL_FEED.get());
                         output.accept(BATTLE_GAUNTLE.get());
                         output.accept(STABLE_ITEM.get());
-                        output.accept(BABY_COW.get());
-                        output.accept(BABY_CHICKEN.get());
+                        
+                        // Add all dynamically registered baby mob items
+                        BabyMobRegistry.addToCreativeTab(output);
                     }).build());
 
     // The constructor for the mod class is the first code that is run when your mod
@@ -312,6 +312,10 @@ public class TharidiaThings {
 
         // Register the Deferred Register to the mod event bus so blocks get registered
         BLOCKS.register(modEventBus);
+        
+        // Register dynamic baby mob items BEFORE items are registered
+        BabyMobRegistry.registerBabyMobs();
+        
         // Register the Deferred Register to the mod event bus so items get registered
         ITEMS.register(modEventBus);
         // Register the Deferred Register to the mod event bus so block entities get registered
@@ -398,6 +402,8 @@ public class TharidiaThings {
         LOGGER.info("HELLO FROM COMMON SETUP");
 
         event.enqueueWork(() -> {
+            // Build reverse lookup for baby mob registry
+            BabyMobRegistry.buildReverseLookup();
             Stats.CUSTOM.get(ModStats.LAMA_CORTA_KILL.get(), StatFormatter.DEFAULT);
             Stats.CUSTOM.get(ModStats.LANCIA_KILL.get(), StatFormatter.DEFAULT);
             Stats.CUSTOM.get(ModStats.MARTELLI_KILL.get(), StatFormatter.DEFAULT);

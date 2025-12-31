@@ -29,6 +29,9 @@
   "item.tharidiathings.copper_lama_corta": "Lama Corta (Copper)",
   "item.tharidiathings.battle_gauntlet": "Battle Gauntlet",
   "item.tharidiathings.dice": "Dice",
+  "item.tharidiathings.animal_feed": "Animal Feed",
+  "item.tharidiathings.baby_mob.tooltip": "Baby %s",
+  "block.tharidiathings.stable": "Stable",
 
   "item.tharidiathings.pinza.holding.hot_iron": "Holding: Hot Iron",
   "item.tharidiathings.pinza.holding.hot_gold": "Holding: Hot Gold",
