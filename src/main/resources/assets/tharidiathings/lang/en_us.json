@@ -1,5 +1,5 @@
 {
-  "itemGroup.tharidiathings": "Tharidia Cose",
+  "itemGroup.tharidiathings": "Tharidia Things",
   "block.tharidiathings.pietro": "Realm",
   "block.tharidiathings.claim": "Claim",
 
@@ -80,5 +80,14 @@
   "message.tharidiathings.battle.player_invite": "You are inviting %s to a battle",
   "message.tharidiathings.battle.start": "Battle Start!",
   "message.tharidiathings.battle.win": "You win the battle",
-  "message.tharidiathings.battle.lose": "You lose the battle"
+  "message.tharidiathings.battle.lose": "You lose the battle",
+
+  "diet.category.grain": "Grains",
+  "diet.category.protein": "Proteins",
+  "diet.category.vegetable": "Vegetables",
+  "diet.category.fruit": "Fruits",
+  "diet.category.sugar": "Sugars",
+  "diet.category.water": "Hydration",
+
+  "diet.tooltip.header": "Diet Values:"
 }

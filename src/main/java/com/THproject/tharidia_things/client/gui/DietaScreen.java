@@ -214,12 +214,12 @@ public class DietaScreen extends Screen {
         java.util.List<BarInfo> bars = new java.util.ArrayList<>(DietCategory.COUNT);
         DietProfile maxProfile = DietRegistry.getMaxValues();
 
-        addBar(bars, "Cereali", DietCategory.GRAIN, 0xFFDAA520, dietData, maxProfile);
-        addBar(bars, "Proteine", DietCategory.PROTEIN, 0xFFCD5C5C, dietData, maxProfile);
-        addBar(bars, "Verdure", DietCategory.VEGETABLE, 0xFF228B22, dietData, maxProfile);
-        addBar(bars, "Frutta", DietCategory.FRUIT, 0xFFFF6347, dietData, maxProfile);
-        addBar(bars, "Zuccheri", DietCategory.SUGAR, 0xFFFFB6C1, dietData, maxProfile);
-        addBar(bars, "Idratazione", DietCategory.WATER, 0xFF1E90FF, dietData, maxProfile);
+        addBar(bars, Component.translatable("diet.category.grain").getString(), DietCategory.GRAIN, 0xFFDAA520, dietData, maxProfile);
+        addBar(bars, Component.translatable("diet.category.protein").getString(), DietCategory.PROTEIN, 0xFFCD5C5C, dietData, maxProfile);
+        addBar(bars, Component.translatable("diet.category.vegetable").getString(), DietCategory.VEGETABLE, 0xFF228B22, dietData, maxProfile);
+        addBar(bars, Component.translatable("diet.category.fruit").getString(), DietCategory.FRUIT, 0xFFFF6347, dietData, maxProfile);
+        addBar(bars, Component.translatable("diet.category.sugar").getString(), DietCategory.SUGAR, 0xFFFFB6C1, dietData, maxProfile);
+        addBar(bars, Component.translatable("diet.category.water").getString(), DietCategory.WATER, 0xFF1E90FF, dietData, maxProfile);
 
         return bars;
     }
