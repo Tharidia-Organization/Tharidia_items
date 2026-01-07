@@ -20,7 +20,7 @@ public class PreLoginNameScreen extends Screen {
     private boolean nameSubmitted = false;
 
     public PreLoginNameScreen() {
-        super(Component.literal("Choose Your Name"));
+        super(Component.translatable("gui.tharidiathings.name_selection"));
     }
 
     @Override
@@ -31,9 +31,9 @@ public class PreLoginNameScreen extends Screen {
         int centerY = this.height / 2;
         
         // Create text field for name input
-        this.nameField = new EditBox(this.font, centerX - 80, centerY - 10, 160, 20, Component.literal("Name"));
+        this.nameField = new EditBox(this.font, centerX - 80, centerY - 10, 160, 20, Component.translatable("gui.tharidiathings.name_entry.field_label"));
         this.nameField.setMaxLength(16);
-        this.nameField.setHint(Component.literal("Enter your name..."));
+        this.nameField.setHint(Component.translatable("gui.tharidiathings.name_entry.hint"));
         this.nameField.setResponder(text -> {
             // Enable confirm button only if text is not empty
             if (this.confirmButton != null) {
@@ -44,7 +44,7 @@ public class PreLoginNameScreen extends Screen {
         
         // Create confirm button
         this.confirmButton = Button.builder(
-            Component.literal("Confirm"),
+            Component.translatable("gui.tharidiathings.name_entry.confirm_button"),
             button -> this.confirmName())
             .bounds(centerX - 50, centerY + 25, 100, 20)
             .build();
@@ -63,7 +63,7 @@ public class PreLoginNameScreen extends Screen {
         String chosenName = this.nameField.getValue().trim();
         
         if (chosenName.isEmpty()) {
-            this.errorMessage = "Name cannot be empty!";
+            this.errorMessage = Component.translatable("gui.tharidiathings.name_entry.error.empty").getString();
             this.errorTimer = 60; // Show error for 3 seconds (60 ticks)
             return;
         }
@@ -77,7 +77,7 @@ public class PreLoginNameScreen extends Screen {
         this.nameField.setEditable(false);
         
         // Show waiting message
-        this.errorMessage = "§aSubmitting name...";
+        this.errorMessage = Component.translatable("gui.tharidiathings.name_entry.status.submitting").getString();
         this.errorTimer = 100;
         
         // Close screen after a short delay
@@ -112,12 +112,12 @@ public class PreLoginNameScreen extends Screen {
         guiGraphics.fill(panelX + 2, panelY + 2, panelX + panelWidth - 2, panelY + panelHeight - 2, 0xFF3C3C3C);
         
         // Render title centered at the top
-        Component titleText = Component.literal("Inserisci il tuo Nome");
+        Component titleText = Component.translatable("gui.tharidiathings.name_entry.title");
         int titleX = centerX - this.font.width(titleText) / 2;
         guiGraphics.drawString(this.font, titleText, titleX, panelY + 15, 0xFFFFFF, true);
         
         // Render instructions
-        Component instructions = Component.literal("Questo è il nome del tuo personaggio");
+        Component instructions = Component.translatable("gui.tharidiathings.name_entry.instructions");
         int instructionsX = centerX - this.font.width(instructions) / 2;
         guiGraphics.drawString(this.font, instructions, instructionsX, panelY + 35, 0xAAAAAA, false);
         

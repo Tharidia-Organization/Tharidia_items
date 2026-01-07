@@ -24,7 +24,7 @@ public class DietaScreen extends Screen {
     private static final int OVERLAY_HEIGHT = 81;
     
     public DietaScreen(InventoryScreen parentScreen) {
-        super(Component.literal("Dieta"));
+        super(Component.translatable("gui.tharidiathings.diet.title"));
         this.parentScreen = parentScreen;
     }
     

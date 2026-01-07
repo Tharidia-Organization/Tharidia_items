@@ -25,7 +25,7 @@ public class TradeRequestScreen extends Screen {
         ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, "textures/gui/trade_acceptation.png");
 
     public TradeRequestScreen(UUID requesterId, String requesterName) {
-        super(Component.literal("Richiesta di Scambio"));
+        super(Component.translatable("gui.tharidiathings.trade_request.title"));
         this.requesterId = requesterId;
         this.requesterName = requesterName;
     }
@@ -39,13 +39,13 @@ public class TradeRequestScreen extends Screen {
         
         // Accept button (green-ish)
         this.addRenderableWidget(Button.builder(
-            Component.literal("§2§l✓ Accetta"),
+            Component.translatable("gui.tharidiathings.trade_request.button.accept"),
             button -> acceptTrade()
         ).bounds(centerX - 80, centerY + 20, 70, 20).build());
         
         // Decline button (red-ish)
         this.addRenderableWidget(Button.builder(
-            Component.literal("§4§l✗ Rifiuta"),
+            Component.translatable("gui.tharidiathings.trade_request.button.decline"),
             button -> declineTrade()
         ).bounds(centerX + 10, centerY + 20, 70, 20).build());
     }
@@ -62,14 +62,14 @@ public class TradeRequestScreen extends Screen {
         renderPanelTexture(guiGraphics, panelX, panelY);
         
         // Draw title
-        Component title = Component.literal("§6§l⚜ Richiesta di Scambio ⚜");
+        Component title = Component.translatable("gui.tharidiathings.trade_request.panel_title");
         int titleWidth = this.font.width(title);
         guiGraphics.drawString(this.font, title, centerX - titleWidth / 2, panelY + 15, 0xFFFFFF, true);
         
         // Draw message
-        Component message1 = Component.literal("§7Il mercante §f" + requesterName);
-        Component message2 = Component.literal("§7desidera commerciare con voi.");
-        Component message3 = Component.literal("§7Accettate la proposta?");
+        Component message1 = Component.translatable("gui.tharidiathings.trade_request.message_1", requesterName);
+        Component message2 = Component.translatable("gui.tharidiathings.trade_request.message_2");
+        Component message3 = Component.translatable("gui.tharidiathings.trade_request.message_3");
         
         int msg1Width = this.font.width(message1);
         int msg2Width = this.font.width(message2);
