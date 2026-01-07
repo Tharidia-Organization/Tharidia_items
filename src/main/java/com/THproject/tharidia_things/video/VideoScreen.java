@@ -194,10 +194,4 @@ public class VideoScreen {
         
         return screen;
     }
-    
-    public enum VideoPlaybackState {
-        STOPPED,
-        PLAYING,
-        PAUSED
-    }
 }
