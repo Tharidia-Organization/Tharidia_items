@@ -60,6 +60,43 @@
   
   "gui.tharidiathings.name_selection": "Scegli il Tuo Nome",
 
+  "gui.tharidiathings.common.unknown": "Sconosciuto",
+  "gui.tharidiathings.common.player_unknown": "Sconosciuto (%s)",
+
+  "gui.tharidiathings.realm.title": "Reame",
+  "gui.tharidiathings.realm.currency_label": "Monete",
+  "gui.tharidiathings.realm.tab.expansion": "Espansione",
+  "gui.tharidiathings.realm.tab.claims": "Rivendicazioni",
+  "gui.tharidiathings.realm.tab.dungeon": "Dungeon",
+
+  "gui.tharidiathings.realm.lord_label": "§6§lSignore:",
+  "gui.tharidiathings.realm.size_label": "§6§lDimensione del Reame:",
+  "gui.tharidiathings.realm.size_value": "§e§lLivello %s",
+  "gui.tharidiathings.realm.max_level": "§5§lLivello massimo raggiunto",
+  "gui.tharidiathings.realm.expansion_cost_label": "§6§lCosto Espansione:",
+  "gui.tharidiathings.realm.coins_needed": "§6Monete necessarie: %s",
+  "gui.tharidiathings.realm.deposit_hint_1": "Deposita patate nello slot in alto.",
+  "gui.tharidiathings.realm.deposit_hint_2": "Saranno convertite in monete.",
+
+  "gui.tharidiathings.realm.claims_title": "§6§lRivendicazioni",
+  "gui.tharidiathings.realm.treasury": "§6§lTesoro: §e%s",
+  "gui.tharidiathings.realm.hierarchy_title": "§6§lGerarchia",
+  "gui.tharidiathings.realm.rank_change": "Cambia",
+  "gui.tharidiathings.realm.rank_select_title": "Seleziona grado",
+  "gui.tharidiathings.realm.rank.colono": "Colono",
+  "gui.tharidiathings.realm.rank.miliziano": "Miliziano",
+  "gui.tharidiathings.realm.rank.guardia": "Guardia",
+  "gui.tharidiathings.realm.rank.consigliere": "Consigliere",
+  "gui.tharidiathings.realm.rank.lord": "Signore",
+
+  "gui.tharidiathings.realm.dungeon_title": "§6§lDungeon",
+  "gui.tharidiathings.realm.dungeon_enter_label": "§6§lEntra nel Dungeon:",
+  "gui.tharidiathings.realm.dungeon_desc_1": "Affronta prove e mostri",
+  "gui.tharidiathings.realm.dungeon_desc_2": "per ottenere ricompense per il reame.",
+  "gui.tharidiathings.realm.queue_status_label": "§6§lStato coda:",
+  "gui.tharidiathings.realm.queue_ready": "§5§lPronto",
+  "gui.tharidiathings.realm.dungeon.enter_button": "Entra",
+
   "gui.tharidiathings.name_entry.title": "Inserisci il tuo Nome",
   "gui.tharidiathings.name_entry.instructions": "Questo è il nome del tuo personaggio",
   "gui.tharidiathings.name_entry.field_label": "Nome",
