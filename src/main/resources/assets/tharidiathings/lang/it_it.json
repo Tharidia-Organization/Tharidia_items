@@ -4,7 +4,7 @@
   "block.tharidiathings.claim": "Rivendicazione",
 
   "container.tharidiathings.claim": "Rivendicazione",
-  "container.tharidiathings.pietro": "Le cose di Tharidia",
+  "container.tharidiathings.pietro": "Reame",
 
   "key.categories.tharidiathings": "Tharidia Things",
   "key.tharidiathings.toggle_claim_boundaries": "Attiva/Disattiva Confini Rivendicazione",
@@ -28,6 +28,7 @@
   "item.tharidiathings.copper_lama_lunga": "Lama Lunga (Rame)",
   "item.tharidiathings.copper_lama_corta": "Lama Corta (Rame)",
   "item.tharidiathings.battle_gauntlet": "Guanto di Battaglia",
+  "item.tharidiathings.dice": "Dado",
 
   "item.tharidiathings.pinza.holding.hot_iron": "Tenendo: Ferro Caldo",
   "item.tharidiathings.pinza.holding.hot_gold": "Tenendo: Oro Caldo",

@@ -9,6 +9,7 @@ import com.THproject.tharidia_things.client.video.VideoToolsManager;
 import com.THproject.tharidia_things.command.*;
 import com.THproject.tharidia_things.config.CropProtectionConfig;
 import com.THproject.tharidia_things.config.FatigueConfig;
+import com.THproject.tharidia_things.config.StaminaConfig;
 import com.THproject.tharidia_things.database.DatabaseManager;
 import com.THproject.tharidia_things.diet.DietAttachments;
 import com.THproject.tharidia_things.diet.DietDataLoader;
@@ -67,6 +68,8 @@ import com.THproject.tharidia_things.network.SyncGateRestrictionsPacket;
 import com.THproject.tharidia_things.realm.RealmManager;
 import com.THproject.tharidia_things.registry.ModAttributes;
 import com.THproject.tharidia_things.registry.ModStats;
+import com.THproject.tharidia_things.stamina.StaminaAttachments;
+import com.THproject.tharidia_things.stamina.StaminaTagMappingsLoader;
 import net.minecraft.stats.Stats;
 import net.minecraft.stats.StatFormatter;
 import com.THproject.tharidia_things.servertransfer.ServerTransferManager;
@@ -304,6 +307,7 @@ public class TharidiaThings {
         FatigueAttachments.ATTACHMENT_TYPES.register(modEventBus);
         DietAttachments.ATTACHMENT_TYPES.register(modEventBus);
         CharacterAttachments.ATTACHMENT_TYPES.register(modEventBus);
+        StaminaAttachments.ATTACHMENT_TYPES.register(modEventBus);
 
         // Register custom stats
         ModStats.register(modEventBus);
@@ -334,6 +338,7 @@ public class TharidiaThings {
         NeoForge.EVENT_BUS.register(PreLoginNameHandler.class);
         // Register the fatigue handler
         NeoForge.EVENT_BUS.register(FatigueHandler.class);
+        NeoForge.EVENT_BUS.register(StaminaHandler.class);
         NeoForge.EVENT_BUS.register(DietHandler.class);
         // Register the trade interaction handler
         NeoForge.EVENT_BUS.register(TradeInteractionHandler.class);
@@ -411,6 +416,10 @@ public class TharidiaThings {
                     FatigueSyncPacket.TYPE,
                     FatigueSyncPacket.STREAM_CODEC,
                     ClientPacketHandler::handleFatigueSync);
+            registrar.playToClient(
+                    StaminaSyncPacket.TYPE,
+                    StaminaSyncPacket.STREAM_CODEC,
+                    ClientPacketHandler::handleStaminaSync);
             registrar.playToClient(
                     DietSyncPacket.TYPE,
                     DietSyncPacket.STREAM_CODEC,
@@ -527,6 +536,11 @@ public class TharidiaThings {
             registrar.playToClient(
                     FatigueSyncPacket.TYPE,
                     FatigueSyncPacket.STREAM_CODEC,
+                    (packet, context) -> {
+                    });
+            registrar.playToClient(
+                    StaminaSyncPacket.TYPE,
+                    StaminaSyncPacket.STREAM_CODEC,
                     (packet, context) -> {
                     });
             registrar.playToClient(
@@ -884,6 +898,8 @@ public class TharidiaThings {
         event.addListener(new DietDataLoader());
         event.addListener(new CropProtectionConfig());
         event.addListener(new FatigueConfig());
+        event.addListener(new StaminaConfig());
+        event.addListener(new StaminaTagMappingsLoader());
 
         ItemCatalogueConfig.reload();
         ItemAttributeHandler.reload();

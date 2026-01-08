@@ -89,7 +89,7 @@ description='''${mod_description}'''
 # Tharidia Tweaks dependency for name selection functionality (SERVER SIDE ONLY)
 [[dependencies.${mod_id}]]
     modId="tharidiatweaks"
-    type="required"
+    type="optional"
     versionRange="[1.1.4,)"
     ordering="AFTER"
     side="SERVER"
