@@ -17,6 +17,7 @@ public class StaminaData implements INBTSerializable<CompoundTag> {
     private boolean inCombat;
     private int combatTicksRemaining;
     private int regenDelayTicksRemaining;
+    private long bowDrawLockUntilGameTime;
     private final List<StaminaModifier> modifiers = new ArrayList<>();
 
     public StaminaData() {
@@ -26,6 +27,7 @@ public class StaminaData implements INBTSerializable<CompoundTag> {
         this.inCombat = false;
         this.combatTicksRemaining = 0;
         this.regenDelayTicksRemaining = 0;
+        this.bowDrawLockUntilGameTime = 0L;
     }
 
     public float getCurrentStamina() {
@@ -76,6 +78,14 @@ public class StaminaData implements INBTSerializable<CompoundTag> {
         this.regenDelayTicksRemaining = Math.max(0, regenDelayTicksRemaining);
     }
 
+    public long getBowDrawLockUntilGameTime() {
+        return bowDrawLockUntilGameTime;
+    }
+
+    public void setBowDrawLockUntilGameTime(long bowDrawLockUntilGameTime) {
+        this.bowDrawLockUntilGameTime = Math.max(0L, bowDrawLockUntilGameTime);
+    }
+
     public List<StaminaModifier> getModifiers() {
         return List.copyOf(modifiers);
     }
@@ -108,6 +118,7 @@ public class StaminaData implements INBTSerializable<CompoundTag> {
         tag.putBoolean("InCombat", inCombat);
         tag.putInt("CombatTicksRemaining", combatTicksRemaining);
         tag.putInt("RegenDelayTicksRemaining", regenDelayTicksRemaining);
+        tag.putLong("BowDrawLockUntil", bowDrawLockUntilGameTime);
 
         ListTag modifierTags = new ListTag();
         for (StaminaModifier modifier : modifiers) {
@@ -125,6 +136,7 @@ public class StaminaData implements INBTSerializable<CompoundTag> {
         inCombat = tag.getBoolean("InCombat");
         combatTicksRemaining = tag.getInt("CombatTicksRemaining");
         regenDelayTicksRemaining = tag.getInt("RegenDelayTicksRemaining");
+        bowDrawLockUntilGameTime = tag.contains("BowDrawLockUntil") ? Math.max(0L, tag.getLong("BowDrawLockUntil")) : 0L;
 
         modifiers.clear();
         if (tag.contains("Modifiers", Tag.TAG_LIST)) {

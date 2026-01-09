@@ -1,5 +1,6 @@
 package com.THproject.tharidia_things.config;
 
+import com.THproject.tharidia_things.Config;
 import com.THproject.tharidia_things.stamina.StaminaComputedStats;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -183,6 +184,29 @@ public class StaminaConfig extends SimpleJsonResourceReloadListener {
 
     public static int getRegenDelayAfterConsumptionTicks() {
         return Math.max(0, Math.round(regenDelayAfterConsumptionSeconds * 20.0f));
+    }
+
+    public static boolean isCombatRegenReductionEnabled() {
+        return Config.STAMINA_COMBAT_REGEN_REDUCTION_ENABLED.get();
+    }
+
+    public static int getCombatRegenReductionPercent() {
+        return Mth.clamp(Config.STAMINA_COMBAT_REGEN_REDUCTION_PERCENT.get(), 0, 100);
+    }
+
+    public static float computeRegenMultiplier(boolean inCombat, boolean combatReductionEnabled, int combatRegenReductionPercent) {
+        if (!inCombat) {
+            return 1.0f;
+        }
+        if (!combatReductionEnabled) {
+            return 0.0f;
+        }
+        int clamped = Mth.clamp(combatRegenReductionPercent, 0, 100);
+        return 1.0f - (clamped / 100.0f);
+    }
+
+    public static float getRegenMultiplier(boolean inCombat) {
+        return computeRegenMultiplier(inCombat, isCombatRegenReductionEnabled(), getCombatRegenReductionPercent());
     }
 
     public static float computeAttackCurveMultiplier(float weaponWeight) {

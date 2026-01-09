@@ -16,6 +16,8 @@
   "tharidiathings.configuration.logDirtBlock": "Registra Blocco Terra",
   "tharidiathings.configuration.magicNumberIntroduction": "Testo Numero Magico",
   "tharidiathings.configuration.magicNumber": "Numero Magico",
+  "tharidiathings.configuration.staminaCombatRegenReductionEnabled": "Riduci Ricarica Stamina In Combattimento",
+  "tharidiathings.configuration.staminaCombatRegenReductionPercent": "Riduzione Ricarica Stamina In Combattimento (%)",
 
   "item.tharidiathings.hot_iron": "Ferro Caldo",
   "item.tharidiathings.hot_gold": "Oro Caldo",

@@ -9,7 +9,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 
-public record StaminaSyncPacket(float currentStamina, float maxStamina, boolean inCombat) implements CustomPacketPayload {
+public record StaminaSyncPacket(float currentStamina, float maxStamina, boolean inCombat, long bowDrawLockUntilGameTime) implements CustomPacketPayload {
     public static final Type<StaminaSyncPacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, "stamina_sync"));
 
@@ -21,6 +21,8 @@ public record StaminaSyncPacket(float currentStamina, float maxStamina, boolean 
                     StaminaSyncPacket::maxStamina,
                     net.minecraft.network.codec.ByteBufCodecs.BOOL,
                     StaminaSyncPacket::inCombat,
+                    net.minecraft.network.codec.ByteBufCodecs.VAR_LONG,
+                    StaminaSyncPacket::bowDrawLockUntilGameTime,
                     StaminaSyncPacket::new
             );
 
@@ -34,6 +36,6 @@ public record StaminaSyncPacket(float currentStamina, float maxStamina, boolean 
         data.setMaxStamina(packet.maxStamina());
         data.setCurrentStamina(packet.currentStamina());
         data.setInCombat(packet.inCombat());
+        data.setBowDrawLockUntilGameTime(packet.bowDrawLockUntilGameTime());
     }
 }
-

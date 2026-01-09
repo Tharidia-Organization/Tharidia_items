@@ -16,6 +16,8 @@
   "tharidiathings.configuration.logDirtBlock": "Log Dirt Block",
   "tharidiathings.configuration.magicNumberIntroduction": "Magic Number Text",
   "tharidiathings.configuration.magicNumber": "Magic Number",
+  "tharidiathings.configuration.staminaCombatRegenReductionEnabled": "Reduce Stamina Regen In Combat",
+  "tharidiathings.configuration.staminaCombatRegenReductionPercent": "Combat Stamina Regen Reduction (%)",
 
   "item.tharidiathings.hot_iron": "Hot Iron",
   "item.tharidiathings.hot_gold": "Hot Gold",
