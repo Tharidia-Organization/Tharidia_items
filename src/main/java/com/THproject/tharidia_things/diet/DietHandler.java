@@ -92,6 +92,7 @@ public class DietHandler {
         
         DietData data = serverPlayer.getData(DietAttachments.DIET_DATA);
         initializeIfNeeded(serverPlayer, data);
+        data.setLastDecayTimeMs(System.currentTimeMillis());
         DietEffectApplier.apply(serverPlayer, data);
         syncIfNeeded(serverPlayer, data, true);
         
