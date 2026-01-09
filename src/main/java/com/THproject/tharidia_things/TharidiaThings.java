@@ -512,6 +512,11 @@ public class TharidiaThings {
                     DietProfileSyncPacket.STREAM_CODEC,
                     ClientPacketHandler::handleDietProfileSync);
 
+            registrar.playToClient(
+                    WeightConfigSyncPacket.TYPE,
+                    WeightConfigSyncPacket.STREAM_CODEC,
+                    ClientPacketHandler::handleWeightConfigSync);
+
             // Register dummy handlers for server-bound packets (client-side only for handshake)
             // Note: All server-bound packets are registered below with actual handlers
             // No dummy handlers needed here as they're registered with real handlers
@@ -645,6 +650,10 @@ public class TharidiaThings {
                     DietProfileSyncPacket.TYPE,
                     DietProfileSyncPacket.STREAM_CODEC,
                     (packet, context) -> {});
+            registrar.playToClient(
+                    WeightConfigSyncPacket.TYPE,
+                    WeightConfigSyncPacket.STREAM_CODEC,
+                    (packet, context) -> {});
             LOGGER.info("Server-side packet registration completed (dummy handlers)");
         }
 
@@ -718,6 +727,18 @@ public class TharidiaThings {
 
             // Sync all video screens to the player
             syncAllVideoScreensToPlayer((ServerPlayer) event.getEntity(), serverLevel);
+
+            PacketDistributor.sendToPlayer((ServerPlayer) event.getEntity(), WeightConfigSyncPacket.fromCurrentRegistry());
+        }
+    }
+
+    @SubscribeEvent
+    public void onDatapackSync(net.neoforged.neoforge.event.OnDatapackSyncEvent event) {
+        WeightConfigSyncPacket packet = WeightConfigSyncPacket.fromCurrentRegistry();
+        if (event.getPlayer() != null) {
+            PacketDistributor.sendToPlayer(event.getPlayer(), packet);
+        } else {
+            PacketDistributor.sendToAllPlayers(packet);
         }
     }
 

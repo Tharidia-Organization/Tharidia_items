@@ -80,6 +80,10 @@ public class WeightRegistry {
     public static boolean isLoaded() {
         return weightData != null;
     }
+
+    public static WeightData getWeightData() {
+        return weightData;
+    }
     
     /**
      * Clears the weight data (for reload)

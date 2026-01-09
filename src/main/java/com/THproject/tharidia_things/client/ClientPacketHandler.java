@@ -256,6 +256,15 @@ public class ClientPacketHandler {
             }
         });
     }
+
+    public static void handleWeightConfigSync(WeightConfigSyncPacket packet, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            Player player = Minecraft.getInstance().player;
+            if (player != null) {
+                WeightConfigSyncPacket.handle(packet, player);
+            }
+        });
+    }
     
     public static void handleFatigueWarning(FatigueWarningPacket packet, IPayloadContext context) {
         context.enqueueWork(() -> {
