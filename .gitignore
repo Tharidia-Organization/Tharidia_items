@@ -51,3 +51,4 @@ repo
 /.obsidian/graph.json
 /.obsidian/workspace.json
 /src/generated/*
+/.claude/

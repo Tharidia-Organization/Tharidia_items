@@ -158,7 +158,14 @@ public class VLCVideoPlayer {
     private void initialize() {
         try {
             TharidiaThings.LOGGER.info("[VIDEO] Initializing player for screen {}", screen.getId());
-            
+
+            // Register shutdown hook to ensure process cleanup on JVM exit
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                if (!isReleased.get()) {
+                    forceCleanupProcesses();
+                }
+            }, "VLCVideoPlayer-Shutdown-" + screen.getId()));
+
             // Pre-allocate frame buffers
             frameBuffer1 = new byte[FRAME_SIZE];
             frameBuffer2 = new byte[FRAME_SIZE];
@@ -202,23 +209,23 @@ public class VLCVideoPlayer {
         TharidiaThings.LOGGER.info("[VIDEO] Loading: {}", url);
         
         // Run loading in background to not block render thread
-        new Thread(() -> {
+        Thread loaderThread = new Thread(() -> {
             try {
                 boolean isYouTubeOrTwitch = YouTubeUrlExtractor.isValidYouTubeUrl(url) || url.contains("twitch.tv");
-                
+
                 if (isYouTubeOrTwitch) {
                     String platform = url.contains("twitch.tv") ? "Twitch" : "YouTube";
                     TharidiaThings.LOGGER.info("[VIDEO] Extracting {} stream URL...", platform);
-                    
+
                     // Use YouTubeUrlExtractor which has proper executable finding logic
                     String streamUrl = YouTubeUrlExtractor.getBestStreamUrl(url);
                     if (streamUrl == null) {
                         TharidiaThings.LOGGER.error("[VIDEO] Failed to extract stream URL");
                         return;
                     }
-                    
+
                     TharidiaThings.LOGGER.info("[VIDEO] Stream URL ready, starting synchronized playback");
-                    
+
                     // Start unified process with both video and audio
                     startUnifiedProcess(streamUrl);
                 } else {
@@ -226,16 +233,18 @@ public class VLCVideoPlayer {
                     TharidiaThings.LOGGER.info("[VIDEO] Using direct URL");
                     startUnifiedProcess(url);
                 }
-                
+
                 // Note: startUnifiedProcess() calls startPipeReaders() which starts all threads
                 // and sets running.set(true) internally
-                
+
                 TharidiaThings.LOGGER.info("[VIDEO] Playback started");
-                
+
             } catch (Exception e) {
                 TharidiaThings.LOGGER.error("[VIDEO] Failed to load video", e);
             }
-        }, "VideoLoader").start();
+        }, "VideoLoader");
+        loaderThread.setDaemon(true);
+        loaderThread.start();
     }
     
     private void startUnifiedProcess(String url) throws Exception {
@@ -847,6 +856,27 @@ public class VLCVideoPlayer {
         TharidiaThings.LOGGER.info("[VIDEO] Player released");
     }
     
+    /**
+     * Force cleanup of FFmpeg processes during JVM shutdown.
+     * Called from shutdown hook - must be fast and non-blocking.
+     */
+    private void forceCleanupProcesses() {
+        running.set(false);
+        audioRunning = false;
+
+        if (videoProcess != null) {
+            videoProcess.destroyForcibly();
+            videoProcess = null;
+        }
+
+        if (windowsAudioProcess != null) {
+            windowsAudioProcess.destroyForcibly();
+            windowsAudioProcess = null;
+        }
+
+        cleanupPipes();
+    }
+
     // Getters
     public DynamicTexture getTexture() {
         return texture;
