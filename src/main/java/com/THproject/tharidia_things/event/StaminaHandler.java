@@ -35,24 +35,24 @@ import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.slf4j.Logger;
 
-import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 public final class StaminaHandler {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final Map<UUID, Float> LAST_SENT_CURRENT = new HashMap<>();
-    private static final Map<UUID, Float> LAST_SENT_MAX = new HashMap<>();
-    private static final Map<UUID, Boolean> LAST_SENT_IN_COMBAT = new HashMap<>();
-    private static final Map<UUID, Long> LAST_SENT_BOW_LOCK_UNTIL = new HashMap<>();
-    private static final Map<UUID, Integer> LAST_SWING_TICK = new HashMap<>();
-    private static final Map<UUID, Integer> LAST_NO_STAMINA_TICK = new HashMap<>();
-    private static final Map<UUID, Integer> LAST_BOW_LOCK_MSG_TICK = new HashMap<>();
-    private static final Map<UUID, Integer> LAST_MELEE_COST_TICK = new HashMap<>();
-    private static final Map<UUID, Integer> LAST_STAMINA_DEBUG_TICK = new HashMap<>();
-    private static final Map<UUID, Integer> LAST_COMBAT_EXIT_TICK = new HashMap<>();
+    private static final Map<UUID, Float> LAST_SENT_CURRENT = new ConcurrentHashMap<>();
+    private static final Map<UUID, Float> LAST_SENT_MAX = new ConcurrentHashMap<>();
+    private static final Map<UUID, Boolean> LAST_SENT_IN_COMBAT = new ConcurrentHashMap<>();
+    private static final Map<UUID, Long> LAST_SENT_BOW_LOCK_UNTIL = new ConcurrentHashMap<>();
+    private static final Map<UUID, Integer> LAST_SWING_TICK = new ConcurrentHashMap<>();
+    private static final Map<UUID, Integer> LAST_NO_STAMINA_TICK = new ConcurrentHashMap<>();
+    private static final Map<UUID, Integer> LAST_BOW_LOCK_MSG_TICK = new ConcurrentHashMap<>();
+    private static final Map<UUID, Integer> LAST_MELEE_COST_TICK = new ConcurrentHashMap<>();
+    private static final Map<UUID, Integer> LAST_STAMINA_DEBUG_TICK = new ConcurrentHashMap<>();
+    private static final Map<UUID, Integer> LAST_COMBAT_EXIT_TICK = new ConcurrentHashMap<>();
     private static final int BOW_DRAW_LOCK_TICKS = 40;
     private static final int MELEE_COST_GRACE_TICKS = 3;
     private static boolean EPIC_FIGHT_LISTENERS_REGISTERED = false;
