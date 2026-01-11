@@ -20,6 +20,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.item.BowItem;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ShieldItem;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.ICancellableEvent;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -980,6 +981,7 @@ public final class StaminaHandler {
             }
         }
         tickBowTension(player, data, stats);
+        tickShieldBlock(player, data, stats);
         tickRegen(player, data, stats);
 
         if (player.tickCount % 20 == 0) {
@@ -1094,6 +1096,57 @@ public final class StaminaHandler {
             startBowDrawLockIfNotActive(player, data);
             if (player instanceof ServerPlayer serverPlayer) {
                 showBowRetry(serverPlayer, getBowDrawLockTicksRemaining(player, data));
+                sync(serverPlayer);
+            }
+            return;
+        }
+
+        if (next != current) {
+            data.setCurrentStamina(next);
+            data.setRegenDelayTicksRemaining(Math.round(stats.regenDelayAfterConsumptionSeconds() * 20.0f));
+        }
+    }
+
+    private static void tickShieldBlock(Player player, StaminaData data, StaminaComputedStats stats) {
+        // Check if player is blocking (using shield)
+        if (!player.isBlocking()) {
+            return;
+        }
+
+        ItemStack useStack = player.getUseItem();
+        if (useStack.isEmpty()) {
+            return;
+        }
+
+        // Check if the item can block - works with any shield (vanilla or modded)
+        // Using canPerformAction with SHIELD_BLOCK is the most universal way
+        if (!useStack.canPerformAction(net.neoforged.neoforge.common.ItemAbilities.SHIELD_BLOCK)) {
+            return;
+        }
+
+        // Calculate how long the player has been blocking
+        int usedTicks = useStack.getUseDuration(player) - player.getUseItemRemainingTicks();
+        float blockingSeconds = usedTicks / 20.0f;
+
+        // Get shield weight
+        float shieldWeight = (float) WeightRegistry.getItemWeight(useStack.getItem());
+
+        // Calculate stamina cost for this tick
+        float cost = StaminaConfig.computeShieldBlockTickCost(blockingSeconds, shieldWeight, stats);
+        if (cost <= 0.0f) {
+            return;
+        }
+
+        float current = data.getCurrentStamina();
+        float next = current - cost;
+
+        // If stamina depleted, force stop blocking
+        if (next <= 0.0f) {
+            data.setCurrentStamina(0.0f);
+            data.setRegenDelayTicksRemaining(Math.round(stats.regenDelayAfterConsumptionSeconds() * 20.0f));
+            player.stopUsingItem();
+            if (player instanceof ServerPlayer serverPlayer) {
+                showNoStamina(serverPlayer);
                 sync(serverPlayer);
             }
             return;

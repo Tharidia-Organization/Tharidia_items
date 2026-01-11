@@ -40,6 +40,14 @@ public class StaminaConfig extends SimpleJsonResourceReloadListener {
     private static String bowCurveType;
     private static List<Float> bowCurveCoefficients;
 
+    // Shield blocking config
+    private static float shieldBlockThresholdSeconds;
+    private static float shieldConsumptionRatePerSecond;
+    private static boolean shieldUseWeight;
+    private static String shieldCurveType;
+    private static List<Float> shieldCurveCoefficients;
+    private static float shieldConsumptionMultiplier;
+
     private static float regenDelayAfterConsumptionSeconds;
 
     static {
@@ -100,6 +108,15 @@ public class StaminaConfig extends SimpleJsonResourceReloadListener {
                             bowMaxTensionTimeSeconds = 1.0f;
                         }
                     }
+                    if (consumption.has("shields") && consumption.get("shields").isJsonObject()) {
+                        JsonObject shields = consumption.getAsJsonObject("shields");
+                        shieldBlockThresholdSeconds = getFloat(shields, "blockThreshold", shieldBlockThresholdSeconds);
+                        shieldConsumptionRatePerSecond = getFloat(shields, "consumptionRate", shieldConsumptionRatePerSecond);
+                        shieldUseWeight = getBoolean(shields, "useWeight", shieldUseWeight);
+                        shieldCurveType = getString(shields, "curveType", shieldCurveType);
+                        shieldCurveCoefficients = getFloatList(shields, "coefficients", shieldCurveCoefficients);
+                        shieldConsumptionMultiplier = getFloat(shields, "consumptionMultiplier", shieldConsumptionMultiplier);
+                    }
                 }
 
                 if (root.has("regeneration") && root.get("regeneration").isJsonObject()) {
@@ -130,6 +147,14 @@ public class StaminaConfig extends SimpleJsonResourceReloadListener {
         bowUseWeaponWeight = true;
         bowCurveType = "quadratic";
         bowCurveCoefficients = List.of(0.03f, 0.05f, 0.92f);
+
+        // Shield defaults
+        shieldBlockThresholdSeconds = 0.5f;
+        shieldConsumptionRatePerSecond = 6.0f;
+        shieldUseWeight = true;
+        shieldCurveType = "quadratic";
+        shieldCurveCoefficients = List.of(0.02f, 0.04f, 0.94f);
+        shieldConsumptionMultiplier = 1.0f;
 
         regenDelayAfterConsumptionSeconds = 0.8f;
     }
@@ -176,6 +201,51 @@ public class StaminaConfig extends SimpleJsonResourceReloadListener {
 
     public static boolean isBowUseWeaponWeight() {
         return bowUseWeaponWeight;
+    }
+
+    // Shield getters
+    public static float getShieldBlockThresholdSeconds() {
+        return shieldBlockThresholdSeconds;
+    }
+
+    public static float getShieldConsumptionRatePerSecond() {
+        return shieldConsumptionRatePerSecond;
+    }
+
+    public static boolean isShieldUseWeight() {
+        return shieldUseWeight;
+    }
+
+    public static float getShieldConsumptionMultiplier() {
+        return shieldConsumptionMultiplier;
+    }
+
+    public static float computeShieldCurveMultiplier(float shieldWeight) {
+        return computeCurveMultiplier(shieldCurveType, shieldCurveCoefficients, shieldWeight);
+    }
+
+    public static float computeShieldBlockTickCost(float blockingSeconds, float shieldWeight, StaminaComputedStats stats) {
+        if (stats == null) {
+            return 0.0f;
+        }
+
+        float threshold = Math.max(0.0f, shieldBlockThresholdSeconds);
+        if (blockingSeconds < threshold) {
+            return 0.0f;
+        }
+
+        float perSecond = Math.max(0.0f, shieldConsumptionRatePerSecond);
+        if (perSecond <= 0.0f) {
+            return 0.0f;
+        }
+
+        float weightCurve = 1.0f;
+        if (isShieldUseWeight()) {
+            weightCurve = computeShieldCurveMultiplier(shieldWeight);
+        }
+
+        float baseTick = perSecond / 20.0f;
+        return baseTick * weightCurve * stats.consumptionMultiplier() * shieldConsumptionMultiplier;
     }
 
     public static float getRegenDelayAfterConsumptionSeconds() {
