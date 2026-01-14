@@ -45,3 +45,5 @@ repo
 /build/
 /run/
 /decompiled/
+/src/generated/
+/.claude/
