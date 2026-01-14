@@ -55,7 +55,6 @@ import com.THproject.tharidia_things.config.ItemCatalogueConfig;
 import com.THproject.tharidia_things.event.ItemAttributeHandler;
 import com.THproject.tharidia_things.event.PlayerStatsIncrementHandler;
 import com.THproject.tharidia_things.fatigue.FatigueAttachments;
-import com.THproject.tharidia_things.features.FreezeManager;
 import com.THproject.tharidia_things.network.BattlePackets;
 import com.THproject.tharidia_things.network.ClaimOwnerSyncPacket;
 import com.THproject.tharidia_things.network.FatigueSyncPacket;
@@ -335,8 +334,6 @@ public class TharidiaThings {
         NeoForge.EVENT_BUS.register(WeightDebuffHandler.class);
         // Register the smithing handler
         NeoForge.EVENT_BUS.register(SmithingHandler.class);
-        // Register the freeze manager
-        NeoForge.EVENT_BUS.register(FreezeManager.class);
         // Register the pre-login name handler
         NeoForge.EVENT_BUS.register(PreLoginNameHandler.class);
         // Register the fatigue handler
@@ -349,9 +346,6 @@ public class TharidiaThings {
         NeoForge.EVENT_BUS.register(TradeInventoryBlocker.class);
         // Register the currency protection handler
         NeoForge.EVENT_BUS.register(CurrencyProtectionHandler.class);
-
-        // Register Freeze Manager for master freeze command
-        NeoForge.EVENT_BUS.register(FreezeManager.class);
 
         BattleGauntleAttachments.register(modEventBus);
 
