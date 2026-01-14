@@ -46,6 +46,7 @@ import com.THproject.tharidia_things.item.CopperLamaCortaItem;
 import com.THproject.tharidia_things.item.BattleGauntlet;
 import com.THproject.tharidia_things.item.CopperElsaItem;
 import com.THproject.tharidia_things.item.DiceItem;
+import com.THproject.tharidia_things.item.PietroBlockItem;
 import com.THproject.tharidia_things.client.ClientPacketHandler;
 import com.THproject.tharidia_things.entity.ModEntities;
 import com.THproject.tharidia_things.compoundTag.BattleGauntleAttachments;
@@ -154,8 +155,9 @@ public class TharidiaThings {
     public static final DeferredBlock<PietroBlock> PIETRO = BLOCKS.register("pietro", () -> new PietroBlock(
             BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(3.0F, 6.0F).noOcclusion()));
     // Creates a new BlockItem with the id "tharidiathings:pietro", combining the
-    // namespace and path
-    public static final DeferredItem<BlockItem> PIETRO_ITEM = ITEMS.registerSimpleBlockItem("pietro", PIETRO);
+    // namespace and path. Uses custom PietroBlockItem for GeckoLib inventory rendering.
+    public static final DeferredItem<PietroBlockItem> PIETRO_ITEM = ITEMS.register("pietro",
+            () -> new PietroBlockItem(PIETRO.get(), new Item.Properties()));
     // Creates a new Block with the id "tharidiathings:claim"
     public static final DeferredBlock<ClaimBlock> CLAIM = BLOCKS.register("claim",
             () -> new ClaimBlock(BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(3.0F, 6.0F)));

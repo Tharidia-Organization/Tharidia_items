@@ -94,6 +94,15 @@ description='''${mod_description}'''
     ordering="AFTER"
     side="SERVER"
 
+# GeckoLib dependency for animated block models (CLIENT SIDE ONLY)
+# User must install GeckoLib separately - not bundled with this mod
+[[dependencies.${mod_id}]]
+    modId="geckolib"
+    type="required"
+    versionRange="[4.7,)"
+    ordering="AFTER"
+    side="CLIENT"
+
 # Paladins dependency for stone great hammer
 #[[dependencies.${mod_id}]]
 #    modId="paladins"

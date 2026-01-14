@@ -27,6 +27,10 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import org.jetbrains.annotations.Nullable;
+import software.bernie.geckolib.animatable.GeoBlockEntity;
+import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
+import software.bernie.geckolib.animation.AnimatableManager;
+import software.bernie.geckolib.util.GeckoLibUtil;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -35,7 +39,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-public class PietroBlockEntity extends BlockEntity implements MenuProvider {
+public class PietroBlockEntity extends BlockEntity implements MenuProvider, GeoBlockEntity {
+
+    // GeckoLib animation cache for animated block rendering
+    private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
 
     private static final int MIN_REALM_SIZE = 3;
     private static final int MAX_REALM_SIZE = 15;
@@ -696,5 +703,22 @@ public class PietroBlockEntity extends BlockEntity implements MenuProvider {
     @Override
     public Packet<ClientGamePacketListener> getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    // ==================== GeckoLib Implementation ====================
+
+    @Override
+    public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
+        // Currently static model - no animations registered
+        // Future animations can be added here, e.g.:
+        // controllers.add(new AnimationController<>(this, "idle", 0, state -> {
+        //     state.getController().setAnimation(RawAnimation.begin().thenLoop("idle"));
+        //     return PlayState.CONTINUE;
+        // }));
+    }
+
+    @Override
+    public AnimatableInstanceCache getAnimatableInstanceCache() {
+        return geoCache;
     }
 }
