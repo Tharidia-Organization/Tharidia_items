@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.UUID;
 
 import com.THproject.tharidia_things.TharidiaThings;
+import com.THproject.tharidia_things.compoundTag.ReviveAttachments;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Pose;
@@ -13,7 +14,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 
-public class Fallen {
+public class Revive {
     public static final List<UUID> fallenPlayers = new ArrayList<>();
 
     public static final ResourceLocation FREEZE_MOVEMENT_ID = ResourceLocation
@@ -21,11 +22,13 @@ public class Fallen {
     public static final ResourceLocation FREEZE_JUMP_ID = ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID,
             "freeze_jump");
 
-    public static void fallPlayer(Player player) {
+    public static void fallPlayer(Player player, boolean can_revive) {
         if (!fallenPlayers.contains(player.getUUID()))
             fallenPlayers.add(player.getUUID());
         player.setForcedPose(Pose.SWIMMING);
         player.setSwimming(true);
+
+        player.getData(ReviveAttachments.REVIVE_DATA.get()).setCanRevive(can_revive);
 
         // Apply attributes to prevent movement and jumping
         AttributeInstance movement = player.getAttribute(Attributes.MOVEMENT_SPEED);

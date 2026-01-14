@@ -1,7 +1,7 @@
 package com.THproject.tharidia_things.client;
 
 import com.THproject.tharidia_things.TharidiaThings;
-import com.THproject.tharidia_things.features.Fallen;
+import com.THproject.tharidia_things.features.Revive;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -24,7 +24,7 @@ public class ClientFallenHandler {
 
         // Check if player has the fallen freeze attribute
         AttributeInstance movement = player.getAttribute(Attributes.MOVEMENT_SPEED);
-        if (movement != null && movement.getModifier(Fallen.FREEZE_MOVEMENT_ID) != null) {
+        if (movement != null && movement.getModifier(Revive.FREEZE_MOVEMENT_ID) != null) {
             // Player is fallen - force pose on client side
             if (player.getForcedPose() != Pose.SWIMMING) {
                 player.setForcedPose(Pose.SWIMMING);

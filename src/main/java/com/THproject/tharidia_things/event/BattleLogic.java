@@ -2,7 +2,7 @@ package com.THproject.tharidia_things.event;
 
 import com.THproject.tharidia_things.TharidiaThings;
 import com.THproject.tharidia_things.compoundTag.BattleGauntleAttachments;
-import com.THproject.tharidia_things.features.Fallen;
+import com.THproject.tharidia_things.features.Revive;
 
 import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.particles.ParticleTypes;
@@ -93,7 +93,7 @@ public class BattleLogic {
             }
         } else if (playerAttachments.getLoseTick() == 1) {
             playerAttachments.setLoseTick(0);
-            Fallen.revivePlayer(player);
+            Revive.revivePlayer(player);
             // if (event.getEntity() instanceof ServerPlayer serverPlayer) {
             // FreezeManager.unfreezePlayer(serverPlayer);
             // }
@@ -209,7 +209,7 @@ public class BattleLogic {
         winnerAttachments.setWinTick(200);
         loserAttachments.setLoseTick(200);
 
-        Fallen.fallPlayer(loser);
+        Revive.fallPlayer(loser, false);
     }
 
     // public static void finischBattle(@Nullable Player winnerPlayer, @Nullable
