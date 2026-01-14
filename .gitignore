@@ -52,3 +52,5 @@ repo
 /.obsidian/workspace.json
 /src/generated/*
 /.claude/
+/src/generated/
+/.claude/
