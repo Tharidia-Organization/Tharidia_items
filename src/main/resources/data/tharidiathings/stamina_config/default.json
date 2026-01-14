@@ -1,0 +1,36 @@
+{
+  "baseValues": {
+    "maxStamina": 100.0,
+    "baseRegenRate": 15.0,
+    "sprintThreshold": 0.2,
+    "combatTimeout": 7.0
+  },
+  "consumption": {
+    "attacks": {
+      "baseCost": 15.0,
+      "useWeaponWeight": true,
+      "curveType": "quadratic",
+      "coefficients": [0.03, 0.05, 0.92]
+    },
+    "bows": {
+      "tensionThreshold": 0.4,
+      "baseCost": 4.0,
+      "consumptionRate": 8.0,
+      "maxTensionTime": 1.0,
+      "useWeaponWeight": true,
+      "curveType": "quadratic",
+      "coefficients": [0.03, 0.05, 0.92]
+    },
+    "shields": {
+      "blockThreshold": 0.5,
+      "consumptionRate": 6.0,
+      "useWeight": true,
+      "curveType": "quadratic",
+      "coefficients": [0.02, 0.04, 0.94],
+      "consumptionMultiplier": 1.0
+    }
+  },
+  "regeneration": {
+    "delayAfterConsumption": 0.8
+  }
+}

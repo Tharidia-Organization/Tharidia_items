@@ -4,7 +4,7 @@
   "block.tharidiathings.claim": "Rivendicazione",
 
   "container.tharidiathings.claim": "Rivendicazione",
-  "container.tharidiathings.pietro": "Le cose di Tharidia",
+  "container.tharidiathings.pietro": "Reame",
 
   "key.categories.tharidiathings": "Tharidia Things",
   "key.tharidiathings.toggle_claim_boundaries": "Attiva/Disattiva Confini Rivendicazione",
@@ -16,6 +16,8 @@
   "tharidiathings.configuration.logDirtBlock": "Registra Blocco Terra",
   "tharidiathings.configuration.magicNumberIntroduction": "Testo Numero Magico",
   "tharidiathings.configuration.magicNumber": "Numero Magico",
+  "tharidiathings.configuration.staminaCombatRegenReductionEnabled": "Riduci Ricarica Stamina In Combattimento",
+  "tharidiathings.configuration.staminaCombatRegenReductionPercent": "Riduzione Ricarica Stamina In Combattimento (%)",
 
   "item.tharidiathings.hot_iron": "Ferro Caldo",
   "item.tharidiathings.hot_gold": "Oro Caldo",
@@ -28,6 +30,7 @@
   "item.tharidiathings.copper_lama_lunga": "Lama Lunga (Rame)",
   "item.tharidiathings.copper_lama_corta": "Lama Corta (Rame)",
   "item.tharidiathings.battle_gauntlet": "Guanto di Battaglia",
+  "item.tharidiathings.dice": "Dado",
 
   "item.tharidiathings.pinza.holding.hot_iron": "Tenendo: Ferro Caldo",
   "item.tharidiathings.pinza.holding.hot_gold": "Tenendo: Oro Caldo",
@@ -60,6 +63,88 @@
   
   "gui.tharidiathings.name_selection": "Scegli il Tuo Nome",
 
+  "gui.tharidiathings.common.unknown": "Sconosciuto",
+  "gui.tharidiathings.common.player_unknown": "Sconosciuto (%s)",
+
+  "gui.tharidiathings.realm.title": "Reame",
+  "gui.tharidiathings.realm.currency_label": "Monete",
+  "gui.tharidiathings.realm.tab.expansion": "Espansione",
+  "gui.tharidiathings.realm.tab.claims": "Rivendicazioni",
+  "gui.tharidiathings.realm.tab.dungeon": "Dungeon",
+
+  "gui.tharidiathings.realm.lord_label": "§6§lSignore:",
+  "gui.tharidiathings.realm.size_label": "§6§lDimensione del Reame:",
+  "gui.tharidiathings.realm.size_value": "§e§lLivello %s",
+  "gui.tharidiathings.realm.max_level": "§5§lLivello massimo raggiunto",
+  "gui.tharidiathings.realm.expansion_cost_label": "§6§lCosto Espansione:",
+  "gui.tharidiathings.realm.coins_needed": "§6Monete necessarie: %s",
+  "gui.tharidiathings.realm.deposit_hint_1": "Deposita patate nello slot in alto.",
+  "gui.tharidiathings.realm.deposit_hint_2": "Saranno convertite in monete.",
+
+  "gui.tharidiathings.realm.claims_title": "§6§lRivendicazioni",
+  "gui.tharidiathings.realm.treasury": "§6§lTesoro: §e%s",
+  "gui.tharidiathings.realm.hierarchy_title": "§6§lGerarchia",
+  "gui.tharidiathings.realm.rank_change": "Cambia",
+  "gui.tharidiathings.realm.rank_select_title": "Seleziona grado",
+  "gui.tharidiathings.realm.rank.colono": "Colono",
+  "gui.tharidiathings.realm.rank.miliziano": "Miliziano",
+  "gui.tharidiathings.realm.rank.guardia": "Guardia",
+  "gui.tharidiathings.realm.rank.consigliere": "Consigliere",
+  "gui.tharidiathings.realm.rank.lord": "Signore",
+
+  "gui.tharidiathings.realm.dungeon_title": "§6§lDungeon",
+  "gui.tharidiathings.realm.dungeon_enter_label": "§6§lEntra nel Dungeon:",
+  "gui.tharidiathings.realm.dungeon_desc_1": "Affronta prove e mostri",
+  "gui.tharidiathings.realm.dungeon_desc_2": "per ottenere ricompense per il reame.",
+  "gui.tharidiathings.realm.queue_status_label": "§6§lStato coda:",
+  "gui.tharidiathings.realm.queue_ready": "§5§lPronto",
+  "gui.tharidiathings.realm.dungeon.enter_button": "Entra",
+
+  "gui.tharidiathings.name_entry.title": "Inserisci il tuo Nome",
+  "gui.tharidiathings.name_entry.instructions": "Questo è il nome del tuo personaggio",
+  "gui.tharidiathings.name_entry.field_label": "Nome",
+  "gui.tharidiathings.name_entry.hint": "Inserisci il tuo nome...",
+  "gui.tharidiathings.name_entry.confirm_button": "Conferma",
+  "gui.tharidiathings.name_entry.error.empty": "Il nome non può essere vuoto!",
+  "gui.tharidiathings.name_entry.status.submitting": "§aInvio del nome...",
+
+  "gui.tharidiathings.diet.title": "Dieta",
+
+  "gui.tharidiathings.claim.parchment_title": "Pergamena del Dominio",
+  "gui.tharidiathings.claim.title": "Dominio Feudale",
+  "gui.tharidiathings.claim.owner_label": "§6§lSignore del Dominio:",
+  "gui.tharidiathings.claim.status_label": "§6§lStato del Dominio:",
+  "gui.tharidiathings.claim.expired": "§c§lSCADUTO",
+  "gui.tharidiathings.claim.time_left_label": "§6Tempo Restante:",
+  "gui.tharidiathings.claim.time_left_value": "§e§l%dh %dm %ds",
+  "gui.tharidiathings.claim.expires_on_label": "§6Scade il:",
+  "gui.tharidiathings.claim.perpetual": "§a§lDOMINIO PERPETUO",
+  "gui.tharidiathings.claim.protection_radius_label": "§6§lRaggio di Protezione:",
+  "gui.tharidiathings.claim.protection_radius_value": "§e§l%s blocchi",
+
+  "gui.tharidiathings.trade.your_offer": "§6La Vostra Offerta",
+  "gui.tharidiathings.trade.status.confirmed": "§2✓ Confermato",
+  "gui.tharidiathings.trade.status.waiting": "§7In attesa...",
+  "gui.tharidiathings.trade.status.other_confirmed": "§2Confermato",
+  "gui.tharidiathings.trade.status.other_waiting": "§7In attesa...",
+  "gui.tharidiathings.trade.complete_label": "§a§lCOMPLETA",
+  "gui.tharidiathings.trade.tax_info": "§cTassa: %d%% (-%d)",
+  "gui.tharidiathings.trade.receive_info": "§aRiceverai: %d",
+
+  "message.tharidiathings.trade.confirmed_wait_other": "§aHai confermato! Aspetta che anche l'altro giocatore confermi.",
+  "message.tharidiathings.trade.confirm_cancelled": "§7Conferma annullata.",
+  "message.tharidiathings.trade.final_confirmed_wait_other": "§a§lHai confermato FINALMENTE! Aspetta che anche l'altro giocatore confermi.",
+  "message.tharidiathings.trade.final_confirm_cancelled": "§7Conferma finale annullata.",
+  "message.tharidiathings.trade.completed": "§a§lSCAMBIO COMPLETATO!",
+
+  "gui.tharidiathings.trade_request.title": "Richiesta di Scambio",
+  "gui.tharidiathings.trade_request.panel_title": "§6§l⚜ Richiesta di Scambio ⚜",
+  "gui.tharidiathings.trade_request.button.accept": "§2§l✓ Accetta",
+  "gui.tharidiathings.trade_request.button.decline": "§4§l✗ Rifiuta",
+  "gui.tharidiathings.trade_request.message_1": "§7Il mercante §f%s",
+  "gui.tharidiathings.trade_request.message_2": "§7desidera commerciare con voi.",
+  "gui.tharidiathings.trade_request.message_3": "§7Accettate la proposta?",
+
   "gui.tharidiathings.battle_invitation.title": "Invito alla battaglia",
   "gui.tharidiathings.battle_invitation.invitator_label": "Invito da: %s",
   "gui.tharidiathings.battle_invitation.button.accept": "Accetta",
@@ -79,5 +164,14 @@
   "message.tharidiathings.battle.player_invite": "Stai invitando %s a una battaglia",
   "message.tharidiathings.battle.start": "Battaglia Iniziata!",
   "message.tharidiathings.battle.win": "Hai vinto la battaglia",
-  "message.tharidiathings.battle.lose": "Hai perso la battaglia"
+  "message.tharidiathings.battle.lose": "Hai perso la battaglia",
+
+  "diet.category.grain": "Cereali",
+  "diet.category.protein": "Proteine",
+  "diet.category.vegetable": "Verdure",
+  "diet.category.fruit": "Frutta",
+  "diet.category.sugar": "Zuccheri",
+  "diet.category.water": "Idratazione",
+
+  "diet.tooltip.header": "Valori dieta:"
 }

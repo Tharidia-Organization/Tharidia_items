@@ -1,9 +1,33 @@
 {
   "variants": {
-    "half=lower": {
+    "half=lower,level=0": {
+      "model": "tharidiathings:block/realm_stage_1"
+    },
+    "half=lower,level=1": {
+      "model": "tharidiathings:block/realm_stage_1"
+    },
+    "half=lower,level=2": {
       "model": "tharidiathings:block/pietro"
     },
-    "half=upper": {
+    "half=lower,level=3": {
+      "model": "tharidiathings:block/pietro"
+    },
+    "half=lower,level=4": {
+      "model": "tharidiathings:block/pietro"
+    },
+    "half=upper,level=0": {
+      "model": "tharidiathings:block/realm_stage_1_upper"
+    },
+    "half=upper,level=1": {
+      "model": "tharidiathings:block/realm_stage_1_upper"
+    },
+    "half=upper,level=2": {
+      "model": "tharidiathings:block/pietro_upper"
+    },
+    "half=upper,level=3": {
+      "model": "tharidiathings:block/pietro_upper"
+    },
+    "half=upper,level=4": {
       "model": "tharidiathings:block/pietro_upper"
     }
   }

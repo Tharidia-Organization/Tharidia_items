@@ -1,0 +1,47 @@
+{
+    "items": {
+        "minecraft:apple": {
+            "grain": 0.0,
+            "protein": 0.0,
+            "vegetable": 0.0,
+            "fruit": 15.0,
+            "sugar": 2.0,
+            "water": 10.0
+        }
+    },
+    "decay_rates": {
+        "grain": 0.15,
+        "protein": 0.2,
+        "vegetable": 0.25,
+        "fruit": 0.25,
+        "sugar": 0.3,
+        "water": 0.35
+    },
+    "max_values": {
+        "grain": 100.0,
+        "protein": 100.0,
+        "vegetable": 100.0,
+        "fruit": 100.0,
+        "sugar": 100.0,
+        "water": 100.0
+    },
+    "settings": {
+        "decay_interval_seconds": 120.0,
+        "saturation_scale": 2.0,
+        "fast_food_saturation_threshold": 2.0,
+        "grain_nutrition_multiplier": 0.4,
+        "fast_food_grain_bonus": 1.5,
+        "protein_meat_multiplier": 0.6,
+        "protein_base_multiplier": 0.2,
+        "vegetable_hint_multiplier": 1.5,
+        "vegetable_base_multiplier": 0.3,
+        "fruit_hint_multiplier": 0.4,
+        "fruit_base_multiplier": 0.2,
+        "sugar_base_multiplier": 0.4,
+        "fast_sugar_flat_bonus": 2.0,
+        "fast_sugar_saturation_multiplier": 1.0,
+        "water_always_eat_bonus": 2.0,
+        "water_default_bonus": 1.5,
+        "drink_water_bonus": 1.6
+    }
+}

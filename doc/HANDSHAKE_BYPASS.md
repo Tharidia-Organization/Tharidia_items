@@ -22,7 +22,7 @@ Il sistema usa un event listener con **priorità HIGHEST** che intercetta l'even
 ```java
 // Register handshake bypass (CLIENT ONLY)
 if (FMLEnvironment.dist == Dist.CLIENT) {
-    NeoForge.EVENT_BUS.register(com.tharidia.tharidia_things.client.HandshakeBypass.class);
+    NeoForge.EVENT_BUS.register(com.THproject.tharidia_things.client.HandshakeBypass.class);
     LOGGER.warn("Handshake bypass registered - you can connect to servers with different mod versions");
 }
 ```

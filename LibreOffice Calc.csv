@@ -1,0 +1,29 @@
+Caratteristiche,Umani,Elfi,Nani,Dragonidi,Orchi
+vita,100,90,85,125,100
+velocità,100,110,115,80,95
+attack speed,95,105,105,95,100
+mana,115,95,95,75,120
+danno mag. avanzi,105,130,110,85,70
+res. magica avanzi,100,100,80,150,70
+danno mag. fuoco,100,100,100,100,100
+res. mag. fuoco,100,100,100,100,100
+danno mag. ghiaccio,100,100,100,100,100
+res. mag. ghiaccio,100,100,100,100,100
+danno mag. druido,100,100,100,100,100
+res. mag. druido,100,100,100,100,100
+danno mag. elettrico,100,100,100,100,100
+res. mag. elettrico,100,100,100,100,100
+danno mag. arcano,100,100,100,100,100
+res. mag. arcano,100,100,100,100,100
+danno mag. terra,100,100,100,100,100
+res. mag. terra,100,100,100,100,100
+danno mag. sangue,100,100,100,100,100
+res. mag. sangue,100,100,100,100,100
+danno fisico,110,95,90,75,130
+stamina,100,100,70,110,120
+res. fisica,100,75,90,135,100
+danno distanza,105,110,140,80,65
+res. distanza,85,80,120,95,120
+peso trasportato,90,80,95,125,110
+deb. caldo,90,150,75,85,100
+deb. freddo,90,70,110,100,130
