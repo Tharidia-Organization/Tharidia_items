@@ -53,6 +53,7 @@ import com.THproject.tharidia_things.compoundTag.BattleGauntleAttachments;
 import com.THproject.tharidia_things.compoundTag.ReviveAttachments;
 import com.THproject.tharidia_things.character.CharacterAttachments;
 import com.THproject.tharidia_things.config.ItemCatalogueConfig;
+import com.THproject.tharidia_things.config.ReviveConfig;
 import com.THproject.tharidia_things.event.ItemAttributeHandler;
 import com.THproject.tharidia_things.event.PlayerStatsIncrementHandler;
 import com.THproject.tharidia_things.fatigue.FatigueAttachments;
@@ -809,6 +810,8 @@ public class TharidiaThings {
             LOGGER.error("Could not load claim registry: overworld is null");
         }
 
+        ReviveConfig.reload();
+
         ItemCatalogueConfig.reload();
         ItemAttributeHandler.reload();
         PlayerStatsIncrementHandler.reload();
@@ -935,6 +938,8 @@ public class TharidiaThings {
         event.addListener(new FatigueConfig());
         event.addListener(new StaminaConfig());
         event.addListener(new StaminaTagMappingsLoader());
+
+        ReviveConfig.reload();
 
         ItemCatalogueConfig.reload();
         ItemAttributeHandler.reload();

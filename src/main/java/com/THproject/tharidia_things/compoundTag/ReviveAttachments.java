@@ -3,6 +3,7 @@ package com.THproject.tharidia_things.compoundTag;
 import java.util.function.Supplier;
 
 import com.THproject.tharidia_things.TharidiaThings;
+import com.THproject.tharidia_things.config.ReviveConfig;
 
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.nbt.CompoundTag;
@@ -16,6 +17,10 @@ public class ReviveAttachments implements INBTSerializable<CompoundTag> {
     private int res_time = 0;
     private long last_revived_time = 0;
     private boolean death_from_battle = false;
+
+    public void resetResTime() {
+        this.res_time = Integer.parseInt(ReviveConfig.config.TIME_TO_RES.get("Value").toString());
+    }
 
     public void setResTime(int time) {
         this.res_time = time;
