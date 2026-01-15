@@ -1,0 +1,56 @@
+package com.THproject.tharidia_things.command;
+
+import com.THproject.tharidia_things.event.ReviveLogic;
+import com.THproject.tharidia_things.features.Revive;
+import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.BoolArgumentType;
+import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
+
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
+import net.minecraft.commands.arguments.EntityArgument;
+
+public class ReviveCommands {
+    public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
+        dispatcher.register(
+                Commands.literal("fall")
+                        .requires(source -> source.hasPermission(2))
+                        .then(Commands.argument("player", EntityArgument.player())
+                                .executes(context -> fallPlayer(context, false))
+                                .then(Commands.argument("can_revive", BoolArgumentType.bool())
+                                        .executes(context -> fallPlayer(context, true)))));
+
+        dispatcher.register(
+                Commands.literal("revive")
+                        .requires(source -> source.hasPermission(2))
+                        .then(Commands.argument("player", EntityArgument.player())
+                                .executes(ReviveCommands::revivePlayer)));
+
+    }
+
+    private static int fallPlayer(CommandContext<CommandSourceStack> context, boolean has_to_read_value) {
+        try {
+            var player = EntityArgument.getPlayer(context, "player");
+            boolean can_revive = true;
+            if (has_to_read_value) {
+                can_revive = BoolArgumentType.getBool(context, "can_revive");
+            }
+
+            Revive.fallPlayer(player, can_revive);
+        } catch (CommandSyntaxException e) {
+            return 0;
+        }
+        return 1;
+    }
+
+    private static int revivePlayer(CommandContext<CommandSourceStack> context) {
+        try {
+            var player = EntityArgument.getPlayer(context, "player");
+            Revive.revivePlayer(player);
+        } catch (CommandSyntaxException e) {
+            return 0;
+        }
+        return 1;
+    }
+}

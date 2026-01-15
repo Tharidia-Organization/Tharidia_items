@@ -50,12 +50,12 @@ import com.THproject.tharidia_things.item.PietroBlockItem;
 import com.THproject.tharidia_things.client.ClientPacketHandler;
 import com.THproject.tharidia_things.entity.ModEntities;
 import com.THproject.tharidia_things.compoundTag.BattleGauntleAttachments;
+import com.THproject.tharidia_things.compoundTag.ReviveAttachments;
 import com.THproject.tharidia_things.character.CharacterAttachments;
 import com.THproject.tharidia_things.config.ItemCatalogueConfig;
 import com.THproject.tharidia_things.event.ItemAttributeHandler;
 import com.THproject.tharidia_things.event.PlayerStatsIncrementHandler;
 import com.THproject.tharidia_things.fatigue.FatigueAttachments;
-import com.THproject.tharidia_things.features.FreezeManager;
 import com.THproject.tharidia_things.network.BattlePackets;
 import com.THproject.tharidia_things.network.ClaimOwnerSyncPacket;
 import com.THproject.tharidia_things.network.FatigueSyncPacket;
@@ -155,7 +155,8 @@ public class TharidiaThings {
     public static final DeferredBlock<PietroBlock> PIETRO = BLOCKS.register("pietro", () -> new PietroBlock(
             BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(3.0F, 6.0F).noOcclusion()));
     // Creates a new BlockItem with the id "tharidiathings:pietro", combining the
-    // namespace and path. Uses custom PietroBlockItem for GeckoLib inventory rendering.
+    // namespace and path. Uses custom PietroBlockItem for GeckoLib inventory
+    // rendering.
     public static final DeferredItem<PietroBlockItem> PIETRO_ITEM = ITEMS.register("pietro",
             () -> new PietroBlockItem(PIETRO.get(), new Item.Properties()));
     // Creates a new Block with the id "tharidiathings:claim"
@@ -297,9 +298,11 @@ public class TharidiaThings {
         BLOCKS.register(modEventBus);
         // Register the Deferred Register to the mod event bus so items get registered
         ITEMS.register(modEventBus);
-        // Register the Deferred Register to the mod event bus so block entities get registered
+        // Register the Deferred Register to the mod event bus so block entities get
+        // registered
         BLOCK_ENTITIES.register(modEventBus);
-        // Register the Deferred Register to the mod event bus so entities get registered
+        // Register the Deferred Register to the mod event bus so entities get
+        // registered
         ModEntities.ENTITIES.register(modEventBus);
         // Register the Deferred Register to the mod event bus so tabs get registered
         CREATIVE_MODE_TABS.register(modEventBus);
@@ -335,8 +338,6 @@ public class TharidiaThings {
         NeoForge.EVENT_BUS.register(WeightDebuffHandler.class);
         // Register the smithing handler
         NeoForge.EVENT_BUS.register(SmithingHandler.class);
-        // Register the freeze manager
-        NeoForge.EVENT_BUS.register(FreezeManager.class);
         // Register the pre-login name handler
         NeoForge.EVENT_BUS.register(PreLoginNameHandler.class);
         // Register the fatigue handler
@@ -350,10 +351,9 @@ public class TharidiaThings {
         // Register the currency protection handler
         NeoForge.EVENT_BUS.register(CurrencyProtectionHandler.class);
 
-        // Register Freeze Manager for master freeze command
-        NeoForge.EVENT_BUS.register(FreezeManager.class);
-
         BattleGauntleAttachments.register(modEventBus);
+
+        ReviveAttachments.register(modEventBus);
 
         modEventBus.addListener(BattlePackets::register);
 
@@ -519,7 +519,8 @@ public class TharidiaThings {
                     WeightConfigSyncPacket.STREAM_CODEC,
                     ClientPacketHandler::handleWeightConfigSync);
 
-            // Register dummy handlers for server-bound packets (client-side only for handshake)
+            // Register dummy handlers for server-bound packets (client-side only for
+            // handshake)
             // Note: All server-bound packets are registered below with actual handlers
             // No dummy handlers needed here as they're registered with real handlers
 
@@ -651,11 +652,13 @@ public class TharidiaThings {
             registrar.playToClient(
                     DietProfileSyncPacket.TYPE,
                     DietProfileSyncPacket.STREAM_CODEC,
-                    (packet, context) -> {});
+                    (packet, context) -> {
+                    });
             registrar.playToClient(
                     WeightConfigSyncPacket.TYPE,
                     WeightConfigSyncPacket.STREAM_CODEC,
-                    (packet, context) -> {});
+                    (packet, context) -> {
+                    });
             LOGGER.info("Server-side packet registration completed (dummy handlers)");
         }
 
@@ -730,7 +733,8 @@ public class TharidiaThings {
             // Sync all video screens to the player
             syncAllVideoScreensToPlayer((ServerPlayer) event.getEntity(), serverLevel);
 
-            PacketDistributor.sendToPlayer((ServerPlayer) event.getEntity(), WeightConfigSyncPacket.fromCurrentRegistry());
+            PacketDistributor.sendToPlayer((ServerPlayer) event.getEntity(),
+                    WeightConfigSyncPacket.fromCurrentRegistry());
         }
     }
 
@@ -951,6 +955,7 @@ public class TharidiaThings {
         ServerTransferCommands.register(event.getDispatcher());
         ItemCatalogueCommand.register(event.getDispatcher());
         StatsCommand.register(event.getDispatcher());
+        ReviveCommands.register(event.getDispatcher());
     }
 
     /**

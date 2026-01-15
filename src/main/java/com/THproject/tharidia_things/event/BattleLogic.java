@@ -1,10 +1,8 @@
 package com.THproject.tharidia_things.event;
 
-import javax.annotation.Nullable;
-
 import com.THproject.tharidia_things.TharidiaThings;
 import com.THproject.tharidia_things.compoundTag.BattleGauntleAttachments;
-import com.THproject.tharidia_things.features.FreezeManager;
+import com.THproject.tharidia_things.features.Revive;
 
 import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.particles.ParticleTypes;
@@ -17,8 +15,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.core.registries.Registries;
@@ -26,16 +22,19 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
 @EventBusSubscriber(modid = TharidiaThings.MODID)
 public class BattleLogic {
-    private static final ResourceLocation DUNGEON_DIMENSION = ResourceLocation.fromNamespaceAndPath("tharidia", "dungeon");
+    private static final ResourceLocation DUNGEON_DIMENSION = ResourceLocation.fromNamespaceAndPath("tharidia",
+            "dungeon");
 
     private static boolean isInDungeonDimension(Player player) {
         return player.level().dimension().equals(ResourceKey.create(Registries.DIMENSION, DUNGEON_DIMENSION));
     }
+
     @SubscribeEvent
     public static void onPlayerKill(LivingDeathEvent event) {
         if (event.getEntity().level().isClientSide())
@@ -44,7 +43,7 @@ public class BattleLogic {
         if (event.getEntity() instanceof Player loser) {
             BattleGauntleAttachments targetAttachments = loser.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
             if (targetAttachments.getInBattle()) {
-                finischBattle(null, loser);
+                finishBattle(getChallengerPlayer(loser));
                 event.setCanceled(true);
             }
         }
@@ -94,9 +93,10 @@ public class BattleLogic {
             }
         } else if (playerAttachments.getLoseTick() == 1) {
             playerAttachments.setLoseTick(0);
-            if (event.getEntity() instanceof ServerPlayer serverPlayer) {
-                FreezeManager.unfreezePlayer(serverPlayer);
-            }
+            Revive.revivePlayer(player);
+            // if (event.getEntity() instanceof ServerPlayer serverPlayer) {
+            // FreezeManager.unfreezePlayer(serverPlayer);
+            // }
         }
     }
 
@@ -146,13 +146,20 @@ public class BattleLogic {
         BattleGauntleAttachments playerAttachments = player.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
 
         if (playerAttachments.getInBattle()) {
-            if (player instanceof ServerPlayer serverPlayer) {
-                Player challengerPlayer = serverPlayer.getServer().getPlayerList()
-                        .getPlayer(playerAttachments.getChallengerUUID());
-                exitPlayerBattle(challengerPlayer);
-            }
-            exitPlayerBattle(player);
+            finishBattle(getChallengerPlayer(player));
         }
+    }
+
+    @SubscribeEvent
+    public static void onPlayerLogin(PlayerLoggedInEvent event) {
+        if (event.getEntity().level().isClientSide())
+            return;
+
+        Player player = event.getEntity();
+
+        BattleGauntleAttachments playerAttachments = player.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
+        playerAttachments.setWinTick(1);
+        playerAttachments.setLoseTick(1);
     }
 
     public static void startBattle(Player player1, Player player2) {
@@ -183,68 +190,103 @@ public class BattleLogic {
                 60.0f, 1.0f);
     }
 
-    public static void finischBattle(@Nullable Player winnerPlayer, @Nullable Player loserPlayer) {
-        if (winnerPlayer == null && loserPlayer == null)
-            return;
+    public static void finishBattle(Player winner) {
+        Player loser = getChallengerPlayer(winner);
+        exitPlayerBattle(winner);
+        exitPlayerBattle(loser);
 
-        BattleGauntleAttachments winnerAttachments = null;
-        BattleGauntleAttachments loserAttachments = null;
+        ((ServerPlayer) winner).connection.send(new ClientboundSetTitleTextPacket(
+                Component.translatable("message.tharidiathings.battle.win")
+                        .withColor(0x00FF00)));
 
-        if (winnerPlayer == null) {
-            loserAttachments = loserPlayer.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
-            if (loserPlayer instanceof ServerPlayer sp) {
-                winnerPlayer = sp.getServer().getPlayerList().getPlayer(loserAttachments.getChallengerUUID());
-                if (winnerPlayer != null) {
-                    winnerAttachments = winnerPlayer.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
-                }
-            }
-        } else {
-            winnerAttachments = winnerPlayer.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
-        }
+        ((ServerPlayer) loser).connection.send(new ClientboundSetTitleTextPacket(
+                Component.translatable("message.tharidiathings.battle.lose")
+                        .withColor(0xFF0000)));
 
-        if (loserPlayer == null) {
-            if (winnerPlayer != null) {
-                winnerAttachments = winnerPlayer.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
-                if (winnerPlayer instanceof ServerPlayer sp) {
-                    loserPlayer = sp.getServer().getPlayerList().getPlayer(winnerAttachments.getChallengerUUID());
-                    if (loserPlayer != null) {
-                        loserAttachments = loserPlayer.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
-                    }
-                }
-            }
-        } else {
-            loserAttachments = loserPlayer.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
-        }
+        BattleGauntleAttachments winnerAttachments = winner.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
+        BattleGauntleAttachments loserAttachments = loser.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
 
-        if (winnerPlayer != null) {
-            exitPlayerBattle(winnerPlayer);
-        }
-        if (loserPlayer != null) {
-            exitPlayerBattle(loserPlayer);
-        }
+        winnerAttachments.setWinTick(200);
+        loserAttachments.setLoseTick(200);
 
-        if (winnerPlayer instanceof ServerPlayer) {
-            ((ServerPlayer) winnerPlayer).connection.send(new ClientboundSetTitleTextPacket(
-                    Component.translatable("message.tharidiathings.battle.win").withColor(0x00FF00)));
-        }
-        if (loserPlayer instanceof ServerPlayer) {
-            ((ServerPlayer) loserPlayer).connection.send(new ClientboundSetTitleTextPacket(
-                    Component.translatable("message.tharidiathings.battle.lose").withColor(0xFF0000)));
-        }
-
-        if (loserPlayer != null && loserAttachments != null) {
-            loserPlayer.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 200, 1, false, false, false));
-            loserPlayer.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 200, 1, false, false, false));
-            loserAttachments.setLoseTick(200);
-        }
-        if (winnerAttachments != null) {
-            winnerAttachments.setWinTick(200);
-        }
-
-        if (loserPlayer instanceof ServerPlayer serverLoser) {
-            FreezeManager.freezePlayer(serverLoser);
-        }
+        Revive.fallPlayer(loser, false);
     }
+
+    // public static void finischBattle(@Nullable Player winnerPlayer, @Nullable
+    // Player loserPlayer) {
+    // if (winnerPlayer == null && loserPlayer == null)
+    // return;
+
+    // BattleGauntleAttachments winnerAttachments = null;
+    // BattleGauntleAttachments loserAttachments = null;
+
+    // if (winnerPlayer == null) {
+    // loserAttachments =
+    // loserPlayer.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
+    // if (loserPlayer instanceof ServerPlayer sp) {
+    // winnerPlayer =
+    // sp.getServer().getPlayerList().getPlayer(loserAttachments.getChallengerUUID());
+    // if (winnerPlayer != null) {
+    // winnerAttachments =
+    // winnerPlayer.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
+    // }
+    // }
+    // } else {
+    // winnerAttachments =
+    // winnerPlayer.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
+    // }
+
+    // if (loserPlayer == null) {
+    // if (winnerPlayer != null) {
+    // winnerAttachments =
+    // winnerPlayer.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
+    // if (winnerPlayer instanceof ServerPlayer sp) {
+    // loserPlayer =
+    // sp.getServer().getPlayerList().getPlayer(winnerAttachments.getChallengerUUID());
+    // if (loserPlayer != null) {
+    // loserAttachments =
+    // loserPlayer.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
+    // }
+    // }
+    // }
+    // } else {
+    // loserAttachments =
+    // loserPlayer.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
+    // }
+
+    // if (winnerPlayer != null) {
+    // exitPlayerBattle(winnerPlayer);
+    // }
+    // if (loserPlayer != null) {
+    // exitPlayerBattle(loserPlayer);
+    // }
+
+    // if (winnerPlayer instanceof ServerPlayer) {
+    // ((ServerPlayer) winnerPlayer).connection.send(new
+    // ClientboundSetTitleTextPacket(
+    // Component.translatable("message.tharidiathings.battle.win").withColor(0x00FF00)));
+    // }
+    // if (loserPlayer instanceof ServerPlayer) {
+    // ((ServerPlayer) loserPlayer).connection.send(new
+    // ClientboundSetTitleTextPacket(
+    // Component.translatable("message.tharidiathings.battle.lose").withColor(0xFF0000)));
+    // }
+
+    // if (loserPlayer != null && loserAttachments != null) {
+    // loserPlayer.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 200, 1,
+    // false, false, false));
+    // loserPlayer.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 200, 1,
+    // false, false, false));
+    // loserAttachments.setLoseTick(200);
+    // }
+    // if (winnerAttachments != null) {
+    // winnerAttachments.setWinTick(200);
+    // }
+
+    // if (loserPlayer instanceof ServerPlayer serverLoser) {
+    // FreezeManager.freezePlayer(serverLoser);
+    // }
+    // }
 
     public static void exitPlayerBattle(Player player) {
         BattleGauntleAttachments playerAttachments = player.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
