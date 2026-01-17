@@ -1,9 +1,12 @@
 package com.THproject.tharidia_things.client.video;
 
+import com.THproject.tharidia_things.Config;
 import com.THproject.tharidia_things.TharidiaThings;
 
-import javax.swing.SwingUtilities;
+import javax.swing.*;
+import java.awt.*;
 import java.io.File;
+import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -21,7 +24,8 @@ public class VideoToolsManager {
     private final AtomicBoolean hasChecked = new AtomicBoolean(false);
     private final AtomicBoolean allToolsPresent = new AtomicBoolean(false);
     private boolean isWindows = false;
-    
+    private boolean hasShownMissingToolsInfo = false;
+
     // Tool status
     private boolean ffmpegFound = false;
     private boolean ffplayFound = false;
@@ -82,29 +86,79 @@ public class VideoToolsManager {
         hasChecked.set(true);
         return allToolsPresent.get();
     }
-    
+
+    /**
+     * Check if required video tools are available WITHOUT showing installer GUI.
+     * Used for CurseForge-compliant mode where auto-install is disabled.
+     * @return true if all tools are available, false otherwise
+     */
+    public boolean checkToolsPresenceOnly() {
+        if (hasChecked.get()) {
+            return allToolsPresent.get();
+        }
+
+        // Detect OS
+        String os = System.getProperty("os.name").toLowerCase();
+        isWindows = os.contains("win");
+
+        // Check for tools on all systems
+        checkWindowsTools();
+
+        // Set tool status based on what we found
+        if (!ffmpegFound || !ffplayFound || !ytDlpFound) {
+            TharidiaThings.LOGGER.info("[VIDEO TOOLS] Missing tools detected (presence-only check) - FFmpeg: {}, FFplay: {}, yt-dlp: {}, streamlink: {}",
+                ffmpegFound, ffplayFound, ytDlpFound, streamlinkFound);
+            allToolsPresent.set(false);
+            // DO NOT show installation GUI - just log the status
+        } else {
+            TharidiaThings.LOGGER.info("[VIDEO TOOLS] All required tools found (presence-only check)");
+            allToolsPresent.set(true);
+        }
+
+        hasChecked.set(true);
+        return allToolsPresent.get();
+    }
+
     /**
      * Get the path to FFmpeg executable
      */
     public String getFfmpegPath() {
-        checkAndInstallTools();
+        ensureToolsChecked();
         return findExecutable("ffmpeg");
     }
-    
+
     /**
      * Get the path to FFplay executable
      */
     public String getFfplayPath() {
-        checkAndInstallTools();
+        ensureToolsChecked();
         return findExecutable("ffplay");
     }
-    
+
     /**
      * Get the path to yt-dlp executable
      */
     public String getYtDlpPath() {
-        checkAndInstallTools();
+        ensureToolsChecked();
         return findExecutable("yt-dlp");
+    }
+
+    /**
+     * Ensures tools are checked, respecting the auto-install config.
+     * Shows informational screen if tools are missing and auto-install is disabled.
+     */
+    private void ensureToolsChecked() {
+        boolean autoInstallEnabled = Config.VIDEO_TOOLS_AUTO_INSTALL.get();
+
+        if (autoInstallEnabled) {
+            checkAndInstallTools();
+        } else {
+            checkToolsPresenceOnly();
+            if (!allToolsPresent.get() && !hasShownMissingToolsInfo) {
+                hasShownMissingToolsInfo = true;
+                showMissingToolsInfoScreen();
+            }
+        }
     }
     
     /**
@@ -113,6 +167,7 @@ public class VideoToolsManager {
     public void recheckTools() {
         hasChecked.set(false);
         allToolsPresent.set(false);
+        hasShownMissingToolsInfo = false;
         checkAndInstallTools();
     }
     
@@ -350,19 +405,90 @@ public class VideoToolsManager {
     private void showInstallationGUI() {
         // CRITICAL: Disable headless mode BEFORE SwingUtilities is invoked
         System.setProperty("java.awt.headless", "false");
-        
+
         SwingUtilities.invokeLater(() -> {
             // Set it again inside the EDT to be absolutely sure
             System.setProperty("java.awt.headless", "false");
-            
+
             List<ToolStatus> toolStatuses = new ArrayList<>();
             toolStatuses.add(new ToolStatus("FFmpeg", "ffmpeg.exe", ffmpegFound, null));
             toolStatuses.add(new ToolStatus("FFplay", "ffplay.exe", ffplayFound, null));
             toolStatuses.add(new ToolStatus("yt-dlp", "yt-dlp.exe", ytDlpFound, null));
             toolStatuses.add(new ToolStatus("streamlink", "streamlink.exe", streamlinkFound, null));
-            
+
             VideoToolsInstallerGUI gui = new VideoToolsInstallerGUI(toolStatuses, this);
             gui.show();
+        });
+    }
+
+    /**
+     * Shows an informational screen when tools are missing and auto-install is disabled.
+     * Provides download links instead of automatic download (CurseForge-compliant).
+     */
+    private void showMissingToolsInfoScreen() {
+        TharidiaThings.LOGGER.info("[VIDEO TOOLS] Showing missing tools info screen (auto-install disabled)");
+
+        SwingUtilities.invokeLater(() -> {
+            System.setProperty("java.awt.headless", "false");
+
+            StringBuilder message = new StringBuilder();
+            message.append("<html><body style='width: 400px; font-family: sans-serif;'>");
+            message.append("<h2>Video Tools Required</h2>");
+            message.append("<p>To use video playback features in Tharidia, please install the following tools manually:</p>");
+            message.append("<br>");
+
+            if (!ffmpegFound || !ffplayFound) {
+                message.append("<b>FFmpeg</b> (includes FFplay)<br>");
+                message.append("<a href='https://www.gyan.dev/ffmpeg/builds/'>https://www.gyan.dev/ffmpeg/builds/</a><br>");
+                message.append("<small>Download 'ffmpeg-release-essentials.zip', extract, and add bin folder to PATH</small><br><br>");
+            }
+
+            if (!ytDlpFound) {
+                message.append("<b>yt-dlp</b><br>");
+                message.append("<a href='https://github.com/yt-dlp/yt-dlp/releases'>https://github.com/yt-dlp/yt-dlp/releases</a><br>");
+                message.append("<small>Download yt-dlp.exe and place it in a folder in your PATH</small><br><br>");
+            }
+
+            if (!streamlinkFound) {
+                message.append("<b>streamlink</b> (for Twitch support)<br>");
+                message.append("<a href='https://streamlink.github.io/install.html'>https://streamlink.github.io/install.html</a><br>");
+                message.append("<small>Follow installation instructions for your OS</small><br><br>");
+            }
+
+            message.append("<hr>");
+            message.append("<p><b>Installation Paths:</b></p>");
+            message.append("<ul>");
+            message.append("<li>Add tools to your system PATH, OR</li>");
+            message.append("<li>Place in: <code>%APPDATA%\\.minecraft\\tharidia\\bin\\</code></li>");
+            message.append("</ul>");
+            message.append("<br>");
+            message.append("<p><i>After installation, restart Minecraft to enable video features.</i></p>");
+            message.append("</body></html>");
+
+            // Create a panel with clickable links
+            JEditorPane editorPane = new JEditorPane("text/html", message.toString());
+            editorPane.setEditable(false);
+            editorPane.setOpaque(false);
+            editorPane.addHyperlinkListener(e -> {
+                if (e.getEventType() == javax.swing.event.HyperlinkEvent.EventType.ACTIVATED) {
+                    try {
+                        Desktop.getDesktop().browse(new URI(e.getURL().toString()));
+                    } catch (Exception ex) {
+                        TharidiaThings.LOGGER.error("[VIDEO TOOLS] Failed to open URL: {}", ex.getMessage());
+                    }
+                }
+            });
+
+            JScrollPane scrollPane = new JScrollPane(editorPane);
+            scrollPane.setPreferredSize(new Dimension(450, 400));
+            scrollPane.setBorder(null);
+
+            JOptionPane.showMessageDialog(
+                null,
+                scrollPane,
+                "Tharidia - Video Tools Required",
+                JOptionPane.INFORMATION_MESSAGE
+            );
         });
     }
     

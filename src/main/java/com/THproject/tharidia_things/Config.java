@@ -122,5 +122,11 @@ public class Config {
             .comment("If true, players in the dev whitelist can connect directly to the dev server without using transfer tokens")
             .define("devDirectAccessEnabled", true);
 
+    // Video tools configuration
+    public static final ModConfigSpec.BooleanValue VIDEO_TOOLS_AUTO_INSTALL = BUILDER
+            .comment("If true, automatically download and install video tools (FFmpeg, yt-dlp) when missing. " +
+                    "Set to false for CurseForge compliance - users must install tools manually.")
+            .define("videoToolsAutoInstall", false);
+
     static final ModConfigSpec SPEC = BUILDER.build();
 }
