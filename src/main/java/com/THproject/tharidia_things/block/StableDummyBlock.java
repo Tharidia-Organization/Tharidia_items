@@ -17,6 +17,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
@@ -28,13 +29,24 @@ import org.jetbrains.annotations.Nullable;
  * Points to master block and has collision but no logic.
  */
 public class StableDummyBlock extends Block {
-    
+
     public static final MapCodec<StableDummyBlock> CODEC = simpleCodec(StableDummyBlock::new);
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
-    
+
+    // Offset to master block position (-2, -1, 0, 1, or 2)
+    // We use 0-4 in blockstate and subtract 2 to get actual offset
+    public static final IntegerProperty OFFSET_X = IntegerProperty.create("offset_x", 0, 4);
+    public static final IntegerProperty OFFSET_Z = IntegerProperty.create("offset_z", 0, 4);
+
+    // Floor collision shape - matches the master block floor height (base at Y 2.8)
+    private static final VoxelShape FLOOR_SHAPE = Shapes.box(0, 0, 0, 1, 0.4, 1);
+
     public StableDummyBlock(BlockBehaviour.Properties properties) {
         super(properties);
-        this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH));
+        this.registerDefaultState(this.stateDefinition.any()
+            .setValue(FACING, Direction.NORTH)
+            .setValue(OFFSET_X, 2)
+            .setValue(OFFSET_Z, 2));
     }
     
     public StableDummyBlock() {
@@ -42,7 +54,6 @@ public class StableDummyBlock extends Block {
             .mapColor(MapColor.WOOD)
             .strength(2.5F)
             .noOcclusion()
-            .noCollission()
             .noLootTable());
     }
     
@@ -53,7 +64,7 @@ public class StableDummyBlock extends Block {
     
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING);
+        builder.add(FACING, OFFSET_X, OFFSET_Z);
     }
     
     @Override
@@ -63,7 +74,12 @@ public class StableDummyBlock extends Block {
     
     @Override
     public VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return Shapes.empty();
+        return FLOOR_SHAPE;
+    }
+
+    @Override
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return FLOOR_SHAPE;
     }
     
     @Override
@@ -74,7 +90,7 @@ public class StableDummyBlock extends Block {
     @Override
     protected net.minecraft.world.ItemInteractionResult useItemOn(net.minecraft.world.item.ItemStack stack, BlockState state, Level level, BlockPos pos, net.minecraft.world.entity.player.Player player, net.minecraft.world.InteractionHand hand, net.minecraft.world.phys.BlockHitResult hitResult) {
         // Forward interaction to master block
-        BlockPos masterPos = findMaster(level, pos);
+        BlockPos masterPos = findMaster(level, pos, state);
         if (masterPos != null) {
             BlockState masterState = level.getBlockState(masterPos);
             if (masterState.getBlock() instanceof StableBlock stableBlock) {
@@ -85,11 +101,11 @@ public class StableDummyBlock extends Block {
         }
         return net.minecraft.world.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
     }
-    
+
     @Override
     protected net.minecraft.world.InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, net.minecraft.world.entity.player.Player player, net.minecraft.world.phys.BlockHitResult hitResult) {
         // Forward interaction to master block
-        BlockPos masterPos = findMaster(level, pos);
+        BlockPos masterPos = findMaster(level, pos, state);
         if (masterPos != null) {
             BlockState masterState = level.getBlockState(masterPos);
             if (masterState.getBlock() instanceof StableBlock stableBlock) {
@@ -106,31 +122,32 @@ public class StableDummyBlock extends Block {
         if (!state.is(newState.getBlock())) {
             // Find and destroy master block when dummy is broken
             if (!level.isClientSide) {
-                findAndDestroyMaster(level, pos, state.getValue(FACING));
+                // Use the state parameter directly since the block is already being removed
+                findAndDestroyMaster(level, pos, state);
             }
         }
         super.onRemove(state, level, pos, newState, isMoving);
     }
-    
+
     @Nullable
-    private BlockPos findMaster(Level level, BlockPos dummyPos) {
-        // Search in 3x3x2 area for master block
-        for (int x = -1; x <= 1; x++) {
-            for (int y = -1; y <= 1; y++) {
-                for (int z = -1; z <= 1; z++) {
-                    BlockPos checkPos = dummyPos.offset(x, y, z);
-                    BlockState checkState = level.getBlockState(checkPos);
-                    if (checkState.getBlock() instanceof StableBlock) {
-                        return checkPos;
-                    }
-                }
-            }
+    private BlockPos findMaster(Level level, BlockPos dummyPos, BlockState dummyState) {
+        // Get offset from blockstate (stored as 0-4, actual offset is -2 to 2)
+        int offsetX = dummyState.getValue(OFFSET_X) - 2;
+        int offsetZ = dummyState.getValue(OFFSET_Z) - 2;
+
+        // Calculate master position using stored offset
+        BlockPos masterPos = dummyPos.offset(offsetX, 0, offsetZ);
+        BlockState masterState = level.getBlockState(masterPos);
+
+        if (masterState.getBlock() instanceof StableBlock) {
+            return masterPos;
         }
+
         return null;
     }
-    
-    private void findAndDestroyMaster(Level level, BlockPos dummyPos, Direction facing) {
-        BlockPos masterPos = findMaster(level, dummyPos);
+
+    private void findAndDestroyMaster(Level level, BlockPos dummyPos, BlockState dummyState) {
+        BlockPos masterPos = findMaster(level, dummyPos, dummyState);
         if (masterPos != null) {
             level.destroyBlock(masterPos, true);
         }

@@ -29,8 +29,11 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 public class StableBlock extends BaseEntityBlock {
-    
+
     public static final MapCodec<StableBlock> CODEC = simpleCodec(StableBlock::new);
+
+    // Floor collision shape - approximately 6 pixels high to match the scaled floor/path height (base at Y 2.8)
+    private static final VoxelShape FLOOR_SHAPE = Shapes.box(0, 0, 0, 1, 0.4, 1);
     
     public StableBlock(BlockBehaviour.Properties properties) {
         super(properties);
@@ -40,8 +43,7 @@ public class StableBlock extends BaseEntityBlock {
         this(BlockBehaviour.Properties.of()
             .mapColor(MapColor.WOOD)
             .strength(2.5F)
-            .noOcclusion()
-            .noCollission());
+            .noOcclusion());
     }
     
     @Override
@@ -51,20 +53,50 @@ public class StableBlock extends BaseEntityBlock {
     
     @Override
     public VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return Shapes.empty();
+        return FLOOR_SHAPE;
     }
-    
+
+    @Override
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return FLOOR_SHAPE;
+    }
+
     @Override
     public RenderShape getRenderShape(BlockState state) {
-        return RenderShape.MODEL;
+        return RenderShape.ENTITYBLOCK_ANIMATED;
     }
     
     @Override
     public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable net.minecraft.world.entity.LivingEntity placer, ItemStack stack) {
         super.setPlacedBy(level, pos, state, placer, stack);
         if (!level.isClientSide) {
+            if (!canFormMultiblock(level, pos)) {
+                // Can't form multiblock, remove the block and drop item
+                level.destroyBlock(pos, true);
+                return;
+            }
             formMultiblock(level, pos);
         }
+    }
+
+    private boolean canFormMultiblock(Level level, BlockPos masterPos) {
+        // Check a larger area (6 blocks radius) to prevent visual overlap with scaled models
+        // The 2.0x scale makes the model extend about 5 blocks from center
+        for (int x = -5; x <= 5; x++) {
+            for (int z = -5; z <= 5; z++) {
+                if (x == 0 && z == 0) continue;
+
+                BlockPos checkPos = masterPos.offset(x, 0, z);
+                BlockState existingState = level.getBlockState(checkPos);
+
+                // If there's already a stable master or dummy here, can't form
+                if (existingState.getBlock() instanceof StableBlock ||
+                    existingState.getBlock() instanceof StableDummyBlock) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
     
     @Override
@@ -76,35 +108,44 @@ public class StableBlock extends BaseEntityBlock {
     }
     
     private void formMultiblock(Level level, BlockPos masterPos) {
-        // Create 3x3 ground-level interaction layer only (no upper blocks)
+        // Create 5x5 ground-level interaction layer only (no upper blocks)
         // Master is at center, create dummies around it at ground level only
-        for (int x = -1; x <= 1; x++) {
-            for (int z = -1; z <= 1; z++) {
+        for (int x = -2; x <= 2; x++) {
+            for (int z = -2; z <= 2; z++) {
                 // Skip center block (master)
                 if (x == 0 && z == 0) continue;
-                
+
                 BlockPos dummyPos = masterPos.offset(x, 0, z);
                 BlockState existingState = level.getBlockState(dummyPos);
-                
+
                 // Only place dummy if space is empty or replaceable
                 if (existingState.isAir() || existingState.canBeReplaced()) {
+                    // Offset to master is (-x, -z), stored as (-x+2, -z+2) for 0-4 range
                     level.setBlock(dummyPos, TharidiaThings.STABLE_DUMMY.get().defaultBlockState()
-                        .setValue(StableDummyBlock.FACING, net.minecraft.core.Direction.NORTH), 3);
+                        .setValue(StableDummyBlock.FACING, net.minecraft.core.Direction.NORTH)
+                        .setValue(StableDummyBlock.OFFSET_X, -x + 2)
+                        .setValue(StableDummyBlock.OFFSET_Z, -z + 2), 3);
                 }
             }
         }
     }
     
     private void destroyMultiblock(Level level, BlockPos masterPos) {
-        // Remove all dummy blocks in 3x3 ground-level area
-        for (int x = -1; x <= 1; x++) {
-            for (int z = -1; z <= 1; z++) {
+        // Remove all dummy blocks in 5x5 ground-level area that belong to this master
+        for (int x = -2; x <= 2; x++) {
+            for (int z = -2; z <= 2; z++) {
                 if (x == 0 && z == 0) continue;
-                
+
                 BlockPos dummyPos = masterPos.offset(x, 0, z);
                 BlockState dummyState = level.getBlockState(dummyPos);
                 if (dummyState.getBlock() instanceof StableDummyBlock) {
-                    level.removeBlock(dummyPos, false);
+                    // Verify this dummy belongs to this master by checking offsets
+                    int expectedOffsetX = -x + 2;
+                    int expectedOffsetZ = -z + 2;
+                    if (dummyState.getValue(StableDummyBlock.OFFSET_X) == expectedOffsetX &&
+                        dummyState.getValue(StableDummyBlock.OFFSET_Z) == expectedOffsetZ) {
+                        level.removeBlock(dummyPos, false);
+                    }
                 }
             }
         }

@@ -6,16 +6,17 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.EntityModel;
-import net.minecraft.client.model.geom.EntityModelSet;
 import net.minecraft.client.renderer.MultiBufferSource;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.block.BlockRenderDispatcher;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.resources.model.BakedModel;
+import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
@@ -23,48 +24,116 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import java.util.Random;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import org.joml.Matrix3f;
-import org.joml.Matrix4f;
-import org.joml.Vector3f;
-import org.joml.Vector4f;
+import net.minecraft.world.phys.AABB;
 
 public class StableBlockRenderer implements BlockEntityRenderer<StableBlockEntity> {
-    
-    private static final ResourceLocation WATER_TEXTURE = ResourceLocation.withDefaultNamespace("textures/block/water_still.png");
-    private static final ItemStack[] FOOD_ITEMS = new ItemStack[] {
-        new ItemStack(Items.WHEAT),
-        new ItemStack(Items.APPLE),
-        new ItemStack(Items.POTATO),
-        new ItemStack(Items.SWEET_BERRIES),
-        new ItemStack(Items.CARROT)
-    };
-    
+
+    private static final float MODEL_SCALE = 2.0F;
+
+    // Overlay model locations for conditional rendering
+    private static final ModelResourceLocation HAY_MODEL = ModelResourceLocation.standalone(
+        ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/stall_hay"));
+    private static final ModelResourceLocation WATER_MODEL = ModelResourceLocation.standalone(
+        ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/stall_water"));
+
     private final EntityRenderDispatcher entityRenderDispatcher;
+    private final BlockRenderDispatcher blockRenderer;
     private final Map<EntityType<?>, EntityModel<?>> modelCache = new HashMap<>();
     private final Map<EntityType<?>, ResourceLocation> textureCache = new HashMap<>();
-    private final Random random = new Random();
-    
+
+    // Cached overlay models (loaded lazily)
+    private BakedModel hayModel = null;
+    private BakedModel waterModel = null;
+    private boolean modelsLoaded = false;
+
     public StableBlockRenderer(BlockEntityRendererProvider.Context context) {
         this.entityRenderDispatcher = context.getEntityRenderer();
+        this.blockRenderer = Minecraft.getInstance().getBlockRenderer();
     }
-    
+
+    private void loadOverlayModels() {
+        if (!modelsLoaded) {
+            var modelManager = Minecraft.getInstance().getModelManager();
+            hayModel = modelManager.getModel(HAY_MODEL);
+            waterModel = modelManager.getModel(WATER_MODEL);
+            modelsLoaded = true;
+        }
+    }
+
+    private void renderBlockModel(StableBlockEntity entity, PoseStack poseStack, MultiBufferSource buffer, int packedLight, int packedOverlay) {
+        poseStack.pushPose();
+
+        // Center the scale transformation so model scales from center
+        float offset = (1.0F - MODEL_SCALE) / 2.0F;
+        poseStack.translate(offset, 0, offset);
+        poseStack.scale(MODEL_SCALE, MODEL_SCALE, MODEL_SCALE);
+
+        // Get the block state and render the model
+        var blockState = entity.getBlockState();
+        BakedModel model = blockRenderer.getBlockModel(blockState);
+
+        blockRenderer.getModelRenderer().renderModel(
+            poseStack.last(),
+            buffer.getBuffer(RenderType.cutout()),
+            blockState,
+            model,
+            1.0F, 1.0F, 1.0F,
+            packedLight,
+            packedOverlay
+        );
+
+        poseStack.popPose();
+    }
+
+    private void renderOverlayModel(BakedModel model, StableBlockEntity entity, PoseStack poseStack, MultiBufferSource buffer, int packedLight, int packedOverlay) {
+        renderOverlayModel(model, entity, poseStack, buffer, packedLight, packedOverlay, 1.0F, 1.0F, 1.0F);
+    }
+
+    private void renderOverlayModel(BakedModel model, StableBlockEntity entity, PoseStack poseStack, MultiBufferSource buffer, int packedLight, int packedOverlay, float r, float g, float b) {
+        if (model == null) return;
+
+        poseStack.pushPose();
+
+        // Apply same transformation as main model
+        float offset = (1.0F - MODEL_SCALE) / 2.0F;
+        poseStack.translate(offset, 0, offset);
+        poseStack.scale(MODEL_SCALE, MODEL_SCALE, MODEL_SCALE);
+
+        blockRenderer.getModelRenderer().renderModel(
+            poseStack.last(),
+            buffer.getBuffer(RenderType.translucent()),
+            entity.getBlockState(),
+            model,
+            r, g, b,
+            packedLight,
+            packedOverlay
+        );
+
+        poseStack.popPose();
+    }
+
     @Override
     public void render(StableBlockEntity entity, float partialTick, PoseStack poseStack, MultiBufferSource buffer, int packedLight, int packedOverlay) {
-        // Render water only if there is water
+        // Load overlay models if not yet loaded
+        loadOverlayModels();
+
+        // Render the block model with 1.5x scale
+        renderBlockModel(entity, poseStack, buffer, packedLight, packedOverlay);
+
+        // Render water overlay if there is water (with vanilla water blue tint #3F76E4)
         if (entity.hasWater()) {
-            renderTroughWater(poseStack, buffer, packedLight);
+            renderOverlayModel(waterModel, entity, poseStack, buffer, packedLight, packedOverlay, 0.247F, 0.463F, 0.894F);
         }
-        
-        // Render food in feeder if there is food
+
+        // Render hay overlay if there is food
         if (entity.getFoodAmount() > 0) {
-            renderFeeder(entity, poseStack, buffer, packedLight);
+            renderOverlayModel(hayModel, entity, poseStack, buffer, packedLight, packedOverlay);
         }
-        
+
         if (!entity.hasAnimal()) {
             return;
         }
@@ -126,50 +195,6 @@ public class StableBlockRenderer implements BlockEntityRenderer<StableBlockEntit
                 renderEggs(totalEggs, poseStack, buffer, packedLight);
             }
         }
-    }
-    
-    private void renderTroughWater(PoseStack poseStack, MultiBufferSource buffer, int packedLight) {
-        poseStack.pushPose();
-        
-        float px = 1F / 16F;
-        float y = (5F * px) + 0.001F; // 3px above ground
-        float x1 = 23F * px;
-        float x2 = 31F * px;
-        float z1 = 12.5F * px;
-        float z2 = 31F * px;
-        
-        VertexConsumer consumer = buffer.getBuffer(RenderType.entityTranslucent(WATER_TEXTURE));
-        var pose = poseStack.last();
-        var matrix = pose.pose();
-        var normalMatrix = pose.normal();
-        float r = 0.2F;
-        float g = 0.4F;
-        float b = 1.0F;
-        float a = 0.75F;
-        
-        addWaterVertex(consumer, matrix, normalMatrix, x1, y, z1, 0F, 0F, r, g, b, a, packedLight);
-        addWaterVertex(consumer, matrix, normalMatrix, x2, y, z1, 1F, 0F, r, g, b, a, packedLight);
-        addWaterVertex(consumer, matrix, normalMatrix, x2, y, z2, 1F, 1F, r, g, b, a, packedLight);
-        addWaterVertex(consumer, matrix, normalMatrix, x1, y, z2, 0F, 1F, r, g, b, a, packedLight);
-        
-        poseStack.popPose();
-    }
-
-    private void addWaterVertex(VertexConsumer consumer, Matrix4f matrix, Matrix3f normalMatrix,
-                                float x, float y, float z, float u, float v,
-                                float r, float g, float b, float a, int packedLight) {
-        Vector4f position = new Vector4f(x, y, z, 1.0F);
-        position.mul(matrix);
-        
-        Vector3f normal = new Vector3f(0.0F, 1.0F, 0.0F);
-        normal.mul(normalMatrix);
-        
-        consumer.addVertex(position.x(), position.y(), position.z())
-            .setColor(r, g, b, a)
-            .setUv(u, v)
-            .setOverlay(OverlayTexture.NO_OVERLAY)
-            .setLight(packedLight)
-            .setNormal(normal.x(), normal.y(), normal.z());
     }
     
     @SuppressWarnings("unchecked")
@@ -364,55 +389,26 @@ public class StableBlockRenderer implements BlockEntityRenderer<StableBlockEntit
             poseStack.popPose();
         }
     }
-    
-    private void renderFeeder(StableBlockEntity entity, PoseStack poseStack, MultiBufferSource buffer, int packedLight) {
-        Minecraft mc = Minecraft.getInstance();
-        int foodAmount = entity.getFoodAmount();
-        
-        // Feeder coordinates: top-left corner of model, x0 z1 to x6 z18, from 1px to 5px above ground
-        float px = 1F / 16F;
-        float minX = -15F * px; // Top-left corner in model coordinates
-        float maxX = -18F * px;
-        float minZ = -15F * px;
-        float maxZ = 10F * px;
-        float minY = 0F * px; // 1 pixel from ground
-        float maxY = 6F * px; // 5 pixels from ground
-        
-        // Use entity position as seed for consistent random placement
-        long seed = entity.getBlockPos().asLong();
-        random.setSeed(seed);
-        
-        // Render food items scattered in the feeder volume
-        int itemsToRender = Math.min(foodAmount, 128); // Cap visual items at 96 for performance (tripled density)
-        
-        for (int i = 0; i < itemsToRender; i++) {
-            poseStack.pushPose();
-            
-            // Use index-based seed for consistent positioning per item
-            random.setSeed(seed + i);
-            
-            // Random position within feeder volume - ensure proper 3D distribution
-            float x = minX + random.nextFloat() * Math.abs(maxX - minX);
-            float y = minY + random.nextFloat() * Math.abs(maxY - minY);
-            float z = minZ + random.nextFloat() * Math.abs(maxZ - minZ);
-            
-            poseStack.translate(x, y, z);
-            
-            // Random scale variation - increased to 1.5x base size
-            float scale = 0.225F + random.nextFloat() * 0.15F; // 1.5x larger (0.15 * 1.5 = 0.225)
-            poseStack.scale(scale, scale, scale);
-            
-            // Random rotation on all axes for scattered look
-            poseStack.mulPose(Axis.XP.rotationDegrees(random.nextFloat() * 360F));
-            poseStack.mulPose(Axis.YP.rotationDegrees(random.nextFloat() * 360F));
-            poseStack.mulPose(Axis.ZP.rotationDegrees(random.nextFloat() * 360F));
-            
-            // Pick random food item
-            ItemStack foodItem = FOOD_ITEMS[random.nextInt(FOOD_ITEMS.length)];
-            
-            mc.getItemRenderer().renderStatic(foodItem, ItemDisplayContext.GROUND, packedLight, OverlayTexture.NO_OVERLAY, poseStack, buffer, mc.level, 0);
-            
-            poseStack.popPose();
-        }
+
+    @Override
+    public boolean shouldRenderOffScreen(StableBlockEntity blockEntity) {
+        // Always render because the scaled model extends beyond the block bounds
+        return true;
+    }
+
+    @Override
+    public int getViewDistance() {
+        // Increase view distance since the model is large and extends beyond normal block bounds
+        return 128;
+    }
+
+    @Override
+    public AABB getRenderBoundingBox(StableBlockEntity blockEntity) {
+        // The model is scaled 2.0x and extends beyond the block bounds
+        var pos = blockEntity.getBlockPos();
+        return new AABB(
+            pos.getX() - 3, pos.getY(), pos.getZ() - 3,
+            pos.getX() + 5, pos.getY() + 3, pos.getZ() + 5
+        );
     }
 }

@@ -142,6 +142,14 @@ public class TharidiaThingsClient {
                 ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/hot_copper_anvil_" + i)
             ));
         }
+
+        // Register stall overlay models for conditional rendering (hay and water)
+        event.register(net.minecraft.client.resources.model.ModelResourceLocation.standalone(
+            ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/stall_hay")
+        ));
+        event.register(net.minecraft.client.resources.model.ModelResourceLocation.standalone(
+            ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/stall_water")
+        ));
     }
 
     @SubscribeEvent
