@@ -42,8 +42,17 @@ public class DependencyCheckHandler {
         // Check on all platforms
         TharidiaThings.LOGGER.info("Checking for missing video dependencies...");
 
-        // Check if auto-install is enabled in config
-        boolean autoInstallEnabled = Config.VIDEO_TOOLS_AUTO_INSTALL.get();
+        // Check if auto-install is enabled in config (with safety check for config not loaded)
+        boolean autoInstallEnabled;
+        try {
+            autoInstallEnabled = Config.VIDEO_TOOLS_AUTO_INSTALL.get();
+        } catch (IllegalStateException e) {
+            // Config not loaded yet, retry on next tick
+            TharidiaThings.LOGGER.debug("Config not loaded yet, will retry dependency check later");
+            hasChecked = false;
+            isCheckScheduled = false;
+            return;
+        }
 
         // Use VideoToolsManager's detection logic
         VideoToolsManager toolsManager = VideoToolsManager.getInstance();

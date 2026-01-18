@@ -148,7 +148,13 @@ public class VideoToolsManager {
      * Shows informational screen if tools are missing and auto-install is disabled.
      */
     private void ensureToolsChecked() {
-        boolean autoInstallEnabled = Config.VIDEO_TOOLS_AUTO_INSTALL.get();
+        boolean autoInstallEnabled;
+        try {
+            autoInstallEnabled = Config.VIDEO_TOOLS_AUTO_INSTALL.get();
+        } catch (IllegalStateException e) {
+            // Config not loaded yet, default to checking without install
+            autoInstallEnabled = false;
+        }
 
         if (autoInstallEnabled) {
             checkAndInstallTools();
