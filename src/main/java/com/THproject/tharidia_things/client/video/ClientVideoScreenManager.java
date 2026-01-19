@@ -2,6 +2,7 @@ package com.THproject.tharidia_things.client.video;
 
 import com.THproject.tharidia_things.TharidiaThings;
 import com.THproject.tharidia_things.video.VideoScreen;
+import com.THproject.tharidia_things.video.VideoPlaybackState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -35,7 +36,7 @@ public class ClientVideoScreenManager {
      */
     public void addOrUpdateScreen(UUID screenId, String dimension, BlockPos corner1, BlockPos corner2,
                                  Direction facing, String videoUrl,
-                                 VideoScreen.VideoPlaybackState playbackState, float volume) {
+                                 VideoPlaybackState playbackState, float volume) {
         
         TharidiaThings.LOGGER.info("[VIDEO MANAGER] addOrUpdateScreen called - ScreenId: {}, URL: '{}', State: {}, Volume: {}", 
             screenId, videoUrl, playbackState, (int)(volume * 100));
@@ -72,7 +73,7 @@ public class ClientVideoScreenManager {
         // Handle video player
         VLCVideoPlayer player = players.get(screenId);
         
-        if (playbackState == VideoScreen.VideoPlaybackState.STOPPED) {
+        if (playbackState == VideoPlaybackState.STOPPED) {
             // Stop and release player completely (used for restart)
             if (player != null) {
                 player.stop();
@@ -80,7 +81,7 @@ public class ClientVideoScreenManager {
                 players.remove(screenId);
                 TharidiaThings.LOGGER.info("Stopped and released video player for screen {}", screenId);
             }
-        } else if (playbackState == VideoScreen.VideoPlaybackState.PLAYING) {
+        } else if (playbackState == VideoPlaybackState.PLAYING) {
             if (player == null || !player.getVideoUrl().equals(videoUrl)) {
                 // Check for required video tools before creating player
                 boolean toolsOk = VideoToolsManager.getInstance().checkAndInstallTools(videoUrl);
@@ -112,7 +113,7 @@ public class ClientVideoScreenManager {
                 player.play();
                 TharidiaThings.LOGGER.info("Resumed video player for screen {}", screenId);
             }
-        } else if (playbackState == VideoScreen.VideoPlaybackState.PAUSED) {
+        } else if (playbackState == VideoPlaybackState.PAUSED) {
             if (player != null) {
                 player.pause();
                 TharidiaThings.LOGGER.info("Paused video player for screen {}", screenId);

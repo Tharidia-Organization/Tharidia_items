@@ -19,6 +19,8 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.entity.player.CanContinueSleepingEvent;
+import net.neoforged.neoforge.event.entity.player.CanPlayerSleepEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerWakeUpEvent;
@@ -448,49 +450,159 @@ public class FatigueHandler {
     }
     
     /**
-     * Track when players start sleeping (both day and night)
-     * Daytime sleeping is NOT forced - use super-fast bed proximity recovery instead
+     * Handle bed interaction for daytime fatigue recovery
+     * We intercept the bed click BEFORE vanilla handles it, so we can bypass the daytime check
+     * Vanilla BedBlock.use() checks time BEFORE calling startSleepInBed(), so CanPlayerSleepEvent
+     * never fires during daytime. We must cancel the vanilla interaction and call startSleepInBed ourselves.
+     *
+     * IMPORTANT: This must handle BOTH client and server side:
+     * - Client side: Cancel event to prevent vanilla showing "You can only sleep at night"
+     * - Server side: Actually start the sleep
      */
-    @SubscribeEvent
+    @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.HIGHEST)
     public static void onBedInteract(PlayerInteractEvent.RightClickBlock event) {
         Player player = event.getEntity();
-        
+        BlockPos pos = event.getPos();
+        BlockState state = player.level().getBlockState(pos);
+
+        // Check if the block is a bed
+        if (!(state.getBlock() instanceof BedBlock)) {
+            return;
+        }
+
+        // Check if it's daytime using VANILLA values (24000 ticks/day, day ends at 12541)
+        // Using vanilla values ensures consistency between client and server
+        long dayTime = player.level().getDayTime() % 24000L;
+        boolean isDaytime = dayTime >= 0 && dayTime < 12541;
+
+        if (player.level().isClientSide) {
+            // CLIENT SIDE: Cancel during daytime to prevent vanilla "You can only sleep at night" message
+            // We cancel unconditionally during daytime - the server will check fatigue and decide
+            if (isDaytime) {
+                event.setCanceled(true);
+                event.setCancellationResult(InteractionResult.SUCCESS);
+            }
+        } else {
+            // SERVER SIDE: Check fatigue and start sleeping if appropriate
+            FatigueData data = player.getData(FatigueAttachments.FATIGUE_DATA);
+            boolean isFatigued = data.getFatigueTicks() < FatigueConfig.getMaxFatigueTicks();
+
+            LOGGER.info("Server bed interaction: isDaytime={}, isFatigued={}, fatigue={}/{}",
+                isDaytime, isFatigued, data.getFatigueTicks(), FatigueConfig.getMaxFatigueTicks());
+
+            if (isDaytime) {
+                // Cancel vanilla interaction
+                event.setCanceled(true);
+                event.setCancellationResult(InteractionResult.SUCCESS);
+
+                if (isFatigued && player instanceof ServerPlayer serverPlayer) {
+                    // Store bed position for rest tracking
+                    data.setLastBedPosition(pos);
+
+                    // Manually start sleeping - this will fire CanPlayerSleepEvent where we allow it
+                    Player.BedSleepingProblem problem = serverPlayer.startSleepInBed(pos).left().orElse(null);
+
+                    if (problem == null) {
+                        LOGGER.info("Player {} started daytime rest for fatigue recovery",
+                            player.getName().getString());
+                    } else {
+                        LOGGER.info("Player {} couldn't start daytime rest: {}",
+                            player.getName().getString(), problem);
+                        serverPlayer.displayClientMessage(
+                            Component.translatable("block.minecraft.bed." + problem.name().toLowerCase()),
+                            true
+                        );
+                    }
+                } else if (player instanceof ServerPlayer serverPlayer) {
+                    // Not fatigued - show vanilla "not possible now" message
+                    serverPlayer.displayClientMessage(
+                        Component.translatable("block.minecraft.bed.not_possible_now"),
+                        true
+                    );
+                }
+            } else if (isFatigued) {
+                // Nighttime with fatigue - store bed position, let vanilla handle the rest
+                data.setLastBedPosition(pos);
+                LOGGER.info("Player {} interacting with bed at night while fatigued",
+                    player.getName().getString());
+            }
+        }
+    }
+
+    /**
+     * Allow players to sleep during daytime when fatigued
+     * This overrides the vanilla "You can only sleep at night" check
+     */
+    @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.HIGHEST)
+    public static void onCanPlayerSleep(CanPlayerSleepEvent event) {
+        Player player = event.getEntity();
+
         // Server-side only
         if (player.level().isClientSide) {
             return;
         }
-        
-        BlockPos pos = event.getPos();
-        BlockState state = player.level().getBlockState(pos);
-        
-        // Check if the block is a bed
-        if (!(state.getBlock() instanceof BedBlock bedBlock)) {
-            return;
-        }
-        
+
         FatigueData data = player.getData(FatigueAttachments.FATIGUE_DATA);
-        
-        // If player is not at full fatigue, mark for special rest tracking
+
+        // Check if player is fatigued (not at max)
         if (data.getFatigueTicks() < FatigueConfig.getMaxFatigueTicks()) {
-            // Check if it's daytime (using configurable cycle length)
+            // Check if it's daytime
             long dayTime = player.level().getDayTime() % FatigueConfig.getDayCycleLength();
             boolean isDaytime = dayTime >= 0 && dayTime < FatigueConfig.getDayEndTime();
-            
-            if (isDaytime && player instanceof ServerPlayer serverPlayer) {
-                // Don't allow day sleep - show message about using proximity recovery
-                event.setCanceled(true);
-                event.setCancellationResult(InteractionResult.FAIL);
-                
-                serverPlayer.displayClientMessage(
-                    Component.translatable("message.tharidiathings.cant_sleep_day_use_proximity"),
-                    true
-                );
-                
-                LOGGER.info("Player {} tried to sleep during day - redirected to proximity recovery", 
+
+            if (isDaytime) {
+                // Allow daytime sleep for fatigue recovery
+                event.setProblem(null); // Clear the "not possible now" problem
+
+                // Mark player as resting
+                playersResting.put(player.getUUID(), true);
+
+                LOGGER.info("Player {} allowed to sleep during daytime for fatigue recovery",
                     player.getName().getString());
+
+                if (player instanceof ServerPlayer serverPlayer) {
+                    serverPlayer.displayClientMessage(
+                        Component.translatable("message.tharidiathings.resting_for_fatigue"),
+                        true
+                    );
+                }
             }
-            // Night time marking is done in handleBedRest when player starts sleeping
         }
+    }
+
+    /**
+     * Keep players in bed during daytime rest until they're fully rested or manually get up
+     * This prevents automatic wake-up during daytime
+     */
+    @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.HIGHEST)
+    public static void onCanContinueSleeping(CanContinueSleepingEvent event) {
+        // CanContinueSleepingEvent returns LivingEntity, need to check if it's a Player
+        if (!(event.getEntity() instanceof Player player)) {
+            return;
+        }
+
+        // Server-side only
+        if (player.level().isClientSide) {
+            return;
+        }
+
+        // Check if player is marked as resting
+        if (!playersResting.getOrDefault(player.getUUID(), false)) {
+            return;
+        }
+
+        // Check if it's daytime
+        long dayTime = player.level().getDayTime() % FatigueConfig.getDayCycleLength();
+        boolean isDaytime = dayTime >= 0 && dayTime < FatigueConfig.getDayEndTime();
+
+        if (isDaytime) {
+            // During daytime rest, allow player to continue sleeping
+            // They can only exit by pressing the leave bed key
+            event.setContinueSleeping(true);
+        }
+
+        // If player has fully rested, allow them to continue until they manually wake
+        // The handleBedRest method will notify them when they're fully rested
     }
     
     /**

@@ -55,3 +55,4 @@ repo
 /src/generated/
 /nul
 /.claude/
+/src/generated/*

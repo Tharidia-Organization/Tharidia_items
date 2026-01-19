@@ -230,6 +230,15 @@ public class ClientPacketHandler {
         });
     }
 
+    public static void handleStaminaSync(StaminaSyncPacket packet, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            Player player = Minecraft.getInstance().player;
+            if (player != null) {
+                StaminaSyncPacket.handle(packet, player);
+            }
+        });
+    }
+
     public static void handleDietSync(DietSyncPacket packet, IPayloadContext context) {
         context.enqueueWork(() -> {
             Player player = Minecraft.getInstance().player;
@@ -244,6 +253,15 @@ public class ClientPacketHandler {
             Player player = Minecraft.getInstance().player;
             if (player != null) {
                 DietProfileSyncPacket.handle(packet, player);
+            }
+        });
+    }
+
+    public static void handleWeightConfigSync(WeightConfigSyncPacket packet, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            Player player = Minecraft.getInstance().player;
+            if (player != null) {
+                WeightConfigSyncPacket.handle(packet, player);
             }
         });
     }

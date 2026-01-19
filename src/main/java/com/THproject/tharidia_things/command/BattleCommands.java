@@ -79,7 +79,7 @@ public class BattleCommands {
                 return 1;
             }
 
-            BattleLogic.finischBattle(winner, loser);
+            BattleLogic.finishBattle(winner);
             source.sendSuccess(() -> Component.literal("Battle ended between " +
                     PlayerNameHelper.getChosenName((ServerPlayer) winner) +
                     " and " +

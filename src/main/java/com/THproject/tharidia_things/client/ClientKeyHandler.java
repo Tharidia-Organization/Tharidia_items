@@ -3,7 +3,10 @@ package com.THproject.tharidia_things.client;
 import com.THproject.tharidia_things.client.video.VideoScreenRenderHandler;
 import com.THproject.tharidia_things.client.video.VideoToolsManager;
 import com.THproject.tharidia_things.TharidiaThings;
+import com.THproject.tharidia_things.stamina.StaminaAttachments;
+import com.THproject.tharidia_things.stamina.StaminaData;
 import net.minecraft.client.Minecraft;
+import net.minecraft.util.Mth;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -45,5 +48,27 @@ public class ClientKeyHandler {
         
         // Update video players
         VideoScreenRenderHandler.onClientTick();
+        
+        applyStaminaToExperienceBar(mc);
+    }
+    
+    private static void applyStaminaToExperienceBar(Minecraft mc) {
+        if (mc.options.hideGui) {
+            return;
+        }
+        
+        var player = mc.player;
+        if (player == null || player.isCreative() || player.isSpectator()) {
+            return;
+        }
+        
+        StaminaData data = player.getData(StaminaAttachments.STAMINA_DATA);
+        float max = data.getMaxStamina();
+        if (max <= 0.0f) {
+            return;
+        }
+        
+        float ratio = Mth.clamp(data.getCurrentStamina() / max, 0.0f, 1.0f);
+        player.experienceProgress = ratio;
     }
 }

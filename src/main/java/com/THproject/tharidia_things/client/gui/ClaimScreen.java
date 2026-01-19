@@ -25,7 +25,7 @@ public class ClaimScreen extends AbstractContainerScreen<ClaimMenu> {
     private static final int BORDER_WIDTH = 10;
     
     public ClaimScreen(ClaimMenu menu, Inventory playerInventory, Component title) {
-        super(menu, playerInventory, Component.literal("Pergamena del Dominio"));
+        super(menu, playerInventory, Component.translatable("gui.tharidiathings.claim.parchment_title"));
         this.imageWidth = PARCHMENT_WIDTH;
         this.imageHeight = PARCHMENT_HEIGHT;
     }
@@ -79,7 +79,7 @@ public class ClaimScreen extends AbstractContainerScreen<ClaimMenu> {
         int originY = 0;
 
         // Render medieval title relative to the GUI origin (already translated by AbstractContainerScreen)
-        MedievalGuiRenderer.renderMedievalTitle(guiGraphics, "Dominio Feudale",
+        MedievalGuiRenderer.renderMedievalTitle(guiGraphics, Component.translatable("gui.tharidiathings.claim.title").getString(),
                 originX + BORDER_WIDTH, originY + 60, this.imageWidth - BORDER_WIDTH * 2);
 
         // Render claim information with medieval styling
@@ -96,12 +96,10 @@ public class ClaimScreen extends AbstractContainerScreen<ClaimMenu> {
         int yPos = y + 90;
         int textX = x + BORDER_WIDTH + 20;
         
-        // Get owner name from claim name
-        String claimName = this.menu.getOwnerName();
-        String ownerName = claimName.replace("'s Claim", "");
+        String ownerName = this.menu.getOwnerName();
         
         // Owner information with medieval styling
-        renderMedievalTextLine(gui, "§6§lSignore del Dominio:", textX, yPos, MedievalGuiRenderer.BROWN_INK);
+        renderMedievalTextLine(gui, Component.translatable("gui.tharidiathings.claim.owner_label").getString(), textX, yPos, MedievalGuiRenderer.BROWN_INK);
         yPos += 16;
         renderMedievalTextLine(gui, "§f" + ownerName, textX + 20, yPos, MedievalGuiRenderer.BLACK_INK);
         yPos += 24;
@@ -114,7 +112,7 @@ public class ClaimScreen extends AbstractContainerScreen<ClaimMenu> {
         long expirationTime = this.menu.getExpirationTime();
         boolean isRented = this.menu.isRented();
         
-        renderMedievalTextLine(gui, "§6§lStato del Dominio:", textX, yPos, MedievalGuiRenderer.BROWN_INK);
+        renderMedievalTextLine(gui, Component.translatable("gui.tharidiathings.claim.status_label").getString(), textX, yPos, MedievalGuiRenderer.BROWN_INK);
         yPos += 16;
         
         if (isRented && expirationTime > 0) {
@@ -122,7 +120,7 @@ public class ClaimScreen extends AbstractContainerScreen<ClaimMenu> {
             long timeLeft = expirationTime - currentTime;
             
             if (timeLeft <= 0) {
-                renderMedievalTextLine(gui, "§c§lSCADUTO", textX + 20, yPos, MedievalGuiRenderer.DEEP_CRIMSON);
+                renderMedievalTextLine(gui, Component.translatable("gui.tharidiathings.claim.expired").getString(), textX + 20, yPos, MedievalGuiRenderer.DEEP_CRIMSON);
             } else {
                 // Calculate time components
                 long totalSeconds = timeLeft / 1000;
@@ -131,20 +129,20 @@ public class ClaimScreen extends AbstractContainerScreen<ClaimMenu> {
                 long seconds = totalSeconds % 60;
                 
                 // Time remaining with medieval styling
-                renderMedievalTextLine(gui, "§6Tempo Restante:", textX + 20, yPos, MedievalGuiRenderer.BROWN_INK);
+                renderMedievalTextLine(gui, Component.translatable("gui.tharidiathings.claim.time_left_label").getString(), textX + 20, yPos, MedievalGuiRenderer.BROWN_INK);
                 yPos += 16;
                 
-                String timeText = String.format("§e§l%dh %dm %ds", hours, minutes, seconds);
+                String timeText = Component.translatable("gui.tharidiathings.claim.time_left_value", hours, minutes, seconds).getString();
                 renderMedievalTextLine(gui, timeText, textX + 40, yPos, MedievalGuiRenderer.ROYAL_GOLD);
                 yPos += 20;
                 
                 String expiresDate = DATE_FORMAT.format(new Date(expirationTime));
-                renderMedievalTextLine(gui, "§6Scade il:", textX + 20, yPos, MedievalGuiRenderer.BROWN_INK);
+                renderMedievalTextLine(gui, Component.translatable("gui.tharidiathings.claim.expires_on_label").getString(), textX + 20, yPos, MedievalGuiRenderer.BROWN_INK);
                 yPos += 16;
                 renderMedievalTextLine(gui, "§f" + expiresDate, textX + 40, yPos, MedievalGuiRenderer.BLACK_INK);
             }
         } else {
-            renderMedievalTextLine(gui, "§a§lDOMINIO PERPETUO", textX + 20, yPos, MedievalGuiRenderer.PURPLE_REGAL);
+            renderMedievalTextLine(gui, Component.translatable("gui.tharidiathings.claim.perpetual").getString(), textX + 20, yPos, MedievalGuiRenderer.PURPLE_REGAL);
         }
         
         // Protection radius
@@ -153,9 +151,9 @@ public class ClaimScreen extends AbstractContainerScreen<ClaimMenu> {
         yPos += 16;
         
         int protectionRadius = this.menu.getProtectionRadius();
-        renderMedievalTextLine(gui, "§6§lRaggio di Protezione:", textX, yPos, MedievalGuiRenderer.BROWN_INK);
+        renderMedievalTextLine(gui, Component.translatable("gui.tharidiathings.claim.protection_radius_label").getString(), textX, yPos, MedievalGuiRenderer.BROWN_INK);
         yPos += 16;
-        renderMedievalTextLine(gui, "§e§l" + protectionRadius + " blocchi", textX + 20, yPos, MedievalGuiRenderer.ROYAL_GOLD);
+        renderMedievalTextLine(gui, Component.translatable("gui.tharidiathings.claim.protection_radius_value", protectionRadius).getString(), textX + 20, yPos, MedievalGuiRenderer.ROYAL_GOLD);
     }
     
     /**

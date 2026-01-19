@@ -56,7 +56,7 @@ public class DietTooltipHandler {
 
         if (!cached.isEmpty()) {
             event.getToolTip().add(Component.literal(" "));
-            event.getToolTip().add(Component.literal("§6Valori dieta:"));
+            event.getToolTip().add(Component.translatable("diet.tooltip.header").withStyle(style -> style.withColor(0xFFAA00)));
             event.getToolTip().addAll(cached);
         }
     }
@@ -94,18 +94,29 @@ public class DietTooltipHandler {
             if (value <= 0.0f) {
                 continue;
             }
-            String label = labels.getOrDefault(category, category.name());
+            String translationKey = getCategoryTranslationKey(category);
             TextColor color = CATEGORY_COLORS.getOrDefault(category, TextColor.fromRgb(0xFFFFFF));
-            lines.add(createDietLine(label, value, color));
+            lines.add(createDietLine(translationKey, value, color));
         }
         return lines;
     }
 
-    private static Component createDietLine(String label, float value, TextColor color) {
+    private static Component createDietLine(String translationKey, float value, TextColor color) {
         MutableComponent line = Component.literal("");
         line.append(Component.literal(" - ").withStyle(ChatFormatting.GRAY));
-        line.append(Component.literal(label + ": ").withStyle(Style.EMPTY.withColor(color)));
+        line.append(Component.translatable(translationKey).append(": ").withStyle(Style.EMPTY.withColor(color)));
         line.append(Component.literal(String.format("+%.1f", value)).withStyle(ChatFormatting.WHITE));
         return line;
+    }
+
+    private static String getCategoryTranslationKey(DietCategory category) {
+        return switch (category) {
+            case GRAIN -> "diet.category.grain";
+            case PROTEIN -> "diet.category.protein";
+            case VEGETABLE -> "diet.category.vegetable";
+            case FRUIT -> "diet.category.fruit";
+            case SUGAR -> "diet.category.sugar";
+            case WATER -> "diet.category.water";
+        };
     }
 }

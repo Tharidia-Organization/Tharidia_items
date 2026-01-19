@@ -103,7 +103,7 @@ public class TradeScreen extends AbstractContainerScreen<TradeMenu> {
     @Override
     protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         // Draw player name (left side) - smaller font using scaling
-        Component playerLabel = Component.literal("§6La Vostra Offerta");
+        Component playerLabel = Component.translatable("gui.tharidiathings.trade.your_offer");
         guiGraphics.pose().pushPose();
         guiGraphics.pose().scale(0.8f, 0.8f, 1.0f);
         guiGraphics.drawString(this.font, playerLabel, (int)(20 / 0.8f), (int)(8 / 0.8f), 0x404040, false);
@@ -123,17 +123,17 @@ public class TradeScreen extends AbstractContainerScreen<TradeMenu> {
         // Draw confirmation status (below buttons)
         int statusY = 92;
         if (localConfirmed) {
-            guiGraphics.drawString(this.font, "§2✓ Confermato", 16, statusY, 0x404040, false);
+            guiGraphics.drawString(this.font, Component.translatable("gui.tharidiathings.trade.status.confirmed").getString(), 16, statusY, 0x404040, false);
         } else {
-            guiGraphics.drawString(this.font, "§7In attesa...", 16, statusY, 0x404040, false);
+            guiGraphics.drawString(this.font, Component.translatable("gui.tharidiathings.trade.status.waiting").getString(), 16, statusY, 0x404040, false);
         }
         
         if (this.menu.isOtherPlayerConfirmed()) {
-            Component otherConfirmed = Component.literal("§2Confermato");
+            Component otherConfirmed = Component.translatable("gui.tharidiathings.trade.status.other_confirmed");
             int width = this.font.width(otherConfirmed);
             guiGraphics.drawString(this.font, otherConfirmed, this.imageWidth - width - 16, statusY, 0x404040, false);
         } else {
-            Component otherWaiting = Component.literal("§7In attesa...");
+            Component otherWaiting = Component.translatable("gui.tharidiathings.trade.status.other_waiting");
             int width = this.font.width(otherWaiting);
             guiGraphics.drawString(this.font, otherWaiting, this.imageWidth - width - 16, statusY, 0x404040, false);
         }
@@ -152,7 +152,7 @@ public class TradeScreen extends AbstractContainerScreen<TradeMenu> {
             
             // Draw attention
             int centerX = this.imageWidth / 2;
-            guiGraphics.drawString(this.font, "§a§lCOMPLETA", centerX - 25, 95, 0x00FF00, false);
+            guiGraphics.drawString(this.font, Component.translatable("gui.tharidiathings.trade.complete_label").getString(), centerX - 25, 95, 0x00FF00, false);
         } else if (bothConfirmed) {
             // Show final confirm and cancel buttons (both visible)
             confirmButton.visible = false;
@@ -202,8 +202,8 @@ public class TradeScreen extends AbstractContainerScreen<TradeMenu> {
             
             // Draw tax info in the center
             int centerX = this.imageWidth / 2;
-            String taxInfo = String.format("§cTassa: %d%% (-%d)", taxPercent, taxAmount);
-            String receiveInfo = String.format("§aRiceverai: %d", taxedCurrency);
+            String taxInfo = Component.translatable("gui.tharidiathings.trade.tax_info", taxPercent, taxAmount).getString();
+            String receiveInfo = Component.translatable("gui.tharidiathings.trade.receive_info", taxedCurrency).getString();
             
             int taxInfoWidth = this.font.width(taxInfo);
             int receiveInfoWidth = this.font.width(receiveInfo);
@@ -261,9 +261,9 @@ public class TradeScreen extends AbstractContainerScreen<TradeMenu> {
         
         // Log for debugging
         if (localConfirmed) {
-            Minecraft.getInstance().player.sendSystemMessage(Component.literal("§aHai confermato! Aspetta che anche l'altro giocatore confermi."));
+            Minecraft.getInstance().player.sendSystemMessage(Component.translatable("message.tharidiathings.trade.confirmed_wait_other"));
         } else {
-            Minecraft.getInstance().player.sendSystemMessage(Component.literal("§7Conferma annullata."));
+            Minecraft.getInstance().player.sendSystemMessage(Component.translatable("message.tharidiathings.trade.confirm_cancelled"));
         }
     }
 
@@ -280,9 +280,9 @@ public class TradeScreen extends AbstractContainerScreen<TradeMenu> {
         
         // Log for debugging
         if (localFinalConfirmed) {
-            Minecraft.getInstance().player.sendSystemMessage(Component.literal("§a§lHai confermato FINALMENTE! Aspetta che anche l'altro giocatore confermi."));
+            Minecraft.getInstance().player.sendSystemMessage(Component.translatable("message.tharidiathings.trade.final_confirmed_wait_other"));
         } else {
-            Minecraft.getInstance().player.sendSystemMessage(Component.literal("§7Conferma finale annullata."));
+            Minecraft.getInstance().player.sendSystemMessage(Component.translatable("message.tharidiathings.trade.final_confirm_cancelled"));
         }
     }
 
@@ -292,7 +292,7 @@ public class TradeScreen extends AbstractContainerScreen<TradeMenu> {
         
         // The trade is already completed server-side when both players final confirmed
         // This button just acknowledges and closes the GUI
-        Minecraft.getInstance().player.sendSystemMessage(Component.literal("§a§lSCAMBIO COMPLETATO!"));
+        Minecraft.getInstance().player.sendSystemMessage(Component.translatable("message.tharidiathings.trade.completed"));
         Minecraft.getInstance().player.closeContainer();
     }
 

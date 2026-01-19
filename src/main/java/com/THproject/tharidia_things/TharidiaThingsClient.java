@@ -7,6 +7,7 @@ import com.THproject.tharidia_things.client.ClientConnectionHandler;
 import com.THproject.tharidia_things.client.RealmBoundaryRenderer;
 import com.THproject.tharidia_things.client.RealmClientHandler;
 import com.THproject.tharidia_things.client.RealmOverlay;
+import com.THproject.tharidia_things.client.StaminaHudOverlay;
 import com.THproject.tharidia_things.client.ZoneMusicPlayer;
 import com.THproject.tharidia_things.client.video.DependencyCheckHandler;
 import com.THproject.tharidia_things.client.renderer.PietroBlockRenderer;
@@ -164,18 +165,22 @@ public class TharidiaThingsClient {
 
     @SubscribeEvent
     static void onRegisterGuiLayers(RegisterGuiLayersEvent event) {
-        // Register the realm overlay to be rendered above the hotbar
         event.registerAbove(
             VanillaGuiLayers.HOTBAR,
             TharidiaThings.modLoc("realm_overlay"),
             new RealmOverlay()
         );
         
-        // Register the weight HUD overlay in the lower left corner
         event.registerAbove(
             VanillaGuiLayers.HOTBAR,
             TharidiaThings.modLoc("weight_overlay"),
             new WeightHudOverlay()
+        );
+
+        event.registerAbove(
+            VanillaGuiLayers.HOTBAR,
+            TharidiaThings.modLoc("stamina_overlay"),
+            new StaminaHudOverlay()
         );
     }
 }

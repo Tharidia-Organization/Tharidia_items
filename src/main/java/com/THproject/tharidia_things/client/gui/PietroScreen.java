@@ -49,7 +49,7 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
     private MedievalProgressBar expansionProgressBar;
 
     public PietroScreen(PietroMenu menu, Inventory playerInventory, Component title) {
-        super(menu, playerInventory, Component.literal("Pergamena del Regno"));
+        super(menu, playerInventory, title);
         this.imageWidth = PARCHMENT_WIDTH;
         this.imageHeight = PARCHMENT_HEIGHT;
     }
@@ -66,19 +66,19 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
         
         // Create medieval-styled tabs
         expansionTabButton = MedievalTab.builder(
-            Component.literal("Espansione"),
+            Component.translatable("gui.tharidiathings.realm.tab.expansion"),
             button -> switchTab(TAB_EXPANSION),
             MedievalTab.TabStyle.ROYAL
         ).bounds(tabX, tabY, tabWidth, tabHeight).setActive(true).build();
         
         claimsTabButton = MedievalTab.builder(
-            Component.literal("Feudi"),
+            Component.translatable("gui.tharidiathings.realm.tab.claims"),
             button -> switchTab(TAB_CLAIMS),
             MedievalTab.TabStyle.ROYAL
         ).bounds(tabX + tabWidth + tabSpacing, tabY, tabWidth + 20, tabHeight).build();
         
         dungeonTabButton = MedievalTab.builder(
-            Component.literal("Dungeon"),
+            Component.translatable("gui.tharidiathings.realm.tab.dungeon"),
             button -> switchTab(TAB_DUNGEON),
             MedievalTab.TabStyle.ROYAL
         ).bounds(tabX + 2 * (tabWidth + tabSpacing) + 20, tabY, tabWidth, tabHeight).build();
@@ -97,7 +97,7 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
         
         // Create Entra button once, initially hidden
         enterDungeonButton = MedievalButton.builder(
-            Component.literal("Entra"),
+            Component.translatable("gui.tharidiathings.realm.dungeon.enter_button"),
             button -> {
                 // Send packet to join dungeon queue
                 sendDungeonJoinRequest();
@@ -156,7 +156,7 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
         gui.fill(x + 1, y + 1, x + 17, y + 17, MedievalGuiRenderer.DARK_PARCHMENT);
         
         // Add text label above slot
-        gui.drawString(Minecraft.getInstance().font, "§6Monete", x - 5, y - 15, MedievalGuiRenderer.ROYAL_GOLD);
+        gui.drawString(Minecraft.getInstance().font, Component.translatable("gui.tharidiathings.realm.currency_label").getString(), x - 5, y - 15, MedievalGuiRenderer.ROYAL_GOLD);
     }
     
     
@@ -194,7 +194,7 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
         int y = 100;
         
         // Render medieval title
-        MedievalGuiRenderer.renderMedievalTitle(guiGraphics, "Gestione del Regno", 
+        MedievalGuiRenderer.renderMedievalTitle(guiGraphics, Component.translatable("gui.tharidiathings.realm.title").getString(), 
                 x, y, this.imageWidth - BORDER_WIDTH * 2);
         
         // Render content based on current tab
@@ -235,12 +235,12 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
             int textX = BORDER_WIDTH + 20;
             
             // Lord information with medieval styling
-            renderMedievalTextLine(guiGraphics, "§6Signore del Regno:", textX, yPos, MedievalGuiRenderer.BROWN_INK);
+            renderMedievalTextLine(guiGraphics, Component.translatable("gui.tharidiathings.realm.lord_label").getString(), textX, yPos, MedievalGuiRenderer.BROWN_INK);
             yPos += 20;
             
             String owner = pietroEntity.getOwnerName();
             if (owner == null || owner.isEmpty()) {
-                owner = "Sconosciuto";
+                owner = Component.translatable("gui.tharidiathings.common.unknown").getString();
             }
             renderMedievalTextLine(guiGraphics, "§f" + owner, textX + 20, yPos, MedievalGuiRenderer.BLACK_INK);
             yPos += 30;
@@ -251,16 +251,16 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
             
             // Realm size information
             int size = this.menu.getRealmSize();
-            renderMedievalTextLine(guiGraphics, "§6Dimensione del Regno:", textX, yPos, MedievalGuiRenderer.BROWN_INK);
+            renderMedievalTextLine(guiGraphics, Component.translatable("gui.tharidiathings.realm.size_label").getString(), textX, yPos, MedievalGuiRenderer.BROWN_INK);
             yPos += 20;
-            renderMedievalTextLine(guiGraphics, "§e" + size + "x" + size + " chunks", textX + 20, yPos, MedievalGuiRenderer.ROYAL_GOLD);
+            renderMedievalTextLine(guiGraphics, Component.translatable("gui.tharidiathings.realm.size_value", size).getString(), textX + 20, yPos, MedievalGuiRenderer.ROYAL_GOLD);
             yPos += 30;
             
             // Expansion progress with medieval progress bar
             if (size >= 15) {
-                renderMedievalTextLine(guiGraphics, "§aREGNO AL MASSIMO LIVELLO!", textX, yPos, MedievalGuiRenderer.PURPLE_REGAL);
+                renderMedievalTextLine(guiGraphics, Component.translatable("gui.tharidiathings.realm.max_level").getString(), textX, yPos, MedievalGuiRenderer.PURPLE_REGAL);
             } else {
-                renderMedievalTextLine(guiGraphics, "§6Monete per Espansione:", textX, yPos, MedievalGuiRenderer.BROWN_INK);
+                renderMedievalTextLine(guiGraphics, Component.translatable("gui.tharidiathings.realm.expansion_cost_label").getString(), textX, yPos, MedievalGuiRenderer.BROWN_INK);
                 yPos += 25;
                 
                 int stored = this.menu.getStoredPotatoes();
@@ -273,7 +273,7 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
                 
                 yPos += 25;
                 int remaining = required - stored;
-                renderMedievalTextLine(guiGraphics, "§6Monete necessarie: §e" + remaining, textX, yPos, MedievalGuiRenderer.BROWN_INK);
+                renderMedievalTextLine(guiGraphics, Component.translatable("gui.tharidiathings.realm.coins_needed", remaining).getString(), textX, yPos, MedievalGuiRenderer.BROWN_INK);
             }
             
             yPos += 30;
@@ -281,9 +281,9 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
             yPos += 25;
             
             // Instructions
-            renderMedievalTextLine(guiGraphics, "§7§oDeposita le monete nello sacco", textX, yPos, MedievalGuiRenderer.BROWN_INK);
+            renderMedievalTextLine(guiGraphics, Component.translatable("gui.tharidiathings.realm.deposit_hint_1").getString(), textX, yPos, MedievalGuiRenderer.BROWN_INK);
             yPos += 15;
-            renderMedievalTextLine(guiGraphics, "§7§oper espandere il tuo regno", textX, yPos, MedievalGuiRenderer.BROWN_INK);
+            renderMedievalTextLine(guiGraphics, Component.translatable("gui.tharidiathings.realm.deposit_hint_2").getString(), textX, yPos, MedievalGuiRenderer.BROWN_INK);
         }
     }
     
@@ -301,12 +301,12 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
         int textX = BORDER_WIDTH + 20;
         
         // Title with medieval styling
-        renderMedievalTextLine(guiGraphics, "§6Feudi del Regno", textX, yPos, MedievalGuiRenderer.BROWN_INK);
+        renderMedievalTextLine(guiGraphics, Component.translatable("gui.tharidiathings.realm.claims_title").getString(), textX, yPos, MedievalGuiRenderer.BROWN_INK);
         yPos += 20;
         
         // Total coins with royal styling
         int totalPotatoes = this.menu.getTotalClaimPotatoes();
-        renderMedievalTextLine(guiGraphics, "§6Tesoro Reale: §e" + totalPotatoes + " monete", textX, yPos, MedievalGuiRenderer.ROYAL_GOLD);
+        renderMedievalTextLine(guiGraphics, Component.translatable("gui.tharidiathings.realm.treasury", totalPotatoes).getString(), textX, yPos, MedievalGuiRenderer.ROYAL_GOLD);
         yPos += 30;
         
         // Render divider
@@ -314,7 +314,7 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
         yPos += 25;
         
         // Hierarchy section with medieval styling
-        renderMedievalTextLine(guiGraphics, "§6Gerarchia Nobiliare:", textX, yPos, MedievalGuiRenderer.BROWN_INK);
+        renderMedievalTextLine(guiGraphics, Component.translatable("gui.tharidiathings.realm.hierarchy_title").getString(), textX, yPos, MedievalGuiRenderer.BROWN_INK);
         yPos += 25;
         
         // Get hierarchy data from client cache
@@ -368,7 +368,7 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
             
             // Rank title with royal colors
             String rankColor = getRankColor(rank);
-            renderMedievalTextLine(guiGraphics, rankColor + rank.getDisplayName(), textX + 120, yPos + 4, MedievalGuiRenderer.BROWN_INK);
+            renderMedievalTextLine(guiGraphics, rankColor + Component.translatable(getRankTranslationKey(rank)).getString(), textX + 120, yPos + 4, MedievalGuiRenderer.BROWN_INK);
             
             // Change rank button (only for lord and not for themselves)
             if (isLord && !entry.playerUUID.equals(ownerUUID)) {
@@ -396,7 +396,7 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
      * Renders a medieval-styled rank change button
      */
     private void renderMedievalRankButton(GuiGraphics gui, int x, int y, UUID playerUUID) {
-        MedievalGuiRenderer.renderMedievalButton(gui, x, y, 45, 16, "Cambia", false, true);
+        MedievalGuiRenderer.renderMedievalButton(gui, x, y, 45, 16, Component.translatable("gui.tharidiathings.realm.rank_change").getString(), false, true);
     }
     
     private void renderDungeonTab(GuiGraphics guiGraphics) {
@@ -405,7 +405,7 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
         int textX = BORDER_WIDTH + 20;
         
         // Title with medieval styling
-        renderMedievalTextLine(guiGraphics, "§6Dungeon del Regno", textX, yPos, MedievalGuiRenderer.BROWN_INK);
+        renderMedievalTextLine(guiGraphics, Component.translatable("gui.tharidiathings.realm.dungeon_title").getString(), textX, yPos, MedievalGuiRenderer.BROWN_INK);
         yPos += 30;
         
         // Render divider
@@ -413,12 +413,12 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
         yPos += 25;
         
         // Dungeon information
-        renderMedievalTextLine(guiGraphics, "§6Entra nel Dungeon Reale:", textX, yPos, MedievalGuiRenderer.BROWN_INK);
+        renderMedievalTextLine(guiGraphics, Component.translatable("gui.tharidiathings.realm.dungeon_enter_label").getString(), textX, yPos, MedievalGuiRenderer.BROWN_INK);
         yPos += 25;
         
-        renderMedievalTextLine(guiGraphics, "§7§oAffronta le sfide del re", textX, yPos, MedievalGuiRenderer.BROWN_INK);
+        renderMedievalTextLine(guiGraphics, Component.translatable("gui.tharidiathings.realm.dungeon_desc_1").getString(), textX, yPos, MedievalGuiRenderer.BROWN_INK);
         yPos += 15;
-        renderMedievalTextLine(guiGraphics, "§7§oe ottieni ricompense leggendarie", textX, yPos, MedievalGuiRenderer.BROWN_INK);
+        renderMedievalTextLine(guiGraphics, Component.translatable("gui.tharidiathings.realm.dungeon_desc_2").getString(), textX, yPos, MedievalGuiRenderer.BROWN_INK);
         yPos += 30;
         
         // Render divider
@@ -426,9 +426,9 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
         yPos += 25;
         
         // Status information
-        renderMedievalTextLine(guiGraphics, "§6Stato della Coda:", textX, yPos, MedievalGuiRenderer.BROWN_INK);
+        renderMedievalTextLine(guiGraphics, Component.translatable("gui.tharidiathings.realm.queue_status_label").getString(), textX, yPos, MedievalGuiRenderer.BROWN_INK);
         yPos += 20;
-        renderMedievalTextLine(guiGraphics, "§aPronto per l'avventura!", textX + 20, yPos, MedievalGuiRenderer.PURPLE_REGAL);
+        renderMedievalTextLine(guiGraphics, Component.translatable("gui.tharidiathings.realm.queue_ready").getString(), textX + 20, yPos, MedievalGuiRenderer.PURPLE_REGAL);
     }
     
     @Override
@@ -444,7 +444,7 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
         // Add medieval-styled dungeon button only on dungeon tab
         if (currentTab == TAB_DUNGEON) {
             enterDungeonButton = MedievalButton.builder(
-                Component.literal("Entra"),
+                Component.translatable("gui.tharidiathings.realm.dungeon.enter_button"),
                 button -> {
                     // Send packet to join dungeon queue
                     sendDungeonJoinRequest();
@@ -469,7 +469,7 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
                 MedievalGuiRenderer.BRONZE);
         
         // Title with medieval styling
-        renderMedievalTextLine(guiGraphics, "§6§lScegli Rango:", menuX + 10, menuY + 10, MedievalGuiRenderer.BROWN_INK);
+        renderMedievalTextLine(guiGraphics, Component.translatable("gui.tharidiathings.realm.rank_select_title").getString(), menuX + 10, menuY + 10, MedievalGuiRenderer.BROWN_INK);
         
         // Rank options (except LORD)
         HierarchyRank[] selectableRanks = {HierarchyRank.CONSIGLIERE, HierarchyRank.GUARDIA, HierarchyRank.MILIZIANO, HierarchyRank.COLONO};
@@ -485,7 +485,7 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
                 MedievalGuiRenderer.renderListItem(guiGraphics, menuX + 5, optionY - 2, menuWidth - 10, 18, "", false, true);
             }
             
-            renderMedievalTextLine(guiGraphics, rankColor + rank.getDisplayName(), menuX + 15, optionY + 4, MedievalGuiRenderer.BLACK_INK);
+            renderMedievalTextLine(guiGraphics, rankColor + Component.translatable(getRankTranslationKey(rank)).getString(), menuX + 15, optionY + 4, MedievalGuiRenderer.BLACK_INK);
             optionY += 20;
         }
     }
@@ -523,10 +523,14 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
         Map<UUID, Integer> hierarchyData = ClientPacketHandler.getCachedHierarchyData();
         if (hierarchyData.containsKey(uuid)) {
             // This is a simplified approach - in a real implementation you'd want a proper UUID->name mapping
-            return "Giocatore" + uuid.toString().substring(0, 8);
+            return Component.translatable("gui.tharidiathings.common.player_unknown", uuid.toString().substring(0, 8)).getString();
         }
         
-        return "Sconosciuto";
+        return Component.translatable("gui.tharidiathings.common.unknown").getString();
+    }
+
+    private static String getRankTranslationKey(HierarchyRank rank) {
+        return "gui.tharidiathings.realm.rank." + rank.name().toLowerCase(Locale.ROOT);
     }
     
     private static class PlayerHierarchyEntry {
@@ -536,7 +540,7 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
         
         PlayerHierarchyEntry(UUID uuid, String name, int level) {
             this.playerUUID = uuid;
-            this.playerName = name != null ? name : "Sconosciuto";
+            this.playerName = name != null ? name : Component.translatable("gui.tharidiathings.common.unknown").getString();
             this.rankLevel = level;
         }
     }

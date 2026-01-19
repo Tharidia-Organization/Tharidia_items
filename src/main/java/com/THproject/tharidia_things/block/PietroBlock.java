@@ -390,6 +390,12 @@ public class PietroBlock extends BaseEntityBlock {
 
     @Override
     public RenderShape getRenderShape(BlockState state) {
+        int realmLevel = state.getValue(REALM_LEVEL);
+        if (realmLevel <= 1) {
+            // Levels 0-1: GeckoLib handles rendering via BlockEntityRenderer
+            return RenderShape.ENTITYBLOCK_ANIMATED;
+        }
+        // Levels 2-4: Standard JSON model rendering
         return RenderShape.MODEL;
     }
 

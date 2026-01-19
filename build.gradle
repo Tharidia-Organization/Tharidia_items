@@ -85,6 +85,7 @@ neoForge {
         // The gametest system is also enabled by default for other run configs under the /test command.
         gameTestServer {
             type = "gameTestServer"
+            gameDirectory = project.file('runs/gametest')
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 
@@ -168,12 +169,10 @@ dependencies {
     // compileOnly for compile-time access, localRuntime for dev environment testing
     // Always uses the latest JAR from the sibling project
     compileOnly files('libs/tharidiatweaks-latest.jar')
-    runtimeOnly files('libs/tharidiatweaks-latest.jar')
     
     // Tharidia Features mod - local dependency for world border functionality
     // Always uses the latest JAR from the sibling project
     compileOnly files('libs/tharidiafeatures-latest.jar')
-    runtimeOnly files('libs/tharidiafeatures-latest.jar')
     
     // MySQL Connector for database communication - included in JAR via JarJar
     implementation 'com.mysql:mysql-connector-j:8.3.0'
@@ -207,6 +206,10 @@ dependencies {
     // Note: Gson is already provided by Minecraft, so we don't JarJar it
     implementation 'com.google.code.gson:gson:2.10.1'
     // jarJar(group: 'com.google.code.gson', name: 'gson', version: '[2.10.1,3.0.0)')
+
+    // GeckoLib for animated block models (NeoForge 1.21.1)
+    // Required dependency - user must install GeckoLib separately
+    implementation "software.bernie.geckolib:geckolib-neoforge-1.21.1:4.8.2"
     
     
     // SLF4J API is already provided by Minecraft/NeoForge - no need to include it
@@ -235,6 +238,13 @@ dependencies {
     // For more info:
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
     // http://www.gradle.org/docs/current/userguide/dependency_management.html
+
+    testImplementation platform('org.junit:junit-bom:5.10.2')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.

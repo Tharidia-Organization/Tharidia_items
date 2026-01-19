@@ -255,77 +255,13 @@ public class YouTubeUrlExtractor {
     
     /**
      * Uses yt-dlp to extract stream URL (most reliable method)
-     * Prefers direct URLs over HLS/DASH, but accepts HLS as fallback
+     * DISABLED: ProcessBuilder execution not allowed for CurseForge compliance
      */
     public static String getYtDlpStreamUrl(String youtubeUrl) {
-        try {
-            TharidiaThings.LOGGER.info("Attempting to extract stream URL using yt-dlp for: {}", youtubeUrl);
-            
-            // Detect OS to use correct command
-            String os = System.getProperty("os.name").toLowerCase();
-            boolean isWindows = os.contains("win");
-            
-            // Find yt-dlp executable
-            if (!ytDlpSearched) {
-                cachedYtDlpPath = findExecutable("yt-dlp", isWindows);
-                ytDlpSearched = true;
-            }
-            
-            String[] commands = {cachedYtDlpPath};
-            
-            String hlsFallbackUrl = null; // Store HLS URL as fallback
-            
-            for (String cmd : commands) {
-                // Try to get direct URL (not HLS) with cookies
-                String result = tryYtDlpExtract(cmd, youtubeUrl, true);
-                if (result != null) {
-                    if (isDirectUrl(result)) {
-                        TharidiaThings.LOGGER.info("Got direct URL using {} with cookies", cmd);
-                        return result;
-                    } else if (hlsFallbackUrl == null) {
-                        hlsFallbackUrl = result;
-                        TharidiaThings.LOGGER.info("Got HLS URL (will use as fallback): {}", 
-                            result.substring(0, Math.min(80, result.length())));
-                    }
-                }
-                
-                // Try without cookies
-                result = tryYtDlpExtract(cmd, youtubeUrl, false);
-                if (result != null) {
-                    if (isDirectUrl(result)) {
-                        TharidiaThings.LOGGER.info("Got direct URL using {} without cookies", cmd);
-                        return result;
-                    } else if (hlsFallbackUrl == null) {
-                        hlsFallbackUrl = result;
-                        TharidiaThings.LOGGER.info("Got HLS URL (will use as fallback): {}", 
-                            result.substring(0, Math.min(80, result.length())));
-                    }
-                }
-            }
-            
-            // If we only got HLS URL, use it - FFmpeg can handle it
-            if (hlsFallbackUrl != null) {
-                TharidiaThings.LOGGER.warn("Using HLS URL as fallback - FFmpeg will handle it");
-                return hlsFallbackUrl;
-            }
-        
-            TharidiaThings.LOGGER.error("Neither yt-dlp nor youtube-dl returned valid URLs");
-            if (os.contains("win")) {
-                TharidiaThings.LOGGER.error("=== WINDOWS INSTALLATION INSTRUCTIONS ===");
-                TharidiaThings.LOGGER.error("1. Download yt-dlp.exe from: https://github.com/yt-dlp/yt-dlp/releases/latest");
-                TharidiaThings.LOGGER.error("2. Place it in one of these locations:");
-                TharidiaThings.LOGGER.error("   - Your Minecraft folder: {}", System.getProperty("user.dir"));
-                TharidiaThings.LOGGER.error("   - Or add to Windows PATH (search 'Environment Variables')");
-                TharidiaThings.LOGGER.error("3. Restart Minecraft");
-            } else {
-                TharidiaThings.LOGGER.error("Install yt-dlp: pip install yt-dlp");
-            }
-            return null;
-        
-        } catch (Exception e) {
-            TharidiaThings.LOGGER.error("Failed to extract stream URL using yt-dlp", e);
-            return null;
-        }
+        // ProcessBuilder (yt-dlp) disabled for CurseForge compliance
+        TharidiaThings.LOGGER.warn("[CURSEFORGE MODE] yt-dlp extraction disabled - external process execution not allowed");
+        TharidiaThings.LOGGER.info("[CURSEFORGE MODE] URL requested: {}", youtubeUrl);
+        return null;
     }
     
     /**
@@ -340,62 +276,11 @@ public class YouTubeUrlExtractor {
     
     /**
      * Try to extract URL using yt-dlp with specific settings
+     * DISABLED: ProcessBuilder execution not allowed for CurseForge compliance
      */
     private static String tryYtDlpExtract(String cmd, String youtubeUrl, boolean useCookies) {
-        try {
-            ProcessBuilder pb;
-            if (useCookies) {
-                pb = new ProcessBuilder(
-                    cmd,
-                    "-f", "best[ext=mp4]/best",  // Simple format - let yt-dlp choose
-                    "-g",  // Get URL only
-                    "--no-warnings",
-                    "--no-playlist",
-                    "--cookies-from-browser", "chrome",
-                    youtubeUrl
-                );
-            } else {
-                pb = new ProcessBuilder(
-                    cmd,
-                    "-f", "best[ext=mp4]/best",
-                    "-g",
-                    "--no-warnings",
-                    "--no-playlist",
-                    youtubeUrl
-                );
-            }
-            
-            pb.redirectErrorStream(false);
-            Process process = pb.start();
-            
-            BufferedReader reader = new BufferedReader(
-                new InputStreamReader(process.getInputStream())
-            );
-            
-            String streamUrl = null;
-            String line;
-            while ((line = reader.readLine()) != null) {
-                line = line.trim();
-                if (line.startsWith("http://") || line.startsWith("https://")) {
-                    streamUrl = line;
-                    break;  // Take first URL
-                }
-            }
-            
-            // Wait with timeout to prevent hanging
-            boolean finished = process.waitFor(60, java.util.concurrent.TimeUnit.SECONDS);
-            if (!finished) {
-                TharidiaThings.LOGGER.warn("yt-dlp process timeout, destroying...");
-                process.destroyForcibly();
-            }
-            reader.close();
-            
-            return streamUrl;
-            
-        } catch (Exception e) {
-            TharidiaThings.LOGGER.debug("Failed to use {}: {}", cmd, e.getMessage());
-            return null;
-        }
+        // ProcessBuilder (yt-dlp) disabled for CurseForge compliance
+        return null;
     }
 
 /**
@@ -439,103 +324,12 @@ public static String getBestStreamUrl(String url) {
 
 /**
  * Uses streamlink to extract Twitch stream URL
+ * DISABLED: ProcessBuilder execution not allowed for CurseForge compliance
  */
 public static String getTwitchStreamUrl(String twitchUrl) {
-    try {
-        TharidiaThings.LOGGER.info("Attempting to extract Twitch stream URL using streamlink for: {}", twitchUrl);
-        
-        // Detect OS to use correct streamlink command
-        String os = System.getProperty("os.name").toLowerCase();
-        boolean isWindows = os.contains("win");
-        
-        // Find streamlink executable
-        if (!streamlinkSearched) {
-            cachedStreamlinkPath = findExecutable("streamlink", isWindows);
-            streamlinkSearched = true;
-        }
-        
-        String streamlinkCmd = cachedStreamlinkPath;
-        
-        // Use streamlink WITHOUT --player-passthrough to get m3u8 URL that VLC can handle
-        // VLC can play m3u8 URLs directly when not using callback rendering
-        ProcessBuilder pb = new ProcessBuilder(
-            streamlinkCmd,
-            "--stream-url",
-            twitchUrl,
-            "best"  // Use 'best' instead of complex quality selector to avoid parsing issues
-        );
-        pb.redirectErrorStream(false);
-        Process process = pb.start();
-        
-        BufferedReader reader = new BufferedReader(
-            new InputStreamReader(process.getInputStream())
-        );
-        
-        // Read the stream URL with timeout
-        String streamUrl = null;
-        String line;
-        
-        // Use a timeout for reading - streamlink can hang
-        long startTime = System.currentTimeMillis();
-        long timeout = 30000; // 30 second timeout
-        
-        while ((line = reader.readLine()) != null) {
-            if (System.currentTimeMillis() - startTime > timeout) {
-                TharidiaThings.LOGGER.warn("Streamlink read timeout, using partial result");
-                break;
-            }
-            line = line.trim();
-            if (line.startsWith("http://") || line.startsWith("https://")) {
-                streamUrl = line;
-                break;
-            }
-        }
-        
-        // Wait for process with timeout
-        boolean finished = process.waitFor(30, java.util.concurrent.TimeUnit.SECONDS);
-        if (!finished) {
-            TharidiaThings.LOGGER.warn("Streamlink process timeout, destroying...");
-            process.destroyForcibly();
-        }
-        
-        int exitCode = finished ? process.exitValue() : -1;
-        
-        if (exitCode == 0 && streamUrl != null && !streamUrl.isEmpty()) {
-            TharidiaThings.LOGGER.info("Successfully extracted Twitch stream URL using streamlink");
-            return streamUrl;
-        } else {
-            TharidiaThings.LOGGER.error("Streamlink failed or returned no URL. Exit code: {}", exitCode);
-            
-            // Read error output for better diagnostics
-            BufferedReader errorReader = new BufferedReader(
-                new InputStreamReader(process.getErrorStream())
-            );
-            StringBuilder errorOutput = new StringBuilder();
-            String errorLine;
-            while ((errorLine = errorReader.readLine()) != null) {
-                errorOutput.append(errorLine).append("\n");
-            }
-            errorReader.close();
-            
-            if (errorOutput.length() > 0) {
-                TharidiaThings.LOGGER.error("Streamlink error output: {}", errorOutput.toString());
-            }
-            
-            if (isWindows) {
-                TharidiaThings.LOGGER.error("=== WINDOWS INSTALLATION INSTRUCTIONS ===");
-                TharidiaThings.LOGGER.error("1. Download streamlink installer from: https://streamlink.github.io/install.html#windows");
-                TharidiaThings.LOGGER.error("2. Run the installer (it will add to PATH automatically)");
-                TharidiaThings.LOGGER.error("3. OR download portable version and place streamlink.exe in: {}", System.getProperty("user.dir"));
-                TharidiaThings.LOGGER.error("4. Restart Minecraft");
-            } else {
-                TharidiaThings.LOGGER.error("Please install streamlink: pip install streamlink");
-            }
-            return null;
-        }
-        
-    } catch (Exception e) {
-        TharidiaThings.LOGGER.error("Failed to extract Twitch stream URL", e);
-        return null;
-    }
+    // ProcessBuilder (streamlink) disabled for CurseForge compliance
+    TharidiaThings.LOGGER.warn("[CURSEFORGE MODE] Streamlink extraction disabled - external process execution not allowed");
+    TharidiaThings.LOGGER.info("[CURSEFORGE MODE] Twitch URL requested: {}", twitchUrl);
+    return null;
 }
 }

@@ -36,7 +36,7 @@ public record DungeonQueuePacket() implements CustomPacketPayload {
             if (context.player() instanceof ServerPlayer serverPlayer) {
                 try {
                     // Use reflection to access DungeonManager from Tharidia Features
-                    Class<?> dungeonManagerClass = Class.forName("com.lucab.tharidia_features.dungeon.DungeonManager");
+                    Class<?> dungeonManagerClass = Class.forName("com.THproject.tharidia_features.dungeon.DungeonManager");
                     java.lang.reflect.Method getInstanceMethod = dungeonManagerClass.getMethod("getInstance");
                     Object dungeonManager = getInstanceMethod.invoke(null);
                     

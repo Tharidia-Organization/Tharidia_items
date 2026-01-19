@@ -88,15 +88,15 @@ public class BattleGauntleAttachments implements INBTSerializable<CompoundTag> {
         }
     }
 
-    public static final DeferredRegister<AttachmentType<?>> ATTACKMENT_TYPES = DeferredRegister
+    public static final DeferredRegister<AttachmentType<?>> ATTACHMENT_TYPES = DeferredRegister
             .create(NeoForgeRegistries.ATTACHMENT_TYPES, TharidiaThings.MODID);
 
-    public static final Supplier<AttachmentType<BattleGauntleAttachments>> BATTLE_GAUNTLE = ATTACKMENT_TYPES
+    public static final Supplier<AttachmentType<BattleGauntleAttachments>> BATTLE_GAUNTLE = ATTACHMENT_TYPES
             .register(
                     "battle_gauntlet",
                     () -> AttachmentType.serializable(BattleGauntleAttachments::new).build());
 
     public static void register(IEventBus eventBus) {
-        ATTACKMENT_TYPES.register(eventBus);
+        ATTACHMENT_TYPES.register(eventBus);
     }
 }

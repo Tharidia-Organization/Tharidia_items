@@ -1,5 +1,6 @@
 package com.THproject.tharidia_things.client.video;
 
+import com.THproject.tharidia_things.Config;
 import com.THproject.tharidia_things.TharidiaThings;
 import net.minecraft.client.Minecraft;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -37,39 +38,66 @@ public class DependencyCheckHandler {
     
     private static void checkDependencies() {
         String os = System.getProperty("os.name").toLowerCase();
-        
+
         // Check on all platforms
         TharidiaThings.LOGGER.info("Checking for missing video dependencies...");
-        
-        // Use VideoToolsManager's detection logic instead
-        VideoToolsManager toolsManager = VideoToolsManager.getInstance();
-        boolean allPresent = toolsManager.checkAndInstallTools();
-        
-        if (allPresent) {
-            TharidiaThings.LOGGER.info("All video dependencies are installed");
+
+        // Check if auto-install is enabled in config (with safety check for config not loaded)
+        boolean autoInstallEnabled;
+        try {
+            autoInstallEnabled = Config.VIDEO_TOOLS_AUTO_INSTALL.get();
+        } catch (IllegalStateException e) {
+            // Config not loaded yet, retry on next tick
+            TharidiaThings.LOGGER.debug("Config not loaded yet, will retry dependency check later");
+            hasChecked = false;
+            isCheckScheduled = false;
             return;
         }
-        
-        // Create missing list based on VideoToolsManager's findings
-        List<DependencyDownloader.Dependency> missing = new ArrayList<>();
-        if (!toolsManager.isFfmpegFound() || !toolsManager.isFfplayFound()) {
-            missing.add(DependencyDownloader.Dependency.FFMPEG); // FFmpeg and FFplay are bundled together
+
+        // Use VideoToolsManager's detection logic
+        VideoToolsManager toolsManager = VideoToolsManager.getInstance();
+
+        if (autoInstallEnabled) {
+            // Original behavior: check and show installer GUI if missing
+            boolean allPresent = toolsManager.checkAndInstallTools();
+
+            if (allPresent) {
+                TharidiaThings.LOGGER.info("All video dependencies are installed");
+                return;
+            }
+
+            // Create missing list based on VideoToolsManager's findings
+            List<DependencyDownloader.Dependency> missing = new ArrayList<>();
+            if (!toolsManager.isFfmpegFound() || !toolsManager.isFfplayFound()) {
+                missing.add(DependencyDownloader.Dependency.FFMPEG);
+            }
+            if (!toolsManager.isYtDlpFound()) {
+                missing.add(DependencyDownloader.Dependency.YTDLP);
+            }
+            if (!isExecutableInPath("streamlink")) {
+                missing.add(DependencyDownloader.Dependency.STREAMLINK);
+            }
+
+            TharidiaThings.LOGGER.warn("Missing dependencies: {}", missing);
+
+            // Open setup screen (with download capability)
+            Minecraft mc = Minecraft.getInstance();
+            mc.execute(() -> {
+                mc.setScreen(new DependencySetupScreen(mc.screen, missing));
+            });
+        } else {
+            // CurseForge-compliant mode: only check presence, show info screen if missing
+            boolean allPresent = toolsManager.checkToolsPresenceOnly();
+
+            if (allPresent) {
+                TharidiaThings.LOGGER.info("All video dependencies are installed (manual install mode)");
+                return;
+            }
+
+            TharidiaThings.LOGGER.info("Video tools missing - auto-install disabled (CurseForge mode)");
+            TharidiaThings.LOGGER.info("Users must install FFmpeg, yt-dlp, and streamlink manually");
+            // Don't show any GUI on startup - only inform when user tries to use video features
         }
-        if (!toolsManager.isYtDlpFound()) {
-            missing.add(DependencyDownloader.Dependency.YTDLP);
-        }
-        // Check if streamlink is available in PATH
-        if (!isExecutableInPath("streamlink")) {
-            missing.add(DependencyDownloader.Dependency.STREAMLINK);
-        }
-        
-        TharidiaThings.LOGGER.warn("Missing dependencies: {}", missing);
-        
-        // Open setup screen
-        Minecraft mc = Minecraft.getInstance();
-        mc.execute(() -> {
-            mc.setScreen(new DependencySetupScreen(mc.screen, missing));
-        });
     }
     
     /**
@@ -82,24 +110,17 @@ public class DependencyCheckHandler {
     
     /**
      * Check if an executable is available in PATH
+     * DISABLED: ProcessBuilder execution not allowed for CurseForge compliance
+     * Now delegates to VideoToolsManager which checks file existence only
      */
     private static boolean isExecutableInPath(String execName) {
-        try {
-            String os = System.getProperty("os.name").toLowerCase();
-            ProcessBuilder pb;
-            
-            if (os.contains("win")) {
-                pb = new ProcessBuilder("where", execName + ".exe");
-            } else {
-                pb = new ProcessBuilder("which", execName);
-            }
-            
-            Process process = pb.start();
-            int exitCode = process.waitFor();
-            return exitCode == 0;
-        } catch (Exception e) {
-            return false;
+        // ProcessBuilder disabled for CurseForge compliance
+        // Check using VideoToolsManager's file-based detection
+        VideoToolsManager manager = VideoToolsManager.getInstance();
+        if (execName.equals("streamlink")) {
+            return manager.isStreamlinkFound();
         }
+        return false;
     }
     
     public static void register() {

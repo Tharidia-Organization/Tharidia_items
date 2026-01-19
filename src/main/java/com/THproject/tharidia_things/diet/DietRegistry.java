@@ -19,7 +19,6 @@ import java.util.concurrent.TimeUnit;
 public final class DietRegistry {
     private static final Logger LOGGER = LoggerFactory.getLogger(DietRegistry.class);
 
-
     private static volatile DietPackConfig config = DietPackConfig.DEFAULT;
 
     // Fast cache per item stack (identity). Auto-clears when stack GC'ed.
@@ -39,6 +38,7 @@ public final class DietRegistry {
 
     public static void setServer(MinecraftServer server) {
         currentServer = server;
+        if (server != null && server == currentServer && persistentCache != null) {return;}
         RecipeNutrientAnalyzer.setServer(server);
         if (server != null) {
             PROFILE_CACHE.invalidateAll();

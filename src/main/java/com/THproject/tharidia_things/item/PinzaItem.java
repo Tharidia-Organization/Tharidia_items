@@ -399,7 +399,10 @@ public class PinzaItem extends Item {
         HoldingType type = getHoldingType(stack);
         if (type != HoldingType.NONE) {
             String item = getHoldingItem(stack);
-            tooltipComponents.add(Component.translatable("item.tharidiathings.pinza.holding." + item));
+            if (!item.isEmpty()) {
+                String translationKey = "item.tharidiathings.pinza.holding." + item;
+                tooltipComponents.add(Component.translatable(translationKey));
+            }
         }
         super.appendHoverText(stack, context, tooltipComponents, tooltipFlag);
     }

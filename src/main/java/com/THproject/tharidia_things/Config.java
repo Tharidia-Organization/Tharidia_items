@@ -22,6 +22,22 @@ public class Config {
             .comment("Enable detailed debug logging for protection/crop checks (WARNING: Very verbose!)")
             .define("debugProtectionChecks", false);
 
+    public static final ModConfigSpec.BooleanValue DEBUG_STAMINA = BUILDER
+            .comment("Enable stamina debug logging (melee/bow cost, lockouts, combat flags)")
+            .define("debugStamina", false);
+
+    public static final ModConfigSpec.BooleanValue DEBUG_STAMINA_EPICFIGHT = BUILDER
+            .comment("Enable extra stamina debug logging for Epic Fight combat interactions")
+            .define("debugStaminaEpicFight", false);
+
+    public static final ModConfigSpec.BooleanValue STAMINA_COMBAT_REGEN_REDUCTION_ENABLED = BUILDER
+            .comment("If true, stamina regenerates in combat at a reduced rate")
+            .define("staminaCombatRegenReductionEnabled", true);
+
+    public static final ModConfigSpec.IntValue STAMINA_COMBAT_REGEN_REDUCTION_PERCENT = BUILDER
+            .comment("Stamina regeneration reduction percent while in combat (0-100)")
+            .defineInRange("staminaCombatRegenReductionPercent", 50, 0, 100);
+
     // Smithing minigame settings
     public static final ModConfigSpec.DoubleValue SMITHING_MIN_CYCLE_TIME = BUILDER
             .comment("Minimum cycle time for the smithing minigame circle (in seconds)")
@@ -105,6 +121,12 @@ public class Config {
     public static final ModConfigSpec.BooleanValue DEV_DIRECT_ACCESS_ENABLED = BUILDER
             .comment("If true, players in the dev whitelist can connect directly to the dev server without using transfer tokens")
             .define("devDirectAccessEnabled", true);
+
+    // Video tools configuration
+    public static final ModConfigSpec.BooleanValue VIDEO_TOOLS_AUTO_INSTALL = BUILDER
+            .comment("If true, automatically download and install video tools (FFmpeg, yt-dlp) when missing. " +
+                    "Set to false for CurseForge compliance - users must install tools manually.")
+            .define("videoToolsAutoInstall", false);
 
     static final ModConfigSpec SPEC = BUILDER.build();
 }

@@ -1,7 +1,7 @@
 package com.THproject.tharidia_things.network;
 
 import com.THproject.tharidia_things.TharidiaThings;
-import com.THproject.tharidia_things.video.VideoScreen;
+import com.THproject.tharidia_things.video.VideoPlaybackState;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -23,7 +23,7 @@ public record VideoScreenSyncPacket(
     BlockPos corner2,
     Direction facing,
     String videoUrl,
-    VideoScreen.VideoPlaybackState playbackState,
+    VideoPlaybackState playbackState,
     float volume
 ) implements CustomPacketPayload {
     
@@ -75,7 +75,7 @@ public record VideoScreenSyncPacket(
                 corner2,
                 facing,
                 videoUrl,
-                VideoScreen.VideoPlaybackState.valueOf(playbackStateStr),
+                VideoPlaybackState.valueOf(playbackStateStr),
                 volume
             );
         }

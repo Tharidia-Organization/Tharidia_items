@@ -1,0 +1,15 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "com.THproject.tharidia_things.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "priority": 500,
+  "mixins": [
+  ],
+  "client": [
+    "ClientSuggestionsMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

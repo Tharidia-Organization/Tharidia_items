@@ -33,12 +33,12 @@ public class GodEyeIntegration {
         
         try {
             // Get the GodEyeDatabase instance from Tharidia Features
-            Class<?> mainClass = Class.forName("com.lucab.tharidia_features.main");
+            Class<?> mainClass = Class.forName("com.THproject.tharidia_features.main");
             Method getGodEyeDatabaseMethod = mainClass.getMethod("getGodEyeDatabase");
             godEyeDatabase = getGodEyeDatabaseMethod.invoke(null);
             
             if (godEyeDatabase != null) {
-                Class<?> godEyeDatabaseClass = Class.forName("com.lucab.tharidia_features.database.GodEyeDatabase");
+                Class<?> godEyeDatabaseClass = Class.forName("com.THproject.tharidia_features.database.GodEyeDatabase");
                 updatePlayerClaimsMethod = godEyeDatabaseClass.getMethod("updatePlayerClaims", UUID.class, int.class, String.class);
                 initialized = true;
                 TharidiaThings.LOGGER.info("GodEye integration initialized successfully");

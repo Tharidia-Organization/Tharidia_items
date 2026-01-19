@@ -10,6 +10,7 @@ import com.THproject.tharidia_things.TharidiaThings;
 import com.THproject.tharidia_things.network.VideoScreenSyncPacket;
 import com.THproject.tharidia_things.video.VideoScreen;
 import com.THproject.tharidia_things.video.VideoScreenRegistry;
+import com.THproject.tharidia_things.video.VideoPlaybackState;
 import com.THproject.tharidia_things.video.YouTubeUrlExtractor;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -168,7 +169,7 @@ public class VideoScreenCommands {
                     corner2,
                     screen.getFacing(),
                     "",
-                    VideoScreen.VideoPlaybackState.STOPPED,
+                    VideoPlaybackState.STOPPED,
                     1.0f  // Default volume 100%
                 ));
                 source.sendSuccess(() -> Component.literal("Video screen created! " +
@@ -222,7 +223,7 @@ public class VideoScreenCommands {
         }
         
         screen.setVideoUrl(url);
-        screen.setPlaybackState(VideoScreen.VideoPlaybackState.PLAYING);
+        screen.setPlaybackState(VideoPlaybackState.PLAYING);
         registry.setDirty();
         
         // Sync to all players
@@ -234,7 +235,7 @@ public class VideoScreenCommands {
                 screen.getCorner2(),
                 screen.getFacing(),
                 url,
-                VideoScreen.VideoPlaybackState.PLAYING,
+                VideoPlaybackState.PLAYING,
                 screen.getVolume()
             ));
             source.sendSuccess(() -> Component.literal("Video URL set and playback started!"), false);
@@ -243,7 +244,7 @@ public class VideoScreenCommands {
             TharidiaThings.LOGGER.error("Failed to send video sync packet", e);
             // Reset the screen state since sync failed
             screen.setVideoUrl("");
-            screen.setPlaybackState(VideoScreen.VideoPlaybackState.STOPPED);
+            screen.setPlaybackState(VideoPlaybackState.STOPPED);
             registry.setDirty();
             return 0;
         }
@@ -251,11 +252,11 @@ public class VideoScreenCommands {
     }
     
     private static int playVideo(CommandContext<CommandSourceStack> context) {
-        return changePlaybackState(context, VideoScreen.VideoPlaybackState.PLAYING, "Video playback started");
+        return changePlaybackState(context, VideoPlaybackState.PLAYING, "Video playback started");
     }
     
     private static int pauseVideo(CommandContext<CommandSourceStack> context) {
-        return changePlaybackState(context, VideoScreen.VideoPlaybackState.PAUSED, "Video playback paused");
+        return changePlaybackState(context, VideoPlaybackState.PAUSED, "Video playback paused");
     }
     
     private static int restartVideo(CommandContext<CommandSourceStack> context) {
@@ -282,7 +283,7 @@ public class VideoScreenCommands {
         }
         
         // Stop then play to restart
-        screen.setPlaybackState(VideoScreen.VideoPlaybackState.STOPPED);
+        screen.setPlaybackState(VideoPlaybackState.STOPPED);
         registry.setDirty();
         
         // Sync stop
@@ -293,12 +294,12 @@ public class VideoScreenCommands {
             screen.getCorner2(),
             screen.getFacing(),
             screen.getVideoUrl(),
-            VideoScreen.VideoPlaybackState.STOPPED,
+            VideoPlaybackState.STOPPED,
             screen.getVolume()
         ));
         
         // Then immediately play
-        screen.setPlaybackState(VideoScreen.VideoPlaybackState.PLAYING);
+        screen.setPlaybackState(VideoPlaybackState.PLAYING);
         PacketDistributor.sendToAllPlayers(new VideoScreenSyncPacket(
             screen.getId(),
             dimension,
@@ -306,7 +307,7 @@ public class VideoScreenCommands {
             screen.getCorner2(),
             screen.getFacing(),
             screen.getVideoUrl(),
-            VideoScreen.VideoPlaybackState.PLAYING,
+            VideoPlaybackState.PLAYING,
             screen.getVolume()
         ));
         
@@ -380,7 +381,7 @@ public class VideoScreenCommands {
     }
     
     private static int changePlaybackState(CommandContext<CommandSourceStack> context, 
-                                          VideoScreen.VideoPlaybackState state, String message) {
+                                          VideoPlaybackState state, String message) {
         CommandSourceStack source = context.getSource();
         
         if (!(source.getEntity() instanceof ServerPlayer player)) {
