@@ -354,127 +354,20 @@ public class DependencyDownloader {
         }
     }
     
+    /**
+     * Download and extract FFmpeg on Linux
+     * DISABLED: ProcessBuilder execution not allowed for CurseForge compliance
+     * Users must install FFmpeg manually on Linux
+     */
     private static boolean downloadAndExtractFFmpegLinux(Path binDir, Consumer<Double> progressCallback) throws IOException {
-        Path tempTar = Files.createTempFile("ffmpeg", ".tar.xz");
-        
-        try {
-            TharidiaThings.LOGGER.info("Starting FFmpeg Linux installation...");
-            
-            // Download tar.xz file
-            if (!downloadFile(FFMPEG_URL_LINUX, tempTar, progress -> progressCallback.accept(progress * 0.7))) {
-                TharidiaThings.LOGGER.error("Failed to download FFmpeg tar.xz file");
-                return false;
-            }
-            
-            TharidiaThings.LOGGER.info("Downloaded FFmpeg to: {}", tempTar);
-            TharidiaThings.LOGGER.info("Extracting to bin directory: {}", binDir);
-            
-            // Extract tar.xz with -J flag for xz compression
-            ProcessBuilder pb = new ProcessBuilder("tar", "-xJf", tempTar.toString(), "-C", binDir.toString());
-            pb.redirectErrorStream(true);
-            Process process = pb.start();
-            
-            // Read output to monitor progress
-            StringBuilder output = new StringBuilder();
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    output.append(line).append("\n");
-                    TharidiaThings.LOGGER.debug("tar: {}", line);
-                }
-            }
-            
-            int exitCode = process.waitFor();
-            TharidiaThings.LOGGER.info("tar extraction exit code: {}", exitCode);
-            
-            if (exitCode != 0) {
-                TharidiaThings.LOGGER.error("Failed to extract FFmpeg tar.xz, exit code: {}", exitCode);
-                TharidiaThings.LOGGER.error("tar output: {}", output.toString());
-                return false;
-            }
-            
-            // List directory contents for debugging
-            TharidiaThings.LOGGER.info("Contents of bin directory after extraction:");
-            try (var stream = Files.list(binDir)) {
-                stream.forEach(path -> 
-                    TharidiaThings.LOGGER.info("  - {}", path.getFileName())
-                );
-            }
-            
-            // Find and rename the extracted ffmpeg binary
-            boolean foundFfmpeg = false;
-            boolean foundFfplay = false;
-            
-            // The extracted files are in a subdirectory like ffmpeg-6.0-amd64-static/
-            try (var stream = Files.list(binDir)) {
-                var dirs = stream.filter(Files::isDirectory)
-                    .filter(p -> p.getFileName().toString().startsWith("ffmpeg-"))
-                    .toList();
-                
-                TharidiaThings.LOGGER.info("Found {} ffmpeg directories", dirs.size());
-                
-                if (!dirs.isEmpty()) {
-                    Path ffmpegDir = dirs.get(0);
-                    TharidiaThings.LOGGER.info("Using ffmpeg directory: {}", ffmpegDir);
-                    
-                    // List contents of ffmpeg directory
-                    try (var dirStream = Files.list(ffmpegDir)) {
-                        dirStream.forEach(path -> 
-                            TharidiaThings.LOGGER.info("ffmpeg dir contains: {}", path.getFileName())
-                        );
-                    }
-                    
-                    Path ffmpegSrc = ffmpegDir.resolve("ffmpeg");
-                    Path ffplaySrc = ffmpegDir.resolve("ffplay");
-                    
-                    if (Files.exists(ffmpegSrc)) {
-                        Files.move(ffmpegSrc, binDir.resolve("ffmpeg"), StandardCopyOption.REPLACE_EXISTING);
-                        foundFfmpeg = true;
-                        binDir.resolve("ffmpeg").toFile().setExecutable(true);
-                        TharidiaThings.LOGGER.info("Moved ffmpeg to bin and made executable");
-                    } else {
-                        TharidiaThings.LOGGER.error("ffmpeg not found in extracted directory");
-                    }
-                    
-                    if (Files.exists(ffplaySrc)) {
-                        Files.move(ffplaySrc, binDir.resolve("ffplay"), StandardCopyOption.REPLACE_EXISTING);
-                        foundFfplay = true;
-                        binDir.resolve("ffplay").toFile().setExecutable(true);
-                        TharidiaThings.LOGGER.info("Moved ffplay to bin and made executable");
-                    } else {
-                        TharidiaThings.LOGGER.warn("ffplay not found in extracted directory (may not be included in static build)");
-                    }
-                    
-                    // Clean up the extracted directory
-                    Files.walk(ffmpegDir).sorted((a, b) -> -a.compareTo(b)).forEach(p -> {
-                        try {
-                            Files.delete(p);
-                        } catch (IOException e) {
-                            TharidiaThings.LOGGER.debug("Failed to delete {}: {}", p, e.getMessage());
-                        }
-                    });
-                } else {
-                    TharidiaThings.LOGGER.error("No ffmpeg-* directory found after extraction");
-                }
-            }
-            
-            progressCallback.accept(1.0);
-            TharidiaThings.LOGGER.info("FFmpeg installation complete. Found ffmpeg: {}, found ffplay: {}", foundFfmpeg, foundFfplay);
-            return foundFfmpeg; // Only require ffmpeg, ffplay is optional in static builds
-            
-        } catch (Exception e) {
-            TharidiaThings.LOGGER.error("FFmpeg extraction failed with exception", e);
-            if (e instanceof InterruptedException) {
-                Thread.currentThread().interrupt();
-            }
-            throw new IOException("Failed to extract FFmpeg", e);
-        } finally {
-            try {
-                Files.deleteIfExists(tempTar);
-            } catch (IOException e) {
-                TharidiaThings.LOGGER.debug("Failed to delete temp file: {}", tempTar, e);
-            }
-        }
+        // ProcessBuilder (tar command) disabled for CurseForge compliance
+        TharidiaThings.LOGGER.info("[CURSEFORGE MODE] Automatic FFmpeg installation on Linux is disabled.");
+        TharidiaThings.LOGGER.info("[CURSEFORGE MODE] Please install FFmpeg manually using your package manager:");
+        TharidiaThings.LOGGER.info("[CURSEFORGE MODE]   Ubuntu/Debian: sudo apt install ffmpeg");
+        TharidiaThings.LOGGER.info("[CURSEFORGE MODE]   Fedora: sudo dnf install ffmpeg");
+        TharidiaThings.LOGGER.info("[CURSEFORGE MODE]   Arch: sudo pacman -S ffmpeg");
+        progressCallback.accept(1.0);
+        return false;
     }
     
     /**
@@ -519,26 +412,17 @@ public class DependencyDownloader {
     
     /**
      * Install FFmpeg using winget (requires user confirmation in CMD)
+     * DISABLED: ProcessBuilder execution not allowed for CurseForge compliance
+     * Users must install FFmpeg manually
      */
     public static CompletableFuture<Boolean> installFFmpegWithWinget() {
         return CompletableFuture.supplyAsync(() -> {
-            try {
-                TharidiaThings.LOGGER.info("Installing FFmpeg via winget...");
-                
-                // Open CMD with winget command
-                ProcessBuilder pb = new ProcessBuilder(
-                    "cmd.exe", "/c", "start", "cmd.exe", "/k",
-                    "echo Installing FFmpeg... && winget install ffmpeg && echo. && echo Installation complete! You can close this window. && pause"
-                );
-                pb.start();
-                
-                TharidiaThings.LOGGER.info("Winget command launched. User must accept in CMD window.");
-                return true;
-                
-            } catch (Exception e) {
-                TharidiaThings.LOGGER.error("Failed to launch winget", e);
-                return false;
-            }
+            // ProcessBuilder (cmd.exe/winget) disabled for CurseForge compliance
+            TharidiaThings.LOGGER.info("[CURSEFORGE MODE] Automatic FFmpeg installation via winget is disabled.");
+            TharidiaThings.LOGGER.info("[CURSEFORGE MODE] Please install FFmpeg manually:");
+            TharidiaThings.LOGGER.info("[CURSEFORGE MODE]   Option 1: Run 'winget install ffmpeg' in Command Prompt");
+            TharidiaThings.LOGGER.info("[CURSEFORGE MODE]   Option 2: Download from https://www.gyan.dev/ffmpeg/builds/");
+            return false;
         });
     }
 }

@@ -55,4 +55,5 @@ repo
 /libs/
 
 /src/generated/
-/.claude/
+/logs/
+/nul

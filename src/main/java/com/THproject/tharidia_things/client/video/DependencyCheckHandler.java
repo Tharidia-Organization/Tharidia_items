@@ -110,24 +110,17 @@ public class DependencyCheckHandler {
     
     /**
      * Check if an executable is available in PATH
+     * DISABLED: ProcessBuilder execution not allowed for CurseForge compliance
+     * Now delegates to VideoToolsManager which checks file existence only
      */
     private static boolean isExecutableInPath(String execName) {
-        try {
-            String os = System.getProperty("os.name").toLowerCase();
-            ProcessBuilder pb;
-            
-            if (os.contains("win")) {
-                pb = new ProcessBuilder("where", execName + ".exe");
-            } else {
-                pb = new ProcessBuilder("which", execName);
-            }
-            
-            Process process = pb.start();
-            int exitCode = process.waitFor();
-            return exitCode == 0;
-        } catch (Exception e) {
-            return false;
+        // ProcessBuilder disabled for CurseForge compliance
+        // Check using VideoToolsManager's file-based detection
+        VideoToolsManager manager = VideoToolsManager.getInstance();
+        if (execName.equals("streamlink")) {
+            return manager.isStreamlinkFound();
         }
+        return false;
     }
     
     public static void register() {

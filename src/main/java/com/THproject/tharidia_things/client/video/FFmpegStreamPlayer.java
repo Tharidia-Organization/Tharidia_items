@@ -37,106 +37,21 @@ public class FFmpegStreamPlayer {
         this.screen = screen;
     }
     
+    /**
+     * Load and play a video stream
+     * DISABLED: ProcessBuilder execution not allowed for CurseForge compliance
+     * Video playback requires external tools (ffmpeg/ffplay) which cannot be executed
+     */
     public void loadVideo(String url) {
         this.videoUrl = url;
-        
-        try {
-            TharidiaThings.LOGGER.info("[FFmpeg] Starting stream capture: {}", url);
-            
-            // Detect OS
-            String os = System.getProperty("os.name").toLowerCase();
-            String ffmpegCmd = os.contains("win") ? "ffmpeg.exe" : "ffmpeg";
-            String ffplayCmd = os.contains("win") ? "ffplay.exe" : "ffplay";
-            
-            // Use lower resolution for testing performance
-            // TODO: Increase back to 1280x720 after optimization
-            videoWidth = 640;
-            videoHeight = 360;
-            
-            TharidiaThings.LOGGER.info("[FFmpeg] Using native 16:9 resolution: {}x{}", videoWidth, videoHeight);
-            
-            // Start FFmpeg with optimized parameters for streaming
-            ProcessBuilder pb = new ProcessBuilder(
-                ffmpegCmd,
-                // Network options
-                "-reconnect", "1",
-                "-reconnect_streamed", "1",
-                "-reconnect_delay_max", "5",
-                "-timeout", "10000000",
-                "-rw_timeout", "10000000",
-                // Input
-                "-i", url,
-                // Video processing - scale to exact 640x360 with proper aspect ratio
-                "-vf", "scale=640:360:force_original_aspect_ratio=decrease,pad=640:360:(ow-iw)/2:(oh-ih)/2:black",
-                "-sws_flags", "fast_bilinear",
-                // Output format
-                "-f", "rawvideo",
-                "-pix_fmt", "rgb24",
-                "-r", "25",
-                "-vsync", "1",
-                // Buffer settings - optimized for live streaming
-                "-fflags", "nobuffer",
-                "-flags", "low_delay",
-                "-probesize", "32",
-                "-analyzeduration", "0",
-                // No audio in video stream (separate process for sync)
-                "-an",
-                "-"
-            );
-            pb.redirectErrorStream(true);
-            
-            ffmpegProcess = pb.start();
-            
-            // Log FFmpeg errors in separate thread
-            new Thread(() -> {
-                try (java.io.BufferedReader reader = new java.io.BufferedReader(
-                        new java.io.InputStreamReader(ffmpegProcess.getErrorStream()))) {
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        TharidiaThings.LOGGER.debug("[FFmpeg] {}", line);
-                    }
-                } catch (Exception e) {
-                    // Ignore
-                }
-            }, "FFmpeg-Error-Logger").start();
-            
-            // Start separate FFplay process for audio - delayed start for sync
-            try {
-                // Small delay to ensure video process is ready
-                Thread.sleep(100);
-                
-                ProcessBuilder audioPb = new ProcessBuilder(
-                    ffplayCmd,
-                    "-nodisp",
-                    "-autoexit",
-                    "-sync", "ext",
-                    "-af", "volume=" + volume,
-                    "-vn",
-                    "-framedrop",
-                    "-infbuf",
-                    "-i", url
-                );
-                audioPb.redirectErrorStream(false);
-                audioProcess = audioPb.start();
-                TharidiaThings.LOGGER.info("[FFmpeg] Audio playback started at volume {}", volume);
-            } catch (Exception e) {
-                TharidiaThings.LOGGER.warn("[FFmpeg] Could not start audio playback: {}", e.getMessage());
-            }
-            
-            texture = new DynamicTexture(videoWidth, videoHeight, false);
-            image = texture.getPixels(); // Get the NativeImage from DynamicTexture
-            
-            running = true;
-            
-            readerThread = new Thread(this::readFrames, "FFmpeg-Reader-" + screen.getId());
-            readerThread.setDaemon(true);
-            readerThread.start();
-            
-            TharidiaThings.LOGGER.info("[FFmpeg] Stream capture started");
-            
-        } catch (Exception e) {
-            TharidiaThings.LOGGER.error("[FFmpeg] Failed to start stream", e);
-        }
+
+        // ProcessBuilder (ffmpeg/ffplay) disabled for CurseForge compliance
+        TharidiaThings.LOGGER.warn("[FFmpeg] Video playback is disabled in CurseForge mode.");
+        TharidiaThings.LOGGER.warn("[FFmpeg] This feature requires executing external tools (ffmpeg/ffplay)");
+        TharidiaThings.LOGGER.warn("[FFmpeg] which is not allowed by CurseForge guidelines.");
+
+        // Don't start any processes - just log the URL for reference
+        TharidiaThings.LOGGER.info("[FFmpeg] Requested URL (not playing): {}", url);
     }
     
     private void readFrames() {
@@ -305,33 +220,15 @@ public class FFmpegStreamPlayer {
         // Cannot seek live stream
     }
     
+    /**
+     * Set audio volume
+     * DISABLED: ProcessBuilder execution not allowed for CurseForge compliance
+     */
     public void setVolume(float volume) {
         this.volume = Math.max(0.0f, Math.min(1.0f, volume));
-        TharidiaThings.LOGGER.info("[FFmpeg] Volume set to {}", volume);
-        
-        // Restart audio process with new volume
-        if (audioProcess != null && videoUrl != null) {
-            try {
-                audioProcess.destroy();
-                audioProcess.waitFor();
-                
-                String os = System.getProperty("os.name").toLowerCase();
-                String ffplayCmd = os.contains("win") ? "ffplay.exe" : "ffplay";
-                
-                ProcessBuilder audioPb = new ProcessBuilder(
-                    ffplayCmd,
-                    "-nodisp",
-                    "-autoexit",
-                    "-af", "volume=" + volume,
-                    "-i", videoUrl
-                );
-                audioPb.redirectErrorStream(false);
-                audioProcess = audioPb.start();
-                TharidiaThings.LOGGER.info("[FFmpeg] Audio restarted with volume {}", volume);
-            } catch (Exception e) {
-                TharidiaThings.LOGGER.warn("[FFmpeg] Failed to restart audio with new volume: {}", e.getMessage());
-            }
-        }
+        TharidiaThings.LOGGER.debug("[FFmpeg] Volume set to {} (audio playback disabled in CurseForge mode)", volume);
+        // ProcessBuilder (ffplay) disabled for CurseForge compliance
+        // Volume changes have no effect when video playback is disabled
     }
     
     public float getVolume() {

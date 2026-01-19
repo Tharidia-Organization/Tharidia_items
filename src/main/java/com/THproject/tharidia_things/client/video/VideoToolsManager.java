@@ -227,35 +227,10 @@ public class VideoToolsManager {
             }
         }
         
-        // Try PATH as last resort (Windows uses 'where', Linux uses 'which')
+        // PATH check disabled for CurseForge compliance (no ProcessBuilder/exec allowed)
+        // Users must install tools manually and place them in known locations
         if (foundPath == null) {
-            TharidiaThings.LOGGER.info("[VIDEO TOOLS] Checking PATH for {}", execName);
-            try {
-                ProcessBuilder pb;
-                if (isWindows) {
-                    pb = new ProcessBuilder("where", execName + ".exe");
-                } else {
-                    pb = new ProcessBuilder("which", execName);
-                }
-                Process process = pb.start();
-                int exitCode = process.waitFor();
-                if (exitCode == 0) {
-                    // Read the path from output
-                    String output = new String(process.getInputStream().readAllBytes()).trim();
-                    if (!output.isEmpty()) {
-                        String firstPath = output.split("\n")[0].trim();
-                        TharidiaThings.LOGGER.info("[VIDEO TOOLS] Found {} in PATH at: {}", execName, firstPath);
-                        foundPath = firstPath;
-                    } else {
-                        TharidiaThings.LOGGER.info("[VIDEO TOOLS] Found {} in PATH", execName);
-                        foundPath = isWindows ? execName + ".exe" : execName;
-                    }
-                } else {
-                    TharidiaThings.LOGGER.warn("[VIDEO TOOLS] {} not found in PATH (exit code: {})", execName, exitCode);
-                }
-            } catch (Exception e) {
-                TharidiaThings.LOGGER.warn("[VIDEO TOOLS] Error checking PATH for {}: {}", execName, e.getMessage());
-            }
+            TharidiaThings.LOGGER.info("[VIDEO TOOLS] {} not found in known locations. Manual installation required.", execName);
         }
         
         if (foundPath == null) {
@@ -276,72 +251,32 @@ public class VideoToolsManager {
     
     /**
      * Use 'which' command to find executable in PATH (Linux/Mac only)
+     * DISABLED: ProcessBuilder execution not allowed for CurseForge compliance
      */
     private String findExecutableWithWhich(String execName) {
-        try {
-            ProcessBuilder pb = new ProcessBuilder("which", execName);
-            pb.redirectErrorStream(true);
-            Process process = pb.start();
-            
-            boolean finished = process.waitFor(5, java.util.concurrent.TimeUnit.SECONDS);
-            if (!finished) {
-                process.destroyForcibly();
-                return null;
-            }
-            
-            if (process.exitValue() == 0) {
-                String output = new String(process.getInputStream().readAllBytes()).trim();
-                if (!output.isEmpty()) {
-                    return output.split("\n")[0].trim();
-                }
-            }
-        } catch (Exception e) {
-            TharidiaThings.LOGGER.debug("[VIDEO TOOLS] 'which' command failed for {}: {}", execName, e.getMessage());
-        }
+        // ProcessBuilder disabled for CurseForge compliance
+        // Users must install tools in known locations
         return null;
     }
     
+    /**
+     * Verify executable works by running it
+     * DISABLED: ProcessBuilder execution not allowed for CurseForge compliance
+     * Now only checks if file exists and is executable
+     */
     private boolean verifyExecutableWorks(String path, String execName) {
+        // ProcessBuilder disabled for CurseForge compliance
+        // Just verify the file exists and appears executable
         try {
-            ProcessBuilder pb;
-            if (execName.equals("ffmpeg") || execName.equals("ffplay")) {
-                // Test with -version flag
-                pb = new ProcessBuilder(path, "-version");
-            } else if (execName.equals("yt-dlp") || execName.equals("streamlink")) {
-                // Test with --version flag
-                pb = new ProcessBuilder(path, "--version");
-            } else {
-                // Generic test
-                pb = new ProcessBuilder(path, "--help");
-            }
-            
-            // Redirect error stream to output stream
-            pb.redirectErrorStream(true);
-            
-            Process process = pb.start();
-            boolean finished = process.waitFor(5, java.util.concurrent.TimeUnit.SECONDS);
-            
-            if (!finished) {
-                TharidiaThings.LOGGER.warn("[VIDEO TOOLS] {} verification timed out", execName);
-                process.destroyForcibly();
-                return false;
-            }
-            
-            int exitCode = process.exitValue();
-            if (exitCode == 0) {
-                // Success - read first line of output to confirm it's the right tool
-                String output = new String(process.getInputStream().readAllBytes());
-                String firstLine = output.split("\n")[0];
-                TharidiaThings.LOGGER.info("[VIDEO TOOLS] {} verification output: {}", execName, firstLine);
+            File file = new File(path);
+            if (file.exists() && file.canExecute()) {
+                TharidiaThings.LOGGER.info("[VIDEO TOOLS] {} found at {} (execution verification skipped for CurseForge compliance)", execName, path);
                 return true;
-            } else {
-                TharidiaThings.LOGGER.warn("[VIDEO TOOLS] {} verification failed with exit code: {}", execName, exitCode);
-                return false;
             }
         } catch (Exception e) {
-            TharidiaThings.LOGGER.warn("[VIDEO TOOLS] Error verifying {}: {}", execName, e.getMessage());
-            return false;
+            TharidiaThings.LOGGER.debug("[VIDEO TOOLS] Error checking {}: {}", execName, e.getMessage());
         }
+        return false;
     }
     
     private List<String> getSearchPaths(String execName) {

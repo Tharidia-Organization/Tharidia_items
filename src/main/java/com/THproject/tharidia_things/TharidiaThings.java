@@ -362,8 +362,8 @@ public class TharidiaThings {
             NeoForge.EVENT_BUS.register(HandshakeBypass.class);
             LOGGER.warn("Handshake bypass registered - you can connect to servers with different mod versions");
 
-            // Check for video tools on Windows
-            VideoToolsManager.getInstance().checkAndInstallTools();
+            // Video tools check disabled for CurseForge compliance
+            // (No automatic tool installation or process execution allowed)
         }
 
         // Log version for debugging

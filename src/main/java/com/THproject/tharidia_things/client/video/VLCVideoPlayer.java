@@ -196,222 +196,34 @@ public class VLCVideoPlayer {
         }
     }
     
+    /**
+     * Load and play a video
+     * DISABLED: ProcessBuilder execution not allowed for CurseForge compliance
+     * Video playback requires external tools (ffmpeg/ffplay) which cannot be executed
+     */
     public void loadVideo(String url) {
         if (!isInitialized) {
             TharidiaThings.LOGGER.error("[VIDEO] Cannot load - not initialized");
             return;
         }
-        
-        // Stop any existing playback
-        stopInternal();
-        
+
         this.videoUrl = url;
-        TharidiaThings.LOGGER.info("[VIDEO] Loading: {}", url);
-        
-        // Run loading in background to not block render thread
-        Thread loaderThread = new Thread(() -> {
-            try {
-                boolean isYouTubeOrTwitch = YouTubeUrlExtractor.isValidYouTubeUrl(url) || url.contains("twitch.tv");
 
-                if (isYouTubeOrTwitch) {
-                    String platform = url.contains("twitch.tv") ? "Twitch" : "YouTube";
-                    TharidiaThings.LOGGER.info("[VIDEO] Extracting {} stream URL...", platform);
-
-                    // Use YouTubeUrlExtractor which has proper executable finding logic
-                    String streamUrl = YouTubeUrlExtractor.getBestStreamUrl(url);
-                    if (streamUrl == null) {
-                        TharidiaThings.LOGGER.error("[VIDEO] Failed to extract stream URL");
-                        return;
-                    }
-
-                    TharidiaThings.LOGGER.info("[VIDEO] Stream URL ready, starting synchronized playback");
-
-                    // Start unified process with both video and audio
-                    startUnifiedProcess(streamUrl);
-                } else {
-                    // Direct URL - use FFmpeg directly
-                    TharidiaThings.LOGGER.info("[VIDEO] Using direct URL");
-                    startUnifiedProcess(url);
-                }
-
-                // Note: startUnifiedProcess() calls startPipeReaders() which starts all threads
-                // and sets running.set(true) internally
-
-                TharidiaThings.LOGGER.info("[VIDEO] Playback started");
-
-            } catch (Exception e) {
-                TharidiaThings.LOGGER.error("[VIDEO] Failed to load video", e);
-            }
-        }, "VideoLoader");
-        loaderThread.setDaemon(true);
-        loaderThread.start();
+        // ProcessBuilder (ffmpeg/ffplay) disabled for CurseForge compliance
+        TharidiaThings.LOGGER.warn("[VIDEO] Video playback is disabled in CurseForge mode.");
+        TharidiaThings.LOGGER.warn("[VIDEO] This feature requires executing external tools (ffmpeg/ffplay)");
+        TharidiaThings.LOGGER.warn("[VIDEO] which is not allowed by CurseForge guidelines.");
+        TharidiaThings.LOGGER.info("[VIDEO] Requested URL (not playing): {}", url);
     }
     
+    /**
+     * Start unified FFmpeg process
+     * DISABLED: ProcessBuilder execution not allowed for CurseForge compliance
+     */
     private void startUnifiedProcess(String url) throws Exception {
-        // Check OS for platform-specific handling
-        String os = System.getProperty("os.name").toLowerCase();
-        boolean isWindows = os.contains("win");
-        
-        // Create named pipes for synchronized output
-        createNamedPipes();
-        
-        // Get FFmpeg path from VideoToolsManager
-        String ffmpeg = getFfmpegPath();
-        
-        // Check if URL is HLS (Twitch streams)
-        boolean isHls = url.contains(".m3u8");
-        
-        // Build FFmpeg command with optimized parameters
-        List<String> command = new ArrayList<>();
-        command.add(ffmpeg);
-        
-        // Performance optimizations - remove throttling
-        command.add("-threads");
-        command.add("0");  // Use all CPU threads
-        command.add("-probesize");
-        command.add("32");  // Faster probing
-        command.add("-analyzeduration");
-        command.add("0");  // No analysis delay
-        
-        // Input options - optimized for live streams
-        if (!isHls) {
-            // Only use -re for non-live content
-            command.add("-re");
-        }
-        command.add("-reconnect");
-        command.add("1");
-        command.add("-reconnect_streamed");
-        command.add("1");
-        command.add("-reconnect_delay_max");
-        command.add("5");
-        
-        // HLS-specific optimizations for Twitch
-        if (isHls) {
-            command.add("-fflags");
-            command.add("nobuffer");
-            command.add("-flags");
-            command.add("low_delay");
-            command.add("-rw_timeout");
-            command.add("15000000");  // 15s read timeout
-            command.add("-hls_time");
-            command.add("2");  // Shorter segments
-            command.add("-max_interleave_delta");
-            command.add("0");  // No interleaving
-        }
-        
-        // Sync options to prevent desync
-        command.add("-sync");
-        command.add("audio");
-        command.add("-vsync");
-        command.add("1");  // VFR with timestamps
-        command.add("-max_delay");
-        command.add("500000");  // 0.5s max delay
-        
-        command.add("-i");
-        command.add(url);
-        
-        // Check if Windows for output format
-        if (isWindows) {
-            // Windows: Output raw video to stdout (no NUT demuxing implemented)
-            TharidiaThings.LOGGER.info("[VIDEO] Using raw video stdout for Windows (sync limited)");
-            
-            // Video processing with optimized scaling
-            command.add("-vf");
-            command.add("scale=" + VIDEO_WIDTH + ":" + VIDEO_HEIGHT + ":force_original_aspect_ratio=decrease," +
-                       "pad=" + VIDEO_WIDTH + ":" + VIDEO_HEIGHT + ":(ow-iw)/2:(oh-ih)/2:black," +
-                       "fps=30");
-            
-            // Output raw video only to stdout
-            command.add("-c:v");
-            command.add("rawvideo");
-            command.add("-pix_fmt");
-            command.add("rgb24");
-            command.add("-f");
-            command.add("rawvideo");
-            command.add("-an");  // No audio in main process
-            command.add("-");
-        } else {
-            // Unix/Linux/macOS: Use named pipes
-            // Video processing with optimized scaling
-            command.add("-vf");
-            command.add("scale=" + VIDEO_WIDTH + ":" + VIDEO_HEIGHT + ":force_original_aspect_ratio=decrease," +
-                       "pad=" + VIDEO_WIDTH + ":" + VIDEO_HEIGHT + ":(ow-iw)/2:(oh-ih)/2:black," +
-                       "fps=30");
-            
-            // Video output to pipe
-            command.add("-map");
-            command.add("0:v:0");
-            command.add("-c:v");
-            command.add("rawvideo");
-            command.add("-pix_fmt");
-            command.add("rgb24");
-            command.add("-f");
-            command.add("rawvideo");
-            command.add("-y");
-            command.add(videoPipe.toString());
-            
-            // Audio output to pipe
-            command.add("-map");
-            command.add("0:a:0");
-            command.add("-c:a");
-            command.add("pcm_s16le");
-            command.add("-ar");
-            command.add("48000");
-            command.add("-ac");
-            command.add("2");
-            command.add("-af");
-            command.add("volume=" + volume);
-            command.add("-f");
-            command.add("s16le");
-            command.add("-y");
-            command.add(audioPipe.toString());
-        }
-        
-        ProcessBuilder pb = new ProcessBuilder(command);
-        
-        pb.redirectErrorStream(false);
-        try {
-            videoProcess = pb.start();
-        } catch (Exception e) {
-            cleanupPipes();
-            TharidiaThings.LOGGER.error("[VIDEO] Failed to start FFmpeg process: {}", e.getMessage());
-            if (isWindows) {
-                TharidiaThings.LOGGER.error("=== WINDOWS FFMPEG INSTALLATION ===");
-                TharidiaThings.LOGGER.error("1. Download FFmpeg from: https://www.gyan.dev/ffmpeg/builds/");
-                TharidiaThings.LOGGER.error("2. Extract to C:\\ffmpeg");
-                TharidiaThings.LOGGER.error("3. Add C:\\ffmpeg\\bin to Windows PATH");
-                TharidiaThings.LOGGER.error("4. Restart Minecraft");
-                TharidiaThings.LOGGER.error("See WINDOWS_SETUP.md for detailed instructions");
-            }
-            throw e;
-        }
-        
-        // Initialize audio line
-        initializeAudioLine();
-        
-        // Start pipe readers
-        startPipeReaders();
-        
-        // Log FFmpeg errors in background
-        Thread errorLogger = new Thread(() -> {
-            try (BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(videoProcess.getErrorStream()))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    if (line.contains("Error") || line.contains("error")) {
-                        TharidiaThings.LOGGER.warn("[FFMPEG] {}", line);
-                    } else {
-                        TharidiaThings.LOGGER.debug("[FFMPEG] {}", line);
-                    }
-                }
-            } catch (Exception e) {
-                // Ignore
-            }
-        }, "FFmpeg-ErrorLog");
-        errorLogger.setDaemon(true);
-        errorLogger.start();
-        
-        TharidiaThings.LOGGER.info("[VIDEO] Unified FFmpeg process started with synchronized pipes");
+        // ProcessBuilder (ffmpeg) disabled for CurseForge compliance
+        TharidiaThings.LOGGER.warn("[VIDEO] startUnifiedProcess disabled - CurseForge compliance mode");
+        throw new UnsupportedOperationException("Video playback disabled for CurseForge compliance");
     }
     
     private void initializeAudioLine() throws Exception {
@@ -431,36 +243,14 @@ public class VLCVideoPlayer {
         }
     }
     
+    /**
+     * Create named pipes for video/audio streaming
+     * DISABLED: ProcessBuilder execution not allowed for CurseForge compliance
+     */
     private void createNamedPipes() throws Exception {
-        String os = System.getProperty("os.name").toLowerCase();
-        boolean isWindows = os.contains("win");
-        
-        if (isWindows) {
-            // Windows named pipes use \.\pipe\ prefix
-            videoPipe = Paths.get("\\\\.\\pipe\\tharidia_video_" + screen.getId());
-            audioPipe = Paths.get("\\\\.\\pipe\\tharidia_audio_" + screen.getId());
-            
-            // Windows named pipes are created by the first process that opens them
-            // No need to create beforehand
-            TharidiaThings.LOGGER.info("[VIDEO] Using Windows named pipes: {}, {}", videoPipe, audioPipe);
-        } else {
-            // Unix/Linux/macOS - use named pipes (FIFO)
-            Path tempDir = Paths.get(System.getProperty("java.io.tmpdir"));
-            videoPipe = tempDir.resolve("tharidia_video_" + screen.getId() + ".pipe");
-            audioPipe = tempDir.resolve("tharidia_audio_" + screen.getId() + ".pipe");
-            
-            // Create FIFOs
-            Files.deleteIfExists(videoPipe);
-            Files.deleteIfExists(audioPipe);
-            
-            ProcessBuilder pbVideo = new ProcessBuilder("mkfifo", videoPipe.toString());
-            ProcessBuilder pbAudio = new ProcessBuilder("mkfifo", audioPipe.toString());
-            
-            pbVideo.inheritIO().start().waitFor();
-            pbAudio.inheritIO().start().waitFor();
-            
-            TharidiaThings.LOGGER.info("[VIDEO] Created named pipes: {}, {}", videoPipe, audioPipe);
-        }
+        // ProcessBuilder (mkfifo) disabled for CurseForge compliance
+        TharidiaThings.LOGGER.warn("[VIDEO] createNamedPipes disabled - CurseForge compliance mode");
+        throw new UnsupportedOperationException("Named pipes creation disabled for CurseForge compliance");
     }
     
     private void cleanupPipes() {
@@ -566,78 +356,13 @@ public class VLCVideoPlayer {
         TharidiaThings.LOGGER.info("[VIDEO] Frame reader thread ended");
     }
     
+    /**
+     * Read audio from pipe
+     * DISABLED: ProcessBuilder execution not allowed for CurseForge compliance
+     */
     private void readAudioFromPipe() {
-        TharidiaThings.LOGGER.info("[VIDEO] Audio reader thread started from pipe");
-        
-        try {
-            InputStream is;
-            String os = System.getProperty("os.name").toLowerCase();
-            boolean isWindows = os.contains("win");
-            
-            if (isWindows) {
-                // For Windows, we need to use a separate FFmpeg process for audio
-                // since Java can't easily read from Windows named pipes
-                TharidiaThings.LOGGER.info("[VIDEO] Using separate audio process for Windows");
-                
-                // Need to extract stream URL again for Windows audio
-                String audioUrl = videoUrl;
-                if (YouTubeUrlExtractor.isValidYouTubeUrl(videoUrl) || videoUrl.contains("twitch.tv")) {
-                    String extractedUrl = YouTubeUrlExtractor.getBestStreamUrl(videoUrl);
-                    if (extractedUrl != null) {
-                        audioUrl = extractedUrl;
-                    }
-                }
-                
-                String ffmpeg = getFfmpegPath();
-                List<String> command = new ArrayList<>();
-                command.add(ffmpeg);
-                command.add("-i");
-                command.add(audioUrl);
-                command.add("-f");
-                command.add("s16le");
-                command.add("-acodec");
-                command.add("pcm_s16le");
-                command.add("-ar");
-                command.add("48000");
-                command.add("-ac");
-                command.add("2");
-                command.add("-af");
-                command.add("volume=" + volume);
-                command.add("-");
-                
-                ProcessBuilder pb = new ProcessBuilder(command);
-                pb.redirectErrorStream(true);
-                windowsAudioProcess = pb.start();
-                
-                is = new BufferedInputStream(windowsAudioProcess.getInputStream(), AUDIO_BUFFER_SIZE * 2);
-                
-                // Store process for cleanup
-                // Note: This breaks perfect sync on Windows but is unavoidable
-                // without complex NUT demuxing
-            } else {
-                is = new BufferedInputStream(new FileInputStream(audioPipe.toFile()), AUDIO_BUFFER_SIZE * 2);
-            }
-            
-            byte[] audioBuffer = new byte[AUDIO_BUFFER_SIZE];
-            
-            while (audioRunning && !Thread.currentThread().isInterrupted()) {
-                int read = is.read(audioBuffer);
-                if (read == -1) {
-                    break;
-                }
-                if (read > 0 && audioLine != null) {
-                    audioLine.write(audioBuffer, 0, read);
-                }
-            }
-            
-            is.close();
-        } catch (Exception e) {
-            if (audioRunning) {
-                TharidiaThings.LOGGER.error("[VIDEO] Audio reading error: {}", e.getMessage());
-            }
-        }
-        
-        TharidiaThings.LOGGER.info("[VIDEO] Audio reader thread ended");
+        // ProcessBuilder (ffmpeg for audio) disabled for CurseForge compliance
+        TharidiaThings.LOGGER.warn("[VIDEO] Audio playback disabled - CurseForge compliance mode");
     }
     
     public void update() {
