@@ -150,6 +150,16 @@ public class TharidiaThingsClient {
         event.register(net.minecraft.client.resources.model.ModelResourceLocation.standalone(
             ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/stall_water")
         ));
+        event.register(net.minecraft.client.resources.model.ModelResourceLocation.standalone(
+            ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/stall_milk")
+        ));
+
+        // Register stall manure overlay models (10 stages for 10%, 20%, ..., 100%)
+        for (int i = 1; i <= 10; i++) {
+            event.register(net.minecraft.client.resources.model.ModelResourceLocation.standalone(
+                ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/stall_shit_" + i)
+            ));
+        }
     }
 
     @SubscribeEvent

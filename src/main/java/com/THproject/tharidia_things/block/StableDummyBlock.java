@@ -1,16 +1,20 @@
 package com.THproject.tharidia_things.block;
 
+import com.THproject.tharidia_things.block.entity.StableBlockEntity;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
@@ -81,7 +85,22 @@ public class StableDummyBlock extends Block {
     public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return FLOOR_SHAPE;
     }
-    
+
+    @Override
+    public SoundType getSoundType(BlockState state, LevelReader level, BlockPos pos, @Nullable Entity entity) {
+        // Get offset from blockstate (stored as 0-4, actual offset is -2 to 2)
+        int offsetX = state.getValue(OFFSET_X) - 2;
+        int offsetZ = state.getValue(OFFSET_Z) - 2;
+
+        // Calculate master position using stored offset
+        BlockPos masterPos = pos.offset(offsetX, 0, offsetZ);
+
+        if (level.getBlockEntity(masterPos) instanceof StableBlockEntity stable && stable.getManureAmount() > 0) {
+            return SoundType.MUD;
+        }
+        return super.getSoundType(state, level, pos, entity);
+    }
+
     @Override
     public RenderShape getRenderShape(BlockState state) {
         return RenderShape.INVISIBLE;

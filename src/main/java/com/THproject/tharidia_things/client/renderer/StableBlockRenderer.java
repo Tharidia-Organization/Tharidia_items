@@ -19,6 +19,7 @@ import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemDisplayContext;
@@ -39,6 +40,17 @@ public class StableBlockRenderer implements BlockEntityRenderer<StableBlockEntit
         ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/stall_hay"));
     private static final ModelResourceLocation WATER_MODEL = ModelResourceLocation.standalone(
         ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/stall_water"));
+    private static final ModelResourceLocation MILK_MODEL = ModelResourceLocation.standalone(
+        ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/stall_milk"));
+
+    // 10 manure levels (10%, 20%, ..., 100%)
+    private static final ModelResourceLocation[] MANURE_MODELS = new ModelResourceLocation[10];
+    static {
+        for (int i = 0; i < 10; i++) {
+            MANURE_MODELS[i] = ModelResourceLocation.standalone(
+                ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/stall_shit_" + (i + 1)));
+        }
+    }
 
     private final EntityRenderDispatcher entityRenderDispatcher;
     private final BlockRenderDispatcher blockRenderer;
@@ -48,6 +60,8 @@ public class StableBlockRenderer implements BlockEntityRenderer<StableBlockEntit
     // Cached overlay models (loaded lazily)
     private BakedModel hayModel = null;
     private BakedModel waterModel = null;
+    private BakedModel milkModel = null;
+    private BakedModel[] manureModels = new BakedModel[10];
     private boolean modelsLoaded = false;
 
     public StableBlockRenderer(BlockEntityRendererProvider.Context context) {
@@ -60,6 +74,10 @@ public class StableBlockRenderer implements BlockEntityRenderer<StableBlockEntit
             var modelManager = Minecraft.getInstance().getModelManager();
             hayModel = modelManager.getModel(HAY_MODEL);
             waterModel = modelManager.getModel(WATER_MODEL);
+            milkModel = modelManager.getModel(MILK_MODEL);
+            for (int i = 0; i < 10; i++) {
+                manureModels[i] = modelManager.getModel(MANURE_MODELS[i]);
+            }
             modelsLoaded = true;
         }
     }
@@ -72,17 +90,23 @@ public class StableBlockRenderer implements BlockEntityRenderer<StableBlockEntit
         poseStack.translate(offset, 0, offset);
         poseStack.scale(MODEL_SCALE, MODEL_SCALE, MODEL_SCALE);
 
-        // Get the block state and render the model
+        // Get the block state and render the model with proper shading
         var blockState = entity.getBlockState();
+        var level = entity.getLevel();
+        var pos = entity.getBlockPos();
         BakedModel model = blockRenderer.getBlockModel(blockState);
 
-        blockRenderer.getModelRenderer().renderModel(
-            poseStack.last(),
-            buffer.getBuffer(RenderType.cutout()),
-            blockState,
+        // Use tesselateBlock for proper ambient occlusion and directional shading
+        blockRenderer.getModelRenderer().tesselateBlock(
+            level,
             model,
-            1.0F, 1.0F, 1.0F,
-            packedLight,
+            blockState,
+            pos,
+            poseStack,
+            buffer.getBuffer(RenderType.cutout()),
+            false,  // checkSides - false to render all faces
+            RandomSource.create(),
+            blockState.getSeed(pos),
             packedOverlay
         );
 
@@ -90,10 +114,6 @@ public class StableBlockRenderer implements BlockEntityRenderer<StableBlockEntit
     }
 
     private void renderOverlayModel(BakedModel model, StableBlockEntity entity, PoseStack poseStack, MultiBufferSource buffer, int packedLight, int packedOverlay) {
-        renderOverlayModel(model, entity, poseStack, buffer, packedLight, packedOverlay, 1.0F, 1.0F, 1.0F);
-    }
-
-    private void renderOverlayModel(BakedModel model, StableBlockEntity entity, PoseStack poseStack, MultiBufferSource buffer, int packedLight, int packedOverlay, float r, float g, float b) {
         if (model == null) return;
 
         poseStack.pushPose();
@@ -103,6 +123,74 @@ public class StableBlockRenderer implements BlockEntityRenderer<StableBlockEntit
         poseStack.translate(offset, 0, offset);
         poseStack.scale(MODEL_SCALE, MODEL_SCALE, MODEL_SCALE);
 
+        var blockState = entity.getBlockState();
+        var level = entity.getLevel();
+        var pos = entity.getBlockPos();
+
+        // Use tesselateBlock for proper ambient occlusion and directional shading
+        blockRenderer.getModelRenderer().tesselateBlock(
+            level,
+            model,
+            blockState,
+            pos,
+            poseStack,
+            buffer.getBuffer(RenderType.translucent()),
+            false,  // checkSides - false to render all faces
+            RandomSource.create(),
+            blockState.getSeed(pos),
+            packedOverlay
+        );
+
+        poseStack.popPose();
+    }
+
+    private void renderOverlayModelTinted(BakedModel model, StableBlockEntity entity, PoseStack poseStack, MultiBufferSource buffer, int packedLight, int packedOverlay, float r, float g, float b) {
+        renderOverlayModelTintedScaled(model, entity, poseStack, buffer, packedLight, packedOverlay, r, g, b, 1.0F);
+    }
+
+    private void renderOverlayModelScaled(BakedModel model, StableBlockEntity entity, PoseStack poseStack, MultiBufferSource buffer, int packedLight, int packedOverlay, float yScale) {
+        if (model == null || yScale <= 0) return;
+
+        poseStack.pushPose();
+
+        // Apply same transformation as main model, but with Y scaling for fill level
+        float offset = (1.0F - MODEL_SCALE) / 2.0F;
+        poseStack.translate(offset, 0, offset);
+        // Scale X and Z normally, but Y is scaled by fill level
+        poseStack.scale(MODEL_SCALE, MODEL_SCALE * yScale, MODEL_SCALE);
+
+        var blockState = entity.getBlockState();
+        var level = entity.getLevel();
+        var pos = entity.getBlockPos();
+
+        blockRenderer.getModelRenderer().tesselateBlock(
+            level,
+            model,
+            blockState,
+            pos,
+            poseStack,
+            buffer.getBuffer(RenderType.translucent()),
+            false,
+            RandomSource.create(),
+            blockState.getSeed(pos),
+            packedOverlay
+        );
+
+        poseStack.popPose();
+    }
+
+    private void renderOverlayModelTintedScaled(BakedModel model, StableBlockEntity entity, PoseStack poseStack, MultiBufferSource buffer, int packedLight, int packedOverlay, float r, float g, float b, float yScale) {
+        if (model == null || yScale <= 0) return;
+
+        poseStack.pushPose();
+
+        // Apply same transformation as main model, but with Y scaling for fill level
+        float offset = (1.0F - MODEL_SCALE) / 2.0F;
+        poseStack.translate(offset, 0, offset);
+        // Scale X and Z normally, but Y is scaled by fill level
+        poseStack.scale(MODEL_SCALE, MODEL_SCALE * yScale, MODEL_SCALE);
+
+        // For tinted overlays (like water), use renderModel with color multiplier
         blockRenderer.getModelRenderer().renderModel(
             poseStack.last(),
             buffer.getBuffer(RenderType.translucent()),
@@ -125,13 +213,31 @@ public class StableBlockRenderer implements BlockEntityRenderer<StableBlockEntit
         renderBlockModel(entity, poseStack, buffer, packedLight, packedOverlay);
 
         // Render water overlay if there is water (with vanilla water blue tint #3F76E4)
+        // Scale Y based on remaining water level
         if (entity.hasWater()) {
-            renderOverlayModel(waterModel, entity, poseStack, buffer, packedLight, packedOverlay, 0.247F, 0.463F, 0.894F);
+            float waterLevel = entity.getWaterLevel();
+            renderOverlayModelTintedScaled(waterModel, entity, poseStack, buffer, packedLight, packedOverlay, 0.247F, 0.463F, 0.894F, waterLevel);
         }
 
         // Render hay overlay if there is food
+        // Scale Y based on remaining food level
         if (entity.getFoodAmount() > 0) {
-            renderOverlayModel(hayModel, entity, poseStack, buffer, packedLight, packedOverlay);
+            float foodLevel = entity.getFoodLevel();
+            renderOverlayModelScaled(hayModel, entity, poseStack, buffer, packedLight, packedOverlay, foodLevel);
+        }
+
+        // Render manure overlays based on manure level (10%, 20%, ..., 100% thresholds)
+        int manureAmount = entity.getManureAmount();
+        for (int i = 0; i < 10; i++) {
+            if (manureAmount >= (i + 1) * 10) {
+                renderOverlayModel(manureModels[i], entity, poseStack, buffer, packedLight, packedOverlay);
+            }
+        }
+
+        // Render milk in bucket if there's an adult milk-producing animal
+        if (entity.hasMilkProducingAnimal()) {
+            // Render milk with a creamy white tint
+            renderOverlayModelTinted(milkModel, entity, poseStack, buffer, packedLight, packedOverlay, 0.98F, 0.98F, 0.95F);
         }
 
         if (!entity.hasAnimal()) {
@@ -154,26 +260,30 @@ public class StableBlockRenderer implements BlockEntityRenderer<StableBlockEntit
             var animal = animals.get(i);
             poseStack.pushPose();
             
-            // Position animals: first two side by side with more space, third one far in back right corner
+            // Position animals: parents on hay patches (SW and NW), baby in center
             if (animals.size() == 1) {
-                // Single animal - center
-                poseStack.translate(0.8, 0.0, -0.35);
+                // Single animal - on hay_patch_sw (front-left)
+                poseStack.translate(-1.0, 0.4, -0.3);
             } else if (animals.size() == 2) {
-                // Two animals - side by side with maximum space (especially for cows)
+                // Two animals - one on hay_patch_sw, one on hay_patch_nw
                 if (i == 0) {
-                    poseStack.translate(0.5, 0.0, -0.4);
+                    // Parent 1 - hay_patch_sw (front-left)
+                    poseStack.translate(-1.0, 0.4, -0.3);
                 } else {
-                    poseStack.translate(1.2, 0.0, -0.4);
+                    // Parent 2 - hay_patch_nw (back-left)
+                    poseStack.translate(-1.0, 0.4, 1.2);
                 }
             } else if (animals.size() == 3) {
-                // Three animals - two adults in front with maximum spacing, baby far in back right corner
+                // Three animals - two parents on hay patches, baby in center-right
                 if (i == 0) {
-                    poseStack.translate(0.5, 0.0, -0.4);
+                    // Parent 1 - hay_patch_sw (front-left)
+                    poseStack.translate(-1.0, 0.4, -0.3);
                 } else if (i == 1) {
-                    poseStack.translate(1.2, 0.0, -0.4);
+                    // Parent 2 - hay_patch_nw (back-left)
+                    poseStack.translate(-1.0, 0.4, 1.2);
                 } else {
-                    // Third animal (baby) very far in back right corner
-                    poseStack.translate(0.5, 0.0, 1);
+                    // Baby - center-right area
+                    poseStack.translate(1.8, 0.4, 0.5);
                 }
             }
             
@@ -185,12 +295,7 @@ public class StableBlockRenderer implements BlockEntityRenderer<StableBlockEntit
         
         // Render eggs for all chickens that have produced them
         if (animalType == EntityType.CHICKEN) {
-            int totalEggs = 0;
-            for (var animal : animals) {
-                if (!animal.isBaby && animal.eggCount > 0) {
-                    totalEggs += animal.eggCount;
-                }
-            }
+            int totalEggs = entity.getTotalEggCount();
             if (totalEggs > 0) {
                 renderEggs(totalEggs, poseStack, buffer, packedLight);
             }
@@ -374,18 +479,35 @@ public class StableBlockRenderer implements BlockEntityRenderer<StableBlockEntit
     private void renderEggs(int eggCount, PoseStack poseStack, MultiBufferSource buffer, int packedLight) {
         Minecraft mc = Minecraft.getInstance();
         ItemStack eggStack = new ItemStack(Items.EGG);
-        
-        for (int i = 0; i < eggCount; i++) {
+
+        // Position eggs inside the chest/basket (front-left area of stall)
+        // The chest in model coordinates is around x=-3 to 0, z=-11 to -8
+        // With 2x scale and -0.5 offset, this translates to approximately:
+        // x: -0.7 to -0.35, z: -1.6 to -1.0 in world coords relative to block pos
+
+        // Calculate egg positions inside the basket
+        float baseX = -0.55F;  // Center X of basket
+        float baseY = 0.65F;   // Inside the basket (slightly above base)
+        float baseZ = -1.35F;  // Center Z of basket
+
+        for (int i = 0; i < Math.min(eggCount, 6); i++) {
             poseStack.pushPose();
-            
-            // Position eggs in a row
-            float xOffset = -0.2F + (i * 0.2F);
-            poseStack.translate(0.5 + xOffset, 0.1, 0.3);
-            poseStack.scale(0.3F, 0.3F, 0.3F);
-            poseStack.mulPose(Axis.XP.rotationDegrees(90));
-            
+
+            // Arrange eggs in a 2x3 grid inside the basket
+            int row = i / 2;
+            int col = i % 2;
+            float xOffset = (col - 0.5F) * 0.15F;
+            float zOffset = (row - 1.0F) * 0.15F;
+
+            poseStack.translate(baseX + xOffset, baseY, baseZ + zOffset);
+            poseStack.scale(0.25F, 0.25F, 0.25F);
+
+            // Rotate eggs 45 degrees upward toward the player (south, negative Z)
+            // X rotation tilts forward/backward, so negative tilts face upward toward south
+            poseStack.mulPose(Axis.XP.rotationDegrees(-45));
+
             mc.getItemRenderer().renderStatic(eggStack, ItemDisplayContext.GROUND, packedLight, OverlayTexture.NO_OVERLAY, poseStack, buffer, mc.level, 0);
-            
+
             poseStack.popPose();
         }
     }

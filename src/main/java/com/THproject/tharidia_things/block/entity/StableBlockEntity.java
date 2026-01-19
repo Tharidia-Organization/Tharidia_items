@@ -36,12 +36,17 @@ public class StableBlockEntity extends BlockEntity {
     private static final int MAX_FOOD_ITEMS = 64; // Maximum food items in feeder
     private static final int FOOD_CONSUMPTION_RATE = 20 * 10; // Consume 1 food every 10 seconds when animals present
     private static final int FEED_USES_REQUIRED = 5; // Number of animal feed uses to fill feeder
-    
+    private static final int MAX_MANURE = 100; // Maximum manure level
+    private static final int ADULT_MANURE_RATE = 20 * 10; // Adult produces 1 manure every 10 seconds
+    private static final int BABY_MANURE_RATE = 20 * 20; // Baby produces 1 manure every 20 seconds
+
     private final List<AnimalData> animals = new ArrayList<>();
     private int waterTicks = 0; // Time remaining for water
     private int foodAmount = 0; // Amount of food in feeder (0-64)
     private int foodConsumptionTicks = 0; // Ticks until next food consumption
     private int feedUses = 0; // Number of times animal feed has been used (0-5)
+    private int manureAmount = 0; // Current manure level (0-100)
+    private int manureProductionTicks = 0; // Ticks until next manure production
     
     public static class AnimalData {
         public EntityType<?> entityType;
@@ -115,13 +120,64 @@ public class StableBlockEntity extends BlockEntity {
     public int getEggCount() {
         return animals.isEmpty() ? 0 : animals.get(0).eggCount;
     }
+
+    /**
+     * Returns the total egg count from all chickens in the stable
+     */
+    public int getTotalEggCount() {
+        int total = 0;
+        for (AnimalData animal : animals) {
+            if (!animal.isBaby && animal.eggCount > 0) {
+                total += animal.eggCount;
+            }
+        }
+        return total;
+    }
+
+    /**
+     * Checks if there is an adult animal capable of producing milk.
+     * This includes vanilla cows, goats, mooshrooms, and modded animals.
+     */
+    public boolean hasMilkProducingAnimal() {
+        for (AnimalData animal : animals) {
+            if (!animal.isBaby && isMilkProducingType(animal.entityType)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Checks if an entity type can produce milk.
+     * Supports vanilla animals (cow, goat, mooshroom) and modded animals.
+     */
+    private static boolean isMilkProducingType(EntityType<?> entityType) {
+        // Vanilla milk-producing animals
+        if (entityType == EntityType.COW ||
+            entityType == EntityType.GOAT ||
+            entityType == EntityType.MOOSHROOM) {
+            return true;
+        }
+
+        // Check for modded animals by entity type ID
+        // Common modded milk-producing animals often have "cow", "goat", or "milk" in their ID
+        ResourceLocation entityId = BuiltInRegistries.ENTITY_TYPE.getKey(entityType);
+        if (entityId != null) {
+            String path = entityId.getPath().toLowerCase();
+            if (path.contains("cow") || path.contains("goat") || path.contains("milk")) {
+                return true;
+            }
+        }
+
+        return false;
+    }
     
     public boolean hasWater() {
         return waterTicks > 0;
     }
     
     public boolean canRefillWater() {
-        return waterTicks == 0;
+        return true;  // Always allow water refill, even when not empty
     }
     
     public void refillWater() {
@@ -136,7 +192,41 @@ public class StableBlockEntity extends BlockEntity {
     public int getFoodAmount() {
         return foodAmount;
     }
-    
+
+    /**
+     * Returns the water level as a percentage (0.0 to 1.0)
+     */
+    public float getWaterLevel() {
+        return (float) waterTicks / WATER_DURATION;
+    }
+
+    /**
+     * Returns the food level as a percentage (0.0 to 1.0)
+     */
+    public float getFoodLevel() {
+        return (float) foodAmount / MAX_FOOD_ITEMS;
+    }
+
+    public int getManureAmount() {
+        return manureAmount;
+    }
+
+    public boolean canCollectManure() {
+        return manureAmount >= 10;
+    }
+
+    public void collectManure(Player player) {
+        if (manureAmount >= 10) {
+            manureAmount -= 10;
+            player.addItem(new ItemStack(TharidiaThings.MANURE.get(), 1));
+            setChanged();
+            if (level != null) {
+                level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+                level.playSound(null, worldPosition, SoundEvents.GRAVEL_BREAK, SoundSource.BLOCKS, 1.0F, 0.8F);
+            }
+        }
+    }
+
     public boolean canAddAnimalFeed() {
         return feedUses < FEED_USES_REQUIRED;
     }
@@ -370,7 +460,7 @@ public class StableBlockEntity extends BlockEntity {
     
     public static void serverTick(Level level, BlockPos pos, BlockState state, StableBlockEntity entity) {
         boolean changed = false;
-        
+
         // Handle water consumption only if there are animals
         if (!entity.animals.isEmpty() && entity.waterTicks > 0) {
             entity.waterTicks--;
@@ -378,7 +468,7 @@ public class StableBlockEntity extends BlockEntity {
                 changed = true;
             }
         }
-        
+
         // Handle food consumption only if there are animals
         if (!entity.animals.isEmpty() && entity.foodAmount > 0) {
             entity.foodConsumptionTicks++;
@@ -388,7 +478,37 @@ public class StableBlockEntity extends BlockEntity {
                 changed = true;
             }
         }
-        
+
+        // Handle manure production for each animal
+        if (!entity.animals.isEmpty() && entity.manureAmount < MAX_MANURE) {
+            entity.manureProductionTicks++;
+            // Calculate production rate based on animals (babies produce slower)
+            int babyCount = 0;
+            int adultCount = 0;
+            for (AnimalData animal : entity.animals) {
+                if (animal.isBaby) {
+                    babyCount++;
+                } else {
+                    adultCount++;
+                }
+            }
+            // Use fastest rate among animals (adult rate if any adults present)
+            int effectiveRate = adultCount > 0 ? ADULT_MANURE_RATE : BABY_MANURE_RATE;
+            if (entity.manureProductionTicks >= effectiveRate) {
+                // Add manure based on number of animals
+                int manureProduced = adultCount + (babyCount > 0 ? 1 : 0); // Adults produce 1 each, babies combined produce 1
+                entity.manureAmount = Math.min(MAX_MANURE, entity.manureAmount + manureProduced);
+                entity.manureProductionTicks = 0;
+                changed = true;
+                TharidiaThings.LOGGER.info("[STABLE DEBUG] Manure produced! Amount: {}, Adults: {}, Babies: {}", entity.manureAmount, adultCount, babyCount);
+            }
+        } else if (entity.animals.isEmpty()) {
+            // Debug: no animals
+            if (level.getGameTime() % 200 == 0) {
+                TharidiaThings.LOGGER.info("[STABLE DEBUG] No animals in stable at {}", pos);
+            }
+        }
+
         if (entity.animals.isEmpty()) {
             if (changed) {
                 entity.setChanged();
@@ -447,6 +567,8 @@ public class StableBlockEntity extends BlockEntity {
         tag.putInt("FoodAmount", foodAmount);
         tag.putInt("FoodConsumptionTicks", foodConsumptionTicks);
         tag.putInt("FeedUses", feedUses);
+        tag.putInt("ManureAmount", manureAmount);
+        tag.putInt("ManureProductionTicks", manureProductionTicks);
     }
     
     @Override
@@ -465,6 +587,8 @@ public class StableBlockEntity extends BlockEntity {
         foodAmount = tag.getInt("FoodAmount");
         foodConsumptionTicks = tag.getInt("FoodConsumptionTicks");
         feedUses = tag.getInt("FeedUses");
+        manureAmount = tag.getInt("ManureAmount");
+        manureProductionTicks = tag.getInt("ManureProductionTicks");
     }
     
     @Override

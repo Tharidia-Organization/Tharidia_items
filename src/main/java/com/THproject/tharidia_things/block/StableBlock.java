@@ -7,21 +7,27 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.ShovelItem;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelReader;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.MapColor;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
@@ -43,7 +49,8 @@ public class StableBlock extends BaseEntityBlock {
         this(BlockBehaviour.Properties.of()
             .mapColor(MapColor.WOOD)
             .strength(2.5F)
-            .noOcclusion());
+            .noOcclusion()
+            .lightLevel(state -> 15));
     }
     
     @Override
@@ -59,6 +66,14 @@ public class StableBlock extends BaseEntityBlock {
     @Override
     public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return FLOOR_SHAPE;
+    }
+
+    @Override
+    public SoundType getSoundType(BlockState state, LevelReader level, BlockPos pos, @Nullable Entity entity) {
+        if (level.getBlockEntity(pos) instanceof StableBlockEntity stable && stable.getManureAmount() > 0) {
+            return SoundType.MUD;
+        }
+        return super.getSoundType(state, level, pos, entity);
     }
 
     @Override
@@ -211,7 +226,13 @@ public class StableBlock extends BaseEntityBlock {
             player.addItem(new ItemStack(Items.MILK_BUCKET));
             return ItemInteractionResult.SUCCESS;
         }
-        
+
+        // Check if collecting manure with shovel
+        if (stack.getItem() instanceof ShovelItem && stable.canCollectManure()) {
+            stable.collectManure(player);
+            return ItemInteractionResult.SUCCESS;
+        }
+
         return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
     }
     
@@ -235,6 +256,27 @@ public class StableBlock extends BaseEntityBlock {
         return InteractionResult.PASS;
     }
     
+    @Override
+    public void animateTick(BlockState state, Level level, BlockPos pos, RandomSource random) {
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be instanceof StableBlockEntity stable && stable.getManureAmount() > 0) {
+            // Spawn stink particles based on manure level
+            int manureLevel = stable.getManureAmount();
+            // More particles with more manure
+            int particleCount = manureLevel >= 66 ? 3 : (manureLevel >= 33 ? 2 : 1);
+
+            for (int i = 0; i < particleCount; i++) {
+                if (random.nextInt(15) < manureLevel / 25) { // Higher chance with more manure
+                    double x = pos.getX() + random.nextDouble() * 2 - 0.5; // Spread across the stable area
+                    double y = pos.getY() + 0.5 + random.nextDouble() * 0.5;
+                    double z = pos.getZ() + random.nextDouble() * 2 - 0.5;
+                    // Use campfire smoke for stink effect (greenish-brown tint visual)
+                    level.addParticle(ParticleTypes.CAMPFIRE_COSY_SMOKE, x, y, z, 0.0, 0.02, 0.0);
+                }
+            }
+        }
+    }
+
     @Override
     public boolean canHarvestBlock(BlockState state, BlockGetter level, BlockPos pos, Player player) {
         return true;

@@ -254,6 +254,8 @@ public class TharidiaThings {
             () -> new DiceItem(new Item.Properties().stacksTo(16)));
     public static final DeferredItem<Item> ANIMAL_FEED = ITEMS.register("animal_feed",
             () -> new AnimalFeedItem(new Item.Properties().stacksTo(64)));
+    public static final DeferredItem<Item> MANURE = ITEMS.register("manure",
+            () -> new Item(new Item.Properties().stacksTo(64)));
 
     // Battle Gauntlet
     public static final DeferredItem<Item> BATTLE_GAUNTLE = ITEMS.register("battle_gauntlet",
@@ -284,6 +286,7 @@ public class TharidiaThings {
                         output.accept(COPPER_ELSA.get());
                         output.accept(DICE.get());
                         output.accept(ANIMAL_FEED.get());
+                        output.accept(MANURE.get());
                         output.accept(BATTLE_GAUNTLE.get());
                         output.accept(STABLE_ITEM.get());
                         
