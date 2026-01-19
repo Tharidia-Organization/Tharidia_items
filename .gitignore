@@ -50,3 +50,8 @@ repo
 /.obsidian/core-plugins.json
 /.obsidian/graph.json
 /.obsidian/workspace.json
+/libs/
+/logs/
+/src/generated/
+/nul
+/.claude/
