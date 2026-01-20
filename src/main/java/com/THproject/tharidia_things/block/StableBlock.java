@@ -13,6 +13,9 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.ShovelItem;
+import net.minecraft.world.item.HoeItem;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
@@ -230,6 +233,66 @@ public class StableBlock extends BaseEntityBlock {
         // Check if collecting manure with shovel
         if (stack.getItem() instanceof ShovelItem && stable.canCollectManure()) {
             stable.collectManure(player);
+            return ItemInteractionResult.SUCCESS;
+        }
+
+        // Check if placing fresh straw for bedding (Houseboundry)
+        // Only allow if bedding freshness is below 70% (needs replacement)
+        if (stack.is(TharidiaThings.FRESH_STRAW.get())) {
+            if (stable.getBeddingFreshness() < 70) {
+                int cfg_freshness = com.THproject.tharidia_things.stable.StableConfigLoader.getConfig().beddingStartFreshness();
+                stable.setBeddingFreshness(cfg_freshness);
+                stack.shrink(1);
+                level.playSound(null, pos, SoundEvents.GRASS_PLACE, SoundSource.BLOCKS, 1.0F, 1.0F);
+                return ItemInteractionResult.SUCCESS;
+            } else {
+                // Bedding is still fresh, don't waste straw
+                level.playSound(null, pos, SoundEvents.VILLAGER_NO, SoundSource.BLOCKS, 0.5F, 1.2F);
+                return ItemInteractionResult.FAIL;
+            }
+        }
+
+        // Check if removing bedding with hoe (Houseboundry)
+        if (stack.getItem() instanceof HoeItem && stable.hasBedding()) {
+            int currentFreshness = stable.getBeddingFreshness();
+            if (stable.removeBedding()) {
+                // Drop fresh straw if freshness was >= 50%, otherwise dirty straw
+                if (currentFreshness >= 50) {
+                    player.addItem(new ItemStack(TharidiaThings.FRESH_STRAW.get()));
+                    level.playSound(null, pos, SoundEvents.GRASS_BREAK, SoundSource.BLOCKS, 1.0F, 1.0F);
+                } else {
+                    player.addItem(new ItemStack(TharidiaThings.DIRTY_STRAW.get()));
+                    level.playSound(null, pos, SoundEvents.GRASS_BREAK, SoundSource.BLOCKS, 1.0F, 0.8F);
+                }
+                // Damage hoe
+                stack.hurtAndBreak(1, player, net.minecraft.world.entity.LivingEntity.getSlotForHand(hand));
+                return ItemInteractionResult.SUCCESS;
+            }
+        }
+
+        // Check if brushing animals (Houseboundry wellness)
+        if (stack.is(TharidiaThings.ANIMAL_BRUSH.get()) && stable.hasAnimal()) {
+            if (stable.applyBrush()) {
+                // Damage brush
+                stack.hurtAndBreak(1, player, net.minecraft.world.entity.LivingEntity.getSlotForHand(hand));
+                return ItemInteractionResult.SUCCESS;
+            } else {
+                // On cooldown - indicate to player
+                level.playSound(null, pos, SoundEvents.VILLAGER_NO, SoundSource.BLOCKS, 0.5F, 1.2F);
+                return ItemInteractionResult.FAIL;
+            }
+        }
+
+        // Check if curing disease with honey bottle (Houseboundry)
+        if (stack.is(Items.HONEY_BOTTLE) && stable.hasDiseasedAnimal()) {
+            boolean cured = stable.tryHoneyCure();
+            stack.shrink(1);
+            player.addItem(new ItemStack(Items.GLASS_BOTTLE));
+            if (cured) {
+                level.playSound(null, pos, SoundEvents.PLAYER_BURP, SoundSource.BLOCKS, 1.0F, 1.2F);
+            } else {
+                level.playSound(null, pos, SoundEvents.VILLAGER_NO, SoundSource.BLOCKS, 0.8F, 0.8F);
+            }
             return ItemInteractionResult.SUCCESS;
         }
 

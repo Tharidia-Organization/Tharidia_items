@@ -33,6 +33,10 @@
   "item.tharidiathings.dice": "Dice",
   "item.tharidiathings.animal_feed": "Animal Feed",
   "item.tharidiathings.manure": "Manure",
+  "item.tharidiathings.animal_brush": "Animal Brush",
+  "item.tharidiathings.fresh_straw": "Fresh Straw",
+  "item.tharidiathings.dirty_straw": "Dirty Straw",
+  "item.tharidiathings.shelter_upgrade_kit": "Shelter Upgrade Kit",
   "item.tharidiathings.baby_mob.tooltip": "Baby %s",
   "block.tharidiathings.stable": "Stable",
 

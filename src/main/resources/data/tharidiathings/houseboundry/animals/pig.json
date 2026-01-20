@@ -1,0 +1,17 @@
+{
+  "entity": "minecraft:pig",
+  "lifecycle": {
+    "baby_duration_hours": 1.0,
+    "productive_duration_days": 14.0
+  },
+  "production": null,
+  "breeding": {
+    "item": "minecraft:carrot",
+    "one_time_only": true
+  },
+  "slaughter_loot": {
+    "items": [
+      { "item": "minecraft:porkchop", "min": 2, "max": 4 }
+    ]
+  }
+}

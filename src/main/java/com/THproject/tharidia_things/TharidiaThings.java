@@ -51,6 +51,10 @@ import com.THproject.tharidia_things.item.CopperElsaItem;
 import com.THproject.tharidia_things.item.DiceItem;
 import com.THproject.tharidia_things.item.PietroBlockItem;
 import com.THproject.tharidia_things.item.AnimalFeedItem;
+import com.THproject.tharidia_things.item.AnimalBrushItem;
+import com.THproject.tharidia_things.item.FreshStrawItem;
+import com.THproject.tharidia_things.item.DirtyStrawItem;
+import com.THproject.tharidia_things.item.ShelterUpgradeKitItem;
 import com.THproject.tharidia_things.registry.BabyMobRegistry;
 import com.THproject.tharidia_things.client.ClientPacketHandler;
 import com.THproject.tharidia_things.entity.ModEntities;
@@ -61,6 +65,9 @@ import com.THproject.tharidia_things.config.ItemCatalogueConfig;
 import com.THproject.tharidia_things.event.ItemAttributeHandler;
 import com.THproject.tharidia_things.event.PlayerStatsIncrementHandler;
 import com.THproject.tharidia_things.fatigue.FatigueAttachments;
+import com.THproject.tharidia_things.houseboundry.AnimalWellnessAttachments;
+import com.THproject.tharidia_things.houseboundry.config.AnimalConfigLoader;
+import com.THproject.tharidia_things.stable.StableConfigLoader;
 import com.THproject.tharidia_things.network.BattlePackets;
 import com.THproject.tharidia_things.network.ClaimOwnerSyncPacket;
 import com.THproject.tharidia_things.network.FatigueSyncPacket;
@@ -268,6 +275,16 @@ public class TharidiaThings {
     public static final DeferredItem<Item> BATTLE_GAUNTLE = ITEMS.register("battle_gauntlet",
             () -> new BattleGauntlet(new Item.Properties().stacksTo(1)));
 
+    // Houseboundry Items
+    public static final DeferredItem<Item> ANIMAL_BRUSH = ITEMS.register("animal_brush",
+            () -> new AnimalBrushItem(new Item.Properties().durability(64)));
+    public static final DeferredItem<Item> FRESH_STRAW = ITEMS.register("fresh_straw",
+            () -> new FreshStrawItem(new Item.Properties().stacksTo(16)));
+    public static final DeferredItem<Item> DIRTY_STRAW = ITEMS.register("dirty_straw",
+            () -> new DirtyStrawItem(new Item.Properties().stacksTo(16)));
+    public static final DeferredItem<Item> SHELTER_UPGRADE_KIT = ITEMS.register("shelter_upgrade_kit",
+            () -> new ShelterUpgradeKitItem(new Item.Properties().stacksTo(1)));
+
     // Creates a creative tab with the id "tharidiathings:tharidia_tab" for the mod
     // items, that is placed after the combat tab
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> THARIDIA_TAB = CREATIVE_MODE_TABS
@@ -296,6 +313,11 @@ public class TharidiaThings {
                         output.accept(MANURE.get());
                         output.accept(BATTLE_GAUNTLE.get());
                         output.accept(STABLE_ITEM.get());
+                        // Houseboundry
+                        output.accept(ANIMAL_BRUSH.get());
+                        output.accept(FRESH_STRAW.get());
+                        output.accept(DIRTY_STRAW.get());
+                        output.accept(SHELTER_UPGRADE_KIT.get());
 
                         // Add all dynamically registered baby mob items
                         BabyMobRegistry.addToCreativeTab(output);
@@ -344,6 +366,7 @@ public class TharidiaThings {
         DietAttachments.ATTACHMENT_TYPES.register(modEventBus);
         CharacterAttachments.ATTACHMENT_TYPES.register(modEventBus);
         StaminaAttachments.ATTACHMENT_TYPES.register(modEventBus);
+        AnimalWellnessAttachments.ATTACHMENT_TYPES.register(modEventBus);
 
         // Register custom stats
         ModStats.register(modEventBus);
@@ -967,6 +990,8 @@ public class TharidiaThings {
         event.addListener(new FatigueConfig());
         event.addListener(new StaminaConfig());
         event.addListener(new StaminaTagMappingsLoader());
+        event.addListener(new AnimalConfigLoader());
+        event.addListener(new StableConfigLoader());
 
         ItemCatalogueConfig.reload();
         ItemAttributeHandler.reload();
@@ -988,6 +1013,7 @@ public class TharidiaThings {
         ItemCatalogueCommand.register(event.getDispatcher());
         StatsCommand.register(event.getDispatcher());
         ReviveCommands.register(event.getDispatcher());
+        StableDebugCommand.register(event.getDispatcher());
     }
 
     /**

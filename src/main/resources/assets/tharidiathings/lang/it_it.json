@@ -33,6 +33,10 @@
   "item.tharidiathings.dice": "Dado",
   "item.tharidiathings.animal_feed": "Mangime per Animali",
   "item.tharidiathings.manure": "Letame",
+  "item.tharidiathings.animal_brush": "Spazzola per Animali",
+  "item.tharidiathings.fresh_straw": "Paglia Fresca",
+  "item.tharidiathings.dirty_straw": "Paglia Sporca",
+  "item.tharidiathings.shelter_upgrade_kit": "Kit Riparo Avanzato",
   "item.tharidiathings.baby_mob.tooltip": "Cucciolo di %s",
   "block.tharidiathings.stable": "Stalla",
 
