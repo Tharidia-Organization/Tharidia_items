@@ -31,6 +31,16 @@
   "item.tharidiathings.copper_lama_corta": "Lama Corta (Rame)",
   "item.tharidiathings.battle_gauntlet": "Guanto di Battaglia",
   "item.tharidiathings.dice": "Dado",
+  "item.tharidiathings.animal_feed": "Mangime per Animali",
+  "item.tharidiathings.manure": "Letame",
+  "item.tharidiathings.animal_brush": "Spazzola per Animali",
+  "item.tharidiathings.fresh_straw": "Paglia Fresca",
+  "item.tharidiathings.dirty_straw": "Paglia Sporca",
+  "item.tharidiathings.shelter_upgrade_kit": "Kit Riparo Avanzato",
+  "item.tharidiathings.pitchfork": "Forcone",
+  "item.tharidiathings.baby_mob.tooltip": "Cucciolo di %s",
+  "item.tharidiathings.baby_mob.name": "Cucciolo di %s",
+  "block.tharidiathings.stable": "Stalla",
 
   "item.tharidiathings.pinza.holding.hot_iron": "Tenendo: Ferro Caldo",
   "item.tharidiathings.pinza.holding.hot_gold": "Tenendo: Oro Caldo",
@@ -173,5 +183,45 @@
   "diet.category.sugar": "Zuccheri",
   "diet.category.water": "Idratazione",
 
-  "diet.tooltip.header": "Valori dieta:"
+  "diet.tooltip.header": "Valori dieta:",
+
+  "gui.tharidiathings.stable.title": "Stalla",
+  "gui.tharidiathings.stable.no_animals": "Nessun animale",
+  "gui.tharidiathings.stable.animals": "Animali",
+  "gui.tharidiathings.stable.resources": "Risorse",
+  "gui.tharidiathings.stable.conditions": "Condizioni",
+  "gui.tharidiathings.stable.production": "Produzione",
+  "gui.tharidiathings.stable.unknown": "Sconosciuto",
+
+  "gui.tharidiathings.stable.animal.baby": "Cucciolo",
+  "gui.tharidiathings.stable.animal.adult": "Adulto",
+  "gui.tharidiathings.stable.animal.barren": "Sterile",
+  "gui.tharidiathings.stable.animal.growth": "Crescita: %d%%",
+  "gui.tharidiathings.stable.animal.sick": "MALATO! (%d min rimasti)",
+  "gui.tharidiathings.stable.animal.milk_ready": "Latte pronto",
+  "gui.tharidiathings.stable.animal.eggs": "Uova: %d",
+
+  "gui.tharidiathings.stable.resource.water": "Acqua",
+  "gui.tharidiathings.stable.resource.food": "Cibo",
+  "gui.tharidiathings.stable.resource.manure": "Letame",
+  "gui.tharidiathings.stable.resource.level.high": "Alto",
+  "gui.tharidiathings.stable.resource.level.medium": "Medio",
+  "gui.tharidiathings.stable.resource.level.low": "Basso",
+  "gui.tharidiathings.stable.resource.level.empty": "Vuoto",
+  "gui.tharidiathings.stable.resource.manure.ready": "Pronto per raccolta",
+
+  "gui.tharidiathings.stable.bedding": "Lettiera",
+  "gui.tharidiathings.stable.bedding.fresh": "Fresca",
+  "gui.tharidiathings.stable.bedding.ok": "OK",
+  "gui.tharidiathings.stable.bedding.dirty": "Sporca",
+  "gui.tharidiathings.stable.bedding.none": "Nessuna",
+  "gui.tharidiathings.stable.shelter": "Rifugio",
+  "gui.tharidiathings.stable.shelter.installed": "Installato",
+  "gui.tharidiathings.stable.shelter.not_installed": "Non installato",
+
+  "gui.tharidiathings.stable.production.blocked": "Bloccata (manca acqua o cibo)",
+  "gui.tharidiathings.stable.production.resting": "Animali a riposo (notte)",
+  "gui.tharidiathings.stable.production.active": "Attiva",
+  "gui.tharidiathings.stable.production.milk_available": "Latte disponibile!",
+  "gui.tharidiathings.stable.production.eggs_available": "Uova disponibili: %d"
 }

@@ -31,6 +31,16 @@
   "item.tharidiathings.copper_lama_corta": "Lama Corta (Copper)",
   "item.tharidiathings.battle_gauntlet": "Battle Gauntlet",
   "item.tharidiathings.dice": "Dice",
+  "item.tharidiathings.animal_feed": "Animal Feed",
+  "item.tharidiathings.manure": "Manure",
+  "item.tharidiathings.animal_brush": "Animal Brush",
+  "item.tharidiathings.fresh_straw": "Fresh Straw",
+  "item.tharidiathings.dirty_straw": "Dirty Straw",
+  "item.tharidiathings.shelter_upgrade_kit": "Shelter Upgrade Kit",
+  "item.tharidiathings.pitchfork": "Pitchfork",
+  "item.tharidiathings.baby_mob.tooltip": "Baby %s",
+  "item.tharidiathings.baby_mob.name": "Baby %s",
+  "block.tharidiathings.stable": "Stable",
 
   "item.tharidiathings.pinza.holding.hot_iron": "Holding: Hot Iron",
   "item.tharidiathings.pinza.holding.hot_gold": "Holding: Hot Gold",
@@ -173,5 +183,45 @@
   "diet.category.sugar": "Sugars",
   "diet.category.water": "Hydration",
 
-  "diet.tooltip.header": "Diet Values:"
+  "diet.tooltip.header": "Diet Values:",
+
+  "gui.tharidiathings.stable.title": "Stable",
+  "gui.tharidiathings.stable.no_animals": "No animals",
+  "gui.tharidiathings.stable.animals": "Animals",
+  "gui.tharidiathings.stable.resources": "Resources",
+  "gui.tharidiathings.stable.conditions": "Conditions",
+  "gui.tharidiathings.stable.production": "Production",
+  "gui.tharidiathings.stable.unknown": "Unknown",
+
+  "gui.tharidiathings.stable.animal.baby": "Baby",
+  "gui.tharidiathings.stable.animal.adult": "Adult",
+  "gui.tharidiathings.stable.animal.barren": "Barren",
+  "gui.tharidiathings.stable.animal.growth": "Growth: %d%%",
+  "gui.tharidiathings.stable.animal.sick": "SICK! (%d min left)",
+  "gui.tharidiathings.stable.animal.milk_ready": "Milk ready",
+  "gui.tharidiathings.stable.animal.eggs": "Eggs: %d",
+
+  "gui.tharidiathings.stable.resource.water": "Water",
+  "gui.tharidiathings.stable.resource.food": "Food",
+  "gui.tharidiathings.stable.resource.manure": "Manure",
+  "gui.tharidiathings.stable.resource.level.high": "High",
+  "gui.tharidiathings.stable.resource.level.medium": "Medium",
+  "gui.tharidiathings.stable.resource.level.low": "Low",
+  "gui.tharidiathings.stable.resource.level.empty": "Empty",
+  "gui.tharidiathings.stable.resource.manure.ready": "Ready to collect",
+
+  "gui.tharidiathings.stable.bedding": "Bedding",
+  "gui.tharidiathings.stable.bedding.fresh": "Fresh",
+  "gui.tharidiathings.stable.bedding.ok": "OK",
+  "gui.tharidiathings.stable.bedding.dirty": "Dirty",
+  "gui.tharidiathings.stable.bedding.none": "None",
+  "gui.tharidiathings.stable.shelter": "Shelter",
+  "gui.tharidiathings.stable.shelter.installed": "Installed",
+  "gui.tharidiathings.stable.shelter.not_installed": "Not installed",
+
+  "gui.tharidiathings.stable.production.blocked": "Blocked (no water or food)",
+  "gui.tharidiathings.stable.production.resting": "Animals resting (night)",
+  "gui.tharidiathings.stable.production.active": "Active",
+  "gui.tharidiathings.stable.production.milk_available": "Milk available!",
+  "gui.tharidiathings.stable.production.eggs_available": "Eggs available: %d"
 }

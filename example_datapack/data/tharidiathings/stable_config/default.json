@@ -1,0 +1,52 @@
+{
+  "_comment": "Stable Configuration - All values are optional, defaults shown below",
+  "_comment2": "All time values are in ticks (20 ticks = 1 second)",
+
+  "max_animals": 3,
+  "_comment_max_animals": "Maximum number of animals in a stable (including baby from breeding)",
+
+  "feed_required_for_breeding": 3,
+  "_comment_feed_required": "Number of food items needed to feed each adult before breeding",
+
+  "growth_time_ticks": 2400,
+  "_comment_growth_time": "Time for baby animal to become adult (2400 = 2 minutes)",
+
+  "egg_production_time_ticks": 600,
+  "_comment_egg_production": "Time between egg production for chickens (600 = 30 seconds)",
+
+  "max_eggs_per_chicken": 3,
+  "_comment_max_eggs": "Maximum eggs a chicken can produce in lifetime (after this they stop producing but are NOT killed)",
+
+  "milk_production_time_ticks": 1200,
+  "_comment_milk_production": "Time between milk production for cows/goats (1200 = 1 minute). Milk is renewable.",
+
+  "water_duration_ticks": 12000,
+  "_comment_water_duration": "How long water lasts after refilling (12000 = 10 minutes)",
+
+  "max_food_items": 64,
+  "_comment_max_food": "Maximum food capacity in the feeder",
+
+  "food_consumption_rate_ticks": 200,
+  "_comment_food_consumption": "Ticks between food consumption when animals present (200 = 10 seconds)",
+
+  "feed_uses_required": 5,
+  "_comment_feed_uses": "Number of Animal Feed uses required to fill the feeder completely",
+
+  "max_manure": 100,
+  "_comment_max_manure": "Maximum manure level (0-100)",
+
+  "adult_manure_rate_ticks": 200,
+  "_comment_adult_manure": "Ticks between manure production for adult animals (200 = 10 seconds)",
+
+  "baby_manure_rate_ticks": 400,
+  "_comment_baby_manure": "Ticks between manure production for baby animals (400 = 20 seconds)",
+
+  "manure_collect_amount": 10,
+  "_comment_manure_collect": "Amount of manure needed to collect with shovel",
+
+  "bedding_decay_interval_ticks": 72000,
+  "_comment_bedding_decay": "Ticks between bedding freshness decay (-1 per interval) (72000 = 1 hour)",
+
+  "bedding_start_freshness": 100,
+  "_comment_bedding_freshness": "Initial freshness when placing fresh straw (0-100)"
+}

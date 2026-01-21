@@ -27,11 +27,14 @@ import com.THproject.tharidia_things.block.ClaimBlock;
 import com.THproject.tharidia_things.block.HotIronMarkerBlock;
 import com.THproject.tharidia_things.block.HotGoldMarkerBlock;
 import com.THproject.tharidia_things.block.HotCopperMarkerBlock;
+import com.THproject.tharidia_things.block.StableBlock;
+import com.THproject.tharidia_things.block.StableDummyBlock;
 import com.THproject.tharidia_things.block.entity.PietroBlockEntity;
 import com.THproject.tharidia_things.block.entity.ClaimBlockEntity;
 import com.THproject.tharidia_things.block.entity.HotIronAnvilEntity;
 import com.THproject.tharidia_things.block.entity.HotGoldAnvilEntity;
 import com.THproject.tharidia_things.block.entity.HotCopperAnvilEntity;
+import com.THproject.tharidia_things.block.entity.StableBlockEntity;
 import com.THproject.tharidia_things.item.HotIronItem;
 import com.THproject.tharidia_things.item.HotGoldItem;
 import com.THproject.tharidia_things.item.HotCopperItem;
@@ -47,6 +50,12 @@ import com.THproject.tharidia_things.item.BattleGauntlet;
 import com.THproject.tharidia_things.item.CopperElsaItem;
 import com.THproject.tharidia_things.item.DiceItem;
 import com.THproject.tharidia_things.item.PietroBlockItem;
+import com.THproject.tharidia_things.item.AnimalFeedItem;
+import com.THproject.tharidia_things.item.AnimalBrushItem;
+import com.THproject.tharidia_things.item.FreshStrawItem;
+import com.THproject.tharidia_things.item.DirtyStrawItem;
+import com.THproject.tharidia_things.item.ShelterUpgradeKitItem;
+import com.THproject.tharidia_things.registry.BabyMobRegistry;
 import com.THproject.tharidia_things.client.ClientPacketHandler;
 import com.THproject.tharidia_things.entity.ModEntities;
 import com.THproject.tharidia_things.compoundTag.BattleGauntleAttachments;
@@ -57,6 +66,9 @@ import com.THproject.tharidia_things.config.ReviveConfig;
 import com.THproject.tharidia_things.event.ItemAttributeHandler;
 import com.THproject.tharidia_things.event.PlayerStatsIncrementHandler;
 import com.THproject.tharidia_things.fatigue.FatigueAttachments;
+import com.THproject.tharidia_things.houseboundry.AnimalWellnessAttachments;
+import com.THproject.tharidia_things.houseboundry.config.AnimalConfigLoader;
+import com.THproject.tharidia_things.stable.StableConfigLoader;
 import com.THproject.tharidia_things.network.BattlePackets;
 import com.THproject.tharidia_things.network.ClaimOwnerSyncPacket;
 import com.THproject.tharidia_things.network.FatigueSyncPacket;
@@ -174,6 +186,13 @@ public class TharidiaThings {
     // Hot Copper Marker Block (invisible, used for hot copper on anvil)
     public static final DeferredBlock<HotCopperMarkerBlock> HOT_COPPER_MARKER = BLOCKS.register("hot_copper_marker",
             () -> new HotCopperMarkerBlock());
+    // Stable Block
+    public static final DeferredBlock<StableBlock> STABLE = BLOCKS.register("stable",
+            () -> new StableBlock());
+    public static final DeferredItem<BlockItem> STABLE_ITEM = ITEMS.registerSimpleBlockItem("stable", STABLE);
+    // Stable Dummy Block (multiblock slave)
+    public static final DeferredBlock<StableDummyBlock> STABLE_DUMMY = BLOCKS.register("stable_dummy",
+            () -> new StableDummyBlock());
 
     // Creates a new BlockEntityType for the Pietro block
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<PietroBlockEntity>> PIETRO_BLOCK_ENTITY = BLOCK_ENTITIES
@@ -193,6 +212,10 @@ public class TharidiaThings {
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<HotCopperAnvilEntity>> HOT_COPPER_ANVIL_ENTITY = BLOCK_ENTITIES
             .register("hot_copper_anvil",
                     () -> BlockEntityType.Builder.of(HotCopperAnvilEntity::new, HOT_COPPER_MARKER.get()).build(null));
+    // Creates a new BlockEntityType for the Stable
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<StableBlockEntity>> STABLE_BLOCK_ENTITY = BLOCK_ENTITIES
+            .register("stable",
+                    () -> BlockEntityType.Builder.of(StableBlockEntity::new, STABLE.get()).build(null));
 
     // Creates a MenuType for the Claim GUI
     public static final DeferredHolder<net.minecraft.world.inventory.MenuType<?>, net.minecraft.world.inventory.MenuType<ClaimMenu>> CLAIM_MENU = MENU_TYPES
@@ -244,10 +267,26 @@ public class TharidiaThings {
             () -> new CopperElsaItem(new Item.Properties()));
     public static final DeferredItem<Item> DICE = ITEMS.register("dice",
             () -> new DiceItem(new Item.Properties().stacksTo(16)));
+    public static final DeferredItem<Item> ANIMAL_FEED = ITEMS.register("animal_feed",
+            () -> new AnimalFeedItem(new Item.Properties().stacksTo(64)));
+    public static final DeferredItem<Item> MANURE = ITEMS.register("manure",
+            () -> new Item(new Item.Properties().stacksTo(64)));
 
     // Battle Gauntlet
     public static final DeferredItem<Item> BATTLE_GAUNTLE = ITEMS.register("battle_gauntlet",
             () -> new BattleGauntlet(new Item.Properties().stacksTo(1)));
+
+    // Houseboundry Items
+    public static final DeferredItem<Item> ANIMAL_BRUSH = ITEMS.register("animal_brush",
+            () -> new AnimalBrushItem(new Item.Properties().durability(64)));
+    public static final DeferredItem<Item> FRESH_STRAW = ITEMS.register("fresh_straw",
+            () -> new FreshStrawItem(new Item.Properties().stacksTo(16)));
+    public static final DeferredItem<Item> DIRTY_STRAW = ITEMS.register("dirty_straw",
+            () -> new DirtyStrawItem(new Item.Properties().stacksTo(16)));
+    public static final DeferredItem<Item> SHELTER_UPGRADE_KIT = ITEMS.register("shelter_upgrade_kit",
+            () -> new ShelterUpgradeKitItem(new Item.Properties().stacksTo(1)));
+    public static final DeferredItem<Item> PITCHFORK = ITEMS.register("pitchfork",
+            () -> new com.THproject.tharidia_things.item.PitchforkItem(new Item.Properties()));
 
     // Creates a creative tab with the id "tharidiathings:tharidia_tab" for the mod
     // items, that is placed after the combat tab
@@ -273,7 +312,19 @@ public class TharidiaThings {
                         output.accept(COPPER_LAMA_CORTA.get());
                         output.accept(COPPER_ELSA.get());
                         output.accept(DICE.get());
+                        output.accept(ANIMAL_FEED.get());
+                        output.accept(MANURE.get());
                         output.accept(BATTLE_GAUNTLE.get());
+                        output.accept(STABLE_ITEM.get());
+                        // Houseboundry
+                        output.accept(ANIMAL_BRUSH.get());
+                        output.accept(FRESH_STRAW.get());
+                        output.accept(DIRTY_STRAW.get());
+                        output.accept(SHELTER_UPGRADE_KIT.get());
+                        output.accept(PITCHFORK.get());
+
+                        // Add all dynamically registered baby mob items
+                        BabyMobRegistry.addToCreativeTab(output);
                     }).build());
 
     // The constructor for the mod class is the first code that is run when your mod
@@ -297,6 +348,10 @@ public class TharidiaThings {
 
         // Register the Deferred Register to the mod event bus so blocks get registered
         BLOCKS.register(modEventBus);
+
+        // Register dynamic baby mob items BEFORE items are registered
+        BabyMobRegistry.registerBabyMobs();
+
         // Register the Deferred Register to the mod event bus so items get registered
         ITEMS.register(modEventBus);
         // Register the Deferred Register to the mod event bus so block entities get
@@ -315,6 +370,7 @@ public class TharidiaThings {
         DietAttachments.ATTACHMENT_TYPES.register(modEventBus);
         CharacterAttachments.ATTACHMENT_TYPES.register(modEventBus);
         StaminaAttachments.ATTACHMENT_TYPES.register(modEventBus);
+        AnimalWellnessAttachments.ATTACHMENT_TYPES.register(modEventBus);
 
         // Register custom stats
         ModStats.register(modEventBus);
@@ -387,6 +443,8 @@ public class TharidiaThings {
         LOGGER.info("HELLO FROM COMMON SETUP");
 
         event.enqueueWork(() -> {
+            // Build reverse lookup for baby mob registry
+            BabyMobRegistry.buildReverseLookup();
             Stats.CUSTOM.get(ModStats.LAMA_CORTA_KILL.get(), StatFormatter.DEFAULT);
             Stats.CUSTOM.get(ModStats.LANCIA_KILL.get(), StatFormatter.DEFAULT);
             Stats.CUSTOM.get(ModStats.MARTELLI_KILL.get(), StatFormatter.DEFAULT);
@@ -938,6 +996,8 @@ public class TharidiaThings {
         event.addListener(new FatigueConfig());
         event.addListener(new StaminaConfig());
         event.addListener(new StaminaTagMappingsLoader());
+        event.addListener(new AnimalConfigLoader());
+        event.addListener(new StableConfigLoader());
 
         ReviveConfig.reload();
 
@@ -961,6 +1021,7 @@ public class TharidiaThings {
         ItemCatalogueCommand.register(event.getDispatcher());
         StatsCommand.register(event.getDispatcher());
         ReviveCommands.register(event.getDispatcher());
+        StableDebugCommand.register(event.getDispatcher());
     }
 
     /**
