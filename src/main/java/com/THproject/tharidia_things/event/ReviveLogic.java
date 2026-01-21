@@ -29,10 +29,12 @@ public class ReviveLogic {
         if (event.getEntity() instanceof Player player) {
             if (!Revive.isPlayerFallen(player)) {
                 ReviveAttachments playerAttachments = player.getData(ReviveAttachments.REVIVE_DATA.get());
-                playerAttachments.resetResTime();
-                Revive.fallPlayer(player, true);
-                event.setCanceled(true);
-                event.getEntity().setHealth(1);
+                if (playerAttachments.canFall()) {
+                    playerAttachments.resetResTime();
+                    Revive.fallPlayer(player, true);
+                    event.setCanceled(true);
+                    event.getEntity().setHealth(1);
+                }
             } else {
                 Revive.revivePlayer(player);
             }

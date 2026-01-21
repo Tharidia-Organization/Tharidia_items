@@ -18,6 +18,7 @@ public class ReviveAttachments implements INBTSerializable<CompoundTag> {
     private long last_revived_time = 0;
     private boolean death_from_battle = false;
     private int invulnerability_tick = 0; // 10 seconds
+    private boolean can_fall = true;
 
     public void resetResTime() {
         this.res_time = Integer.parseInt(ReviveConfig.config.TIME_TO_RES.get("Value").toString());
@@ -39,6 +40,10 @@ public class ReviveAttachments implements INBTSerializable<CompoundTag> {
         this.invulnerability_tick = tick;
     }
 
+    public void setCanFall(boolean val) {
+        this.can_fall = val;
+    }
+
     public int getResTime() {
         return res_time;
     }
@@ -53,6 +58,10 @@ public class ReviveAttachments implements INBTSerializable<CompoundTag> {
 
     public int getInvulnerabilityTick() {
         return invulnerability_tick;
+    }
+
+    public boolean canFall() {
+        return can_fall;
     }
 
     public void decreaseResTime() {

@@ -1,6 +1,6 @@
 package com.THproject.tharidia_things.command;
 
-import com.THproject.tharidia_things.event.ReviveLogic;
+import com.THproject.tharidia_things.compoundTag.ReviveAttachments;
 import com.THproject.tharidia_things.features.Revive;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.BoolArgumentType;
@@ -10,23 +10,33 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.server.level.ServerPlayer;
 
 public class ReviveCommands {
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(
-                Commands.literal("fall")
-                        .requires(source -> source.hasPermission(2))
-                        .then(Commands.argument("player", EntityArgument.player())
-                                .executes(context -> fallPlayer(context, false))
-                                .then(Commands.argument("can_revive", BoolArgumentType.bool())
-                                        .executes(context -> fallPlayer(context, true)))));
+                Commands.literal("thmaster")
+                        .then(Commands.literal("fall")
+                                .requires(source -> source.hasPermission(2))
+                                .then(Commands.argument("player", EntityArgument.player())
+                                        .executes(context -> fallPlayer(context, false))
+                                        .then(Commands.argument("can_revive", BoolArgumentType.bool())
+                                                .executes(context -> fallPlayer(context, true))))));
 
         dispatcher.register(
-                Commands.literal("revive")
-                        .requires(source -> source.hasPermission(2))
-                        .then(Commands.argument("player", EntityArgument.player())
-                                .executes(ReviveCommands::revivePlayer)));
+                Commands.literal("thmaster")
+                        .then(Commands.literal("revive")
+                                .requires(source -> source.hasPermission(2))
+                                .then(Commands.argument("player", EntityArgument.player())
+                                        .executes(ReviveCommands::revivePlayer))));
 
+        dispatcher.register(
+                Commands.literal("thmaster")
+                        .then(Commands.literal("can_fall")
+                                .requires(source -> source.hasPermission(2))
+                                .then(Commands.argument("player", EntityArgument.player())
+                                        .then(Commands.argument("can_fall", BoolArgumentType.bool())
+                                                .executes(ReviveCommands::setCanFall)))));
     }
 
     private static int fallPlayer(CommandContext<CommandSourceStack> context, boolean has_to_read_value) {
@@ -51,6 +61,18 @@ public class ReviveCommands {
         } catch (CommandSyntaxException e) {
             return 0;
         }
+        return 1;
+    }
+
+    private static int setCanFall(CommandContext<CommandSourceStack> context) {
+        try {
+            ServerPlayer player = EntityArgument.getPlayer(context, "player");
+            boolean can_fall = BoolArgumentType.getBool(context, "can_fall");
+            player.getData(ReviveAttachments.REVIVE_DATA.get()).setCanFall(can_fall);
+        } catch (CommandSyntaxException e) {
+            return 0;
+        }
+
         return 1;
     }
 }
