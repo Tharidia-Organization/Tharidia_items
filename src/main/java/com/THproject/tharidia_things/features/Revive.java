@@ -28,7 +28,9 @@ public class Revive {
         player.setForcedPose(Pose.SWIMMING);
         player.setSwimming(true);
 
-        player.getData(ReviveAttachments.REVIVE_DATA.get()).setCanRevive(can_revive);
+        ReviveAttachments reviveAttachments = player.getData(ReviveAttachments.REVIVE_DATA.get());
+        reviveAttachments.setCanRevive(can_revive);
+        reviveAttachments.setInvulnerabilityTick(player.tickCount);
 
         // Apply attributes to prevent movement and jumping
         AttributeInstance movement = player.getAttribute(Attributes.MOVEMENT_SPEED);
