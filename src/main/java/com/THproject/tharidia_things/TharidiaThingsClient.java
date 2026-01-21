@@ -14,6 +14,7 @@ import com.THproject.tharidia_things.client.renderer.PietroBlockRenderer;
 import com.THproject.tharidia_things.client.renderer.HotIronAnvilRenderer;
 import com.THproject.tharidia_things.client.renderer.HotGoldAnvilRenderer;
 import com.THproject.tharidia_things.client.renderer.HotCopperAnvilRenderer;
+import com.THproject.tharidia_things.client.renderer.StableBlockRenderer;
 import com.THproject.tharidia_things.diet.ClientDietProfileCache;
 import com.THproject.tharidia_things.diet.DietRegistry;
 import net.minecraft.client.renderer.RenderType;
@@ -102,6 +103,7 @@ public class TharidiaThingsClient {
         event.registerBlockEntityRenderer(TharidiaThings.HOT_IRON_ANVIL_ENTITY.get(), HotIronAnvilRenderer::new);
         event.registerBlockEntityRenderer(TharidiaThings.HOT_GOLD_ANVIL_ENTITY.get(), HotGoldAnvilRenderer::new);
         event.registerBlockEntityRenderer(TharidiaThings.HOT_COPPER_ANVIL_ENTITY.get(), HotCopperAnvilRenderer::new);
+        event.registerBlockEntityRenderer(TharidiaThings.STABLE_BLOCK_ENTITY.get(), StableBlockRenderer::new);
     }
     
     @SubscribeEvent
@@ -109,6 +111,12 @@ public class TharidiaThingsClient {
         // Set render type for Pietro block to support transparency
         net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(
             TharidiaThings.PIETRO.get(), 
+            RenderType.cutout()
+        );
+        
+        // Set render type for Stable block to support transparency
+        net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(
+            TharidiaThings.STABLE.get(), 
             RenderType.cutout()
         );
     }
@@ -133,6 +141,24 @@ public class TharidiaThingsClient {
         for (int i = 0; i <= 4; i++) {
             event.register(net.minecraft.client.resources.model.ModelResourceLocation.standalone(
                 ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/hot_copper_anvil_" + i)
+            ));
+        }
+
+        // Register stall overlay models for conditional rendering (hay and water)
+        event.register(net.minecraft.client.resources.model.ModelResourceLocation.standalone(
+            ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/stall_hay")
+        ));
+        event.register(net.minecraft.client.resources.model.ModelResourceLocation.standalone(
+            ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/stall_water")
+        ));
+        event.register(net.minecraft.client.resources.model.ModelResourceLocation.standalone(
+            ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/stall_milk")
+        ));
+
+        // Register stall manure overlay models (10 stages for 10%, 20%, ..., 100%)
+        for (int i = 1; i <= 10; i++) {
+            event.register(net.minecraft.client.resources.model.ModelResourceLocation.standalone(
+                ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/stall_shit_" + i)
             ));
         }
     }

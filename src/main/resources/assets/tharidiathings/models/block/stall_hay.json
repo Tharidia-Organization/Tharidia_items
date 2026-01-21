@@ -1,0 +1,24 @@
+{
+	"format_version": "1.9.0",
+	"credit": "Hay overlay for stall",
+	"texture_size": [256, 256],
+	"textures": {
+		"0": "tharidiathings:block/stall"
+	},
+	"elements": [
+		{
+			"name": "hay_in_feeder",
+			"from": [-9.98, 5.5, 22.78],
+			"to": [9.02, 6.7, 27.38],
+			"rotation": {"angle": 0, "axis": "y", "origin": [-21.28, 0, 12.68]},
+			"faces": {
+				"north": {"uv": [9.125, 4.375, 11, 4.9375], "texture": "#0"},
+				"east": {"uv": [10.1875, 4.375, 11, 4.9375], "texture": "#0"},
+				"south": {"uv": [9.125, 4.375, 11, 4.9375], "texture": "#0"},
+				"west": {"uv": [10.1875, 4.375, 11, 4.9375], "texture": "#0"},
+				"up": {"uv": [11, 4.9375, 9.125, 4.375], "texture": "#0"},
+				"down": {"uv": [11, 4.375, 9.125, 4.9375], "texture": "#0"}
+			}
+		}
+	]
+}
