@@ -22,6 +22,8 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.server.level.ServerLevel;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -54,7 +56,8 @@ public class StableBlockEntity extends BlockEntity {
     private long lastRandomEventCheckMs = 0;   // Last random event check (every 1200000 ms = 20 min real, ~1 MC day)
     private boolean wasRainingLastTick = false; // Track rain start for hygiene boost
     private boolean wasThunderingLastTick = false; // Track thunder for stress trigger
-    
+    private int particleTickCounter = 0; // Counter for spawning visual feedback particles
+
     // Animal wellness states (Houseboundry)
     public enum AnimalState {
         GOLD,      // Excellent condition - bonus production
@@ -94,6 +97,9 @@ public class StableBlockEntity extends BlockEntity {
         public boolean thunderTriggeredThisStorm = false;
         public boolean rainHygieneApplied = false;
 
+        // Night rest behavior
+        public boolean isResting = false;
+
         public AnimalData(EntityType<?> entityType) {
             this.entityType = entityType;
             this.isBaby = true;
@@ -114,6 +120,7 @@ public class StableBlockEntity extends BlockEntity {
             this.hasBred = false;
             this.thunderTriggeredThisStorm = false;
             this.rainHygieneApplied = false;
+            this.isResting = false;
         }
 
         public AnimalData() {
@@ -186,6 +193,7 @@ public class StableBlockEntity extends BlockEntity {
             tag.putBoolean("HasBred", hasBred);
             tag.putBoolean("ThunderTriggeredThisStorm", thunderTriggeredThisStorm);
             tag.putBoolean("RainHygieneApplied", rainHygieneApplied);
+            tag.putBoolean("IsResting", isResting);
         }
 
         public void load(CompoundTag tag) {
@@ -209,6 +217,7 @@ public class StableBlockEntity extends BlockEntity {
             hasBred = tag.contains("HasBred") && tag.getBoolean("HasBred");
             thunderTriggeredThisStorm = tag.contains("ThunderTriggeredThisStorm") && tag.getBoolean("ThunderTriggeredThisStorm");
             rainHygieneApplied = tag.contains("RainHygieneApplied") && tag.getBoolean("RainHygieneApplied");
+            isResting = tag.contains("IsResting") && tag.getBoolean("IsResting");
         }
     }
     
@@ -842,7 +851,75 @@ public class StableBlockEntity extends BlockEntity {
             player.drop(stack, false);
         }
     }
-    
+
+    // ==================== PARTICLE HELPER METHODS ====================
+
+    /**
+     * Spawns particles at the stable position for visual feedback.
+     * Called periodically during serverTick to indicate animal states.
+     */
+    private static void spawnStateParticles(Level level, BlockPos pos, StableBlockEntity entity) {
+        if (!(level instanceof ServerLevel serverLevel)) return;
+
+        double x = pos.getX() + 0.5;
+        double y = pos.getY() + 1.0;
+        double z = pos.getZ() + 0.5;
+
+        for (AnimalData animal : entity.animals) {
+            AnimalState state = animal.calculateState();
+
+            // Disease particles - green witch particles
+            if (animal.diseased) {
+                serverLevel.sendParticles(ParticleTypes.WITCH, x, y, z, 2, 0.3, 0.2, 0.3, 0.02);
+
+                // Terminal disease (> 100 minutes) - more urgent red particles
+                long diseaseMinutes = animal.diseaseStartTimestamp > 0 ?
+                    (System.currentTimeMillis() - animal.diseaseStartTimestamp) / 60000 : 0;
+                if (diseaseMinutes >= 100) {
+                    serverLevel.sendParticles(ParticleTypes.DAMAGE_INDICATOR, x, y + 0.5, z, 1, 0.2, 0.1, 0.2, 0.0);
+                }
+            }
+
+            // State-based particles
+            switch (state) {
+                case GOLD -> {
+                    // Happy green particles for excellent condition
+                    serverLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, x, y, z, 1, 0.3, 0.2, 0.3, 0.0);
+                }
+                case CRITICAL -> {
+                    // Smoke/angry particles for critical condition
+                    if (!animal.diseased) { // Don't double-up with disease particles
+                        serverLevel.sendParticles(ParticleTypes.SMOKE, x, y, z, 2, 0.3, 0.2, 0.3, 0.01);
+                    }
+                }
+                default -> {
+                    // No particles for OK/LOW states
+                }
+            }
+
+            // Resting particles - small white particles when sleeping
+            if (animal.isResting) {
+                serverLevel.sendParticles(ParticleTypes.FALLING_WATER, x, y + 0.3, z, 1, 0.2, 0.0, 0.2, 0.0);
+            }
+        }
+    }
+
+    /**
+     * Spawns production particles when an animal produces something.
+     */
+    private static void spawnProductionParticles(Level level, BlockPos pos) {
+        if (!(level instanceof ServerLevel serverLevel)) return;
+
+        double x = pos.getX() + 0.5;
+        double y = pos.getY() + 1.0;
+        double z = pos.getZ() + 0.5;
+
+        // Heart particles for production
+        serverLevel.sendParticles(ParticleTypes.HEART, x, y, z, 3, 0.3, 0.2, 0.3, 0.0);
+    }
+
+    // ==================== END PARTICLE HELPER METHODS ====================
+
     public static void serverTick(Level level, BlockPos pos, BlockState state, StableBlockEntity entity) {
         boolean changed = false;
         StableConfig config = cfg();
@@ -888,6 +965,14 @@ public class StableBlockEntity extends BlockEntity {
         // Default: 72000 ticks = 3600 seconds = 3600000 ms (1 hour real-time per freshness point)
         if (entity.beddingFreshness > 0) {
             long now = System.currentTimeMillis();
+
+            // FIX: Initialize timestamp if it's 0 (e.g., from old saves or first bedding placement)
+            // This prevents instant decay due to elapsed time calculation from epoch (1970)
+            if (entity.lastBeddingDecayMs == 0) {
+                entity.lastBeddingDecayMs = now;
+                changed = true;
+            }
+
             long elapsedMs = now - entity.lastBeddingDecayMs;
             // Convert ticks to milliseconds: ticks / 20 ticks/sec * 1000 ms/sec = ticks * 50
             long decayIntervalMs = (long) config.beddingDecayIntervalTicks() * 50L;
@@ -1043,9 +1128,11 @@ public class StableBlockEntity extends BlockEntity {
 
             for (AnimalData animal : entity.animals) {
                 if (!animal.diseased) {
-                    // Disease chance based on hygiene (check once per hour passed)
+                    // Disease chance based on hygiene, stress, and comfort (check once per hour passed)
                     for (int h = 0; h < hoursPassed; h++) {
                         float diseaseChance = 0;
+
+                        // Base chance from hygiene
                         if (animal.hygiene >= 60) {
                             diseaseChance = 0; // 0%
                         } else if (animal.hygiene >= 40) {
@@ -1056,11 +1143,27 @@ public class StableBlockEntity extends BlockEntity {
                             diseaseChance = 0.15f; // 15%
                         }
 
+                        // CRITICAL state factors increase disease chance significantly
+                        // High stress (>= 70) adds 10% disease chance
+                        if (animal.stress >= 70) {
+                            diseaseChance += 0.10f;
+                        } else if (animal.stress >= 50) {
+                            diseaseChance += 0.05f; // Elevated stress adds 5%
+                        }
+
+                        // Low comfort (< 20) adds 10% disease chance
+                        if (animal.comfort < 20) {
+                            diseaseChance += 0.10f;
+                        } else if (animal.comfort < 40) {
+                            diseaseChance += 0.03f; // Poor comfort adds 3%
+                        }
+
                         if (diseaseChance > 0 && level.random.nextFloat() < diseaseChance) {
                             animal.diseased = true;
                             animal.diseaseStartTimestamp = now;
                             changed = true;
-                            TharidiaThings.LOGGER.info("[STABLE] Animal became diseased! Hygiene was: {}", animal.hygiene);
+                            TharidiaThings.LOGGER.info("[STABLE] Animal became diseased! Hygiene: {}, Stress: {}, Comfort: {}",
+                                animal.hygiene, animal.stress, animal.comfort);
                             break; // Animal is now diseased, stop checking
                         }
                     }
@@ -1155,7 +1258,24 @@ public class StableBlockEntity extends BlockEntity {
 
         // ==================== END HOUSEBOUNDRY WELLNESS ====================
 
+        // ==================== DAY/NIGHT CYCLE ====================
+        // Check if it's daytime (animals produce) or nighttime (animals rest)
+        long dayTime = level.getDayTime();
+        boolean isDaytime = config.isDaytime(dayTime);
+
+        // Update resting state for all animals
+        for (AnimalData animal : entity.animals) {
+            boolean shouldRest = !isDaytime;
+            if (animal.isResting != shouldRest) {
+                animal.isResting = shouldRest;
+                changed = true;
+            }
+        }
+
+        // ==================== END DAY/NIGHT CYCLE ====================
+
         // Only allow growth and production if there is water and food
+        // Production is also blocked during nighttime (animals are resting)
         boolean hasWater = entity.waterTicks > 0;
         boolean hasFood = entity.foodAmount > 0;
 
@@ -1176,10 +1296,10 @@ public class StableBlockEntity extends BlockEntity {
                 }
             }
 
-            // Handle egg production (only with water, food, not CRITICAL, not BARREN)
+            // Handle egg production (only with water, food, not CRITICAL, not BARREN, not resting)
             if (animal.entityType == EntityType.CHICKEN && !animal.isBaby
                     && animal.totalEggsProduced < config.maxEggsPerChicken()
-                    && hasWater && hasFood && productionMult > 0) {
+                    && hasWater && hasFood && productionMult > 0 && !animal.isResting) {
                 animal.eggProductionTicks++;
                 int effectiveEggTime = (int) (config.eggProductionTimeTicks() * productionMult);
                 if (animal.eggProductionTicks >= effectiveEggTime) {
@@ -1188,12 +1308,13 @@ public class StableBlockEntity extends BlockEntity {
                     animal.eggProductionTicks = 0;
                     changed = true;
                     level.playSound(null, pos, SoundEvents.CHICKEN_EGG, SoundSource.BLOCKS, 0.8F, 1.0F);
+                    spawnProductionParticles(level, pos); // Visual feedback for production
                 }
             }
 
-            // Handle milk production (only with water, food, not CRITICAL)
+            // Handle milk production (only with water, food, not CRITICAL, not resting)
             if (isMilkProducingType(animal.entityType) && !animal.isBaby && !animal.milkReady
-                    && hasWater && hasFood && productionMult > 0) {
+                    && hasWater && hasFood && productionMult > 0 && !animal.isResting) {
                 animal.milkProductionTicks++;
                 int effectiveMilkTime = (int) (config.milkProductionTimeTicks() * productionMult);
                 if (animal.milkProductionTicks >= effectiveMilkTime) {
@@ -1201,16 +1322,26 @@ public class StableBlockEntity extends BlockEntity {
                     animal.milkProductionTicks = 0;
                     changed = true;
                     level.playSound(null, pos, SoundEvents.COW_AMBIENT, SoundSource.BLOCKS, 0.5F, 1.2F);
+                    spawnProductionParticles(level, pos); // Visual feedback for production
                 }
             }
         }
+
+        // ==================== VISUAL PARTICLE FEEDBACK ====================
+        // Spawn state particles every 40 ticks (2 seconds) for visual feedback
+        entity.particleTickCounter++;
+        if (entity.particleTickCounter >= 40 && !entity.animals.isEmpty()) {
+            entity.particleTickCounter = 0;
+            spawnStateParticles(level, pos, entity);
+        }
+        // ==================== END VISUAL PARTICLE FEEDBACK ====================
 
         if (changed) {
             entity.setChanged();
             level.sendBlockUpdated(pos, state, state, 3);
         }
     }
-    
+
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);

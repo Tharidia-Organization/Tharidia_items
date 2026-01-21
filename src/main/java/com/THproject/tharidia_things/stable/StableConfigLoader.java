@@ -73,6 +73,17 @@ public class StableConfigLoader extends SimpleJsonResourceReloadListener {
                     .orElse(null);
 
                 if (config != null) {
+                    // Handle extra fields beyond the 16-field codec limit (dayStartTick, dayEndTick)
+                    if (configJson.isJsonObject()) {
+                        var jsonObj = configJson.getAsJsonObject();
+                        int dayStart = jsonObj.has("day_start_tick")
+                            ? jsonObj.get("day_start_tick").getAsInt()
+                            : StableConfig.DEFAULT.dayStartTick();
+                        int dayEnd = jsonObj.has("day_end_tick")
+                            ? jsonObj.get("day_end_tick").getAsInt()
+                            : StableConfig.DEFAULT.dayEndTick();
+                        config = config.withDayNightTicks(dayStart, dayEnd);
+                    }
                     currentConfig = config;
                     LOGGER.info("Loaded stable config from {}", finalConfigId);
                     logConfig(config);
@@ -102,5 +113,7 @@ public class StableConfigLoader extends SimpleJsonResourceReloadListener {
         LOGGER.debug("  manureCollectAmount: {}", config.manureCollectAmount());
         LOGGER.debug("  beddingDecayIntervalTicks: {}", config.beddingDecayIntervalTicks());
         LOGGER.debug("  beddingStartFreshness: {}", config.beddingStartFreshness());
+        LOGGER.debug("  dayStartTick: {} (day begins)", config.dayStartTick());
+        LOGGER.debug("  dayEndTick: {} (night begins)", config.dayEndTick());
     }
 }

@@ -233,24 +233,41 @@ public class StableDebugLogger {
                 sb.append(String.format("║        State: %s %s%s║\n",
                     stateIcon, stateEffect, spaces(47 - stateIcon.length() - stateEffect.length())));
 
-                // Disease status
+                // Disease status with detailed timing
                 if (animal.diseased) {
                     long diseaseMinutes = animal.diseaseStartTimestamp > 0 ?
                         (System.currentTimeMillis() - animal.diseaseStartTimestamp) / 60000 : 0;
                     long timeRemaining = 120 - diseaseMinutes;
                     String diseasePhase;
+                    String urgencyIcon;
                     if (diseaseMinutes < 60) {
-                        diseasePhase = "Early (curable)";
+                        diseasePhase = "Early";
+                        urgencyIcon = "⚠";
                     } else if (diseaseMinutes < 100) {
                         diseasePhase = "Advanced";
+                        urgencyIcon = "⚠⚠";
                     } else {
                         diseasePhase = "TERMINAL";
+                        urgencyIcon = "☠";
                     }
-                    sb.append(String.format("║        Disease: ⚠ YES - %s (%d min remaining)%s║\n",
-                        diseasePhase, timeRemaining,
-                        spaces(24 - diseasePhase.length() - digitCount((int)timeRemaining))));
+                    sb.append(String.format("║        Disease: %s SICK - %s%s║\n",
+                        urgencyIcon, diseasePhase,
+                        spaces(52 - urgencyIcon.length() - diseasePhase.length())));
+                    sb.append(String.format("║          └─ Time until DEATH: %d min (curable with honey/medicine)%s║\n",
+                        timeRemaining,
+                        spaces(10 - digitCount((int)timeRemaining))));
+                    sb.append(String.format("║          └─ Disease duration: %d min / 120 min%s║\n",
+                        diseaseMinutes,
+                        spaces(28 - digitCount((int)diseaseMinutes))));
                 } else {
                     sb.append("║        Disease: ✓ Healthy                                                     ║\n");
+                }
+
+                // Resting status (day/night cycle)
+                if (animal.isResting) {
+                    sb.append("║        Activity: 💤 RESTING (nighttime - no production)                       ║\n");
+                } else {
+                    sb.append("║        Activity: ✓ Active (producing)                                         ║\n");
                 }
 
                 // Brush cooldown
@@ -310,6 +327,15 @@ public class StableDebugLogger {
         sb.append(String.format("║    Weather: %s %s%s║\n",
             weatherStatus, weatherEffect,
             spaces(56 - weatherStatus.length() - weatherEffect.length())));
+
+        // Day/Night cycle
+        long dayTime = level.getDayTime() % 24000;
+        boolean isDaytime = cfg.isDaytime(dayTime);
+        String timeIcon = isDaytime ? "☀" : "🌙";
+        String timeStatus = isDaytime ? "DAYTIME (animals active)" : "NIGHTTIME (animals resting)";
+        sb.append(String.format("║    Time: %s %s (tick %d/24000)%s║\n",
+            timeIcon, timeStatus, dayTime,
+            spaces(37 - timeStatus.length() - digitCount((int)dayTime))));
 
         // Bedding
         float beddingPercent = (float) stable.getBeddingFreshness() / 100 * 100;
