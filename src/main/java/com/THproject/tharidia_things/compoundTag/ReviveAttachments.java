@@ -17,6 +17,7 @@ public class ReviveAttachments implements INBTSerializable<CompoundTag> {
     private int res_time = 0;
     private long last_revived_time = 0;
     private boolean death_from_battle = false;
+    private int invulnerability_tick = 0; // 10 seconds
 
     public void resetResTime() {
         this.res_time = Integer.parseInt(ReviveConfig.config.TIME_TO_RES.get("Value").toString());
@@ -34,6 +35,10 @@ public class ReviveAttachments implements INBTSerializable<CompoundTag> {
         this.death_from_battle = val;
     }
 
+    public void setInvulnerabilityTick(int tick) {
+        this.invulnerability_tick = tick;
+    }
+
     public int getResTime() {
         return res_time;
     }
@@ -44,6 +49,10 @@ public class ReviveAttachments implements INBTSerializable<CompoundTag> {
 
     public boolean canRevive() {
         return death_from_battle;
+    }
+
+    public int getInvulnerabilityTick() {
+        return invulnerability_tick;
     }
 
     public void decreaseResTime() {
@@ -57,6 +66,7 @@ public class ReviveAttachments implements INBTSerializable<CompoundTag> {
         nbt.putInt("res_time", this.res_time);
         nbt.putLong("last_revived_time", last_revived_time);
         nbt.putBoolean("death_from_battle", death_from_battle);
+        nbt.putInt("invulnerability_time", invulnerability_tick);
         return nbt;
     }
 
@@ -65,6 +75,7 @@ public class ReviveAttachments implements INBTSerializable<CompoundTag> {
         this.res_time = nbt.getInt("res_time");
         this.last_revived_time = nbt.getLong("last_revived_time");
         this.death_from_battle = nbt.getBoolean("death_from_battle");
+        this.invulnerability_tick = nbt.getInt("invulnerability_time");
     }
 
     public static final DeferredRegister<AttachmentType<?>> ATTACHMENT_TYPES = DeferredRegister
