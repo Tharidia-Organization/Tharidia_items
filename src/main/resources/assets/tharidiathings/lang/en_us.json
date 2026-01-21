@@ -99,6 +99,7 @@
   "gui.tharidiathings.realm.queue_status_label": "§6§lQueue Status:",
   "gui.tharidiathings.realm.queue_ready": "§5§lReady",
   "gui.tharidiathings.realm.dungeon.enter_button": "Enter",
+  "gui.tharidiathings.realm.dungeon.enter_group_button": "Enter Group",
 
   "gui.tharidiathings.name_entry.title": "Enter your name",
   "gui.tharidiathings.name_entry.instructions": "This is your character's name",
