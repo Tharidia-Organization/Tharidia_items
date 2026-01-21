@@ -109,6 +109,11 @@
   "gui.tharidiathings.realm.queue_status_label": "§6§lStato coda:",
   "gui.tharidiathings.realm.queue_ready": "§5§lPronto",
   "gui.tharidiathings.realm.dungeon.enter_button": "Entra",
+  "gui.tharidiathings.realm.dungeon.enter_group_button": "Entra Gruppo",
+  "gui.tharidiathings.realm.dungeon.exit_button": "Esci",
+  "gui.tharidiathings.realm.dungeon.start_button": "Inizia",
+  "gui.tharidiathings.realm.group_queue_title": "§6§lCoda Gruppo",
+  "gui.tharidiathings.realm.group_count": "Giocatori: %s/%s",
 
   "gui.tharidiathings.name_entry.title": "Inserisci il tuo Nome",
   "gui.tharidiathings.name_entry.instructions": "Questo è il nome del tuo personaggio",

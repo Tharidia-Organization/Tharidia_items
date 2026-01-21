@@ -61,7 +61,7 @@ public class StableHudOverlay {
     private static final int COLOR_GOOD = MedievalGuiRenderer.BRONZE;
     private static final int COLOR_WARNING = MedievalGuiRenderer.PURPLE_REGAL;
     private static final int COLOR_DANGER = MedievalGuiRenderer.DEEP_CRIMSON;
-    private static final int COLOR_GRAY = MedievalGuiRenderer.STONE_GRAY;
+    private static final int COLOR_GRAY = MedievalGuiRenderer.SILVER;
 
     @SubscribeEvent
     public static void onRenderGui(RenderGuiEvent.Post event) {
@@ -425,7 +425,7 @@ public class StableHudOverlay {
         int startX = 10;
         int startY = 10;
 
-        guiGraphics.fill(startX + 2, startY + 2, startX + boxWidth + 2, startY + boxHeight + 2, MedievalGuiRenderer.SHADOW);
+        guiGraphics.fill(startX + 2, startY + 2, startX + boxWidth + 2, startY + boxHeight + 2, MedievalGuiRenderer.SHADOW_DARK);
         MedievalGuiRenderer.renderParchmentBackground(guiGraphics, startX, startY, boxWidth, boxHeight);
         guiGraphics.renderOutline(startX, startY, boxWidth, boxHeight, MedievalGuiRenderer.BRONZE);
         guiGraphics.renderOutline(startX + 2, startY + 2, boxWidth - 4, boxHeight - 4,

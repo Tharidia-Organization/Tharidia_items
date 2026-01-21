@@ -110,6 +110,10 @@
   "gui.tharidiathings.realm.queue_ready": "§5§lReady",
   "gui.tharidiathings.realm.dungeon.enter_button": "Enter",
   "gui.tharidiathings.realm.dungeon.enter_group_button": "Enter Group",
+  "gui.tharidiathings.realm.dungeon.exit_button": "Exit",
+  "gui.tharidiathings.realm.dungeon.start_button": "Start",
+  "gui.tharidiathings.realm.group_queue_title": "§6§lGroup Queue",
+  "gui.tharidiathings.realm.group_count": "Players: %s/%s",
 
   "gui.tharidiathings.name_entry.title": "Enter your name",
   "gui.tharidiathings.name_entry.instructions": "This is your character's name",
