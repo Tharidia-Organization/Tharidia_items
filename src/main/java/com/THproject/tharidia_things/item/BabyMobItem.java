@@ -10,16 +10,22 @@ import java.util.List;
 
 public class BabyMobItem extends Item {
     private final EntityType<?> entityType;
-    
+
     public BabyMobItem(EntityType<?> entityType, Properties properties) {
         super(properties);
         this.entityType = entityType;
     }
-    
+
     public EntityType<?> getEntityType() {
         return entityType;
     }
-    
+
+    @Override
+    public Component getName(ItemStack stack) {
+        // Generate name dynamically: "Baby [Entity Name]"
+        return Component.translatable("item.tharidiathings.baby_mob.name", entityType.getDescription());
+    }
+
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltipComponents, TooltipFlag tooltipFlag) {
         super.appendHoverText(stack, context, tooltipComponents, tooltipFlag);

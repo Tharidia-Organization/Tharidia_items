@@ -1,6 +1,7 @@
 package com.THproject.tharidia_things.block.entity;
 
 import com.THproject.tharidia_things.TharidiaThings;
+import com.THproject.tharidia_things.stable.AnimalTypeHelper;
 import com.THproject.tharidia_things.stable.StableConfig;
 import com.THproject.tharidia_things.stable.StableConfigLoader;
 import net.minecraft.core.BlockPos;
@@ -17,6 +18,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
@@ -173,6 +175,17 @@ public class StableBlockEntity extends BlockEntity {
             };
         }
 
+        /**
+         * Gets overall wellness as a 0-100 value for animation purposes.
+         * Combines comfort, stress (inverted), hygiene, and disease status.
+         */
+        public int getOverallWellness() {
+            if (diseased) return 10; // Very low wellness when sick
+            // Weighted average: comfort 40%, inverted stress 30%, hygiene 30%
+            int invertedStress = 100 - stress;
+            return (comfort * 40 + invertedStress * 30 + hygiene * 30) / 100;
+        }
+
         public void save(CompoundTag tag) {
             tag.putString("EntityType", BuiltInRegistries.ENTITY_TYPE.getKey(entityType).toString());
             tag.putBoolean("IsBaby", isBaby);
@@ -223,6 +236,12 @@ public class StableBlockEntity extends BlockEntity {
     
     public StableBlockEntity(BlockPos pos, BlockState state) {
         super(TharidiaThings.STABLE_BLOCK_ENTITY.get(), pos, state);
+        // Initialize timestamps to current time to prevent massive catch-up loops
+        long now = System.currentTimeMillis();
+        this.lastWellnessUpdateMs = now;
+        this.lastDiseaseCheckMs = now;
+        this.lastRandomEventCheckMs = now;
+        this.lastBeddingDecayMs = now;
     }
     
     public boolean hasAnimal() {
@@ -273,27 +292,18 @@ public class StableBlockEntity extends BlockEntity {
 
     /**
      * Checks if an entity type can produce milk.
-     * Supports vanilla animals (cow, goat, mooshroom) and modded animals.
+     * Delegates to AnimalTypeHelper for centralized logic.
      */
     private static boolean isMilkProducingType(EntityType<?> entityType) {
-        // Vanilla milk-producing animals
-        if (entityType == EntityType.COW ||
-            entityType == EntityType.GOAT ||
-            entityType == EntityType.MOOSHROOM) {
-            return true;
-        }
+        return AnimalTypeHelper.isMilkProducingType(entityType);
+    }
 
-        // Check for modded animals by entity type ID
-        // Common modded milk-producing animals often have "cow", "goat", or "milk" in their ID
-        ResourceLocation entityId = BuiltInRegistries.ENTITY_TYPE.getKey(entityType);
-        if (entityId != null) {
-            String path = entityId.getPath().toLowerCase();
-            if (path.contains("cow") || path.contains("goat") || path.contains("milk")) {
-                return true;
-            }
-        }
-
-        return false;
+    /**
+     * Checks if an entity type can produce eggs.
+     * Delegates to AnimalTypeHelper for centralized logic.
+     */
+    private static boolean isEggProducingType(EntityType<?> entityType) {
+        return AnimalTypeHelper.isEggProducingType(entityType);
     }
     
     public boolean hasWater() {
@@ -319,16 +329,18 @@ public class StableBlockEntity extends BlockEntity {
 
     /**
      * Returns the water level as a percentage (0.0 to 1.0)
+     * Clamped to prevent values outside valid range.
      */
     public float getWaterLevel() {
-        return (float) waterTicks / cfg().waterDurationTicks();
+        return Math.max(0.0f, Math.min(1.0f, (float) waterTicks / cfg().waterDurationTicks()));
     }
 
     /**
      * Returns the food level as a percentage (0.0 to 1.0)
+     * Clamped to prevent values outside valid range.
      */
     public float getFoodLevel() {
-        return (float) foodAmount / cfg().maxFoodItems();
+        return Math.max(0.0f, Math.min(1.0f, (float) foodAmount / cfg().maxFoodItems()));
     }
 
     public int getManureAmount() {
@@ -575,19 +587,16 @@ public class StableBlockEntity extends BlockEntity {
             }
         }
 
-        // Check if correct food type and not fully fed
+        // Check if correct food type using AnimalTypeHelper (supports all vanilla + modded animals)
+        if (!AnimalTypeHelper.isValidBreedingFood(entityType, stack)) {
+            return false;
+        }
+
+        // Check if any animal still needs feeding
         int feedRequired = cfg().feedRequiredForBreeding();
-        if (entityType == EntityType.COW && stack.is(Items.WHEAT)) {
-            for (AnimalData animal : animals) {
-                if (animal.feedCount < feedRequired) {
-                    return true;
-                }
-            }
-        } else if (entityType == EntityType.CHICKEN && stack.is(Items.WHEAT_SEEDS)) {
-            for (AnimalData animal : animals) {
-                if (animal.feedCount < feedRequired) {
-                    return true;
-                }
+        for (AnimalData animal : animals) {
+            if (animal.feedCount < feedRequired) {
+                return true;
             }
         }
 
@@ -705,23 +714,29 @@ public class StableBlockEntity extends BlockEntity {
     }
     
     public boolean canCollectEggs() {
-        if (animals.isEmpty() || animals.get(0).entityType != EntityType.CHICKEN) {
+        if (animals.isEmpty()) {
             return false;
         }
-        
+
+        // Check if the animal type produces eggs (supports modded animals)
+        if (!isEggProducingType(animals.get(0).entityType)) {
+            return false;
+        }
+
         for (AnimalData animal : animals) {
             if (!animal.isBaby && animal.eggCount > 0) {
                 return true;
             }
         }
-        
+
         return false;
     }
     
     /**
-     * Collects eggs from all chickens that have eggs available.
-     * Chickens are NOT killed - they continue living and producing eggs.
+     * Collects eggs from all egg-producing animals that have eggs available.
+     * Animals are NOT killed - they continue living and producing eggs.
      * After reaching maxEggsPerChicken lifetime total, they simply stop producing (BARREN phase).
+     * Supports vanilla chickens and modded egg-laying animals.
      */
     public void collectEggs(Player player) {
         if (!canCollectEggs()) {
@@ -730,7 +745,7 @@ public class StableBlockEntity extends BlockEntity {
 
         int totalCollected = 0;
         for (AnimalData animal : animals) {
-            if (!animal.isBaby && animal.eggCount > 0 && animal.entityType == EntityType.CHICKEN) {
+            if (!animal.isBaby && animal.eggCount > 0 && isEggProducingType(animal.entityType)) {
                 totalCollected += animal.eggCount;
                 animal.eggCount = 0;
                 animal.eggProductionTicks = 0;
@@ -773,8 +788,8 @@ public class StableBlockEntity extends BlockEntity {
         for (int i = 0; i < animals.size(); i++) {
             AnimalData animal = animals.get(i);
             if (!animal.isBaby) {
-                // For chickens, prefer barren ones (reached max eggs)
-                if (animal.entityType == EntityType.CHICKEN && animal.totalEggsProduced >= cfg().maxEggsPerChicken()) {
+                // For egg-producing animals, prefer barren ones (reached max eggs)
+                if (isEggProducingType(animal.entityType) && animal.totalEggsProduced >= cfg().maxEggsPerChicken()) {
                     toSlaughter = animal;
                     slaughterIndex = i;
                     break;
@@ -811,37 +826,25 @@ public class StableBlockEntity extends BlockEntity {
 
     /**
      * Drops loot for a slaughtered animal based on its type.
+     * Uses AnimalTypeHelper to support both vanilla and modded animals.
      */
     private void dropSlaughterLoot(Player player, AnimalData animal) {
         boolean isAdult = !animal.isBaby;
         EntityType<?> type = animal.entityType;
 
-        if (type == EntityType.COW || type == EntityType.MOOSHROOM) {
-            dropLoot(player, new ItemStack(Items.BEEF, isAdult ? 2 : 1));
-            if (isAdult) {
-                dropLoot(player, new ItemStack(Items.LEATHER, 2));
-            }
-        } else if (type == EntityType.CHICKEN) {
-            dropLoot(player, new ItemStack(Items.CHICKEN, 1));
-            if (isAdult) {
-                dropLoot(player, new ItemStack(Items.FEATHER, 2));
-            }
-        } else if (type == EntityType.PIG) {
-            dropLoot(player, new ItemStack(Items.PORKCHOP, isAdult ? 2 : 1));
-        } else if (type == EntityType.SHEEP) {
-            dropLoot(player, new ItemStack(Items.MUTTON, isAdult ? 2 : 1));
-            if (isAdult) {
-                dropLoot(player, new ItemStack(Items.WHITE_WOOL, 1));
-            }
-        } else if (type == EntityType.GOAT) {
-            // Goats don't drop specific meat in vanilla, give generic leather
-            if (isAdult) {
-                dropLoot(player, new ItemStack(Items.LEATHER, 1));
-            }
-        } else {
-            // Generic fallback for modded animals
-            if (isAdult) {
-                dropLoot(player, new ItemStack(Items.LEATHER, 1));
+        // Get meat drop from AnimalTypeHelper (supports modded animals)
+        Item meatDrop = AnimalTypeHelper.getMeatDrop(type);
+        if (meatDrop != null) {
+            dropLoot(player, new ItemStack(meatDrop, isAdult ? 2 : 1));
+        }
+
+        // Get secondary drop (leather, feathers, wool, etc) from AnimalTypeHelper
+        if (isAdult) {
+            Item secondaryDrop = AnimalTypeHelper.getSecondaryDrop(type);
+            if (secondaryDrop != null) {
+                int amount = (secondaryDrop == Items.FEATHER) ? 2 :
+                            (secondaryDrop == Items.LEATHER) ? 2 : 1;
+                dropLoot(player, new ItemStack(secondaryDrop, amount));
             }
         }
     }
@@ -979,6 +982,9 @@ public class StableBlockEntity extends BlockEntity {
 
             if (elapsedMs >= decayIntervalMs) {
                 int decayAmount = (int) (elapsedMs / decayIntervalMs);
+                // SAFETY: Limit catch-up decay to max 50 intervals (prevents instant 0% after long offline)
+                // This gives players a chance to replace bedding even after extended absence
+                decayAmount = Math.min(decayAmount, 50);
                 entity.beddingFreshness = Math.max(0, entity.beddingFreshness - decayAmount);
                 entity.lastBeddingDecayMs = now;
                 changed = true;
@@ -1050,6 +1056,8 @@ public class StableBlockEntity extends BlockEntity {
         // Process wellness updates based on real time elapsed (even if multiple intervals passed while unloaded)
         if (wellnessElapsedMs >= 60000) {
             int minutesPassed = (int) (wellnessElapsedMs / 60000);
+            // SAFETY: Limit catch-up to max 120 minutes (2 hours) to prevent issues from corrupted timestamps
+            minutesPassed = Math.min(minutesPassed, 120);
             entity.lastWellnessUpdateMs = now;
             changed = true;
 
@@ -1124,6 +1132,8 @@ public class StableBlockEntity extends BlockEntity {
         long diseaseElapsedMs = now - entity.lastDiseaseCheckMs;
         if (diseaseElapsedMs >= 3600000) {
             int hoursPassed = (int) (diseaseElapsedMs / 3600000);
+            // SAFETY: Limit catch-up to max 24 hours to prevent issues from corrupted timestamps
+            hoursPassed = Math.min(hoursPassed, 24);
             entity.lastDiseaseCheckMs = now;
 
             for (AnimalData animal : entity.animals) {
@@ -1183,18 +1193,8 @@ public class StableBlockEntity extends BlockEntity {
                     TharidiaThings.LOGGER.info("[STABLE] Animal died from disease after {} minutes", diseaseMinutes);
                 }
             }
-
-            // Natural cure: hygiene > 80 for 2 days (48 hours real = 2880000 ms)
-            // Simplified: if hygiene is > 80 and disease has been present < 30 min, 1% chance per minute to cure
-            if (animal.diseased && animal.hygiene > 80) {
-                long diseaseMinutes = (now - animal.diseaseStartTimestamp) / 60000;
-                if (diseaseMinutes < 30 && level.random.nextFloat() < 0.01f) {
-                    animal.diseased = false;
-                    animal.diseaseStartTimestamp = 0;
-                    changed = true;
-                    TharidiaThings.LOGGER.info("[STABLE] Animal naturally cured from disease!");
-                }
-            }
+            // NOTE: Animals can ONLY be cured with honey bottles (tryHoneyCure method)
+            // There is no natural cure - disease must be treated or the animal dies after 120 minutes
         }
 
         // Remove dead animals
@@ -1208,9 +1208,12 @@ public class StableBlockEntity extends BlockEntity {
         long randomEventElapsedMs = now - entity.lastRandomEventCheckMs;
         if (randomEventElapsedMs >= 1200000) {
             int daysPassed = (int) (randomEventElapsedMs / 1200000);
+            // SAFETY: Limit catch-up to max 10 days to prevent extreme effects from corrupted timestamps
+            daysPassed = Math.min(daysPassed, 10);
             entity.lastRandomEventCheckMs = now;
 
-            // Process random events for each "day" passed
+            // Process random events for each "day" passed (max 10)
+            // Note: Comfort/stress events scale with days, but outbreak is checked only ONCE
             for (int d = 0; d < daysPassed; d++) {
                 float eventRoll = level.random.nextFloat();
 
@@ -1234,24 +1237,26 @@ public class StableBlockEntity extends BlockEntity {
                         TharidiaThings.LOGGER.info("[STABLE] Random event: Restless Night blocked by fresh bedding!");
                     }
                 }
+            }
 
-                // 2% chance: "Outbreak Event" - one random healthy animal gets diseased (independent of hygiene)
-                float outbreakRoll = level.random.nextFloat();
-                if (outbreakRoll < 0.02f) {
-                    // Find healthy animals
-                    List<AnimalData> healthyAnimals = new ArrayList<>();
-                    for (AnimalData animal : entity.animals) {
-                        if (!animal.diseased) {
-                            healthyAnimals.add(animal);
-                        }
+            // OUTBREAK EVENT: Checked only ONCE per random event check (not per day passed)
+            // This prevents exponential disease spread after being offline for multiple days
+            // 2% chance: one random healthy animal gets diseased (independent of hygiene)
+            float outbreakRoll = level.random.nextFloat();
+            if (outbreakRoll < 0.02f) {
+                // Find healthy animals
+                List<AnimalData> healthyAnimals = new ArrayList<>();
+                for (AnimalData animal : entity.animals) {
+                    if (!animal.diseased) {
+                        healthyAnimals.add(animal);
                     }
-                    if (!healthyAnimals.isEmpty()) {
-                        AnimalData victim = healthyAnimals.get(level.random.nextInt(healthyAnimals.size()));
-                        victim.diseased = true;
-                        victim.diseaseStartTimestamp = now;
-                        changed = true;
-                        TharidiaThings.LOGGER.info("[STABLE] Random event: OUTBREAK! One animal became diseased randomly");
-                    }
+                }
+                if (!healthyAnimals.isEmpty()) {
+                    AnimalData victim = healthyAnimals.get(level.random.nextInt(healthyAnimals.size()));
+                    victim.diseased = true;
+                    victim.diseaseStartTimestamp = now;
+                    changed = true;
+                    TharidiaThings.LOGGER.info("[STABLE] Random event: OUTBREAK! One animal became diseased randomly");
                 }
             }
         }
@@ -1297,7 +1302,8 @@ public class StableBlockEntity extends BlockEntity {
             }
 
             // Handle egg production (only with water, food, not CRITICAL, not BARREN, not resting)
-            if (animal.entityType == EntityType.CHICKEN && !animal.isBaby
+            // Supports all egg-producing animals (chickens, ducks, turkeys, etc.)
+            if (isEggProducingType(animal.entityType) && !animal.isBaby
                     && animal.totalEggsProduced < config.maxEggsPerChicken()
                     && hasWater && hasFood && productionMult > 0 && !animal.isResting) {
                 animal.eggProductionTicks++;

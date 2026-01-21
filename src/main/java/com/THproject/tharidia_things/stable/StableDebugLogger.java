@@ -31,8 +31,8 @@ public class StableDebugLogger {
     // Search radius for finding stables
     private static final int SEARCH_RADIUS = 32;
 
-    // Enable/disable debug logging
-    private static boolean enabled = true;
+    // Enable/disable debug logging (disabled by default, admin-only command to enable)
+    private static boolean enabled = false;
 
     private static int tickCounter = 0;
 
@@ -135,7 +135,7 @@ public class StableDebugLogger {
                 String phase;
                 if (animal.isBaby) {
                     phase = "BABY";
-                } else if (animal.entityType == EntityType.CHICKEN && animal.totalEggsProduced >= cfg.maxEggsPerChicken()) {
+                } else if (isEggProducingType(animal.entityType) && animal.totalEggsProduced >= cfg.maxEggsPerChicken()) {
                     phase = "BARREN";
                 } else {
                     phase = "PRODUCTIVE";
@@ -164,8 +164,8 @@ public class StableDebugLogger {
                 sb.append(String.format("║        Breeding: %s%s║\n",
                     breedStatus, spaces(animal.hasBred ? 40 : 63)));
 
-                // Egg production (chickens only)
-                if (animal.entityType == EntityType.CHICKEN) {
+                // Egg production (chickens and other egg-producing animals)
+                if (isEggProducingType(animal.entityType)) {
                     boolean isBarren = animal.totalEggsProduced >= cfg.maxEggsPerChicken();
                     String eggStatus = isBarren ? "BARREN - no more eggs" : "producing";
                     sb.append(String.format("║        Eggs Available: %d%s║\n",
@@ -224,10 +224,11 @@ public class StableDebugLogger {
                     case LOW -> "▼ LOW";
                     case CRITICAL -> "✖ CRITICAL";
                 };
+                // Multipliers: GOLD=0.7x time (43% faster), LOW=1.3x time (23% slower)
                 String stateEffect = switch (state) {
-                    case GOLD -> "(+30% production)";
+                    case GOLD -> "(43% faster production)";
                     case OK -> "(normal)";
-                    case LOW -> "(-30% production)";
+                    case LOW -> "(23% slower production)";
                     case CRITICAL -> "(NO production!)";
                 };
                 sb.append(String.format("║        State: %s %s%s║\n",
@@ -415,7 +416,7 @@ public class StableDebugLogger {
                         milkReadyCount++;
                     }
                 }
-                if (animal.entityType == EntityType.CHICKEN) {
+                if (isEggProducingType(animal.entityType)) {
                     if (animal.totalEggsProduced >= cfg.maxEggsPerChicken()) {
                         barrenCount++;
                     } else {
@@ -502,19 +503,17 @@ public class StableDebugLogger {
 
     /**
      * Checks if an entity type can produce milk.
-     * Supports vanilla animals (cow, goat, mooshroom) and modded animals.
+     * Delegates to AnimalTypeHelper for centralized logic.
      */
     private static boolean isMilkProducingType(EntityType<?> entityType) {
-        if (entityType == EntityType.COW ||
-            entityType == EntityType.GOAT ||
-            entityType == EntityType.MOOSHROOM) {
-            return true;
-        }
-        ResourceLocation entityId = BuiltInRegistries.ENTITY_TYPE.getKey(entityType);
-        if (entityId != null) {
-            String path = entityId.getPath().toLowerCase();
-            return path.contains("cow") || path.contains("goat") || path.contains("milk");
-        }
-        return false;
+        return AnimalTypeHelper.isMilkProducingType(entityType);
+    }
+
+    /**
+     * Checks if an entity type can produce eggs.
+     * Delegates to AnimalTypeHelper for centralized logic.
+     */
+    private static boolean isEggProducingType(EntityType<?> entityType) {
+        return AnimalTypeHelper.isEggProducingType(entityType);
     }
 }

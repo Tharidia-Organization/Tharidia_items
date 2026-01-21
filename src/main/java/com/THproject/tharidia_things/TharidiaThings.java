@@ -284,6 +284,8 @@ public class TharidiaThings {
             () -> new DirtyStrawItem(new Item.Properties().stacksTo(16)));
     public static final DeferredItem<Item> SHELTER_UPGRADE_KIT = ITEMS.register("shelter_upgrade_kit",
             () -> new ShelterUpgradeKitItem(new Item.Properties().stacksTo(1)));
+    public static final DeferredItem<Item> PITCHFORK = ITEMS.register("pitchfork",
+            () -> new com.THproject.tharidia_things.item.PitchforkItem(new Item.Properties()));
 
     // Creates a creative tab with the id "tharidiathings:tharidia_tab" for the mod
     // items, that is placed after the combat tab
@@ -318,6 +320,7 @@ public class TharidiaThings {
                         output.accept(FRESH_STRAW.get());
                         output.accept(DIRTY_STRAW.get());
                         output.accept(SHELTER_UPGRADE_KIT.get());
+                        output.accept(PITCHFORK.get());
 
                         // Add all dynamically registered baby mob items
                         BabyMobRegistry.addToCreativeTab(output);

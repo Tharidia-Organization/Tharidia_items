@@ -13,7 +13,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.ShovelItem;
-import net.minecraft.world.item.HoeItem;
+import com.THproject.tharidia_things.item.PitchforkItem;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.BlockGetter;
@@ -53,6 +53,7 @@ public class StableBlock extends BaseEntityBlock {
             .mapColor(MapColor.WOOD)
             .strength(2.5F)
             .noOcclusion()
+            .noLootTable()  // We handle drops manually in onRemove
             .lightLevel(state -> 15));
     }
     
@@ -98,10 +99,10 @@ public class StableBlock extends BaseEntityBlock {
     }
 
     private boolean canFormMultiblock(Level level, BlockPos masterPos) {
-        // Check a larger area (6 blocks radius) to prevent visual overlap with scaled models
-        // The 2.0x scale makes the model extend about 5 blocks from center
-        for (int x = -5; x <= 5; x++) {
-            for (int z = -5; z <= 5; z++) {
+        // Check the 5x5 multiblock area (-2 to +2) for conflicts with existing stables
+        // Also check 1 block buffer around to prevent overlapping dummies
+        for (int x = -3; x <= 3; x++) {
+            for (int z = -3; z <= 3; z++) {
                 if (x == 0 && z == 0) continue;
 
                 BlockPos checkPos = masterPos.offset(x, 0, z);
@@ -120,6 +121,12 @@ public class StableBlock extends BaseEntityBlock {
     @Override
     public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
         if (!state.is(newState.getBlock()) && !level.isClientSide) {
+            // Drop the stable item - handles both direct breaking and destruction via dummy
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof StableBlockEntity) {
+                // Only drop if block entity exists (first removal)
+                net.minecraft.world.level.block.Block.popResource(level, pos, new ItemStack(TharidiaThings.STABLE.get()));
+            }
             destroyMultiblock(level, pos);
         }
         super.onRemove(state, level, pos, newState, isMoving);
@@ -208,10 +215,20 @@ public class StableBlock extends BaseEntityBlock {
         }
         
         // Check if feeding animals for breeding
-        if ((stack.is(Items.WHEAT) || stack.is(Items.WHEAT_SEEDS)) && stable.canFeed(stack)) {
+        // Now supports all animals via AnimalTypeHelper
+        if (stable.canFeed(stack)) {
             stable.feed(stack);
             stack.shrink(1);
             return ItemInteractionResult.SUCCESS;
+        }
+
+        // Provide feedback if player tries to feed but cannot (breeding requirements not met)
+        // Only trigger if this looks like a breeding food attempt
+        if (stable.hasAnimal() && stable.getAnimals().size() == 2 &&
+            com.THproject.tharidia_things.stable.AnimalTypeHelper.isValidBreedingFood(stable.getAnimalType(), stack)) {
+            // Check why breeding failed and give appropriate feedback
+            level.playSound(null, pos, SoundEvents.VILLAGER_NO, SoundSource.BLOCKS, 0.5F, 1.2F);
+            return ItemInteractionResult.FAIL;
         }
         
         // Check if refilling water with water bucket
@@ -226,7 +243,7 @@ public class StableBlock extends BaseEntityBlock {
         if (stack.is(Items.BUCKET) && stable.canCollectMilk()) {
             stable.collectMilk(player);
             stack.shrink(1);
-            player.addItem(new ItemStack(Items.MILK_BUCKET));
+            // Milk bucket is given inside collectMilk() - don't duplicate
             return ItemInteractionResult.SUCCESS;
         }
 
@@ -252,8 +269,8 @@ public class StableBlock extends BaseEntityBlock {
             }
         }
 
-        // Check if removing bedding with hoe (Houseboundry)
-        if (stack.getItem() instanceof HoeItem && stable.hasBedding()) {
+        // Check if removing bedding with pitchfork (Houseboundry)
+        if (stack.getItem() instanceof PitchforkItem && stable.hasBedding()) {
             int currentFreshness = stable.getBeddingFreshness();
             if (stable.removeBedding()) {
                 // Drop fresh straw if freshness was >= 50%, otherwise dirty straw
@@ -264,7 +281,7 @@ public class StableBlock extends BaseEntityBlock {
                     player.addItem(new ItemStack(TharidiaThings.DIRTY_STRAW.get()));
                     level.playSound(null, pos, SoundEvents.GRASS_BREAK, SoundSource.BLOCKS, 1.0F, 0.8F);
                 }
-                // Damage hoe
+                // Damage pitchfork
                 stack.hurtAndBreak(1, player, net.minecraft.world.entity.LivingEntity.getSlotForHand(hand));
                 return ItemInteractionResult.SUCCESS;
             }

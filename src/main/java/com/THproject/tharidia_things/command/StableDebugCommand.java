@@ -9,6 +9,7 @@ import net.minecraft.network.chat.Component;
 
 /**
  * Command to control stable debug logging.
+ * Requires admin permission (op level 2+).
  * /stabledebug - Toggle debug logging
  * /stabledebug on - Enable debug logging
  * /stabledebug off - Disable debug logging
@@ -17,6 +18,7 @@ public class StableDebugCommand {
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("stabledebug")
+            .requires(source -> source.hasPermission(2)) // Requires op level 2 (admin)
             .executes(context -> {
                 // Toggle
                 boolean newState = !StableDebugLogger.isEnabled();

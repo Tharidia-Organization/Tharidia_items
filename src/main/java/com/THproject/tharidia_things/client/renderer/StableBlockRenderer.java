@@ -2,6 +2,7 @@ package com.THproject.tharidia_things.client.renderer;
 
 import com.THproject.tharidia_things.TharidiaThings;
 import com.THproject.tharidia_things.block.entity.StableBlockEntity;
+import com.THproject.tharidia_things.stable.AnimalTypeHelper;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
@@ -17,6 +18,7 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.client.resources.model.ModelResourceLocation;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
@@ -243,81 +245,144 @@ public class StableBlockRenderer implements BlockEntityRenderer<StableBlockEntit
         if (!entity.hasAnimal()) {
             return;
         }
-        
+
         var animals = entity.getAnimals();
         EntityType<?> animalType = entity.getAnimalType();
-        
+
         if (animalType == null) {
             return;
         }
-        
-        // Calculate time-based animation for head movement
-        long time = entity.getLevel() != null ? entity.getLevel().getGameTime() : 0;
-        float animationTime = (time + partialTick) * 0.05F;
-        
+
+        // Get game time for animations
+        long gameTime = entity.getLevel() != null ? entity.getLevel().getGameTime() : 0;
+
+        // Create unique stable ID from block position for animation state management
+        BlockPos pos = entity.getBlockPos();
+        long stableId = ((long) pos.getX() << 32) | ((long) pos.getZ() & 0xFFFFFFFFL) ^ pos.getY();
+
         // Render animals based on count
         for (int i = 0; i < animals.size(); i++) {
             var animal = animals.get(i);
             poseStack.pushPose();
-            
+            float rotationDegrees = 0.0F;
+
             // Position animals: parents on hay patches (SW and NW), baby in center
             if (animals.size() == 1) {
                 // Single animal - on hay_patch_sw (front-left)
                 poseStack.translate(-1.0, 0.4, -0.3);
+                rotationDegrees = 90.0F;
             } else if (animals.size() == 2) {
                 // Two animals - one on hay_patch_sw, one on hay_patch_nw
                 if (i == 0) {
                     // Parent 1 - hay_patch_sw (front-left)
                     poseStack.translate(-1.0, 0.4, -0.3);
+                    rotationDegrees = 90.0F;
                 } else {
                     // Parent 2 - hay_patch_nw (back-left)
                     poseStack.translate(-1.0, 0.4, 1.2);
+                    rotationDegrees = 90.0F;
                 }
             } else if (animals.size() == 3) {
                 // Three animals - two parents on hay patches, baby in center-right
                 if (i == 0) {
                     // Parent 1 - hay_patch_sw (front-left)
                     poseStack.translate(-1.0, 0.4, -0.3);
+                    rotationDegrees = 90.0F;
                 } else if (i == 1) {
                     // Parent 2 - hay_patch_nw (back-left)
                     poseStack.translate(-1.0, 0.4, 1.2);
+                    rotationDegrees = 90.0F;
                 } else {
                     // Baby - center-right area
                     poseStack.translate(1.8, 0.4, 0.5);
+                    rotationDegrees = -90.0F;
                 }
             }
-            
-            // Render animal with animation offset per animal
-            renderAnimal(animal.entityType, animal.isBaby, animationTime + (i * 1.5F), poseStack, buffer, packedLight);
-            
+
+            if (rotationDegrees != 0.0F) {
+                poseStack.mulPose(Axis.YP.rotationDegrees(rotationDegrees));
+            }
+
+            // Get animation state for this specific animal
+            StableAnimalAnimator.AnimalAnimationState animState =
+                StableAnimalAnimator.getAnimationState(stableId, i);
+            animState.lastUpdateTime = gameTime;
+
+            // Render animal with full animation system
+            renderAnimal(
+                animal.entityType,
+                animal.isBaby,
+                animal.isResting,
+                animal.diseased,
+                animal.getOverallWellness(),
+                animState,
+                gameTime,
+                partialTick,
+                poseStack,
+                buffer,
+                packedLight
+            );
+
             poseStack.popPose();
         }
-        
-        // Render eggs for all chickens that have produced them
-        if (animalType == EntityType.CHICKEN) {
+
+        // Render eggs for all egg-producing animals (chickens, ducks, etc.)
+        if (AnimalTypeHelper.isEggProducingType(animalType)) {
             int totalEggs = entity.getTotalEggCount();
             if (totalEggs > 0) {
                 renderEggs(totalEggs, poseStack, buffer, packedLight);
             }
         }
+
+        // Periodic cleanup of old animation states (every ~10 seconds)
+        if (gameTime % 200 == 0) {
+            StableAnimalAnimator.cleanupOldStates(gameTime);
+        }
     }
     
+    // Sickly green color for diseased animals (ARGB: slightly pale greenish tint)
+    private static final int DISEASED_COLOR = 0xFF88BB88;
+
     @SuppressWarnings("unchecked")
-    private void renderAnimal(EntityType<?> entityType, boolean isBaby, float animationTime, PoseStack poseStack, MultiBufferSource buffer, int packedLight) {
+    private void renderAnimal(
+            EntityType<?> entityType,
+            boolean isBaby,
+            boolean isResting,
+            boolean diseased,
+            int wellness,
+            StableAnimalAnimator.AnimalAnimationState animState,
+            long gameTime,
+            float partialTick,
+            PoseStack poseStack,
+            MultiBufferSource buffer,
+            int packedLight
+    ) {
         poseStack.pushPose();
 
         // Rotate 180 degrees
         poseStack.mulPose(Axis.ZP.rotationDegrees(180));
-        
+
         float scale = isBaby ? 0.5F : 0.8F;
         poseStack.scale(scale, scale, scale);
         poseStack.translate(0, -1.5, 0);
-        
+
+        // Apply advanced animations (breathing, swaying, idle behaviors, etc.)
+        StableAnimalAnimator.applyAnimations(
+            poseStack,
+            animState,
+            entityType,
+            isBaby,
+            isResting,
+            wellness,
+            gameTime,
+            partialTick
+        );
+
         try {
             // Get cached model and texture, or create from ModelLayerLocation
             EntityModel<?> model = modelCache.get(entityType);
             ResourceLocation texture = textureCache.get(entityType);
-            
+
             if (model == null) {
                 // Create model for this entity type
                 model = createModelForEntity(entityType);
@@ -325,7 +390,7 @@ public class StableBlockRenderer implements BlockEntityRenderer<StableBlockEntit
                     modelCache.put(entityType, model);
                 }
             }
-            
+
             if (texture == null) {
                 // Build texture path from entity type
                 texture = getTextureForEntity(entityType);
@@ -333,38 +398,43 @@ public class StableBlockRenderer implements BlockEntityRenderer<StableBlockEntit
                     textureCache.put(entityType, texture);
                 }
             }
-            
+
             if (model == null) {
                 ResourceLocation entityId = BuiltInRegistries.ENTITY_TYPE.getKey(entityType);
                 TharidiaThings.LOGGER.warn("[STABLE RENDER] No model available for {}", entityId);
             }
-            
+
             if (texture == null) {
                 ResourceLocation entityId = BuiltInRegistries.ENTITY_TYPE.getKey(entityType);
                 TharidiaThings.LOGGER.warn("[STABLE RENDER] No texture available for {}", entityId);
             }
-            
+
             if (model != null && texture != null) {
-                // Animate head with slight oscillation using setupAnim
                 model.young = isBaby;
-                
-                // Try to animate, but skip if it fails (some models require non-null entity)
+
+                // Use animator's head rotation values for more lifelike movement
                 try {
-                    float headXRot = (float) Math.sin(animationTime) * 0.1F;
-                    float headYRot = (float) Math.cos(animationTime * 0.7F) * 0.15F;
-                    ((EntityModel<LivingEntity>) model).setupAnim(null, 0, 0, 0, headYRot * 57.2958F, headXRot * 57.2958F);
-                } catch (NullPointerException e) {
-                    // Some models (like LlamaModel) require a non-null entity for setupAnim
+                    float headYaw = StableAnimalAnimator.getHeadYaw(animState, isResting);
+                    float headPitch = StableAnimalAnimator.getHeadPitch(animState, isResting);
+                    ((EntityModel<LivingEntity>) model).setupAnim(null, 0, 0, 0, headYaw, headPitch);
+                } catch (NullPointerException | UnsupportedOperationException | ClassCastException e) {
+                    // Expected for some models - animation will be static but rendering continues
+                    // The PoseStack transformations will still provide lifelike movement
                 }
-                
-                model.renderToBuffer(poseStack, buffer.getBuffer(RenderType.entityCutoutNoCull(texture)), 
-                    packedLight, OverlayTexture.NO_OVERLAY, -1);
+
+                // Apply greenish tint if animal is diseased, otherwise normal color
+                int color = diseased ? DISEASED_COLOR : -1;
+                model.renderToBuffer(poseStack, buffer.getBuffer(RenderType.entityCutoutNoCull(texture)),
+                    packedLight, OverlayTexture.NO_OVERLAY, color);
             }
         } catch (Exception e) {
             ResourceLocation entityId = BuiltInRegistries.ENTITY_TYPE.getKey(entityType);
             TharidiaThings.LOGGER.error("[STABLE RENDER] Exception rendering {}: {}", entityId, e.getMessage(), e);
         }
-        
+
+        // Clean up animator's pose stack additions
+        StableAnimalAnimator.finishAnimations(poseStack);
+
         poseStack.popPose();
     }
     

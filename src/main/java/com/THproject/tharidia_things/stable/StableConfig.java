@@ -54,7 +54,7 @@ public record StableConfig(
         3,                      // feedRequiredForBreeding
         20 * 60 * 2,           // growthTimeTicks (2 minutes)
         20 * 30,               // eggProductionTimeTicks (30 seconds)
-        3,                      // maxEggsPerChicken (legacy, chickens no longer die)
+        50,                     // maxEggsPerChicken (lifetime egg limit before barren phase)
         20 * 60,               // milkProductionTimeTicks (1 minute cooldown)
         20 * 60 * 10,          // waterDurationTicks (10 minutes)
         64,                     // maxFoodItems

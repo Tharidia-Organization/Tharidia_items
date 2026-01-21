@@ -26,6 +26,7 @@ import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -150,6 +151,31 @@ public class StableDummyBlock extends Block {
 
     @Nullable
     private BlockPos findMaster(Level level, BlockPos dummyPos, BlockState dummyState) {
+        return getMasterPos(level, dummyPos, dummyState);
+    }
+
+    /**
+     * Gets the master block position from a dummy block position.
+     * Can be called from client-side code for HUD rendering.
+     *
+     * @param level the level
+     * @param dummyPos the position of the dummy block
+     * @return the position of the master stable block, or null if not found
+     */
+    @Nullable
+    public static BlockPos getMasterPos(net.minecraft.world.level.LevelAccessor level, BlockPos dummyPos) {
+        BlockState state = level.getBlockState(dummyPos);
+        if (!(state.getBlock() instanceof StableDummyBlock)) {
+            return null;
+        }
+        return getMasterPos(level, dummyPos, state);
+    }
+
+    /**
+     * Gets the master block position from a dummy block position and state.
+     */
+    @Nullable
+    public static BlockPos getMasterPos(net.minecraft.world.level.LevelAccessor level, BlockPos dummyPos, BlockState dummyState) {
         // Get offset from blockstate (stored as 0-4, actual offset is -2 to 2)
         int offsetX = dummyState.getValue(OFFSET_X) - 2;
         int offsetZ = dummyState.getValue(OFFSET_Z) - 2;
@@ -168,7 +194,36 @@ public class StableDummyBlock extends Block {
     private void findAndDestroyMaster(Level level, BlockPos dummyPos, BlockState dummyState) {
         BlockPos masterPos = findMaster(level, dummyPos, dummyState);
         if (masterPos != null) {
-            level.destroyBlock(masterPos, true);
+            // Use false for dropBlock since the master's onRemove handles the drop manually
+            // This prevents double drops
+            level.destroyBlock(masterPos, false);
         }
+    }
+
+    /**
+     * Checks if the stable has animals by looking at the master block entity.
+     */
+    private boolean hasAnimalsInStable(BlockGetter level, BlockPos dummyPos, BlockState dummyState) {
+        BlockPos masterPos = getMasterPos((net.minecraft.world.level.LevelAccessor) level, dummyPos, dummyState);
+        if (masterPos != null && level.getBlockEntity(masterPos) instanceof StableBlockEntity stable) {
+            return stable.hasAnimal();
+        }
+        return false;
+    }
+
+    @Override
+    public float getDestroyProgress(BlockState state, Player player, BlockGetter level, BlockPos pos) {
+        if (hasAnimalsInStable(level, pos, state)) {
+            return 0.0F;
+        }
+        return super.getDestroyProgress(state, player, level, pos);
+    }
+
+    @Override
+    public boolean onDestroyedByPlayer(BlockState state, Level level, BlockPos pos, Player player, boolean willHarvest, net.minecraft.world.level.material.FluidState fluid) {
+        if (hasAnimalsInStable(level, pos, state)) {
+            return false;
+        }
+        return super.onDestroyedByPlayer(state, level, pos, player, willHarvest, fluid);
     }
 }
