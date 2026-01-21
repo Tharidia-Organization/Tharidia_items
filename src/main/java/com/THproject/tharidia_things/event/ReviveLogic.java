@@ -30,7 +30,6 @@ public class ReviveLogic {
             if (!Revive.isPlayerFallen(player)) {
                 ReviveAttachments playerAttachments = player.getData(ReviveAttachments.REVIVE_DATA.get());
                 playerAttachments.resetResTime();
-                playerAttachments.setInvulnerabilityTick(player.tickCount);
                 Revive.fallPlayer(player, true);
                 event.setCanceled(true);
                 event.getEntity().setHealth(1);
@@ -77,8 +76,11 @@ public class ReviveLogic {
                         event.getEntity().displayClientMessage(
                                 Component.literal(String.valueOf(playerReviveAttachments.getResTime())), true);
 
-                        if (playerReviveAttachments.getResTime() == 0)
+                        if (playerReviveAttachments.getResTime() == 0) {
+                            if (!item_to_revive.equals(""))
+                                event.getEntity().getMainHandItem().shrink(1);
                             Revive.revivePlayer(interractedPlayer);
+                        }
                     }
                 }
             }
