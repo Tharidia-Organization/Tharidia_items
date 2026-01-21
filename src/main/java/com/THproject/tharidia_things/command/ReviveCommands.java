@@ -10,6 +10,7 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 
 public class ReviveCommands {
@@ -46,8 +47,9 @@ public class ReviveCommands {
             if (has_to_read_value) {
                 can_revive = BoolArgumentType.getBool(context, "can_revive");
             }
-
             Revive.fallPlayer(player, can_revive);
+            context.getSource().sendSuccess(
+                    () -> Component.literal(String.format("Fallen %s", player.getName().getString())), false);
         } catch (CommandSyntaxException e) {
             return 0;
         }
@@ -58,6 +60,8 @@ public class ReviveCommands {
         try {
             var player = EntityArgument.getPlayer(context, "player");
             Revive.revivePlayer(player);
+            context.getSource().sendSuccess(
+                    () -> Component.literal(String.format("Revived player %s", player.getName().getString())), false);
         } catch (CommandSyntaxException e) {
             return 0;
         }
@@ -69,6 +73,16 @@ public class ReviveCommands {
             ServerPlayer player = EntityArgument.getPlayer(context, "player");
             boolean can_fall = BoolArgumentType.getBool(context, "can_fall");
             player.getData(ReviveAttachments.REVIVE_DATA.get()).setCanFall(can_fall);
+
+            if (can_fall)
+                context.getSource().sendSuccess(
+                        () -> Component.literal(String.format("Player %s can now fall", player.getName().getString())),
+                        can_fall);
+            else
+                context.getSource().sendSuccess(
+                        () -> Component
+                                .literal(String.format("Player %s can no longer fall", player.getName().getString())),
+                        can_fall);
         } catch (CommandSyntaxException e) {
             return 0;
         }
