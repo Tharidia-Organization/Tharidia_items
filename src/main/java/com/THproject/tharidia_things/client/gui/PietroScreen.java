@@ -6,18 +6,26 @@ import com.THproject.tharidia_things.client.gui.medieval.MedievalGuiRenderer;
 import com.THproject.tharidia_things.client.gui.medieval.MedievalTab;
 import com.THproject.tharidia_things.client.gui.medieval.MedievalButton;
 import com.THproject.tharidia_things.client.gui.medieval.MedievalProgressBar;
+import com.THproject.tharidia_things.dungeon_query.DungeonQueryInstance;
 import com.THproject.tharidia_things.gui.PietroMenu;
 import com.THproject.tharidia_things.gui.inventory.PlayerInventoryPanelLayout;
 import com.THproject.tharidia_things.client.gui.components.PlayerInventoryPanelRenderer;
 import com.THproject.tharidia_things.network.DungeonQueuePacket;
+import com.THproject.tharidia_things.network.JoinGroupQueuePacket;
+import com.THproject.tharidia_things.network.LeaveGroupQueuePacket;
+import com.THproject.tharidia_things.network.StartGroupDungeonPacket;
+import com.THproject.tharidia_things.client.ClientGroupQueueHandler;
 import com.THproject.tharidia_things.realm.HierarchyRank;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.network.PacketDistributor;
+import org.apache.logging.log4j.core.jmx.Server;
 
 import java.util.*;
 
@@ -52,33 +60,38 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
 
     // Group queue page state
     private boolean showGroupQueuePage = false;
-    private final UUID[] groupQueue = new UUID[10];
     private MedievalButton exitGroupButton;
     private MedievalButton startGroupButton;
 
-    // Static reference for particle system - tracks active group queue
-    private static BlockPos activeGroupQueueBlockPos = null;
-
+    /**
+     * Gets the Pietro block position for the particle system.
+     * Uses the synced client data from ClientGroupQueueHandler.
+     */
     public static BlockPos getActiveGroupQueueBlockPos() {
-        return activeGroupQueueBlockPos;
+        // Check all positions with active queues
+        Set<BlockPos> activePositions = ClientGroupQueueHandler.getActiveQueuePositions();
+        return activePositions.isEmpty() ? null : activePositions.iterator().next();
     }
 
     public static boolean hasPlayersInGroupQueue() {
-        return activeGroupQueueBlockPos != null;
+        return !ClientGroupQueueHandler.getActiveQueuePositions().isEmpty();
     }
 
     public PietroScreen(PietroMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
         this.imageWidth = PARCHMENT_WIDTH;
         this.imageHeight = PARCHMENT_HEIGHT;
+
+        // Set the current Pietro position in ClientGroupQueueHandler
+        if (menu.getBlockEntity() != null) {
+            ClientGroupQueueHandler.setCurrentPietroPos(menu.getBlockEntity().getBlockPos());
+        }
     }
 
     @Override
     public void onClose() {
-        // Clear group queue and particles when screen is closed
-        if (showGroupQueuePage) {
-            clearGroupQueue();
-        }
+        // Clear the current Pietro position reference
+        ClientGroupQueueHandler.clearCurrentPietroPos();
         super.onClose();
     }
 
@@ -139,10 +152,13 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
         enterDungeonButtonGroup = MedievalButton.builder(
                 Component.translatable("gui.tharidiathings.realm.dungeon.enter_group_button"),
                 button -> {
-                    // Open group queue page and add current player to queue
-                    showGroupQueuePage = true;
-                    addPlayerToQueue(Minecraft.getInstance().player.getUUID());
-                    updateButtonVisibility();
+                    // Send packet to join/create group queue
+                    if (this.menu.getBlockEntity() != null) {
+                        BlockPos pos = this.menu.getBlockEntity().getBlockPos();
+                        PacketDistributor.sendToServer(new JoinGroupQueuePacket(pos));
+                        showGroupQueuePage = true;
+                        updateButtonVisibility();
+                    }
                 },
                 MedievalButton.ButtonStyle.PURPLE)
                 .bounds(this.leftPos + PARCHMENT_WIDTH - 220, this.topPos + PARCHMENT_HEIGHT - 40, 120, 25).build();
@@ -153,21 +169,28 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
         exitGroupButton = MedievalButton.builder(
                 Component.translatable("gui.tharidiathings.realm.dungeon.exit_button"),
                 button -> {
-                    // Exit group queue page and clear the queue
-                    showGroupQueuePage = false;
-                    clearGroupQueue();
-                    updateButtonVisibility();
+                    // Send packet to leave group queue
+                    if (this.menu.getBlockEntity() != null) {
+                        BlockPos pos = this.menu.getBlockEntity().getBlockPos();
+                        PacketDistributor.sendToServer(new LeaveGroupQueuePacket(pos));
+                        showGroupQueuePage = false;
+                        updateButtonVisibility();
+                    }
                 },
                 MedievalButton.ButtonStyle.DANGER)
                 .bounds(this.leftPos + BORDER_WIDTH + 20, this.topPos + PARCHMENT_HEIGHT - 40, 80, 25).build();
         exitGroupButton.visible = false;
         this.addRenderableWidget(exitGroupButton);
 
-        // Create Start button for group queue page - SUCCESS style for positive action
+        // Create Start button for group queue page - SUCCESS style for positive action (only visible for leader)
         startGroupButton = MedievalButton.builder(
                 Component.translatable("gui.tharidiathings.realm.dungeon.start_button"),
                 button -> {
-                    // TODO: Start action - to be implemented later
+                    // Send packet to start the dungeon for all players in queue
+                    if (this.menu.getBlockEntity() != null) {
+                        BlockPos pos = this.menu.getBlockEntity().getBlockPos();
+                        PacketDistributor.sendToServer(new StartGroupDungeonPacket(pos));
+                    }
                 },
                 MedievalButton.ButtonStyle.SUCCESS)
                 .bounds(this.leftPos + PARCHMENT_WIDTH - 100, this.topPos + PARCHMENT_HEIGHT - 40, 80, 25).build();
@@ -201,29 +224,27 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
         if (exitGroupButton != null) {
             exitGroupButton.visible = onGroupPage;
         }
+
+        // Start button - only visible for the leader
         if (startGroupButton != null) {
-            startGroupButton.visible = onGroupPage;
-        }
-    }
-
-    private void clearGroupQueue() {
-        Arrays.fill(groupQueue, null);
-        // Clear particle system reference
-        activeGroupQueueBlockPos = null;
-    }
-
-    private void addPlayerToQueue(UUID playerUUID) {
-        // Find first empty slot and add player
-        for (int i = 0; i < groupQueue.length; i++) {
-            if (groupQueue[i] == null) {
-                groupQueue[i] = playerUUID;
-                // Set block position for particle system
-                if (this.menu.getBlockEntity() != null) {
-                    activeGroupQueueBlockPos = this.menu.getBlockEntity().getBlockPos();
-                }
-                return;
+            boolean isLeader = false;
+            if (this.menu.getBlockEntity() != null && Minecraft.getInstance().player != null) {
+                BlockPos pos = this.menu.getBlockEntity().getBlockPos();
+                UUID localPlayerUUID = Minecraft.getInstance().player.getUUID();
+                isLeader = ClientGroupQueueHandler.isLocalPlayerLeader(pos, localPlayerUUID);
             }
+            startGroupButton.visible = onGroupPage && isLeader;
         }
+    }
+
+    /**
+     * Gets the current queue data from the server-synced client handler.
+     */
+    private ClientGroupQueueHandler.QueueData getCurrentQueueData() {
+        if (this.menu.getBlockEntity() != null) {
+            return ClientGroupQueueHandler.getQueueData(this.menu.getBlockEntity().getBlockPos());
+        }
+        return null;
     }
 
     @Override
@@ -609,6 +630,11 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
         int filledBorderColor = MedievalGuiRenderer.GOLD_MAIN;
         int highlightColor = MedievalGuiRenderer.GOLD_BRIGHT;
 
+        // Get synced queue data from server
+        ClientGroupQueueHandler.QueueData queueData = getCurrentQueueData();
+        List<UUID> queuePlayers = queueData != null ? queueData.playerUUIDs : Collections.emptyList();
+        int playerCount = queuePlayers.size();
+
         // Render 2 rows of 5 circles
         for (int row = 0; row < 2; row++) {
             for (int col = 0; col < 5; col++) {
@@ -616,8 +642,8 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
                 int centerX = startX + col * circleSpacing + circleRadius;
                 int centerY = yPos + row * (circleRadius * 2 + 20) + circleRadius;
 
-                // Determine if this slot is filled
-                boolean isFilled = (groupQueue[index] != null);
+                // Determine if this slot is filled (using synced data)
+                boolean isFilled = (index < playerCount);
 
                 // Render decorated circle
                 renderQueueCircle(guiGraphics, centerX, centerY, circleRadius,
@@ -629,10 +655,6 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
         }
 
         // Player count indicator
-        int playerCount = 0;
-        for (UUID uuid : groupQueue) {
-            if (uuid != null) playerCount++;
-        }
         yPos += circleRadius * 4 + 50;
         String countText = Component.translatable("gui.tharidiathings.realm.group_count", playerCount, 10).getString();
         int countTextWidth = Minecraft.getInstance().font.width(countText);
@@ -733,9 +755,13 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
             enterDungeonButtonGroup = MedievalButton.builder(
                     Component.translatable("gui.tharidiathings.realm.dungeon.enter_group_button"),
                     button -> {
-                        showGroupQueuePage = true;
-                        addPlayerToQueue(Minecraft.getInstance().player.getUUID());
-                        updateButtonVisibility();
+                        // Send packet to join/create group queue
+                        if (this.menu.getBlockEntity() != null) {
+                            BlockPos pos = this.menu.getBlockEntity().getBlockPos();
+                            PacketDistributor.sendToServer(new JoinGroupQueuePacket(pos));
+                            showGroupQueuePage = true;
+                            updateButtonVisibility();
+                        }
                     },
                     MedievalButton.ButtonStyle.PURPLE)
                     .bounds(this.leftPos + PARCHMENT_WIDTH - 220, this.topPos + PARCHMENT_HEIGHT - 40, 120, 25).build();
@@ -744,9 +770,13 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
             exitGroupButton = MedievalButton.builder(
                     Component.translatable("gui.tharidiathings.realm.dungeon.exit_button"),
                     button -> {
-                        showGroupQueuePage = false;
-                        clearGroupQueue();
-                        updateButtonVisibility();
+                        // Send packet to leave group queue
+                        if (this.menu.getBlockEntity() != null) {
+                            BlockPos pos = this.menu.getBlockEntity().getBlockPos();
+                            PacketDistributor.sendToServer(new LeaveGroupQueuePacket(pos));
+                            showGroupQueuePage = false;
+                            updateButtonVisibility();
+                        }
                     },
                     MedievalButton.ButtonStyle.DANGER)
                     .bounds(this.leftPos + BORDER_WIDTH + 20, this.topPos + PARCHMENT_HEIGHT - 40, 80, 25).build();
@@ -755,7 +785,11 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
             startGroupButton = MedievalButton.builder(
                     Component.translatable("gui.tharidiathings.realm.dungeon.start_button"),
                     button -> {
-                        // TODO: Start action
+                        // Send packet to start the dungeon for all players in queue
+                        if (this.menu.getBlockEntity() != null) {
+                            BlockPos pos = this.menu.getBlockEntity().getBlockPos();
+                            PacketDistributor.sendToServer(new StartGroupDungeonPacket(pos));
+                        }
                     },
                     MedievalButton.ButtonStyle.SUCCESS)
                     .bounds(this.leftPos + PARCHMENT_WIDTH - 100, this.topPos + PARCHMENT_HEIGHT - 40, 80, 25).build();

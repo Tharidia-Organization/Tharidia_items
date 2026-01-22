@@ -73,6 +73,10 @@ import com.THproject.tharidia_things.network.BattlePackets;
 import com.THproject.tharidia_things.network.ClaimOwnerSyncPacket;
 import com.THproject.tharidia_things.network.FatigueSyncPacket;
 import com.THproject.tharidia_things.network.DungeonQueuePacket;
+import com.THproject.tharidia_things.network.JoinGroupQueuePacket;
+import com.THproject.tharidia_things.network.LeaveGroupQueuePacket;
+import com.THproject.tharidia_things.network.StartGroupDungeonPacket;
+import com.THproject.tharidia_things.network.SyncGroupQueuePacket;
 import com.THproject.tharidia_things.network.HierarchySyncPacket;
 import com.THproject.tharidia_things.network.RealmSyncPacket;
 import com.THproject.tharidia_things.network.UpdateHierarchyPacket;
@@ -730,6 +734,23 @@ public class TharidiaThings {
                 DungeonQueuePacket.TYPE,
                 DungeonQueuePacket.STREAM_CODEC,
                 DungeonQueuePacket::handle);
+        // Group dungeon queue packets
+        registrar.playToServer(
+                JoinGroupQueuePacket.TYPE,
+                JoinGroupQueuePacket.STREAM_CODEC,
+                JoinGroupQueuePacket::handle);
+        registrar.playToServer(
+                LeaveGroupQueuePacket.TYPE,
+                LeaveGroupQueuePacket.STREAM_CODEC,
+                LeaveGroupQueuePacket::handle);
+        registrar.playToServer(
+                StartGroupDungeonPacket.TYPE,
+                StartGroupDungeonPacket.STREAM_CODEC,
+                StartGroupDungeonPacket::handle);
+        registrar.playToClient(
+                SyncGroupQueuePacket.TYPE,
+                SyncGroupQueuePacket.STREAM_CODEC,
+                SyncGroupQueuePacket::handle);
         registrar.playToServer(
                 SelectComponentPacket.TYPE,
                 SelectComponentPacket.STREAM_CODEC,
