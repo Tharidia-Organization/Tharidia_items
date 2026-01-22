@@ -67,7 +67,6 @@ public record StartGroupDungeonPacket(BlockPos pietroPos) implements CustomPacke
 
                 for (ServerPlayer p : playersToTeleport) {
                     dungeonInstance.insertPlayer(p);
-                    p.sendSystemMessage(Component.translatable("gui.tharidiathings.realm.dungeon.teleporting"));
                 }
 
                 if (DungeonInstanceManager.getActiveInstanceCount() >= DungeonInstanceManager.MAXIMUM_INSTANCES) {

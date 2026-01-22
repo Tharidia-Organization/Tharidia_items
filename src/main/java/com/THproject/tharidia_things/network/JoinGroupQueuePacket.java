@@ -44,7 +44,6 @@ public record JoinGroupQueuePacket(BlockPos pietroPos) implements CustomPacketPa
                         GroupDungeonQueueManager.getPlayerQueue(player.getUUID());
 
                 if (existingPlayerQueue != null) {
-                    player.sendSystemMessage(Component.translatable("gui.tharidiathings.realm.dungeon.already_in_queue"));
                     return;
                 }
 
@@ -54,13 +53,6 @@ public record JoinGroupQueuePacket(BlockPos pietroPos) implements CustomPacketPa
                 if (success) {
                     GroupDungeonQueueManager.GroupQueue queue = GroupDungeonQueueManager.getQueue(pos);
                     if (queue != null) {
-                        boolean isLeader = queue.isLeader(player.getUUID());
-                        if (isLeader) {
-                            player.sendSystemMessage(Component.translatable("gui.tharidiathings.realm.dungeon.queue_created"));
-                        } else {
-                            player.sendSystemMessage(Component.translatable("gui.tharidiathings.realm.dungeon.joined_queue"));
-                        }
-
                         // Sync to all nearby players
                         syncQueueToNearbyPlayers(pos, player);
                     }
