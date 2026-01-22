@@ -1,5 +1,6 @@
 package com.THproject.tharidia_things.network;
 
+import com.THproject.tharidia_features.dungeon.DungeonManager;
 import com.THproject.tharidia_things.TharidiaThings;
 import com.THproject.tharidia_things.dungeon_query.DungeonInstanceManager;
 import com.THproject.tharidia_things.dungeon_query.DungeonQueryInstance;
@@ -69,7 +70,7 @@ public record StartGroupDungeonPacket(BlockPos pietroPos) implements CustomPacke
                     dungeonInstance.insertPlayer(p);
                 }
 
-                if (DungeonInstanceManager.getActiveInstanceCount() >= DungeonInstanceManager.MAXIMUM_INSTANCES) {
+                if (DungeonInstanceManager.getActiveInstanceCount() >= DungeonManager.getInstance().getMaxInstances()) {
                     DungeonInstanceManager.addToWaitingQueue(dungeonInstance);
                 } else {
                     // Register the instance to be ticked

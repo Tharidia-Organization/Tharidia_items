@@ -1,5 +1,6 @@
 package com.THproject.tharidia_things.dungeon_query;
 
+import com.THproject.tharidia_features.dungeon.DungeonManager;
 import com.THproject.tharidia_things.TharidiaThings;
 
 import net.neoforged.bus.api.SubscribeEvent;
@@ -15,8 +16,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 @EventBusSubscriber(modid = TharidiaThings.MODID)
 public class DungeonInstanceManager {
-    public static final int MAXIMUM_INSTANCES = 1;
-
     private static final List<DungeonQueryInstance> activeInstances = new CopyOnWriteArrayList<>();
     // Waiting queue for groups when all instances are full
     private static final List<DungeonQueryInstance> waitingQueue = new ArrayList<>();
@@ -90,8 +89,7 @@ public class DungeonInstanceManager {
         }
 
         // If there are waiting groups and free instance slots, start next group
-        // TODO: change MAXIMUM_INSTANCES with DungeonManager.MAX_INSTANCES
-        while (activeInstances.size() < MAXIMUM_INSTANCES && !waitingQueue.isEmpty()) {
+        while (activeInstances.size() < DungeonManager.getInstance().getMaxInstances() && !waitingQueue.isEmpty()) {
             DungeonQueryInstance nextGroup = waitingQueue.remove(0);
             registerInstance(nextGroup);
             nextGroup.callPlayers();
