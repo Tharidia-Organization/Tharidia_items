@@ -23,13 +23,12 @@ import java.util.List;
  */
 public record StartGroupDungeonPacket(BlockPos pietroPos) implements CustomPacketPayload {
 
-    public static final CustomPacketPayload.Type<StartGroupDungeonPacket> TYPE =
-            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, "start_group_dungeon"));
+    public static final CustomPacketPayload.Type<StartGroupDungeonPacket> TYPE = new CustomPacketPayload.Type<>(
+            ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, "start_group_dungeon"));
 
     public static final StreamCodec<ByteBuf, StartGroupDungeonPacket> STREAM_CODEC = StreamCodec.composite(
             BlockPos.STREAM_CODEC, StartGroupDungeonPacket::pietroPos,
-            StartGroupDungeonPacket::new
-    );
+            StartGroupDungeonPacket::new);
 
     @Override
     public Type<? extends CustomPacketPayload> type() {
@@ -64,17 +63,21 @@ public record StartGroupDungeonPacket(BlockPos pietroPos) implements CustomPacke
 
                 // Create dungeon instance and teleport all players
                 DungeonQueryInstance dungeonInstance = new DungeonQueryInstance(level);
+                dungeonInstance.setRealmPos(pos);
 
                 for (ServerPlayer p : playersToTeleport) {
                     dungeonInstance.insertPlayer(p);
                     p.sendSystemMessage(Component.translatable("gui.tharidiathings.realm.dungeon.teleporting"));
                 }
 
-                // Register the instance to be ticked
-                DungeonInstanceManager.registerInstance(dungeonInstance);
-
-                // Start the dungeon
-                dungeonInstance.startDungeon();
+                if (DungeonInstanceManager.getActiveInstanceCount() >= DungeonInstanceManager.MAXIMUM_INSTANCES) {
+                    DungeonInstanceManager.addToWaitingQueue(dungeonInstance);
+                } else {
+                    // Register the instance to be ticked
+                    DungeonInstanceManager.registerInstance(dungeonInstance);
+                    // Start the dungeon
+                    dungeonInstance.startDungeon();
+                }
 
                 // Notify all nearby players that queue is gone
                 SyncGroupQueuePacket syncPacket = new SyncGroupQueuePacket(pos, Collections.emptyList(), null);

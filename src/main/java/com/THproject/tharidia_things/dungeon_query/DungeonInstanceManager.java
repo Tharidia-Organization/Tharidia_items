@@ -1,7 +1,7 @@
 package com.THproject.tharidia_things.dungeon_query;
 
 import com.THproject.tharidia_things.TharidiaThings;
-import net.minecraft.server.level.ServerLevel;
+
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -15,8 +15,11 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 @EventBusSubscriber(modid = TharidiaThings.MODID)
 public class DungeonInstanceManager {
+    public static final int MAXIMUM_INSTANCES = 1;
 
     private static final List<DungeonQueryInstance> activeInstances = new CopyOnWriteArrayList<>();
+    // Waiting queue for groups when all instances are full
+    private static final List<DungeonQueryInstance> waitingQueue = new ArrayList<>();
 
     /**
      * Registers a new dungeon instance to be ticked.
@@ -27,11 +30,22 @@ public class DungeonInstanceManager {
     }
 
     /**
+     * Adds a DungeonQueryInstance to the waiting queue if all instances are full.
+     */
+    public static void addToWaitingQueue(DungeonQueryInstance instance) {
+        waitingQueue.add(instance);
+        TharidiaThings.LOGGER.info("[DUNGEON] Added group to waiting queue. Queue size: {}", waitingQueue.size());
+    }
+
+    /**
      * Unregisters a dungeon instance.
      */
     public static void unregisterInstance(DungeonQueryInstance instance) {
-        activeInstances.remove(instance);
-        TharidiaThings.LOGGER.debug("[DUNGEON] Unregistered dungeon instance. Total active: {}", activeInstances.size());
+        if (activeInstances.contains(instance)) {
+            activeInstances.remove(instance);
+            TharidiaThings.LOGGER.debug("[DUNGEON] Unregistered dungeon instance. Total active: {}",
+                    activeInstances.size());
+        }
     }
 
     /**
@@ -46,6 +60,7 @@ public class DungeonInstanceManager {
      */
     public static void clearAll() {
         activeInstances.clear();
+        waitingQueue.clear();
     }
 
     /**
@@ -53,6 +68,10 @@ public class DungeonInstanceManager {
      */
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post event) {
+        // event.getServer().getPlayerList().getPlayers().forEach(player -> {
+        //     player.sendSystemMessage(
+        //             Component.literal(String.valueOf(DungeonManager.getInstance().getActiveInstanceCount())));
+        // });
         // Tick all active instances
         List<DungeonQueryInstance> toRemove = new ArrayList<>();
 
@@ -60,14 +79,23 @@ public class DungeonInstanceManager {
             instance.tick();
 
             // Check if dungeon has ended
-            if (instance.getStatus() == DungeonStatus.IDLE && instance.getPlayers().isEmpty()) {
+            if (instance.getStatus() == DungeonStatus.IDLE) {
                 toRemove.add(instance);
             }
         }
 
-        // Remov e finished instances
+        // Remove finished instances
         for (DungeonQueryInstance instance : toRemove) {
             unregisterInstance(instance);
+        }
+
+        // If there are waiting groups and free instance slots, start next group
+        // TODO: change MAXIMUM_INSTANCES with DungeonManager.MAX_INSTANCES
+        while (activeInstances.size() < MAXIMUM_INSTANCES && !waitingQueue.isEmpty()) {
+            DungeonQueryInstance nextGroup = waitingQueue.remove(0);
+            registerInstance(nextGroup);
+            nextGroup.callPlayers();
+            TharidiaThings.LOGGER.info("[DUNGEON] Called next group from waiting queue.");
         }
     }
 }
