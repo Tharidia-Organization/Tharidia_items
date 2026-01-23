@@ -20,8 +20,8 @@ public final class PlayerInventoryPanelRenderer {
             PlayerInventoryPanelLayout.PANEL_HEIGHT, MedievalGuiRenderer.BRONZE);
 
         // Title
-        gui.drawString(Minecraft.getInstance().font, "§6Inventario", panelX + 50, panelY + 5,
-            MedievalGuiRenderer.ROYAL_GOLD);
+        gui.drawString(Minecraft.getInstance().font, "Inventario", panelX + 50, panelY + 5,
+            MedievalGuiRenderer.TEXT_DARK);
 
         // Slot borders
         renderSlotBorders(gui, slotStartX, slotStartY, 3);

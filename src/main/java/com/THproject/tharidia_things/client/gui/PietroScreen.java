@@ -1,16 +1,15 @@
 package com.THproject.tharidia_things.client.gui;
 
+import com.THproject.tharidia_things.TharidiaThings;
 import com.THproject.tharidia_things.block.entity.PietroBlockEntity;
 import com.THproject.tharidia_things.client.ClientPacketHandler;
 import com.THproject.tharidia_things.client.gui.medieval.MedievalGuiRenderer;
-import com.THproject.tharidia_things.client.gui.medieval.MedievalTab;
 import com.THproject.tharidia_things.client.gui.medieval.MedievalButton;
-import com.THproject.tharidia_things.client.gui.medieval.MedievalProgressBar;
+import com.THproject.tharidia_things.client.gui.components.ImageTabButton;
+import com.THproject.tharidia_things.client.gui.components.ImageProgressBar;
 import com.THproject.tharidia_things.dungeon_query.DungeonQueryInstance;
 import com.THproject.tharidia_things.gui.PietroMenu;
 import com.THproject.tharidia_things.gui.inventory.PlayerInventoryPanelLayout;
-import com.THproject.tharidia_things.client.gui.components.PlayerInventoryPanelRenderer;
-import com.THproject.tharidia_things.network.DungeonQueuePacket;
 import com.THproject.tharidia_things.network.JoinGroupQueuePacket;
 import com.THproject.tharidia_things.network.LeaveGroupQueuePacket;
 import com.THproject.tharidia_things.network.StartGroupDungeonPacket;
@@ -21,6 +20,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.level.Level;
@@ -30,23 +30,61 @@ import org.apache.logging.log4j.core.jmx.Server;
 import java.util.*;
 
 /**
- * Medieval-styled realm management screen with ornate tabs and royal aesthetics
+ * Medieval-styled realm management screen with PNG-based textures
  */
 public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
+    // PNG Texture Resources
+    private static final ResourceLocation BACKGROUND_TEXTURE =
+            ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, "textures/gui/realm_background.png");
+    private static final ResourceLocation INVENTORY_PANEL_TEXTURE =
+            ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, "textures/gui/inventory_panel.png");
+    private static final ResourceLocation BAR_TEXTURE =
+            ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, "textures/gui/bar.png");
+    private static final ResourceLocation EXPANSION_BUTTON_TEXTURE =
+            ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, "textures/gui/expansion_button.png");
+    private static final ResourceLocation EXPANSION_BUTTON_PRESSED_TEXTURE =
+            ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, "textures/gui/expansion_button_pressed.png");
+    private static final ResourceLocation CLAIMS_BUTTON_TEXTURE =
+            ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, "textures/gui/claims_button.png");
+    private static final ResourceLocation CLAIMS_BUTTON_PRESSED_TEXTURE =
+            ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, "textures/gui/claims_button_pressed.png");
+    private static final ResourceLocation DUNGEON_BUTTON_TEXTURE =
+            ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, "textures/gui/dungeon_button.png");
+    private static final ResourceLocation DUNGEON_BUTTON_PRESSED_TEXTURE =
+            ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, "textures/gui/dungeon_button_pressed.png");
+    private static final ResourceLocation ENTER_LARGE_BUTTON_TEXTURE =
+            ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, "textures/gui/enter_large_button.png");
+
+    // Enter large button texture dimensions
+    private static final int ENTER_BTN_TEX_WIDTH = 650;
+    private static final int ENTER_BTN_TEX_HEIGHT = 110;
+
+    // Medieval font for GUI text
+    private static final ResourceLocation MEDIEVAL_FONT =
+            ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, "medieval");
+
+    // PNG Texture dimensions (original sizes)
+    private static final int BG_TEX_WIDTH = 1024;
+    private static final int BG_TEX_HEIGHT = 1536;
+    private static final int INV_TEX_WIDTH = 340;
+    private static final int INV_TEX_HEIGHT = 280;
+    private static final int BAR_TEX_WIDTH = 754;
+    private static final int BAR_TEX_HEIGHT = 70;
+
     // Tab identifiers
     private static final int TAB_EXPANSION = 0;
     private static final int TAB_CLAIMS = 1;
     private static final int TAB_DUNGEON = 2;
 
-    // Medieval styling dimensions
-    private static final int PARCHMENT_WIDTH = 300;
-    private static final int PARCHMENT_HEIGHT = 350;
-    private static final int BORDER_WIDTH = 15;
+    // GUI display dimensions (scaled from texture)
+    private static final int PARCHMENT_WIDTH = 256;  // Display width
+    private static final int PARCHMENT_HEIGHT = 384; // Display height (maintains aspect ratio)
+    private static final int BORDER_WIDTH = 20;
 
     private int currentTab = TAB_EXPANSION;
-    private MedievalTab expansionTabButton;
-    private MedievalTab claimsTabButton;
-    private MedievalTab dungeonTabButton;
+    private ImageTabButton expansionTabButton;
+    private ImageTabButton claimsTabButton;
+    private ImageTabButton dungeonTabButton;
     private List<MedievalButton> hierarchyButtons = new ArrayList<>();
     private int scrollOffset = 0;
     private static final int MAX_VISIBLE_PLAYERS = 6;
@@ -54,14 +92,13 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
     private boolean showRankSelectionMenu = false;
     private int rankMenuX = 0;
     private int rankMenuY = 0;
-    private MedievalButton enterDungeonButton;
-    private MedievalButton enterDungeonButtonGroup;
-    private MedievalProgressBar expansionProgressBar;
+    private ImageTabButton enterDungeonButtonGroup;
+    private ImageProgressBar expansionProgressBar;
 
     // Group queue page state
     private boolean showGroupQueuePage = false;
     private MedievalButton exitGroupButton;
-    private MedievalButton startGroupButton;
+    private ImageTabButton startGroupButton;
 
     /**
      * Gets the Pietro block position for the particle system.
@@ -99,58 +136,62 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
     protected void init() {
         super.init();
 
-        int tabX = this.leftPos + BORDER_WIDTH;
-        int tabY = this.topPos + 60;
-        int tabWidth = 75;
-        int tabHeight = 30;
-        int tabSpacing = 10;
+        // Tab button positions matching the white paper areas in realm_background.png
+        // The white torn paper areas are below the coins icon, around y=85-110 in display
+        int tabY = this.topPos + 102;  // Y position matching the white paper areas
+        int tabHeight = 26;           // Display height for tab buttons
+        int tabSpacing = 8;
 
-        // Create medieval-styled tabs - using PARCHMENT style for elegant look
-        expansionTabButton = MedievalTab.builder(
-                Component.translatable("gui.tharidiathings.realm.tab.expansion"),
-                button -> switchTab(TAB_EXPANSION),
-                MedievalTab.TabStyle.PARCHMENT).bounds(tabX, tabY, tabWidth, tabHeight).setActive(true).build();
+        // Tab button widths (matching the white paper areas proportionally)
+        int expWidth = 62;
+        int claimsWidth = 70;
+        int dungeonWidth = 62;
+        int totalTabWidth = expWidth + claimsWidth + dungeonWidth + (tabSpacing * 2);
 
-        claimsTabButton = MedievalTab.builder(
-                Component.translatable("gui.tharidiathings.realm.tab.claims"),
-                button -> switchTab(TAB_CLAIMS),
-                MedievalTab.TabStyle.PARCHMENT).bounds(tabX + tabWidth + tabSpacing, tabY, tabWidth + 20, tabHeight)
+        // Center the tabs horizontally in the GUI
+        int tabStartX = this.leftPos + (PARCHMENT_WIDTH - totalTabWidth) / 2;
+
+        // Create PNG-based tab buttons with pressed textures
+        // Expansion button (left tab)
+        int expX = tabStartX;
+        expansionTabButton = ImageTabButton.builder(EXPANSION_BUTTON_TEXTURE, EXPANSION_BUTTON_PRESSED_TEXTURE, 254, 99,
+                button -> switchTab(TAB_EXPANSION))
+                .bounds(expX, tabY, expWidth, tabHeight)
+                .setActive(true)
                 .build();
 
-        dungeonTabButton = MedievalTab.builder(
-                Component.translatable("gui.tharidiathings.realm.tab.dungeon"),
-                button -> switchTab(TAB_DUNGEON),
-                MedievalTab.TabStyle.PURPLE).bounds(tabX + 2 * (tabWidth + tabSpacing) + 20, tabY, tabWidth, tabHeight)
+        // Claims button (middle tab)
+        int claimsX = expX + expWidth + tabSpacing;
+        claimsTabButton = ImageTabButton.builder(CLAIMS_BUTTON_TEXTURE, CLAIMS_BUTTON_PRESSED_TEXTURE, 268, 104,
+                button -> switchTab(TAB_CLAIMS))
+                .bounds(claimsX, tabY, claimsWidth, tabHeight)
+                .build();
+
+        // Dungeon button (right tab)
+        int dungeonX = claimsX + claimsWidth + tabSpacing;
+        dungeonTabButton = ImageTabButton.builder(DUNGEON_BUTTON_TEXTURE, DUNGEON_BUTTON_PRESSED_TEXTURE, 256, 102,
+                button -> switchTab(TAB_DUNGEON))
+                .bounds(dungeonX, tabY, dungeonWidth, tabHeight)
                 .build();
 
         this.addRenderableWidget(expansionTabButton);
         this.addRenderableWidget(claimsTabButton);
         this.addRenderableWidget(dungeonTabButton);
 
-        // Initialize expansion progress bar with relative coordinates
-        expansionProgressBar = new MedievalProgressBar(
+        // Initialize expansion progress bar with PNG texture
+        int barDisplayWidth = 190;  // Scaled display width for the bar
+        int barDisplayHeight = 18;  // Scaled display height
+        expansionProgressBar = new ImageProgressBar(
+                BAR_TEXTURE,
                 BORDER_WIDTH + 20,
                 180,
-                this.imageWidth - BORDER_WIDTH * 2 - 40,
-                15);
+                barDisplayWidth,
+                barDisplayHeight);
 
-        // Create Entra button once, initially hidden - WOOD style for action
-        enterDungeonButton = MedievalButton.builder(
-                Component.translatable("gui.tharidiathings.realm.dungeon.enter_button"),
-                button -> {
-                    // Send packet to join dungeon queue
-                    sendDungeonJoinRequest();
-                },
-                MedievalButton.ButtonStyle.WOOD)
-                .bounds(this.leftPos + PARCHMENT_WIDTH - 100, this.topPos + PARCHMENT_HEIGHT
-                        - 40, 80, 25)
-                .build();
-        enterDungeonButton.visible = false;
-        this.addRenderableWidget(enterDungeonButton);
-
-        // Create Entra Gruppo button once, initially hidden - PURPLE for group/magic
-        enterDungeonButtonGroup = MedievalButton.builder(
-                Component.translatable("gui.tharidiathings.realm.dungeon.enter_group_button"),
+        // Create Enter button using PNG texture (centered)
+        int enterBtnWidth = 140;
+        int enterBtnHeight = 25;
+        enterDungeonButtonGroup = ImageTabButton.builder(ENTER_LARGE_BUTTON_TEXTURE, ENTER_BTN_TEX_WIDTH, ENTER_BTN_TEX_HEIGHT,
                 button -> {
                     // Send packet to join/create group queue
                     if (this.menu.getBlockEntity() != null) {
@@ -159,9 +200,9 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
                         showGroupQueuePage = true;
                         updateButtonVisibility();
                     }
-                },
-                MedievalButton.ButtonStyle.PURPLE)
-                .bounds(this.leftPos + PARCHMENT_WIDTH - 220, this.topPos + PARCHMENT_HEIGHT - 40, 120, 25).build();
+                })
+                .bounds(this.leftPos + (PARCHMENT_WIDTH - enterBtnWidth) / 2, this.topPos + PARCHMENT_HEIGHT - 120, enterBtnWidth, enterBtnHeight)
+                .build();
         enterDungeonButtonGroup.visible = false;
         this.addRenderableWidget(enterDungeonButtonGroup);
 
@@ -182,18 +223,19 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
         exitGroupButton.visible = false;
         this.addRenderableWidget(exitGroupButton);
 
-        // Create Start button for group queue page - SUCCESS style for positive action (only visible for leader)
-        startGroupButton = MedievalButton.builder(
-                Component.translatable("gui.tharidiathings.realm.dungeon.start_button"),
+        // Create Start button for group queue page using PNG texture (only visible for leader)
+        int startBtnWidth = 70;
+        int startBtnHeight = 20;
+        startGroupButton = ImageTabButton.builder(ENTER_LARGE_BUTTON_TEXTURE, ENTER_BTN_TEX_WIDTH, ENTER_BTN_TEX_HEIGHT,
                 button -> {
                     // Send packet to start the dungeon for all players in queue
                     if (this.menu.getBlockEntity() != null) {
                         BlockPos pos = this.menu.getBlockEntity().getBlockPos();
                         PacketDistributor.sendToServer(new StartGroupDungeonPacket(pos));
                     }
-                },
-                MedievalButton.ButtonStyle.SUCCESS)
-                .bounds(this.leftPos + PARCHMENT_WIDTH - 100, this.topPos + PARCHMENT_HEIGHT - 40, 80, 25).build();
+                })
+                .bounds(this.leftPos + (PARCHMENT_WIDTH - startBtnWidth) / 2, this.topPos + PARCHMENT_HEIGHT - 50, startBtnWidth, startBtnHeight)
+                .build();
         startGroupButton.visible = false;
         this.addRenderableWidget(startGroupButton);
 
@@ -212,10 +254,7 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
         boolean onDungeonTab = (currentTab == TAB_DUNGEON);
         boolean onGroupPage = showGroupQueuePage && onDungeonTab;
 
-        // Dungeon buttons - show only on dungeon tab when NOT on group page
-        if (enterDungeonButton != null) {
-            enterDungeonButton.visible = onDungeonTab && !showGroupQueuePage;
-        }
+        // Dungeon group button - show only on dungeon tab when NOT on group page
         if (enterDungeonButtonGroup != null) {
             enterDungeonButtonGroup.visible = onDungeonTab && !showGroupQueuePage;
         }
@@ -252,59 +291,44 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
         int x = (this.width - this.imageWidth) / 2;
         int y = (this.height - this.imageHeight) / 2;
 
-        // Render medieval parchment background
-        MedievalGuiRenderer.renderParchmentBackground(guiGraphics, x, y, this.imageWidth, this.imageHeight);
+        // Render PNG background texture (scaled to fit display dimensions)
+        guiGraphics.blit(BACKGROUND_TEXTURE, x, y, 0, 0, this.imageWidth, this.imageHeight, this.imageWidth, this.imageHeight);
 
-        // Render ornate border with royal crimson
-        MedievalGuiRenderer.renderOrnateBorder(guiGraphics, x, y, this.imageWidth, this.imageHeight,
-                MedievalGuiRenderer.DEEP_CRIMSON);
-
-        // Render special frame around potato slot at top center
-        renderPotatoSlotFrame(guiGraphics, x + 141, y + 35);
-
-        // Render simple background for player inventory (left side outside main GUI)
+        // Render player inventory panel using PNG texture (left side outside main GUI)
         int inventoryBgX = x + PlayerInventoryPanelLayout.PANEL_OFFSET_X;
         int inventoryBgY = y + PlayerInventoryPanelLayout.PANEL_OFFSET_Y;
-        int slotStartX = this.leftPos + PlayerInventoryPanelLayout.SLOT_OFFSET_X;
-        int slotStartY = this.topPos + PlayerInventoryPanelLayout.SLOT_OFFSET_Y;
-        PlayerInventoryPanelRenderer.renderPanel(guiGraphics, inventoryBgX, inventoryBgY, slotStartX, slotStartY);
+        int panelWidth = PlayerInventoryPanelLayout.PANEL_WIDTH;
+        int panelHeight = PlayerInventoryPanelLayout.PANEL_HEIGHT;
+
+        // Render PNG inventory panel texture with scaling
+        // blit(texture, x, y, destWidth, destHeight, srcX, srcY, srcWidth, srcHeight, texWidth, texHeight)
+        guiGraphics.blit(INVENTORY_PANEL_TEXTURE, inventoryBgX, inventoryBgY, panelWidth, panelHeight,
+                0, 0, INV_TEX_WIDTH, INV_TEX_HEIGHT, INV_TEX_WIDTH, INV_TEX_HEIGHT);
     }
 
-    /**
-     * Renders a special medieval frame around the potato slot
-     */
-    private void renderPotatoSlotFrame(GuiGraphics gui, int x, int y) {
-        // Outer frame with bronze color
-        gui.fill(x - 3, y - 3, x + 21, y + 21, MedievalGuiRenderer.BRONZE);
-        // Inner frame with gold
-        gui.fill(x - 1, y - 1, x + 19, y + 19, MedievalGuiRenderer.ROYAL_GOLD);
-        // Center with darker parchment
-        gui.fill(x + 1, y + 1, x + 17, y + 17, MedievalGuiRenderer.DARK_PARCHMENT);
-
-        // Add text label above slot (no shadow)
-        gui.drawString(Minecraft.getInstance().font,
-                Component.translatable("gui.tharidiathings.realm.currency_label").getString(), x - 5, y - 15,
-                MedievalGuiRenderer.ROYAL_GOLD, false);
-    }
+    // Gap between main inventory and hotbar (in pixels)
+    private static final int HOTBAR_GAP = 58;  // 54 (3 rows) + 4 pixel gap
 
     /**
-     * Renders a decorative royal crest
+     * Renders slot borders for the inventory panel
      */
-    private void renderRoyalCrest(GuiGraphics gui, int x, int y) {
-        // Shield background
-        gui.fill(x - 2, y - 2, x + 42, y + 42, MedievalGuiRenderer.BRONZE);
-        gui.fill(x, y, x + 40, y + 40, MedievalGuiRenderer.ROYAL_GOLD);
-
-        // Inner shield
-        gui.fill(x + 5, y + 5, x + 35, y + 35, MedievalGuiRenderer.DEEP_CRIMSON);
-        gui.fill(x + 8, y + 8, x + 32, y + 32, MedievalGuiRenderer.PURPLE_REGAL);
-
-        // Crown symbol (no shadow)
-        gui.drawString(Minecraft.getInstance().font, "♔", x + 12, y + 12, MedievalGuiRenderer.GOLD_LEAF, false);
-
-        // Decorative cross
-        gui.fill(x + 18, y + 2, x + 22, y + 38, MedievalGuiRenderer.BRONZE);
-        gui.fill(x + 2, y + 18, x + 38, y + 22, MedievalGuiRenderer.BRONZE);
+    private void renderInventorySlotBorders(GuiGraphics gui, int slotStartX, int slotStartY) {
+        // Main inventory (3 rows)
+        for (int row = 0; row < 3; row++) {
+            for (int col = 0; col < 9; col++) {
+                int slotX = slotStartX + col * 18;
+                int slotY = slotStartY + row * 18;
+                gui.fill(slotX - 1, slotY - 1, slotX + 17, slotY + 17, MedievalGuiRenderer.BRONZE);
+                gui.fill(slotX, slotY, slotX + 16, slotY + 16, 0xFF1A1A1A);
+            }
+        }
+        // Hotbar (1 row, with small gap below main inventory)
+        for (int col = 0; col < 9; col++) {
+            int slotX = slotStartX + col * 18;
+            int slotY = slotStartY + HOTBAR_GAP;
+            gui.fill(slotX - 1, slotY - 1, slotX + 17, slotY + 17, MedievalGuiRenderer.BRONZE);
+            gui.fill(slotX, slotY, slotX + 16, slotY + 16, 0xFF1A1A1A);
+        }
     }
 
     @Override
@@ -317,13 +341,8 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
     @Override
     protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         // renderLabels uses relative coordinates (0,0 is top-left of GUI container)
-        int x = BORDER_WIDTH;
-        int y = 100;
-
-        // Render medieval title
-        MedievalGuiRenderer.renderMedievalTitle(guiGraphics,
-                Component.translatable("gui.tharidiathings.realm.title").getString(),
-                x, y, this.imageWidth - BORDER_WIDTH * 2);
+        // Content area starts below the tab buttons (which are part of the PNG at y ~60)
+        int contentStartY = 140; // Below the decorative divider in the PNG
 
         // Render content based on current tab
         if (currentTab == TAB_EXPANSION) {
@@ -337,142 +356,104 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
                 renderDungeonTab(guiGraphics);
             }
         }
-
-        // Render decorative elements
-        renderSideDecorations(guiGraphics, 0, 0);
     }
 
-    /**
-     * Renders side decorative elements
-     */
-    private void renderSideDecorations(GuiGraphics gui, int x, int y) {
-        // Left side decorations (no shadow)
-        for (int i = 0; i < 4; i++) {
-            int decorY = y + 120 + (i * 50);
-            gui.drawString(Minecraft.getInstance().font, "✦", x + 8, decorY, MedievalGuiRenderer.BRONZE, false);
-        }
-
-        // Right side decorations (no shadow)
-        for (int i = 0; i < 4; i++) {
-            int decorY = y + 120 + (i * 50);
-            gui.drawString(Minecraft.getInstance().font, "✦", x + this.imageWidth - 20, decorY,
-                    MedievalGuiRenderer.BRONZE, false);
-        }
-    }
+    // Dark text color for contrast on parchment - near black brown
+    private static final int TEXT_DARK = 0xFF1A1208;  // Very dark brown, almost black
 
     private void renderExpansionTab(GuiGraphics guiGraphics) {
         PietroBlockEntity pietroEntity = this.menu.getBlockEntity();
         if (pietroEntity != null) {
             // Use relative coordinates (0,0 = top-left of GUI)
-            int yPos = 130;
-            int textX = BORDER_WIDTH + 20;
+            // Content starts below the first PNG horizontal divider line (around y=140)
+            int yPos = 160;
+            int textX = BORDER_WIDTH + 15;
 
-            // Lord information with medieval styling
+            // Lord information
             renderMedievalTextLine(guiGraphics,
                     Component.translatable("gui.tharidiathings.realm.lord_label").getString(), textX, yPos,
-                    MedievalGuiRenderer.BROWN_INK);
-            yPos += 20;
+                    TEXT_DARK);
+            yPos += 18;
 
             String owner = pietroEntity.getOwnerName();
             if (owner == null || owner.isEmpty()) {
                 owner = Component.translatable("gui.tharidiathings.common.unknown").getString();
             }
-            renderMedievalTextLine(guiGraphics, "§f" + owner, textX + 20, yPos, MedievalGuiRenderer.BLACK_INK);
-            yPos += 30;
+            renderMedievalTextLine(guiGraphics, owner, textX + 15, yPos, TEXT_DARK);
+            yPos += 40;
 
-            // Render divider
-            MedievalGuiRenderer.renderMedievalDivider(guiGraphics, textX, yPos,
-                    this.imageWidth - BORDER_WIDTH * 2 - 40);
-            yPos += 25;
-
-            // Realm size information
+            // Realm size information (below second PNG divider line)
             int size = this.menu.getRealmSize();
             renderMedievalTextLine(guiGraphics,
                     Component.translatable("gui.tharidiathings.realm.size_label").getString(), textX, yPos,
-                    MedievalGuiRenderer.BROWN_INK);
-            yPos += 20;
+                    TEXT_DARK);
+            yPos += 18;
             renderMedievalTextLine(guiGraphics,
-                    Component.translatable("gui.tharidiathings.realm.size_value", size).getString(), textX + 20, yPos,
-                    MedievalGuiRenderer.ROYAL_GOLD);
-            yPos += 30;
+                    Component.translatable("gui.tharidiathings.realm.size_value", size).getString(), textX + 15, yPos,
+                    TEXT_DARK);
+            yPos += 35;
 
-            // Expansion progress with medieval progress bar
+            // Expansion progress with progress bar
             if (size >= 15) {
                 renderMedievalTextLine(guiGraphics,
                         Component.translatable("gui.tharidiathings.realm.max_level").getString(), textX, yPos,
-                        MedievalGuiRenderer.PURPLE_REGAL);
+                        TEXT_DARK);
             } else {
                 renderMedievalTextLine(guiGraphics,
                         Component.translatable("gui.tharidiathings.realm.expansion_cost_label").getString(), textX,
-                        yPos, MedievalGuiRenderer.BROWN_INK);
-                yPos += 25;
+                        yPos, TEXT_DARK);
+                yPos += 22;
 
                 int stored = this.menu.getStoredPotatoes();
                 int required = pietroEntity.getPotatoCostForNextLevel();
                 float progress = required > 0 ? (float) stored / required : 0f;
 
-                // Update and render medieval progress bar with relative coordinates
-                expansionProgressBar.position(BORDER_WIDTH + 20, yPos).setProgress(progress).showValueText(stored,
+                // Update and render progress bar
+                expansionProgressBar.position(BORDER_WIDTH + 15, yPos).setProgress(progress).showValueText(stored,
                         required, "");
                 expansionProgressBar.render(guiGraphics);
 
-                yPos += 25;
+                yPos += 22;
                 int remaining = required - stored;
                 renderMedievalTextLine(guiGraphics,
                         Component.translatable("gui.tharidiathings.realm.coins_needed", remaining).getString(), textX,
-                        yPos, MedievalGuiRenderer.BROWN_INK);
+                        yPos, TEXT_DARK);
             }
-
-            yPos += 30;
-            MedievalGuiRenderer.renderMedievalDivider(guiGraphics, textX, yPos,
-                    this.imageWidth - BORDER_WIDTH * 2 - 40);
-            yPos += 25;
-
-            // Instructions
-            renderMedievalTextLine(guiGraphics,
-                    Component.translatable("gui.tharidiathings.realm.deposit_hint_1").getString(), textX, yPos,
-                    MedievalGuiRenderer.BROWN_INK);
-            yPos += 15;
-            renderMedievalTextLine(guiGraphics,
-                    Component.translatable("gui.tharidiathings.realm.deposit_hint_2").getString(), textX, yPos,
-                    MedievalGuiRenderer.BROWN_INK);
         }
     }
 
     /**
-     * Renders text without shadow effect for cleaner medieval appearance
+     * Renders text with medieval font and dark color for authentic parchment appearance
      */
     private void renderMedievalTextLine(GuiGraphics gui, String text, int x, int y, int color) {
-        // Main text only - no shadow
-        gui.drawString(Minecraft.getInstance().font, text, x, y, color, false);
+        // Use medieval font with specified color - no shadow for clean parchment look
+        Component styledText = Component.literal(text).withStyle(style -> style.withFont(MEDIEVAL_FONT));
+        gui.drawString(Minecraft.getInstance().font, styledText, x, y, color, false);
     }
 
     private void renderClaimsTab(GuiGraphics guiGraphics) {
         // Use relative coordinates (0,0 = top-left of GUI)
-        int yPos = 130;
-        int textX = BORDER_WIDTH + 20;
+        // Content starts below the first PNG horizontal divider line
+        int yPos = 160;
+        int textX = BORDER_WIDTH + 15;
 
-        // Title with medieval styling
+        // Title
         renderMedievalTextLine(guiGraphics, Component.translatable("gui.tharidiathings.realm.claims_title").getString(),
-                textX, yPos, MedievalGuiRenderer.BROWN_INK);
-        yPos += 20;
+                textX, yPos, TEXT_DARK);
+        yPos += 18;
 
-        // Total coins with royal styling
+        // Total coins
         int totalPotatoes = this.menu.getTotalClaimPotatoes();
         renderMedievalTextLine(guiGraphics,
                 Component.translatable("gui.tharidiathings.realm.treasury", totalPotatoes).getString(), textX, yPos,
-                MedievalGuiRenderer.ROYAL_GOLD);
-        yPos += 30;
+                TEXT_DARK);
+        yPos += 40;
 
-        // Render divider
-        MedievalGuiRenderer.renderMedievalDivider(guiGraphics, textX, yPos, this.imageWidth - BORDER_WIDTH * 2 - 40);
-        yPos += 25;
-
-        // Hierarchy section with medieval styling
+        // Hierarchy section (below second PNG divider line)
         renderMedievalTextLine(guiGraphics,
                 Component.translatable("gui.tharidiathings.realm.hierarchy_title").getString(), textX, yPos,
-                MedievalGuiRenderer.BROWN_INK);
-        yPos += 25;
+                TEXT_DARK);
+        yPos += 22;
 
         // Get hierarchy data from client cache
         Map<UUID, Integer> hierarchyData = ClientPacketHandler.getCachedHierarchyData();
@@ -519,15 +500,14 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
                     even,
                     false);
 
-            // Player name with medieval styling
+            // Player name with dark styling
             String displayName = entry.playerName.length() > 15 ? entry.playerName.substring(0, 15) : entry.playerName;
-            renderMedievalTextLine(guiGraphics, "§f" + displayName, textX + 5, yPos + 4, MedievalGuiRenderer.BLACK_INK);
+            renderMedievalTextLine(guiGraphics, displayName, textX + 5, yPos + 4, TEXT_DARK);
 
-            // Rank title with royal colors
-            String rankColor = getRankColor(rank);
+            // Rank title
             renderMedievalTextLine(guiGraphics,
-                    rankColor + Component.translatable(getRankTranslationKey(rank)).getString(), textX + 120, yPos + 4,
-                    MedievalGuiRenderer.BROWN_INK);
+                    Component.translatable(getRankTranslationKey(rank)).getString(), textX + 120, yPos + 4,
+                    TEXT_DARK);
 
             // Change rank button (only for lord and not for themselves)
             if (isLord && !entry.playerUUID.equals(ownerUUID)) {
@@ -563,60 +543,44 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
 
     private void renderDungeonTab(GuiGraphics guiGraphics) {
         // Use relative coordinates (0,0 = top-left of GUI)
-        int yPos = 130;
-        int textX = BORDER_WIDTH + 20;
-
-        // Title with medieval styling
-        renderMedievalTextLine(guiGraphics,
-                Component.translatable("gui.tharidiathings.realm.dungeon_title").getString(), textX, yPos,
-                MedievalGuiRenderer.BROWN_INK);
-        yPos += 30;
-
-        // Render divider
-        MedievalGuiRenderer.renderMedievalDivider(guiGraphics, textX, yPos, this.imageWidth - BORDER_WIDTH * 2 - 40);
-        yPos += 25;
+        // Content starts below the first PNG horizontal divider line
+        int yPos = 160;
+        int textX = BORDER_WIDTH + 15;
 
         // Dungeon information
         renderMedievalTextLine(guiGraphics,
                 Component.translatable("gui.tharidiathings.realm.dungeon_enter_label").getString(), textX, yPos,
-                MedievalGuiRenderer.BROWN_INK);
-        yPos += 25;
+                TEXT_DARK);
+        yPos += 20;
 
         renderMedievalTextLine(guiGraphics,
                 Component.translatable("gui.tharidiathings.realm.dungeon_desc_1").getString(), textX, yPos,
-                MedievalGuiRenderer.BROWN_INK);
-        yPos += 15;
+                TEXT_DARK);
+        yPos += 14;
         renderMedievalTextLine(guiGraphics,
                 Component.translatable("gui.tharidiathings.realm.dungeon_desc_2").getString(), textX, yPos,
-                MedievalGuiRenderer.BROWN_INK);
-        yPos += 30;
+                TEXT_DARK);
+        yPos += 35;
 
-        // Render divider
-        MedievalGuiRenderer.renderMedievalDivider(guiGraphics, textX, yPos, this.imageWidth - BORDER_WIDTH * 2 - 40);
-        yPos += 25;
-
-        // Status information
+        // Status information (below second PNG divider line)
         renderMedievalTextLine(guiGraphics,
                 Component.translatable("gui.tharidiathings.realm.queue_status_label").getString(), textX, yPos,
-                MedievalGuiRenderer.BROWN_INK);
-        yPos += 20;
+                TEXT_DARK);
+        yPos += 18;
         renderMedievalTextLine(guiGraphics, Component.translatable("gui.tharidiathings.realm.queue_ready").getString(),
-                textX + 20, yPos, MedievalGuiRenderer.PURPLE_REGAL);
+                textX + 15, yPos, TEXT_DARK);
     }
 
     private void renderGroupQueuePage(GuiGraphics guiGraphics) {
-        int yPos = 130;
-        int textX = BORDER_WIDTH + 20;
+        // Content starts below the first PNG horizontal divider line
+        int yPos = 145;
+        int textX = BORDER_WIDTH + 15;
 
-        // Title with medieval styling
+        // Title
         renderMedievalTextLine(guiGraphics,
                 Component.translatable("gui.tharidiathings.realm.group_queue_title").getString(), textX, yPos,
-                MedievalGuiRenderer.BROWN_INK);
-        yPos += 30;
-
-        // Render divider
-        MedievalGuiRenderer.renderMedievalDivider(guiGraphics, textX, yPos, this.imageWidth - BORDER_WIDTH * 2 - 40);
-        yPos += 40;
+                TEXT_DARK);
+        yPos += 35;
 
         // Circle parameters
         int circleRadius = 15;
@@ -658,8 +622,7 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
         yPos += circleRadius * 4 + 50;
         String countText = Component.translatable("gui.tharidiathings.realm.group_count", playerCount, 10).getString();
         int countTextWidth = Minecraft.getInstance().font.width(countText);
-        renderMedievalTextLine(guiGraphics, countText, (this.imageWidth - countTextWidth) / 2, yPos,
-                playerCount > 0 ? MedievalGuiRenderer.GOLD_MAIN : MedievalGuiRenderer.SEPIA);
+        renderMedievalTextLine(guiGraphics, countText, (this.imageWidth - countTextWidth) / 2, yPos, TEXT_DARK);
     }
 
     /**
@@ -724,10 +687,6 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
         super.rebuildWidgets();
 
         // Clear existing buttons
-        if (enterDungeonButton != null) {
-            this.removeWidget(enterDungeonButton);
-            enterDungeonButton = null;
-        }
         if (enterDungeonButtonGroup != null) {
             this.removeWidget(enterDungeonButtonGroup);
             enterDungeonButtonGroup = null;
@@ -741,19 +700,11 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
             startGroupButton = null;
         }
 
-        // Add medieval-styled dungeon buttons only on dungeon tab
+        // Add PNG-based dungeon button only on dungeon tab (centered)
         if (currentTab == TAB_DUNGEON) {
-            enterDungeonButton = MedievalButton.builder(
-                    Component.translatable("gui.tharidiathings.realm.dungeon.enter_button"),
-                    button -> {
-                        sendDungeonJoinRequest();
-                    },
-                    MedievalButton.ButtonStyle.WOOD)
-                    .bounds(this.leftPos + PARCHMENT_WIDTH - 100, this.topPos + PARCHMENT_HEIGHT - 40, 80, 25).build();
-            this.addRenderableWidget(enterDungeonButton);
-
-            enterDungeonButtonGroup = MedievalButton.builder(
-                    Component.translatable("gui.tharidiathings.realm.dungeon.enter_group_button"),
+            int enterBtnWidth = 140;
+            int enterBtnHeight = 25;
+            enterDungeonButtonGroup = ImageTabButton.builder(ENTER_LARGE_BUTTON_TEXTURE, ENTER_BTN_TEX_WIDTH, ENTER_BTN_TEX_HEIGHT,
                     button -> {
                         // Send packet to join/create group queue
                         if (this.menu.getBlockEntity() != null) {
@@ -762,9 +713,9 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
                             showGroupQueuePage = true;
                             updateButtonVisibility();
                         }
-                    },
-                    MedievalButton.ButtonStyle.PURPLE)
-                    .bounds(this.leftPos + PARCHMENT_WIDTH - 220, this.topPos + PARCHMENT_HEIGHT - 40, 120, 25).build();
+                    })
+                    .bounds(this.leftPos + (PARCHMENT_WIDTH - enterBtnWidth) / 2, this.topPos + PARCHMENT_HEIGHT - 120, enterBtnWidth, enterBtnHeight)
+                    .build();
             this.addRenderableWidget(enterDungeonButtonGroup);
 
             exitGroupButton = MedievalButton.builder(
@@ -782,17 +733,18 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
                     .bounds(this.leftPos + BORDER_WIDTH + 20, this.topPos + PARCHMENT_HEIGHT - 40, 80, 25).build();
             this.addRenderableWidget(exitGroupButton);
 
-            startGroupButton = MedievalButton.builder(
-                    Component.translatable("gui.tharidiathings.realm.dungeon.start_button"),
+            int startBtnWidth = 70;
+            int startBtnHeight = 20;
+            startGroupButton = ImageTabButton.builder(ENTER_LARGE_BUTTON_TEXTURE, ENTER_BTN_TEX_WIDTH, ENTER_BTN_TEX_HEIGHT,
                     button -> {
                         // Send packet to start the dungeon for all players in queue
                         if (this.menu.getBlockEntity() != null) {
                             BlockPos pos = this.menu.getBlockEntity().getBlockPos();
                             PacketDistributor.sendToServer(new StartGroupDungeonPacket(pos));
                         }
-                    },
-                    MedievalButton.ButtonStyle.SUCCESS)
-                    .bounds(this.leftPos + PARCHMENT_WIDTH - 100, this.topPos + PARCHMENT_HEIGHT - 40, 80, 25).build();
+                    })
+                    .bounds(this.leftPos + (PARCHMENT_WIDTH - startBtnWidth) / 2, this.topPos + PARCHMENT_HEIGHT - 50, startBtnWidth, startBtnHeight)
+                    .build();
             this.addRenderableWidget(startGroupButton);
 
             updateButtonVisibility();
@@ -812,10 +764,10 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
         MedievalGuiRenderer.renderOrnateBorder(guiGraphics, menuX, menuY, menuWidth, menuHeight,
                 MedievalGuiRenderer.BRONZE);
 
-        // Title with medieval styling
+        // Title
         renderMedievalTextLine(guiGraphics,
                 Component.translatable("gui.tharidiathings.realm.rank_select_title").getString(), menuX + 10,
-                menuY + 10, MedievalGuiRenderer.BROWN_INK);
+                menuY + 10, TEXT_DARK);
 
         // Rank options (except LORD)
         HierarchyRank[] selectableRanks = { HierarchyRank.CONSIGLIERE, HierarchyRank.GUARDIA, HierarchyRank.MILIZIANO,
@@ -823,7 +775,6 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
         int optionY = menuY + 30;
 
         for (HierarchyRank rank : selectableRanks) {
-            String rankColor = getRankColor(rank);
             // Highlight on hover
             int relMouseX = (int) (Minecraft.getInstance().mouseHandler.xpos()
                     * Minecraft.getInstance().getWindow().getGuiScaledWidth()
@@ -839,8 +790,8 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
             }
 
             renderMedievalTextLine(guiGraphics,
-                    rankColor + Component.translatable(getRankTranslationKey(rank)).getString(), menuX + 15,
-                    optionY + 4, MedievalGuiRenderer.BLACK_INK);
+                    Component.translatable(getRankTranslationKey(rank)).getString(), menuX + 15,
+                    optionY + 4, TEXT_DARK);
             optionY += 20;
         }
     }
@@ -849,29 +800,6 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
         currentTab = tab;
         scrollOffset = 0;
         updateTabButtons();
-    }
-
-    private void sendDungeonJoinRequest() {
-        // Send packet to server to join dungeon queue
-        DungeonQueuePacket packet = new DungeonQueuePacket();
-        PacketDistributor.sendToServer(packet);
-    }
-
-    private String getRankColor(HierarchyRank rank) {
-        switch (rank) {
-            case LORD:
-                return "§6§l";
-            case CONSIGLIERE:
-                return "§5§l";
-            case GUARDIA:
-                return "§b§l";
-            case MILIZIANO:
-                return "§7§l";
-            case COLONO:
-                return "§8§l";
-            default:
-                return "§f";
-        }
     }
 
     private String getPlayerNameFromUUID(UUID uuid) {

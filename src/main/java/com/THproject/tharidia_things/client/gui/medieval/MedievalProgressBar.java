@@ -162,7 +162,7 @@ public class MedievalProgressBar {
             int textX = x + (width - textWidth) / 2;
             int textY = y + (height - mc.font.lineHeight) / 2;
 
-            gui.drawString(mc.font, text, textX, textY, MedievalGuiRenderer.GOLD_LEAF, false);
+            gui.drawString(mc.font, text, textX, textY, MedievalGuiRenderer.TEXT_DARK, false);
         }
     }
 

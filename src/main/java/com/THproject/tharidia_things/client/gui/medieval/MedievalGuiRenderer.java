@@ -1,13 +1,34 @@
 package com.THproject.tharidia_things.client.gui.medieval;
 
+import com.THproject.tharidia_things.TharidiaThings;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 
 /**
  * Advanced Medieval GUI Renderer - Creates stunning, realistic medieval interfaces
  * Features: realistic parchment, embossed borders, metallic effects, wax seals, leather textures
  */
 public class MedievalGuiRenderer {
+
+    // Medieval font resource location
+    public static final ResourceLocation MEDIEVAL_FONT =
+            ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, "medieval");
+
+    /**
+     * Creates a Component with medieval font styling
+     */
+    public static Component withMedievalFont(String text) {
+        return Component.literal(text).withStyle(style -> style.withFont(MEDIEVAL_FONT));
+    }
+
+    /**
+     * Draws text with medieval font
+     */
+    public static void drawMedievalText(GuiGraphics gui, String text, int x, int y, int color) {
+        gui.drawString(Minecraft.getInstance().font, withMedievalFont(text), x, y, color, false);
+    }
 
     // ==================== REFINED MEDIEVAL COLOR PALETTE ====================
 
@@ -51,6 +72,7 @@ public class MedievalGuiRenderer {
     public static final int BROWN_INK = 0xFF3E2723;            // Brown ink
     public static final int SEPIA = 0xFF704214;                // Sepia tone
     public static final int RED_INK = 0xFF8B0000;              // Red ink
+    public static final int TEXT_DARK = 0xFF1A1208;            // Very dark brown for text
 
     // Effects
     public static final int SHADOW_DARK = 0xCC000000;          // Strong shadow
@@ -273,13 +295,14 @@ public class MedievalGuiRenderer {
             gui.fill(x + 3, y + 3, x + width - 3, y + height - 3, SHADOW_LIGHT);
         }
 
-        // Text (no shadow)
+        // Text with medieval font (no shadow)
         Minecraft mc = Minecraft.getInstance();
-        int textWidth = mc.font.width(text);
+        Component styledText = withMedievalFont(text);
+        int textWidth = mc.font.width(styledText);
         int textX = x + (width - textWidth) / 2;
         int textY = y + (height - mc.font.lineHeight) / 2;
 
-        gui.drawString(mc.font, text, textX, textY, textColor, false);
+        gui.drawString(mc.font, styledText, textX, textY, textColor, false);
     }
 
     // ==================== TAB RENDERING ====================
@@ -291,7 +314,7 @@ public class MedievalGuiRenderer {
                                         String text, boolean active, boolean hovered) {
         int baseColor = active ? PARCHMENT_LIGHT : (hovered ? PARCHMENT_BASE : PARCHMENT_DARK);
         int borderColor = active ? GOLD_MAIN : BRONZE;
-        int textColor = active ? BROWN_INK : (hovered ? BROWN_INK : SEPIA);
+        int textColor = TEXT_DARK;  // Always use dark text on parchment background
 
         // Tab body with pointed bottom
         int bodyHeight = height - 6;
@@ -323,13 +346,14 @@ public class MedievalGuiRenderer {
             renderMetalStud(gui, x + width - 6, y + 4, 2, GOLD_MAIN);
         }
 
-        // Text
+        // Text with medieval font
         Minecraft mc = Minecraft.getInstance();
-        int textWidth = mc.font.width(text);
+        Component styledText = withMedievalFont(text);
+        int textWidth = mc.font.width(styledText);
         int textX = x + (width - textWidth) / 2;
         int textY = y + (bodyHeight - mc.font.lineHeight) / 2;
 
-        gui.drawString(mc.font, text, textX, textY, textColor, false);
+        gui.drawString(mc.font, styledText, textX, textY, textColor, false);
     }
 
     // ==================== PROGRESS BAR RENDERING ====================
@@ -414,15 +438,16 @@ public class MedievalGuiRenderer {
     }
 
     /**
-     * Renders an elegant medieval title
+     * Renders an elegant medieval title with dark text
      */
     public static void renderMedievalTitle(GuiGraphics gui, String title, int x, int y, int width) {
         Minecraft mc = Minecraft.getInstance();
-        int titleWidth = mc.font.width(title);
+        Component styledTitle = withMedievalFont(title);
+        int titleWidth = mc.font.width(styledTitle);
         int titleX = x + (width - titleWidth) / 2;
 
-        // Main title in gold (no shadow)
-        gui.drawString(mc.font, "§6§l" + title, titleX, y, GOLD_MAIN, false);
+        // Main title in dark color with medieval font (no shadow, no formatting codes)
+        gui.drawString(mc.font, styledTitle, titleX, y, TEXT_DARK, false);
 
         // Underline ornament
         int underlineY = y + mc.font.lineHeight + 4;
@@ -439,10 +464,9 @@ public class MedievalGuiRenderer {
         renderSpot(gui, x + 5, y + 5, 6, LEATHER_DARK);
         renderSpot(gui, x + 5, y + 5, 5, LEATHER_MAIN);
 
-        // Arrow
-        Minecraft mc = Minecraft.getInstance();
+        // Arrow in dark color with medieval font
         String arrow = up ? "\u25B2" : "\u25BC";
-        gui.drawString(mc.font, arrow, x + 1, y + 1, GOLD_MAIN, false);
+        gui.drawString(Minecraft.getInstance().font, withMedievalFont(arrow), x + 1, y + 1, TEXT_DARK, false);
     }
 
     /**
@@ -450,8 +474,8 @@ public class MedievalGuiRenderer {
      */
     public static void renderListItem(GuiGraphics gui, int x, int y, int width, int height,
                                      String text, boolean even, boolean selected) {
-        int bgColor = selected ? GOLD_MAIN : (even ? PARCHMENT_BASE : PARCHMENT_DARK);
-        int textColor = selected ? BLACK_INK : BROWN_INK;
+        int bgColor = selected ? PARCHMENT_LIGHT : (even ? PARCHMENT_BASE : PARCHMENT_DARK);
+        int textColor = TEXT_DARK;
 
         // Background with subtle gradient
         gui.fill(x, y, x + width, y + height, bgColor);
@@ -470,9 +494,9 @@ public class MedievalGuiRenderer {
         // Left accent line
         gui.fill(x, y + 2, x + 2, y + height - 2, selected ? DEEP_CRIMSON : BRONZE);
 
-        // Text
+        // Text with medieval font
         Minecraft mc = Minecraft.getInstance();
-        gui.drawString(mc.font, text, x + 8, y + (height - mc.font.lineHeight) / 2, textColor, false);
+        gui.drawString(mc.font, withMedievalFont(text), x + 8, y + (height - mc.font.lineHeight) / 2, textColor, false);
     }
 
     // ==================== WAX SEAL RENDERING ====================

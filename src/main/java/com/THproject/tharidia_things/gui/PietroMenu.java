@@ -69,8 +69,11 @@ public class PietroMenu extends AbstractContainerMenu {
         return data.get(2);
     }
     
+    // Gap between main inventory and hotbar (54 pixels for 3 rows + 4 pixel gap)
+    private static final int HOTBAR_GAP = 58;
+
     private void layoutSlots(Inventory playerInventory) {
-        // GUI is now 300x350 pixels (PARCHMENT_WIDTH x PARCHMENT_HEIGHT)
+        // GUI is now 256x384 pixels (PARCHMENT_WIDTH x PARCHMENT_HEIGHT)
         // Potato slot centered horizontally at top
         if (blockEntity != null) {
             this.addSlot(new SlotItemHandler(blockEntity.getPotatoInventory(), 0, 141, 35) {
@@ -80,21 +83,21 @@ public class PietroMenu extends AbstractContainerMenu {
                 }
             });
         }
-        
+
         // Move player inventory to shared left panel location
         int invStartX = PlayerInventoryPanelLayout.SLOT_OFFSET_X;
         int invStartY = PlayerInventoryPanelLayout.SLOT_OFFSET_Y;
-        
+
         // Player inventory (9-35)
         for (int row = 0; row < 3; ++row) {
             for (int col = 0; col < 9; ++col) {
                 this.addSlot(new Slot(playerInventory, col + row * 9 + 9, invStartX + col * 18, invStartY + row * 18));
             }
         }
-        
-        // Player hotbar (0-8)
+
+        // Player hotbar (0-8) with small gap below main inventory
         for (int col = 0; col < 9; ++col) {
-            this.addSlot(new Slot(playerInventory, col, invStartX + col * 18, invStartY + 78));
+            this.addSlot(new Slot(playerInventory, col, invStartX + col * 18, invStartY + HOTBAR_GAP));
         }
     }
 

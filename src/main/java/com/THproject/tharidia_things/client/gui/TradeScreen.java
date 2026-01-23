@@ -110,7 +110,7 @@ public class TradeScreen extends AbstractContainerScreen<TradeMenu> {
         guiGraphics.pose().popPose();
         
         // Draw other player name (right side) - smaller font using scaling
-        Component otherLabel = Component.literal("§6" + this.menu.getOtherPlayerName());
+        Component otherLabel = Component.literal(this.menu.getOtherPlayerName());
         int otherLabelWidth = this.font.width(otherLabel);
         guiGraphics.pose().pushPose();
         guiGraphics.pose().scale(0.8f, 0.8f, 1.0f);

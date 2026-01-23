@@ -101,7 +101,7 @@ public class ClaimScreen extends AbstractContainerScreen<ClaimMenu> {
         // Owner information with medieval styling
         renderMedievalTextLine(gui, Component.translatable("gui.tharidiathings.claim.owner_label").getString(), textX, yPos, MedievalGuiRenderer.BROWN_INK);
         yPos += 16;
-        renderMedievalTextLine(gui, "§f" + ownerName, textX + 20, yPos, MedievalGuiRenderer.BLACK_INK);
+        renderMedievalTextLine(gui, ownerName, textX + 20, yPos, MedievalGuiRenderer.TEXT_DARK);
         yPos += 24;
         
         // Render divider
@@ -133,13 +133,13 @@ public class ClaimScreen extends AbstractContainerScreen<ClaimMenu> {
                 yPos += 16;
                 
                 String timeText = Component.translatable("gui.tharidiathings.claim.time_left_value", hours, minutes, seconds).getString();
-                renderMedievalTextLine(gui, timeText, textX + 40, yPos, MedievalGuiRenderer.ROYAL_GOLD);
+                renderMedievalTextLine(gui, timeText, textX + 40, yPos, MedievalGuiRenderer.TEXT_DARK);
                 yPos += 20;
                 
                 String expiresDate = DATE_FORMAT.format(new Date(expirationTime));
                 renderMedievalTextLine(gui, Component.translatable("gui.tharidiathings.claim.expires_on_label").getString(), textX + 20, yPos, MedievalGuiRenderer.BROWN_INK);
                 yPos += 16;
-                renderMedievalTextLine(gui, "§f" + expiresDate, textX + 40, yPos, MedievalGuiRenderer.BLACK_INK);
+                renderMedievalTextLine(gui, expiresDate, textX + 40, yPos, MedievalGuiRenderer.TEXT_DARK);
             }
         } else {
             renderMedievalTextLine(gui, Component.translatable("gui.tharidiathings.claim.perpetual").getString(), textX + 20, yPos, MedievalGuiRenderer.PURPLE_REGAL);
@@ -153,7 +153,7 @@ public class ClaimScreen extends AbstractContainerScreen<ClaimMenu> {
         int protectionRadius = this.menu.getProtectionRadius();
         renderMedievalTextLine(gui, Component.translatable("gui.tharidiathings.claim.protection_radius_label").getString(), textX, yPos, MedievalGuiRenderer.BROWN_INK);
         yPos += 16;
-        renderMedievalTextLine(gui, Component.translatable("gui.tharidiathings.claim.protection_radius_value", protectionRadius).getString(), textX + 20, yPos, MedievalGuiRenderer.ROYAL_GOLD);
+        renderMedievalTextLine(gui, Component.translatable("gui.tharidiathings.claim.protection_radius_value", protectionRadius).getString(), textX + 20, yPos, MedievalGuiRenderer.TEXT_DARK);
     }
     
     /**
