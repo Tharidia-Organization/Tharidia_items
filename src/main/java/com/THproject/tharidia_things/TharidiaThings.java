@@ -35,6 +35,8 @@ import com.THproject.tharidia_things.block.entity.HotIronAnvilEntity;
 import com.THproject.tharidia_things.block.entity.HotGoldAnvilEntity;
 import com.THproject.tharidia_things.block.entity.HotCopperAnvilEntity;
 import com.THproject.tharidia_things.block.entity.StableBlockEntity;
+import com.THproject.tharidia_things.block.ore_chunks.IronChunkBlock;
+import com.THproject.tharidia_things.block.ore_chunks.IronChunkBlockEntity;
 import com.THproject.tharidia_things.item.HotIronItem;
 import com.THproject.tharidia_things.item.HotGoldItem;
 import com.THproject.tharidia_things.item.HotCopperItem;
@@ -55,6 +57,7 @@ import com.THproject.tharidia_things.item.AnimalBrushItem;
 import com.THproject.tharidia_things.item.FreshStrawItem;
 import com.THproject.tharidia_things.item.DirtyStrawItem;
 import com.THproject.tharidia_things.item.ShelterUpgradeKitItem;
+import com.THproject.tharidia_things.item.crusher_hammer.IronCrusherHammer;
 import com.THproject.tharidia_things.registry.BabyMobRegistry;
 import com.THproject.tharidia_things.client.ClientPacketHandler;
 import com.THproject.tharidia_things.entity.ModEntities;
@@ -63,22 +66,10 @@ import com.THproject.tharidia_things.compoundTag.ReviveAttachments;
 import com.THproject.tharidia_things.character.CharacterAttachments;
 import com.THproject.tharidia_things.config.ItemCatalogueConfig;
 import com.THproject.tharidia_things.config.ReviveConfig;
-import com.THproject.tharidia_things.event.ItemAttributeHandler;
-import com.THproject.tharidia_things.event.PlayerStatsIncrementHandler;
 import com.THproject.tharidia_things.fatigue.FatigueAttachments;
 import com.THproject.tharidia_things.houseboundry.AnimalWellnessAttachments;
 import com.THproject.tharidia_things.houseboundry.config.AnimalConfigLoader;
 import com.THproject.tharidia_things.stable.StableConfigLoader;
-import com.THproject.tharidia_things.network.BattlePackets;
-import com.THproject.tharidia_things.network.ClaimOwnerSyncPacket;
-import com.THproject.tharidia_things.network.FatigueSyncPacket;
-import com.THproject.tharidia_things.network.DungeonQueuePacket;
-import com.THproject.tharidia_things.network.HierarchySyncPacket;
-import com.THproject.tharidia_things.network.RealmSyncPacket;
-import com.THproject.tharidia_things.network.UpdateHierarchyPacket;
-import com.THproject.tharidia_things.network.SelectComponentPacket;
-import com.THproject.tharidia_things.network.SubmitNamePacket;
-import com.THproject.tharidia_things.network.SyncGateRestrictionsPacket;
 import com.THproject.tharidia_things.realm.RealmManager;
 import com.THproject.tharidia_things.registry.ModAttributes;
 import com.THproject.tharidia_things.registry.ModStats;
@@ -194,6 +185,17 @@ public class TharidiaThings {
     public static final DeferredBlock<StableDummyBlock> STABLE_DUMMY = BLOCKS.register("stable_dummy",
             () -> new StableDummyBlock());
 
+    // Chunks Block
+    public static final DeferredBlock<IronChunkBlock> IRON_CHUNK = BLOCKS.register("iron_chunk",
+            () -> new IronChunkBlock(
+                    BlockBehaviour.Properties.of()
+                            .mapColor(MapColor.METAL)
+                            .destroyTime(4.0f)
+                            .explosionResistance(6.0f)
+                            .noOcclusion()));
+    public static final DeferredItem<BlockItem> IRON_CHUNK_ITEM = ITEMS.registerSimpleBlockItem("iron_chunk",
+            IRON_CHUNK);
+
     // Creates a new BlockEntityType for the Pietro block
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<PietroBlockEntity>> PIETRO_BLOCK_ENTITY = BLOCK_ENTITIES
             .register("pietro", () -> BlockEntityType.Builder.of(PietroBlockEntity::new, PIETRO.get()).build(null));
@@ -216,6 +218,10 @@ public class TharidiaThings {
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<StableBlockEntity>> STABLE_BLOCK_ENTITY = BLOCK_ENTITIES
             .register("stable",
                     () -> BlockEntityType.Builder.of(StableBlockEntity::new, STABLE.get()).build(null));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<IronChunkBlockEntity>> IRON_CHUNK_BLOCK_ENTITY = BLOCK_ENTITIES
+            .register("iron_chunk",
+                    () -> BlockEntityType.Builder.of(IronChunkBlockEntity::new, IRON_CHUNK.get()).build(null));
 
     // Creates a MenuType for the Claim GUI
     public static final DeferredHolder<net.minecraft.world.inventory.MenuType<?>, net.minecraft.world.inventory.MenuType<ClaimMenu>> CLAIM_MENU = MENU_TYPES
@@ -276,6 +282,10 @@ public class TharidiaThings {
     public static final DeferredItem<Item> BATTLE_GAUNTLE = ITEMS.register("battle_gauntlet",
             () -> new BattleGauntlet(new Item.Properties().stacksTo(1)));
 
+    // Crusher Hammer
+    public static final DeferredItem<Item> IRON_CRUSHER_HAMMER = ITEMS.register("iron_crusher_hammer",
+            () -> new IronCrusherHammer());
+
     // Houseboundry Items
     public static final DeferredItem<Item> ANIMAL_BRUSH = ITEMS.register("animal_brush",
             () -> new AnimalBrushItem(new Item.Properties().durability(64)));
@@ -316,12 +326,16 @@ public class TharidiaThings {
                         output.accept(MANURE.get());
                         output.accept(BATTLE_GAUNTLE.get());
                         output.accept(STABLE_ITEM.get());
+                        output.accept(IRON_CRUSHER_HAMMER.get());
                         // Houseboundry
                         output.accept(ANIMAL_BRUSH.get());
                         output.accept(FRESH_STRAW.get());
                         output.accept(DIRTY_STRAW.get());
                         output.accept(SHELTER_UPGRADE_KIT.get());
                         output.accept(PITCHFORK.get());
+
+                        // Chunks
+                        output.accept(IRON_CHUNK.get());
 
                         // Add all dynamically registered baby mob items
                         BabyMobRegistry.addToCreativeTab(output);

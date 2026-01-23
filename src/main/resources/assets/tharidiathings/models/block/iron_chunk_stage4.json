@@ -1,0 +1,7 @@
+{
+    "parent": "tharidiathings:block/chunk_stage4",
+    "textures": {
+        "1": "tharidiathings:block/iron_chunk",
+        "particle": "tharidiathings:block/iron_chunk"
+    }
+}
