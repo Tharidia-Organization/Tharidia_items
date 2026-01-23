@@ -80,6 +80,7 @@ import net.minecraft.stats.StatFormatter;
 import com.THproject.tharidia_things.servertransfer.ServerTransferManager;
 import com.THproject.tharidia_things.servertransfer.ServerTransferCommands;
 import com.THproject.tharidia_things.servertransfer.TransferTokenManager;
+import com.THproject.tharidia_things.sounds.ModSounds;
 import com.THproject.tharidia_things.servertransfer.DevWhitelistManager;
 
 import net.neoforged.api.distmarker.Dist;
@@ -354,6 +355,9 @@ public class TharidiaThings {
         if (FMLEnvironment.dist == Dist.CLIENT) {
             modEventBus.addListener(this::registerScreens);
         }
+
+        // Register custom sounds
+        ModSounds.SOUND_EVENTS.register(modEventBus);
 
         // Register custom attributes
         ModAttributes.ATTRIBUTES.register(modEventBus);

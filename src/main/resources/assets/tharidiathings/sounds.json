@@ -1,0 +1,11 @@
+{
+    "crusher_hammer_use": {
+        "sounds": [
+            "tharidiathings:crusher_hammer/use1",
+            "tharidiathings:crusher_hammer/use2",
+            "tharidiathings:crusher_hammer/use3",
+            "tharidiathings:crusher_hammer/use4",
+            "tharidiathings:crusher_hammer/use5"
+        ]
+    }
+}
