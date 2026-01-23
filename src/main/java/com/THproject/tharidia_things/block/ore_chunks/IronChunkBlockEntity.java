@@ -4,11 +4,14 @@ import com.THproject.tharidia_things.TharidiaThings;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 public class IronChunkBlockEntity extends BlockEntity {
-    private final int MAX_HIT = 5;
+    private static final int MAX_HIT = 5;
+    private static final ItemStack ITEM_DROP = Items.IRON_NUGGET.getDefaultInstance();
     private int hit;
 
     public IronChunkBlockEntity(BlockPos pos, BlockState state) {
@@ -40,6 +43,10 @@ public class IronChunkBlockEntity extends BlockEntity {
         return MAX_HIT;
     }
 
+    public ItemStack getDrop() {
+        return ITEM_DROP;
+    }
+
     public void hit() {
         this.hit++;
         calcStage();
@@ -50,8 +57,8 @@ public class IronChunkBlockEntity extends BlockEntity {
             int stage = (int) Math.floor(((float) hit / MAX_HIT * 100) / 20);
             stage = stage <= 4 ? stage : 4;
             BlockState state = this.getBlockState();
-            if (state.getValue(ChunkStage.STAGE) != stage) {
-                this.level.setBlock(this.worldPosition, state.setValue(ChunkStage.STAGE, stage), 3);
+            if (state.getValue(Chunks.STAGE) != stage) {
+                this.level.setBlock(this.worldPosition, state.setValue(Chunks.STAGE, stage), 3);
             }
         }
     }

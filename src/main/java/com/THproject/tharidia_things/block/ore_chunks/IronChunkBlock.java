@@ -22,12 +22,12 @@ public class IronChunkBlock extends BaseEntityBlock {
 
     public IronChunkBlock(Properties properties) {
         super(properties);
-        this.registerDefaultState(this.stateDefinition.any().setValue(ChunkStage.STAGE, 0));
+        this.registerDefaultState(this.stateDefinition.any().setValue(Chunks.STAGE, 0));
     }
 
     @Override
     public void attack(BlockState state, Level level, BlockPos pos, Player player) {
-        OnChunkAttacked.attackChunk(level, pos, player, Items.IRON_NUGGET.getDefaultInstance());
+        Chunks.attackChunk(level, pos, player);
         super.attack(state, level, pos, player);
     }
 
@@ -38,13 +38,13 @@ public class IronChunkBlock extends BaseEntityBlock {
 
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return switch (state.getValue(ChunkStage.STAGE)) {
-            case 0 -> ChunkStage.SHAPE_STAGE0;
-            case 1 -> ChunkStage.SHAPE_STAGE1;
-            case 2 -> ChunkStage.SHAPE_STAGE2;
-            case 3 -> ChunkStage.SHAPE_STAGE3;
-            case 4 -> ChunkStage.SHAPE_STAGE4;
-            default -> ChunkStage.SHAPE_STAGE0;
+        return switch (state.getValue(Chunks.STAGE)) {
+            case 0 -> Chunks.SHAPE_STAGE0;
+            case 1 -> Chunks.SHAPE_STAGE1;
+            case 2 -> Chunks.SHAPE_STAGE2;
+            case 3 -> Chunks.SHAPE_STAGE3;
+            case 4 -> Chunks.SHAPE_STAGE4;
+            default -> Chunks.SHAPE_STAGE0;
         };
     }
 
@@ -61,6 +61,6 @@ public class IronChunkBlock extends BaseEntityBlock {
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(ChunkStage.STAGE);
+        builder.add(Chunks.STAGE);
     }
 }
