@@ -26,6 +26,8 @@ public class ClientPacketHandler {
     public static List<PietroBlockEntity> syncedRealms = new ArrayList<>();
     // Stores hierarchy data: Map of player UUID to rank level
     private static Map<UUID, Integer> cachedHierarchyData = new HashMap<>();
+    // Stores player names: Map of player UUID to name
+    private static Map<UUID, String> cachedPlayerNames = new HashMap<>();
     private static UUID cachedOwnerUUID = null;
     private static String cachedOwnerName = "";
 
@@ -194,29 +196,39 @@ public class ClientPacketHandler {
     public static void handleHierarchySync(HierarchySyncPacket packet, IPayloadContext context) {
         context.enqueueWork(() -> {
             LOGGER.info("Received HierarchySyncPacket with {} players", packet.hierarchyData().size());
-            
+
             cachedHierarchyData = new HashMap<>(packet.hierarchyData());
+            cachedPlayerNames = new HashMap<>(packet.playerNames());
             cachedOwnerUUID = packet.ownerUUID();
             cachedOwnerName = packet.ownerName();
-            
+
             LOGGER.info("Hierarchy data cached. Owner: {} ({})", cachedOwnerName, cachedOwnerUUID);
         });
     }
-    
+
     public static Map<UUID, Integer> getCachedHierarchyData() {
         return new HashMap<>(cachedHierarchyData);
     }
-    
+
+    public static Map<UUID, String> getCachedPlayerNames() {
+        return new HashMap<>(cachedPlayerNames);
+    }
+
+    public static String getCachedPlayerName(UUID uuid) {
+        return cachedPlayerNames.getOrDefault(uuid, "Unknown");
+    }
+
     public static UUID getCachedOwnerUUID() {
         return cachedOwnerUUID;
     }
-    
+
     public static String getCachedOwnerName() {
         return cachedOwnerName;
     }
-    
+
     public static void clearHierarchyCache() {
         cachedHierarchyData.clear();
+        cachedPlayerNames.clear();
         cachedOwnerUUID = null;
         cachedOwnerName = "";
     }

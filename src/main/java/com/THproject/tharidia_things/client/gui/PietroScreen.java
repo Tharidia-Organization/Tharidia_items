@@ -13,6 +13,7 @@ import com.THproject.tharidia_things.gui.inventory.PlayerInventoryPanelLayout;
 import com.THproject.tharidia_things.network.JoinGroupQueuePacket;
 import com.THproject.tharidia_things.network.LeaveGroupQueuePacket;
 import com.THproject.tharidia_things.network.StartGroupDungeonPacket;
+import com.THproject.tharidia_things.network.UpdateHierarchyPacket;
 import com.THproject.tharidia_things.client.ClientGroupQueueHandler;
 import com.THproject.tharidia_things.realm.HierarchyRank;
 import net.minecraft.client.Minecraft;
@@ -36,8 +37,6 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
     // PNG Texture Resources
     private static final ResourceLocation BACKGROUND_TEXTURE =
             ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, "textures/gui/realm_background.png");
-    private static final ResourceLocation INVENTORY_PANEL_TEXTURE =
-            ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, "textures/gui/inventory_panel.png");
     private static final ResourceLocation BAR_TEXTURE =
             ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, "textures/gui/bar.png");
     private static final ResourceLocation EXPANSION_BUTTON_TEXTURE =
@@ -54,6 +53,12 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
             ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, "textures/gui/dungeon_button_pressed.png");
     private static final ResourceLocation ENTER_LARGE_BUTTON_TEXTURE =
             ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, "textures/gui/enter_large_button.png");
+    private static final ResourceLocation SLOT_EMPTY_TEXTURE =
+            ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, "textures/gui/slot_empty.png");
+    private static final ResourceLocation SLOT_SELECTED_TEXTURE =
+            ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, "textures/gui/slot_selected.png");
+    // Slot texture dimensions (actual PNG size - these are larger textures scaled down for display)
+    private static final int SLOT_TEX_SIZE = 100;
 
     // Enter large button texture dimensions
     private static final int ENTER_BTN_TEX_WIDTH = 650;
@@ -66,8 +71,6 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
     // PNG Texture dimensions (original sizes)
     private static final int BG_TEX_WIDTH = 1024;
     private static final int BG_TEX_HEIGHT = 1536;
-    private static final int INV_TEX_WIDTH = 340;
-    private static final int INV_TEX_HEIGHT = 280;
     private static final int BAR_TEX_WIDTH = 754;
     private static final int BAR_TEX_HEIGHT = 70;
 
@@ -98,6 +101,13 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
     // Group queue page state
     private boolean showGroupQueuePage = false;
     private MedievalButton exitGroupButton;
+
+    // Claims tab - clickable rank entries
+    private List<PlayerHierarchyEntry> currentHierarchyEntries = new ArrayList<>();
+    private int claimsListStartY = 0;
+    private int claimsListItemHeight = 20;
+    private int rankTextX = 0;
+    private int rankTextWidth = 60;
     private ImageTabButton startGroupButton;
 
     /**
@@ -219,11 +229,12 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
                     }
                 },
                 MedievalButton.ButtonStyle.DANGER)
-                .bounds(this.leftPos + BORDER_WIDTH + 20, this.topPos + PARCHMENT_HEIGHT - 40, 80, 25).build();
+                .bounds(this.leftPos + BORDER_WIDTH + 10, this.topPos + PARCHMENT_HEIGHT - 90, 80, 25).build();
         exitGroupButton.visible = false;
         this.addRenderableWidget(exitGroupButton);
 
         // Create Start button for group queue page using PNG texture (only visible for leader)
+        // Positioned on the right side, symmetric to the exit button
         int startBtnWidth = 70;
         int startBtnHeight = 20;
         startGroupButton = ImageTabButton.builder(ENTER_LARGE_BUTTON_TEXTURE, ENTER_BTN_TEX_WIDTH, ENTER_BTN_TEX_HEIGHT,
@@ -234,7 +245,7 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
                         PacketDistributor.sendToServer(new StartGroupDungeonPacket(pos));
                     }
                 })
-                .bounds(this.leftPos + (PARCHMENT_WIDTH - startBtnWidth) / 2, this.topPos + PARCHMENT_HEIGHT - 50, startBtnWidth, startBtnHeight)
+                .bounds(this.leftPos + PARCHMENT_WIDTH - BORDER_WIDTH - 10 - startBtnWidth, this.topPos + PARCHMENT_HEIGHT - 90, startBtnWidth, startBtnHeight)
                 .build();
         startGroupButton.visible = false;
         this.addRenderableWidget(startGroupButton);
@@ -264,15 +275,9 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
             exitGroupButton.visible = onGroupPage;
         }
 
-        // Start button - only visible for the leader
+        // Start button - visible on group page (leader check done server-side when clicking)
         if (startGroupButton != null) {
-            boolean isLeader = false;
-            if (this.menu.getBlockEntity() != null && Minecraft.getInstance().player != null) {
-                BlockPos pos = this.menu.getBlockEntity().getBlockPos();
-                UUID localPlayerUUID = Minecraft.getInstance().player.getUUID();
-                isLeader = ClientGroupQueueHandler.isLocalPlayerLeader(pos, localPlayerUUID);
-            }
-            startGroupButton.visible = onGroupPage && isLeader;
+            startGroupButton.visible = onGroupPage;
         }
     }
 
@@ -294,16 +299,51 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
         // Render PNG background texture (scaled to fit display dimensions)
         guiGraphics.blit(BACKGROUND_TEXTURE, x, y, 0, 0, this.imageWidth, this.imageHeight, this.imageWidth, this.imageHeight);
 
-        // Render player inventory panel using PNG texture (left side outside main GUI)
+        // Render player inventory panel background (left side outside main GUI)
         int inventoryBgX = x + PlayerInventoryPanelLayout.PANEL_OFFSET_X;
         int inventoryBgY = y + PlayerInventoryPanelLayout.PANEL_OFFSET_Y;
         int panelWidth = PlayerInventoryPanelLayout.PANEL_WIDTH;
         int panelHeight = PlayerInventoryPanelLayout.PANEL_HEIGHT;
 
-        // Render PNG inventory panel texture with scaling
-        // blit(texture, x, y, destWidth, destHeight, srcX, srcY, srcWidth, srcHeight, texWidth, texHeight)
-        guiGraphics.blit(INVENTORY_PANEL_TEXTURE, inventoryBgX, inventoryBgY, panelWidth, panelHeight,
-                0, 0, INV_TEX_WIDTH, INV_TEX_HEIGHT, INV_TEX_WIDTH, INV_TEX_HEIGHT);
+        // Render medieval-styled inventory panel background
+        renderInventoryPanelBackground(guiGraphics, inventoryBgX, inventoryBgY, panelWidth, panelHeight);
+
+        // Render slot backgrounds
+        int slotStartX = x + PlayerInventoryPanelLayout.SLOT_OFFSET_X;
+        int slotStartY = y + PlayerInventoryPanelLayout.SLOT_OFFSET_Y;
+        renderInventorySlotBorders(guiGraphics, slotStartX, slotStartY);
+    }
+
+    /**
+     * Renders a medieval-styled inventory panel background
+     */
+    private void renderInventoryPanelBackground(GuiGraphics gui, int x, int y, int width, int height) {
+        // Main parchment background
+        gui.fill(x, y, x + width, y + height, 0xFFD4C4A8); // Light parchment
+
+        // Inner darker area for slots
+        int innerPadding = 5;
+        gui.fill(x + innerPadding, y + innerPadding,
+                x + width - innerPadding, y + height - innerPadding, 0xFFC4B498);
+
+        // Simple border
+        int borderColor = 0xFF8B7355; // Brown border
+        gui.fill(x, y, x + width, y + 2, borderColor); // Top
+        gui.fill(x, y + height - 2, x + width, y + height, borderColor); // Bottom
+        gui.fill(x, y, x + 2, y + height, borderColor); // Left
+        gui.fill(x + width - 2, y, x + width, y + height, borderColor); // Right
+
+        // Corner accents
+        int cornerSize = 4;
+        int accentColor = 0xFF6B5344; // Darker brown
+        // Top-left
+        gui.fill(x, y, x + cornerSize, y + cornerSize, accentColor);
+        // Top-right
+        gui.fill(x + width - cornerSize, y, x + width, y + cornerSize, accentColor);
+        // Bottom-left
+        gui.fill(x, y + height - cornerSize, x + cornerSize, y + height, accentColor);
+        // Bottom-right
+        gui.fill(x + width - cornerSize, y + height - cornerSize, x + width, y + height, accentColor);
     }
 
     // Gap between main inventory and hotbar (in pixels)
@@ -465,27 +505,39 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
                 : null;
         boolean isLord = currentPlayerUUID != null && currentPlayerUUID.equals(ownerUUID);
 
-        // Add lord to the list if available
-        List<PlayerHierarchyEntry> entries = new ArrayList<>();
+        // Build list of entries
+        currentHierarchyEntries.clear();
         if (ownerUUID != null) {
-            entries.add(new PlayerHierarchyEntry(ownerUUID, ownerName, HierarchyRank.LORD.getLevel()));
+            currentHierarchyEntries.add(new PlayerHierarchyEntry(ownerUUID, ownerName, HierarchyRank.LORD.getLevel()));
         }
 
         // Add other vassals from hierarchy data
         for (Map.Entry<UUID, Integer> entry : hierarchyData.entrySet()) {
             String playerName = getPlayerNameFromUUID(entry.getKey());
-            entries.add(new PlayerHierarchyEntry(entry.getKey(), playerName, entry.getValue()));
+            currentHierarchyEntries.add(new PlayerHierarchyEntry(entry.getKey(), playerName, entry.getValue()));
         }
 
         // Sort by rank level (descending)
-        entries.sort((a, b) -> Integer.compare(b.rankLevel, a.rankLevel));
+        currentHierarchyEntries.sort((a, b) -> Integer.compare(b.rankLevel, a.rankLevel));
+
+        // Store list position for click detection
+        claimsListStartY = yPos;
+        rankTextX = textX + 120;
+
+        // Get mouse position for hover detection
+        int mouseX = (int) (Minecraft.getInstance().mouseHandler.xpos()
+                * Minecraft.getInstance().getWindow().getGuiScaledWidth()
+                / Minecraft.getInstance().getWindow().getScreenWidth()) - this.leftPos;
+        int mouseY = (int) (Minecraft.getInstance().mouseHandler.ypos()
+                * Minecraft.getInstance().getWindow().getGuiScaledHeight()
+                / Minecraft.getInstance().getWindow().getScreenHeight()) - this.topPos;
 
         // Display vassal list with medieval styling
         int displayStartIndex = scrollOffset;
-        int displayEndIndex = Math.min(scrollOffset + MAX_VISIBLE_PLAYERS, entries.size());
+        int displayEndIndex = Math.min(scrollOffset + MAX_VISIBLE_PLAYERS, currentHierarchyEntries.size());
 
         for (int i = displayStartIndex; i < displayEndIndex; i++) {
-            PlayerHierarchyEntry entry = entries.get(i);
+            PlayerHierarchyEntry entry = currentHierarchyEntries.get(i);
             HierarchyRank rank = HierarchyRank.fromLevel(entry.rankLevel);
 
             // Alternate background for medieval list effect
@@ -494,7 +546,7 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
                     guiGraphics,
                     textX - 5,
                     yPos - 2,
-                    this.imageWidth - BORDER_WIDTH * 2 - 30,
+                    this.imageWidth - BORDER_WIDTH * 2 - 20,
                     18,
                     "",
                     even,
@@ -504,41 +556,47 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
             String displayName = entry.playerName.length() > 15 ? entry.playerName.substring(0, 15) : entry.playerName;
             renderMedievalTextLine(guiGraphics, displayName, textX + 5, yPos + 4, TEXT_DARK);
 
-            // Rank title
-            renderMedievalTextLine(guiGraphics,
-                    Component.translatable(getRankTranslationKey(rank)).getString(), textX + 120, yPos + 4,
-                    TEXT_DARK);
+            // Rank title - make clickable for lord (except for themselves)
+            String rankText = Component.translatable(getRankTranslationKey(rank)).getString();
+            boolean canChangeRank = isLord && !entry.playerUUID.equals(ownerUUID);
 
-            // Change rank button (only for lord and not for themselves)
-            if (isLord && !entry.playerUUID.equals(ownerUUID)) {
-                renderMedievalRankButton(guiGraphics, textX + 200, yPos, entry.playerUUID);
+            // Check if mouse is hovering over rank text
+            boolean isHovered = canChangeRank &&
+                    mouseX >= rankTextX && mouseX <= rankTextX + rankTextWidth &&
+                    mouseY >= yPos && mouseY <= yPos + claimsListItemHeight;
+
+            if (canChangeRank) {
+                // Render clickable rank with hover effect
+                if (isHovered) {
+                    // Highlight background on hover
+                    guiGraphics.fill(rankTextX - 2, yPos, rankTextX + rankTextWidth + 2, yPos + 16,
+                            0x40000000);
+                }
+                // Use different color to indicate clickable
+                renderMedievalTextLine(guiGraphics, rankText, rankTextX, yPos + 4,
+                        isHovered ? MedievalGuiRenderer.GOLD_MAIN : MedievalGuiRenderer.BRONZE);
+            } else {
+                // Non-clickable rank (lord's own rank)
+                renderMedievalTextLine(guiGraphics, rankText, rankTextX, yPos + 4, TEXT_DARK);
             }
 
-            yPos += 20;
+            yPos += claimsListItemHeight;
         }
 
         // Medieval scroll indicators
         if (scrollOffset > 0) {
-            MedievalGuiRenderer.renderScrollIndicator(guiGraphics, textX + this.imageWidth - BORDER_WIDTH * 2 - 50, 160,
+            MedievalGuiRenderer.renderScrollIndicator(guiGraphics, this.imageWidth - BORDER_WIDTH - 25, 165,
                     true);
         }
-        if (displayEndIndex < entries.size()) {
-            MedievalGuiRenderer.renderScrollIndicator(guiGraphics, textX + this.imageWidth - BORDER_WIDTH * 2 - 50, 250,
-                    false);
+        if (displayEndIndex < currentHierarchyEntries.size()) {
+            MedievalGuiRenderer.renderScrollIndicator(guiGraphics, this.imageWidth - BORDER_WIDTH - 25,
+                    claimsListStartY + (MAX_VISIBLE_PLAYERS * claimsListItemHeight) - 15, false);
         }
 
         // Render rank selection menu if open
         if (showRankSelectionMenu && selectedPlayerForRankChange != null) {
             renderRankSelectionMenu(guiGraphics);
         }
-    }
-
-    /**
-     * Renders a medieval-styled rank change button
-     */
-    private void renderMedievalRankButton(GuiGraphics gui, int x, int y, UUID playerUUID) {
-        MedievalGuiRenderer.renderMedievalButton(gui, x, y, 45, 16,
-                Component.translatable("gui.tharidiathings.realm.rank_change").getString(), false, true);
     }
 
     private void renderDungeonTab(GuiGraphics guiGraphics) {
@@ -580,106 +638,40 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
         renderMedievalTextLine(guiGraphics,
                 Component.translatable("gui.tharidiathings.realm.group_queue_title").getString(), textX, yPos,
                 TEXT_DARK);
-        yPos += 35;
+        yPos += 25;
 
-        // Circle parameters
-        int circleRadius = 15;
-        int circleSpacing = 45;
-        int startX = (this.imageWidth - (5 * circleSpacing - (circleSpacing - circleRadius * 2))) / 2;
-
-        // Medieval colors for queue circles
-        int emptyCircleColor = MedievalGuiRenderer.LEATHER_DARK;
-        int filledCircleColor = MedievalGuiRenderer.BRONZE;
-        int emptyBorderColor = MedievalGuiRenderer.WOOD_DARK;
-        int filledBorderColor = MedievalGuiRenderer.GOLD_MAIN;
-        int highlightColor = MedievalGuiRenderer.GOLD_BRIGHT;
+        // Slot parameters
+        int slotSize = 32; // Display size for slot icons
+        int slotSpacing = 40;
+        int startX = (this.imageWidth - (5 * slotSpacing)) / 2 + 3;
 
         // Get synced queue data from server
         ClientGroupQueueHandler.QueueData queueData = getCurrentQueueData();
         List<UUID> queuePlayers = queueData != null ? queueData.playerUUIDs : Collections.emptyList();
         int playerCount = queuePlayers.size();
 
-        // Render 2 rows of 5 circles
+        // Render 2 rows of 5 slots using PNG textures
         for (int row = 0; row < 2; row++) {
             for (int col = 0; col < 5; col++) {
                 int index = row * 5 + col;
-                int centerX = startX + col * circleSpacing + circleRadius;
-                int centerY = yPos + row * (circleRadius * 2 + 20) + circleRadius;
+                int slotX = startX + col * slotSpacing;
+                int slotY = yPos + row * (slotSize + 15);
 
                 // Determine if this slot is filled (using synced data)
                 boolean isFilled = (index < playerCount);
 
-                // Render decorated circle
-                renderQueueCircle(guiGraphics, centerX, centerY, circleRadius,
-                        isFilled ? filledBorderColor : emptyBorderColor,
-                        isFilled ? filledCircleColor : emptyCircleColor,
-                        isFilled ? highlightColor : emptyBorderColor,
-                        isFilled);
+                // Render slot texture with scaling
+                // blit(texture, x, y, destWidth, destHeight, u, v, srcWidth, srcHeight, texWidth, texHeight)
+                ResourceLocation texture = isFilled ? SLOT_SELECTED_TEXTURE : SLOT_EMPTY_TEXTURE;
+                guiGraphics.blit(texture, slotX, slotY, slotSize, slotSize, 0, 0, SLOT_TEX_SIZE, SLOT_TEX_SIZE, SLOT_TEX_SIZE, SLOT_TEX_SIZE);
             }
         }
 
-        // Player count indicator
-        yPos += circleRadius * 4 + 50;
+        // Player count indicator - positioned between Exit and Start buttons
+        int countY = PARCHMENT_HEIGHT - 105;
         String countText = Component.translatable("gui.tharidiathings.realm.group_count", playerCount, 10).getString();
         int countTextWidth = Minecraft.getInstance().font.width(countText);
-        renderMedievalTextLine(guiGraphics, countText, (this.imageWidth - countTextWidth) / 2, yPos, TEXT_DARK);
-    }
-
-    /**
-     * Renders a decorated medieval-style queue circle using efficient horizontal line fills
-     */
-    private void renderQueueCircle(GuiGraphics gui, int centerX, int centerY, int radius,
-                                   int borderColor, int fillColor, int highlightColor, boolean isFilled) {
-        int radiusSq = radius * radius;
-        int outerRadiusSq = (radius + 2) * (radius + 2);
-
-        // Draw circles using horizontal line spans (much more efficient than pixel-by-pixel)
-        for (int dy = -radius - 2; dy <= radius + 2; dy++) {
-            int dySq = dy * dy;
-
-            // Calculate horizontal span for outer border
-            int outerSpan = (int) Math.sqrt(outerRadiusSq - dySq);
-            int innerSpan = (dySq <= radiusSq) ? (int) Math.sqrt(radiusSq - dySq) : -1;
-
-            // Shadow (only for main circle area, offset by 2)
-            if (innerSpan >= 0) {
-                gui.fill(centerX - innerSpan + 2, centerY + dy + 2,
-                        centerX + innerSpan + 3, centerY + dy + 3,
-                        MedievalGuiRenderer.SHADOW_LIGHT);
-            }
-
-            // Border ring (left and right segments)
-            if (innerSpan >= 0 && outerSpan > innerSpan) {
-                // Left border segment
-                gui.fill(centerX - outerSpan, centerY + dy,
-                        centerX - innerSpan, centerY + dy + 1, borderColor);
-                // Right border segment
-                gui.fill(centerX + innerSpan + 1, centerY + dy,
-                        centerX + outerSpan + 1, centerY + dy + 1, borderColor);
-            } else if (innerSpan < 0 && dySq <= outerRadiusSq) {
-                // Full border line (top/bottom of ring where no inner circle)
-                gui.fill(centerX - outerSpan, centerY + dy,
-                        centerX + outerSpan + 1, centerY + dy + 1, borderColor);
-            }
-
-            // Main circle fill
-            if (innerSpan >= 0) {
-                gui.fill(centerX - innerSpan, centerY + dy,
-                        centerX + innerSpan + 1, centerY + dy + 1, fillColor);
-            }
-        }
-
-        // Simple highlight for filled circles (just a few rectangles instead of pixel loops)
-        if (isFilled) {
-            // Top-left highlight area (simplified)
-            int highlightAlpha = 50;
-            int highlightWithAlpha = (highlightAlpha << 24) | (highlightColor & 0x00FFFFFF);
-            gui.fill(centerX - radius + 4, centerY - radius + 4,
-                    centerX - 2, centerY - 2, highlightWithAlpha);
-
-            // Center gold dot
-            gui.fill(centerX - 2, centerY - 2, centerX + 3, centerY + 3, highlightColor);
-        }
+        renderMedievalTextLine(guiGraphics, countText, (this.imageWidth - countTextWidth) / 2, countY, TEXT_DARK);
     }
 
     @Override
@@ -700,99 +692,210 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
             startGroupButton = null;
         }
 
-        // Add PNG-based dungeon button only on dungeon tab (centered)
-        if (currentTab == TAB_DUNGEON) {
-            int enterBtnWidth = 140;
-            int enterBtnHeight = 25;
-            enterDungeonButtonGroup = ImageTabButton.builder(ENTER_LARGE_BUTTON_TEXTURE, ENTER_BTN_TEX_WIDTH, ENTER_BTN_TEX_HEIGHT,
-                    button -> {
-                        // Send packet to join/create group queue
-                        if (this.menu.getBlockEntity() != null) {
-                            BlockPos pos = this.menu.getBlockEntity().getBlockPos();
-                            PacketDistributor.sendToServer(new JoinGroupQueuePacket(pos));
-                            showGroupQueuePage = true;
-                            updateButtonVisibility();
-                        }
-                    })
-                    .bounds(this.leftPos + (PARCHMENT_WIDTH - enterBtnWidth) / 2, this.topPos + PARCHMENT_HEIGHT - 120, enterBtnWidth, enterBtnHeight)
-                    .build();
-            this.addRenderableWidget(enterDungeonButtonGroup);
+        // Always create dungeon buttons (visibility is controlled by updateButtonVisibility)
+        int enterBtnWidth = 140;
+        int enterBtnHeight = 25;
+        enterDungeonButtonGroup = ImageTabButton.builder(ENTER_LARGE_BUTTON_TEXTURE, ENTER_BTN_TEX_WIDTH, ENTER_BTN_TEX_HEIGHT,
+                button -> {
+                    // Send packet to join/create group queue
+                    if (this.menu.getBlockEntity() != null) {
+                        BlockPos pos = this.menu.getBlockEntity().getBlockPos();
+                        PacketDistributor.sendToServer(new JoinGroupQueuePacket(pos));
+                        showGroupQueuePage = true;
+                        updateButtonVisibility();
+                    }
+                })
+                .bounds(this.leftPos + (PARCHMENT_WIDTH - enterBtnWidth) / 2, this.topPos + PARCHMENT_HEIGHT - 120, enterBtnWidth, enterBtnHeight)
+                .build();
+        enterDungeonButtonGroup.visible = false;
+        this.addRenderableWidget(enterDungeonButtonGroup);
 
-            exitGroupButton = MedievalButton.builder(
-                    Component.translatable("gui.tharidiathings.realm.dungeon.exit_button"),
-                    button -> {
-                        // Send packet to leave group queue
-                        if (this.menu.getBlockEntity() != null) {
-                            BlockPos pos = this.menu.getBlockEntity().getBlockPos();
-                            PacketDistributor.sendToServer(new LeaveGroupQueuePacket(pos));
-                            showGroupQueuePage = false;
-                            updateButtonVisibility();
-                        }
-                    },
-                    MedievalButton.ButtonStyle.DANGER)
-                    .bounds(this.leftPos + BORDER_WIDTH + 20, this.topPos + PARCHMENT_HEIGHT - 40, 80, 25).build();
-            this.addRenderableWidget(exitGroupButton);
+        exitGroupButton = MedievalButton.builder(
+                Component.translatable("gui.tharidiathings.realm.dungeon.exit_button"),
+                button -> {
+                    // Send packet to leave group queue
+                    if (this.menu.getBlockEntity() != null) {
+                        BlockPos pos = this.menu.getBlockEntity().getBlockPos();
+                        PacketDistributor.sendToServer(new LeaveGroupQueuePacket(pos));
+                        showGroupQueuePage = false;
+                        updateButtonVisibility();
+                    }
+                },
+                MedievalButton.ButtonStyle.DANGER)
+                .bounds(this.leftPos + BORDER_WIDTH + 10, this.topPos + PARCHMENT_HEIGHT - 90, 80, 25).build();
+        exitGroupButton.visible = false;
+        this.addRenderableWidget(exitGroupButton);
 
-            int startBtnWidth = 70;
-            int startBtnHeight = 20;
-            startGroupButton = ImageTabButton.builder(ENTER_LARGE_BUTTON_TEXTURE, ENTER_BTN_TEX_WIDTH, ENTER_BTN_TEX_HEIGHT,
-                    button -> {
-                        // Send packet to start the dungeon for all players in queue
-                        if (this.menu.getBlockEntity() != null) {
-                            BlockPos pos = this.menu.getBlockEntity().getBlockPos();
-                            PacketDistributor.sendToServer(new StartGroupDungeonPacket(pos));
-                        }
-                    })
-                    .bounds(this.leftPos + (PARCHMENT_WIDTH - startBtnWidth) / 2, this.topPos + PARCHMENT_HEIGHT - 50, startBtnWidth, startBtnHeight)
-                    .build();
-            this.addRenderableWidget(startGroupButton);
+        // Start button positioned on the right side, symmetric to the exit button
+        int startBtnWidth = 70;
+        int startBtnHeight = 20;
+        startGroupButton = ImageTabButton.builder(ENTER_LARGE_BUTTON_TEXTURE, ENTER_BTN_TEX_WIDTH, ENTER_BTN_TEX_HEIGHT,
+                button -> {
+                    // Send packet to start the dungeon for all players in queue
+                    if (this.menu.getBlockEntity() != null) {
+                        BlockPos pos = this.menu.getBlockEntity().getBlockPos();
+                        PacketDistributor.sendToServer(new StartGroupDungeonPacket(pos));
+                    }
+                })
+                .bounds(this.leftPos + PARCHMENT_WIDTH - BORDER_WIDTH - 10 - startBtnWidth, this.topPos + PARCHMENT_HEIGHT - 90, startBtnWidth, startBtnHeight)
+                .build();
+        startGroupButton.visible = false;
+        this.addRenderableWidget(startGroupButton);
 
-            updateButtonVisibility();
-        }
+        updateButtonVisibility();
     }
 
     private void renderRankSelectionMenu(GuiGraphics guiGraphics) {
-        int menuWidth = 120;
-        int menuHeight = 110;
+        int menuWidth = 100;
+        int menuHeight = 90;
 
         // Use stored menu position (set when button is clicked)
         int menuX = rankMenuX;
         int menuY = rankMenuY;
 
-        // Medieval-styled popup menu
-        MedievalGuiRenderer.renderParchmentBackground(guiGraphics, menuX, menuY, menuWidth, menuHeight);
-        MedievalGuiRenderer.renderOrnateBorder(guiGraphics, menuX, menuY, menuWidth, menuHeight,
-                MedievalGuiRenderer.BRONZE);
+        // Simple popup menu - solid background with thin border
+        guiGraphics.fill(menuX, menuY, menuX + menuWidth, menuY + menuHeight, 0xFFE8DCC8); // Parchment color
+        guiGraphics.fill(menuX, menuY, menuX + menuWidth, menuY + 1, 0xFF8B7355); // Top border
+        guiGraphics.fill(menuX, menuY + menuHeight - 1, menuX + menuWidth, menuY + menuHeight, 0xFF8B7355); // Bottom
+        guiGraphics.fill(menuX, menuY, menuX + 1, menuY + menuHeight, 0xFF8B7355); // Left border
+        guiGraphics.fill(menuX + menuWidth - 1, menuY, menuX + menuWidth, menuY + menuHeight, 0xFF8B7355); // Right
 
-        // Title
-        renderMedievalTextLine(guiGraphics,
-                Component.translatable("gui.tharidiathings.realm.rank_select_title").getString(), menuX + 10,
-                menuY + 10, TEXT_DARK);
-
-        // Rank options (except LORD)
+        // Rank options (except LORD) - no title, just list
         HierarchyRank[] selectableRanks = { HierarchyRank.CONSIGLIERE, HierarchyRank.GUARDIA, HierarchyRank.MILIZIANO,
                 HierarchyRank.COLONO };
-        int optionY = menuY + 30;
+        int optionY = menuY + 8;
+
+        // Get mouse position for hover detection
+        int relMouseX = (int) (Minecraft.getInstance().mouseHandler.xpos()
+                * Minecraft.getInstance().getWindow().getGuiScaledWidth()
+                / Minecraft.getInstance().getWindow().getScreenWidth());
+        int relMouseY = (int) (Minecraft.getInstance().mouseHandler.ypos()
+                * Minecraft.getInstance().getWindow().getGuiScaledHeight()
+                / Minecraft.getInstance().getWindow().getScreenHeight());
 
         for (HierarchyRank rank : selectableRanks) {
-            // Highlight on hover
-            int relMouseX = (int) (Minecraft.getInstance().mouseHandler.xpos()
-                    * Minecraft.getInstance().getWindow().getGuiScaledWidth()
-                    / Minecraft.getInstance().getWindow().getScreenWidth());
-            int relMouseY = (int) (Minecraft.getInstance().mouseHandler.ypos()
-                    * Minecraft.getInstance().getWindow().getGuiScaledHeight()
-                    / Minecraft.getInstance().getWindow().getScreenHeight());
+            boolean isHovered = relMouseX >= menuX && relMouseX <= menuX + menuWidth &&
+                    relMouseY >= optionY && relMouseY <= optionY + 18;
 
-            if (relMouseX >= menuX && relMouseX <= menuX + menuWidth && relMouseY >= optionY
-                    && relMouseY <= optionY + 18) {
-                MedievalGuiRenderer.renderListItem(guiGraphics, menuX + 5, optionY - 2, menuWidth - 10, 18, "", false,
-                        true);
+            if (isHovered) {
+                guiGraphics.fill(menuX + 2, optionY, menuX + menuWidth - 2, optionY + 18, 0x30000000);
             }
 
-            renderMedievalTextLine(guiGraphics,
-                    Component.translatable(getRankTranslationKey(rank)).getString(), menuX + 15,
-                    optionY + 4, TEXT_DARK);
+            // Center text in menu
+            String rankText = Component.translatable(getRankTranslationKey(rank)).getString();
+            int textWidth = Minecraft.getInstance().font.width(rankText);
+            int textX = menuX + (menuWidth - textWidth) / 2;
+
+            renderMedievalTextLine(guiGraphics, rankText, textX, optionY + 4,
+                    isHovered ? MedievalGuiRenderer.GOLD_MAIN : TEXT_DARK);
             optionY += 20;
+        }
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button == 0) { // Left click
+            int relX = (int) mouseX - this.leftPos;
+            int relY = (int) mouseY - this.topPos;
+
+            // Handle rank selection menu clicks
+            if (showRankSelectionMenu && selectedPlayerForRankChange != null) {
+                int menuWidth = 100;
+                int menuHeight = 90;
+
+                // Check if click is inside menu
+                if (relX >= rankMenuX && relX <= rankMenuX + menuWidth &&
+                        relY >= rankMenuY && relY <= rankMenuY + menuHeight) {
+
+                    // Check which rank was clicked
+                    HierarchyRank[] selectableRanks = {HierarchyRank.CONSIGLIERE, HierarchyRank.GUARDIA,
+                            HierarchyRank.MILIZIANO, HierarchyRank.COLONO};
+                    int optionY = rankMenuY + 8;
+
+                    for (HierarchyRank rank : selectableRanks) {
+                        if (relY >= optionY && relY <= optionY + 18) {
+                            // Send rank change packet
+                            sendRankChangePacket(selectedPlayerForRankChange, rank);
+                            showRankSelectionMenu = false;
+                            selectedPlayerForRankChange = null;
+                            return true;
+                        }
+                        optionY += 20;
+                    }
+                }
+
+                // Click outside menu - close it
+                showRankSelectionMenu = false;
+                selectedPlayerForRankChange = null;
+                return true;
+            }
+
+            // Handle claims tab rank text clicks
+            if (currentTab == TAB_CLAIMS && !currentHierarchyEntries.isEmpty()) {
+                UUID ownerUUID = ClientPacketHandler.getCachedOwnerUUID();
+                UUID currentPlayerUUID = Minecraft.getInstance().player != null ?
+                        Minecraft.getInstance().player.getUUID() : null;
+                boolean isLord = currentPlayerUUID != null && currentPlayerUUID.equals(ownerUUID);
+
+                if (isLord) {
+                    int displayStartIndex = scrollOffset;
+                    int displayEndIndex = Math.min(scrollOffset + MAX_VISIBLE_PLAYERS, currentHierarchyEntries.size());
+
+                    for (int i = displayStartIndex; i < displayEndIndex; i++) {
+                        int itemY = claimsListStartY + (i - scrollOffset) * claimsListItemHeight;
+
+                        // Check if click is on rank text area
+                        if (relX >= rankTextX && relX <= rankTextX + rankTextWidth &&
+                                relY >= itemY && relY <= itemY + claimsListItemHeight) {
+
+                            PlayerHierarchyEntry entry = currentHierarchyEntries.get(i);
+
+                            // Don't allow changing lord's own rank
+                            if (!entry.playerUUID.equals(ownerUUID)) {
+                                selectedPlayerForRankChange = entry.playerUUID;
+                                showRankSelectionMenu = true;
+                                rankMenuX = relX;
+                                rankMenuY = relY;
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        if (currentTab == TAB_CLAIMS && !currentHierarchyEntries.isEmpty()) {
+            int relX = (int) mouseX - this.leftPos;
+            int relY = (int) mouseY - this.topPos;
+
+            // Check if mouse is over the list area
+            int listEndY = claimsListStartY + (MAX_VISIBLE_PLAYERS * claimsListItemHeight);
+            if (relY >= claimsListStartY && relY <= listEndY) {
+                int maxScroll = Math.max(0, currentHierarchyEntries.size() - MAX_VISIBLE_PLAYERS);
+
+                if (scrollY > 0) {
+                    // Scroll up
+                    scrollOffset = Math.max(0, scrollOffset - 1);
+                } else if (scrollY < 0) {
+                    // Scroll down
+                    scrollOffset = Math.min(maxScroll, scrollOffset + 1);
+                }
+                return true;
+            }
+        }
+
+        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+    }
+
+    private void sendRankChangePacket(UUID playerUUID, HierarchyRank newRank) {
+        if (this.menu.getBlockEntity() != null) {
+            BlockPos pos = this.menu.getBlockEntity().getBlockPos();
+            PacketDistributor.sendToServer(new UpdateHierarchyPacket(pos, playerUUID, newRank.getLevel()));
         }
     }
 
@@ -804,20 +907,20 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
 
     private String getPlayerNameFromUUID(UUID uuid) {
         // Try to get player name from various sources
+
+        // First check if it's the local player
         if (Minecraft.getInstance().player != null && Minecraft.getInstance().player.getUUID().equals(uuid)) {
             return Minecraft.getInstance().player.getName().getString();
         }
 
-        // Check hierarchy cache
-        Map<UUID, Integer> hierarchyData = ClientPacketHandler.getCachedHierarchyData();
-        if (hierarchyData.containsKey(uuid)) {
-            // This is a simplified approach - in a real implementation you'd want a proper
-            // UUID->name mapping
-            return Component.translatable("gui.tharidiathings.common.player_unknown", uuid.toString().substring(0, 8))
-                    .getString();
+        // Check cached player names from hierarchy sync
+        String cachedName = ClientPacketHandler.getCachedPlayerName(uuid);
+        if (cachedName != null && !cachedName.equals("Unknown")) {
+            return cachedName;
         }
 
-        return Component.translatable("gui.tharidiathings.common.unknown").getString();
+        // Fallback to truncated UUID
+        return uuid.toString().substring(0, 8);
     }
 
     private static String getRankTranslationKey(HierarchyRank rank) {
