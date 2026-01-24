@@ -44,7 +44,7 @@ public class IronChunkBlockEntity extends BlockEntity {
     }
 
     public ItemStack getDrop() {
-        return ITEM_DROP;
+        return ITEM_DROP.copy();
     }
 
     public void hit() {
