@@ -56,6 +56,12 @@ public class Chunks {
             serverLevel.sendParticles(
                     new BlockParticleOption(ParticleTypes.BLOCK, Blocks.STONE.defaultBlockState()),
                     pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 20, 0, 0, 0, 0.05);
+
+            if (Math.random() < 0.3) {
+                serverLevel.sendParticles(
+                        ParticleTypes.FLAME,
+                        pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 20, 0, 0, 0, 0.05);
+            }
         }
     }
 

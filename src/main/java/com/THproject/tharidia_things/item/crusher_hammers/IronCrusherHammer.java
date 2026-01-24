@@ -1,4 +1,4 @@
-package com.THproject.tharidia_things.item.crusher_hammer;
+package com.THproject.tharidia_things.item.crusher_hammers;
 
 import net.minecraft.world.item.Item;
 

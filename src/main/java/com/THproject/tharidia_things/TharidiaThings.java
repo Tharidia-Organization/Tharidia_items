@@ -57,7 +57,7 @@ import com.THproject.tharidia_things.item.AnimalBrushItem;
 import com.THproject.tharidia_things.item.FreshStrawItem;
 import com.THproject.tharidia_things.item.DirtyStrawItem;
 import com.THproject.tharidia_things.item.ShelterUpgradeKitItem;
-import com.THproject.tharidia_things.item.crusher_hammer.IronCrusherHammer;
+import com.THproject.tharidia_things.item.crusher_hammers.IronCrusherHammer;
 import com.THproject.tharidia_things.registry.BabyMobRegistry;
 import com.THproject.tharidia_things.client.ClientPacketHandler;
 import com.THproject.tharidia_things.entity.ModEntities;

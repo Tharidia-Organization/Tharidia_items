@@ -1,6 +1,8 @@
 package com.THproject.tharidia_things.event;
 
 import com.THproject.tharidia_things.Config;
+import com.THproject.tharidia_things.command.ItemCatalogueCommand;
+import com.THproject.tharidia_things.config.ItemCatalogueConfig;
 import com.THproject.tharidia_things.config.StaminaConfig;
 import com.THproject.tharidia_things.network.StaminaSyncPacket;
 import com.THproject.tharidia_things.stamina.StaminaAttachments;
@@ -36,6 +38,8 @@ import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.slf4j.Logger;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
@@ -77,6 +81,37 @@ public final class StaminaHandler {
         return current + staminaEpsilon(cost) < cost;
     }
 
+    private static boolean isConfiguredAsMeleeWeapon(ItemStack stack) {
+        if (stack.isEmpty())
+            return false;
+
+        if (ItemCatalogueConfig.config == null)
+            return false;
+
+        String itemId = stack.getItem().toString();
+        return listContainsItem(ItemCatalogueConfig.config.LAMA_CORTA_ITEMS.get("Value"), itemId)
+                || listContainsItem(ItemCatalogueConfig.config.LANCIA_ITEMS.get("Value"), itemId)
+                || listContainsItem(ItemCatalogueConfig.config.MARTELLI_ITEMS.get("Value"), itemId)
+                || listContainsItem(ItemCatalogueConfig.config.MAZZE_ITEMS.get("Value"), itemId)
+                || listContainsItem(ItemCatalogueConfig.config.SPADE_2_MANI_ITEMS.get("Value"), itemId)
+                || listContainsItem(ItemCatalogueConfig.config.ASCE_ITEMS.get("Value"), itemId)
+                || listContainsItem(ItemCatalogueConfig.config.SOCCHI_ITEMS.get("Value"), itemId);
+    }
+
+    private static boolean listContainsItem(Object list, String id) {
+        if (!(list instanceof ArrayList<?>)) {
+            return false;
+        }
+
+        for (Object obj : (ArrayList<?>) list) {
+            if (obj instanceof String && obj.equals(id)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public static void registerEpicFightCompat() {
         if (EPIC_FIGHT_LISTENERS_REGISTERED) {
             return;
@@ -89,23 +124,19 @@ public final class StaminaHandler {
 
         registerEpicFightEventListener(
                 "yesman.epicfight.api.neoevent.playerpatch.ComboAttackEvent",
-                StaminaHandler::onEpicFightComboAttackEvent
-        );
+                StaminaHandler::onEpicFightComboAttackEvent);
 
         registerEpicFightEventListener(
                 "yesman.epicfight.api.neoevent.playerpatch.DealDamageEvent$Income",
-                StaminaHandler::onEpicFightDealDamageIncomeEvent
-        );
+                StaminaHandler::onEpicFightDealDamageIncomeEvent);
 
         registerEpicFightEventListener(
                 "yesman.epicfight.api.neoevent.playerpatch.SkillConsumeEvent",
-                StaminaHandler::onEpicFightSkillConsumeEvent
-        );
+                StaminaHandler::onEpicFightSkillConsumeEvent);
 
         registerEpicFightEventListener(
                 "yesman.epicfight.api.neoevent.playerpatch.SkillCastEvent",
-                StaminaHandler::onEpicFightSkillCastEvent
-        );
+                StaminaHandler::onEpicFightSkillCastEvent);
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
@@ -159,8 +190,7 @@ public final class StaminaHandler {
                         "[STAMINA_EF] combo attack canceled (insufficient): attacker={} current={} cost={}",
                         attacker.getName().getString(),
                         String.format(Locale.ROOT, "%.3f", current),
-                        String.format(Locale.ROOT, "%.3f", cost)
-                );
+                        String.format(Locale.ROOT, "%.3f", cost));
             }
             notifyNoStamina(attacker);
             return;
@@ -179,8 +209,7 @@ public final class StaminaHandler {
                     attacker.getName().getString(),
                     String.format(Locale.ROOT, "%.3f", current),
                     String.format(Locale.ROOT, "%.3f", next),
-                    String.format(Locale.ROOT, "%.3f", cost)
-            );
+                    String.format(Locale.ROOT, "%.3f", cost));
         }
     }
 
@@ -220,8 +249,7 @@ public final class StaminaHandler {
                         "[STAMINA_EF] deal damage canceled (insufficient): attacker={} current={} cost={}",
                         attacker.getName().getString(),
                         String.format(Locale.ROOT, "%.3f", current),
-                        String.format(Locale.ROOT, "%.3f", cost)
-                );
+                        String.format(Locale.ROOT, "%.3f", cost));
             }
             notifyNoStamina(attacker);
             return;
@@ -240,8 +268,7 @@ public final class StaminaHandler {
                     attacker.getName().getString(),
                     String.format(Locale.ROOT, "%.3f", current),
                     String.format(Locale.ROOT, "%.3f", next),
-                    String.format(Locale.ROOT, "%.3f", cost)
-            );
+                    String.format(Locale.ROOT, "%.3f", cost));
         }
     }
 
@@ -275,7 +302,8 @@ public final class StaminaHandler {
             epicFightRequested = number.floatValue();
         }
 
-        float cost = epicFightRequested > 0.0f ? (epicFightRequested * stats.consumptionMultiplier()) : computeAttackCost(attacker, stats);
+        float cost = epicFightRequested > 0.0f ? (epicFightRequested * stats.consumptionMultiplier())
+                : computeAttackCost(attacker, stats);
         if (cost <= 0.0f) {
             return;
         }
@@ -294,8 +322,7 @@ public final class StaminaHandler {
                         String.format(Locale.ROOT, "%.3f", current),
                         String.format(Locale.ROOT, "%.3f", cost),
                         String.format(Locale.ROOT, "%.3f", epicFightRequested),
-                        String.valueOf(resourceType)
-                );
+                        String.valueOf(resourceType));
             }
             notifyNoStamina(attacker);
             return;
@@ -317,8 +344,7 @@ public final class StaminaHandler {
                     String.format(Locale.ROOT, "%.3f", next),
                     String.format(Locale.ROOT, "%.3f", cost),
                     String.format(Locale.ROOT, "%.3f", epicFightRequested),
-                    String.valueOf(resourceType)
-            );
+                    String.valueOf(resourceType));
         }
     }
 
@@ -358,8 +384,7 @@ public final class StaminaHandler {
                         "[STAMINA_EF] skill cast canceled (insufficient): attacker={} current={} cost={}",
                         attacker.getName().getString(),
                         String.format(Locale.ROOT, "%.3f", current),
-                        String.format(Locale.ROOT, "%.3f", cost)
-                );
+                        String.format(Locale.ROOT, "%.3f", cost));
             }
             notifyNoStamina(attacker);
             return;
@@ -379,8 +404,7 @@ public final class StaminaHandler {
                     attacker.getName().getString(),
                     String.format(Locale.ROOT, "%.3f", current),
                     String.format(Locale.ROOT, "%.3f", next),
-                    String.format(Locale.ROOT, "%.3f", cost)
-            );
+                    String.format(Locale.ROOT, "%.3f", cost));
         }
     }
 
@@ -515,7 +539,6 @@ public final class StaminaHandler {
         }
     }
 
-
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onAttack(AttackEntityEvent event) {
         if (event.getEntity().level().isClientSide()) {
@@ -558,8 +581,7 @@ public final class StaminaHandler {
                                 attacker.getName().getString(),
                                 String.format(Locale.ROOT, "%.3f", current),
                                 String.format(Locale.ROOT, "%.3f", cost),
-                                attacker.getMainHandItem().getItem()
-                        );
+                                attacker.getMainHandItem().getItem());
                     }
                     showNoStamina(serverPlayer);
                     sync(serverPlayer);
@@ -586,24 +608,60 @@ public final class StaminaHandler {
             return;
         }
 
+        if (event.getAction() != PlayerInteractEvent.LeftClickBlock.Action.START)
+            return;
+
         Player player = event.getEntity();
         if (player.isCreative()) {
             return;
         }
 
-        float cost = getMeleeAttackCost(player);
-        if (cost <= 0.0f) {
+        ItemStack item = player.getMainHandItem();
+        if (!isConfiguredAsMeleeWeapon(item))
+            return;
+
+        UUID playerId = player.getUUID();
+        Integer lastTick = LAST_MELEE_COST_TICK.get(playerId);
+        if (lastTick != null && player.tickCount - lastTick <= 1) {
             return;
         }
 
         StaminaData data = player.getData(StaminaAttachments.STAMINA_DATA);
-        if (isInsufficient(data.getCurrentStamina(), cost)) {
+        StaminaComputedStats stats = computeStats(data);
+        float maxStamina = stats.maxStamina();
+        data.setMaxStamina(maxStamina);
+        if (!data.isInitialized()) {
+            data.setCurrentStamina(maxStamina);
+            data.setInitialized(true);
+        }
+
+        float cost = computeAttackCost(player, stats);
+        if (cost <= 0.0f) {
+            return;
+        }
+
+        float current = data.getCurrentStamina();
+        if (isInsufficient(current, cost)) {
             event.setCanceled(true);
             if (player instanceof ServerPlayer serverPlayer) {
-                LOGGER.debug("Block interaction canceled for {}: insufficient stamina (current: {}, cost: {})", player.getName().getString(), data.getCurrentStamina(), cost);
+                LOGGER.debug("Block interaction canceled for {}: insufficient stamina (current: {}, cost: {})",
+                        player.getName().getString(), current, cost);
                 showNoStamina(serverPlayer);
                 sync(serverPlayer);
             }
+            return;
+        }
+
+        // Consume stamina when hitting blocks
+        float next = Math.max(0.0f, current - cost);
+        if (next != current) {
+            data.setCurrentStamina(next);
+            data.setRegenDelayTicksRemaining(Math.round(stats.regenDelayAfterConsumptionSeconds() * 20.0f));
+        }
+        sync(player);
+        LAST_MELEE_COST_TICK.put(playerId, player.tickCount);
+        if (debugStamina()) {
+            logStaminaDebugOncePerTick(player, "block hit consumed", current, next, cost);
         }
     }
 
@@ -640,8 +698,7 @@ public final class StaminaHandler {
                     LOGGER.info(
                             "[STAMINA] bow canceled (lock): player={} remainingTicks={}",
                             player.getName().getString(),
-                            lockRemaining
-                    );
+                            lockRemaining);
                 }
                 showBowRetry(serverPlayer, lockRemaining);
                 sync(serverPlayer);
@@ -665,8 +722,7 @@ public final class StaminaHandler {
                             player.getName().getString(),
                             String.format(Locale.ROOT, "%.3f", current),
                             String.format(Locale.ROOT, "%.3f", min),
-                            getBowDrawLockTicksRemaining(player, data)
-                    );
+                            getBowDrawLockTicksRemaining(player, data));
                 }
                 showBowRetry(serverPlayer, getBowDrawLockTicksRemaining(player, data));
                 sync(serverPlayer);
@@ -701,8 +757,7 @@ public final class StaminaHandler {
                 LOGGER.info(
                         "[STAMINA] bow canceled (other-cancel): player={} lockTicks={}",
                         player.getName().getString(),
-                        getBowDrawLockTicksRemaining(player, data)
-                );
+                        getBowDrawLockTicksRemaining(player, data));
             }
             showBowRetry(serverPlayer, getBowDrawLockTicksRemaining(player, data));
             sync(serverPlayer);
@@ -755,8 +810,7 @@ public final class StaminaHandler {
                     sourceEntity != null ? sourceEntity.getType() : "null",
                     directEntity != null ? directEntity.getType() : "null",
                     event.getSource().getMsgId(),
-                    String.format(Locale.ROOT, "%.2f", event.getAmount())
-            );
+                    String.format(Locale.ROOT, "%.2f", event.getAmount()));
         }
 
         if (event.getEntity() instanceof Player hurtPlayer) {
@@ -773,11 +827,10 @@ public final class StaminaHandler {
                         serverPlayer.isUsingItem(),
                         serverPlayer.getUseItem().getItem(),
                         src != null ? src.getType() : "null",
-                        direct != null ? direct.getType() : "null"
-                );
+                        direct != null ? direct.getType() : "null");
             }
         }
-        
+
         if (attacker != null && attacker != event.getEntity()) {
             StaminaData attackerData = attacker.getData(StaminaAttachments.STAMINA_DATA);
             enterCombat(attacker, attackerData, "neoforge:dealt_damage");
@@ -837,8 +890,7 @@ public final class StaminaHandler {
                         attacker.getName().getString(),
                         String.format(Locale.ROOT, "%.3f", current),
                         String.format(Locale.ROOT, "%.3f", cost),
-                        event.getSource().getMsgId()
-                );
+                        event.getSource().getMsgId());
             }
             showNoStamina(attacker);
             sync(attacker);
@@ -860,8 +912,7 @@ public final class StaminaHandler {
                     String.format(Locale.ROOT, "%.3f", current),
                     String.format(Locale.ROOT, "%.3f", next),
                     String.format(Locale.ROOT, "%.3f", cost),
-                    event.getSource().getMsgId()
-            );
+                    event.getSource().getMsgId());
         }
     }
 
@@ -880,8 +931,7 @@ public final class StaminaHandler {
                 String.format(Locale.ROOT, "%.3f", before),
                 String.format(Locale.ROOT, "%.3f", after),
                 String.format(Locale.ROOT, "%.3f", cost),
-                player.getMainHandItem().getItem()
-        );
+                player.getMainHandItem().getItem());
     }
 
     @SubscribeEvent
@@ -1039,8 +1089,7 @@ public final class StaminaHandler {
                         "[STAMINA] enter combat: player={} reason={} timeoutTicks={}",
                         serverPlayer.getName().getString(),
                         reason,
-                        timeoutTicks
-                );
+                        timeoutTicks);
             }
         }
     }
@@ -1162,7 +1211,8 @@ public final class StaminaHandler {
         float base = StaminaConfig.getAttackBaseCost();
         float curve = 1.0f;
         if (StaminaConfig.isAttackUseWeaponWeight()) {
-            curve = StaminaConfig.computeAttackCurveMultiplier((float) WeightRegistry.getItemWeight(attacker.getMainHandItem().getItem()));
+            curve = StaminaConfig.computeAttackCurveMultiplier(
+                    (float) WeightRegistry.getItemWeight(attacker.getMainHandItem().getItem()));
         }
         return base * curve * stats.consumptionMultiplier() * stats.attackCostMultiplier();
     }
@@ -1232,14 +1282,14 @@ public final class StaminaHandler {
                 StaminaConfig.getBaseSprintThresholdFraction(),
                 StaminaConfig.getRegenDelayAfterConsumptionSeconds(),
                 false,
-                data.getModifiers()
-        );
+                data.getModifiers());
     }
 
     private static void sync(Player player) {
         if (player instanceof ServerPlayer serverPlayer) {
             StaminaData data = serverPlayer.getData(StaminaAttachments.STAMINA_DATA);
-            PacketDistributor.sendToPlayer(serverPlayer, new StaminaSyncPacket(data.getCurrentStamina(), data.getMaxStamina(), data.isInCombat(), data.getBowDrawLockUntilGameTime()));
+            PacketDistributor.sendToPlayer(serverPlayer, new StaminaSyncPacket(data.getCurrentStamina(),
+                    data.getMaxStamina(), data.isInCombat(), data.getBowDrawLockUntilGameTime()));
 
             UUID id = serverPlayer.getUUID();
             LAST_SENT_CURRENT.put(id, data.getCurrentStamina());
@@ -1262,13 +1312,12 @@ public final class StaminaHandler {
         boolean lastInCombat = LAST_SENT_IN_COMBAT.getOrDefault(id, false);
         long lastBowLockUntil = LAST_SENT_BOW_LOCK_UNTIL.getOrDefault(id, 0L);
 
-        boolean changed =
-                Float.isNaN(lastCurrent)
-                        || Math.abs(lastCurrent - data.getCurrentStamina()) > 0.01f
-                        || Float.isNaN(lastMax)
-                        || Math.abs(lastMax - data.getMaxStamina()) > 0.01f
-                        || lastInCombat != data.isInCombat()
-                        || lastBowLockUntil != data.getBowDrawLockUntilGameTime();
+        boolean changed = Float.isNaN(lastCurrent)
+                || Math.abs(lastCurrent - data.getCurrentStamina()) > 0.01f
+                || Float.isNaN(lastMax)
+                || Math.abs(lastMax - data.getMaxStamina()) > 0.01f
+                || lastInCombat != data.isInCombat()
+                || lastBowLockUntil != data.getBowDrawLockUntilGameTime();
 
         if (changed) {
             sync(serverPlayer);

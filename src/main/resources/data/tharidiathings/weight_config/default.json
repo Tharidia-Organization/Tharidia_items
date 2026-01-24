@@ -50,7 +50,8 @@
     "minecraft:netherite_boots": 5.0,
     "minecraft:oak_log": 1.0,
     "minecraft:oak_planks": 0.5,
-    "minecraft:stick": 0.1
+    "minecraft:stick": 0.1,
+    "tharidiathings:iron_crusher_hammer": 1.0
   },
   "thresholds": {
     "light": 200.0,
