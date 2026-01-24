@@ -132,6 +132,7 @@ sourceSets.main.resources { srcDir 'src/generated/resources' }
 tasks.register('copyLatestJars', Copy) {
     description = 'Copy the latest JARs from Tharidia Features and Tweaks projects'
     group = 'build'
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
     
     // Copy Tharidia Features JAR
     from('../Tharidia_features/build/libs') {
@@ -150,8 +151,33 @@ tasks.register('copyLatestJars', Copy) {
     into 'libs'
 }
 
+// Task to copy latest JARs from sibling projects
+tasks.register('copyMods', Copy) {
+    description = 'Copy the mods build from Tharidia Features and Tweaks projects as mod'
+    group = 'build'
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    
+    // Copy Tharidia Features JAR
+    from('../Tharidia_features/build/libs') {
+        include '*.jar'
+        exclude '*-sources.jar', '*-javadoc.jar'
+        rename { 'tharidiafeatures-latest.jar' }
+    }
+    
+    // Copy Tharidia Tweaks JAR
+    from('../Tharidia_tweaks/build/libs') {
+        include '*.jar'
+        exclude '*-sources.jar', '*-javadoc.jar'
+        rename { 'tharidiatweaks-latest.jar' }
+    }
+    
+    into 'run/mods'
+}
+
+
 // Make compileJava depend on copying latest JARs
 compileJava.dependsOn copyLatestJars
+compileJava.dependsOn copyMods
 
 // Sets up a dependency configuration called 'localRuntime'.
 // This configuration should be used instead of 'runtimeOnly' to declare
