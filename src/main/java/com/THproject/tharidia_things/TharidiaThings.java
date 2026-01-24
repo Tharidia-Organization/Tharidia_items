@@ -5,7 +5,6 @@ import com.THproject.tharidia_things.client.ClientSeekPacketHandler;
 import com.THproject.tharidia_things.client.HandshakeBypass;
 import com.THproject.tharidia_things.client.TradeClientHandler;
 import com.THproject.tharidia_things.client.gui.*;
-import com.THproject.tharidia_things.client.video.VideoToolsManager;
 import com.THproject.tharidia_things.command.*;
 import com.THproject.tharidia_things.config.CropProtectionConfig;
 import com.THproject.tharidia_things.config.FatigueConfig;
