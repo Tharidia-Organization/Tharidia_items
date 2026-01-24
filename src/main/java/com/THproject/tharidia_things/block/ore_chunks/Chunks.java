@@ -35,10 +35,11 @@ public class Chunks {
                 BlockEntity blockEntity = level.getBlockEntity(pos);
                 if (blockEntity instanceof IronChunkBlockEntity ironChunkBlockEntity) {
                     ironChunkBlockEntity.hit();
-                    playSound(level, pos);
+                    playHammerSound(level, pos);
                     spawnParticle(level, pos);
                     destroyHandItem(player, 1);
                     if (ironChunkBlockEntity.getHit() >= ironChunkBlockEntity.getMaxHit()) {
+                        playChunkBreakSound(level, pos);
                         destroyAndPop(level, pos, ironChunkBlockEntity.getDrop());
                     }
                 }
@@ -46,8 +47,13 @@ public class Chunks {
         }
     }
 
-    public static void playSound(Level level, BlockPos pos) {
+    public static void playHammerSound(Level level, BlockPos pos) {
         level.playSound(null, pos.getX(), pos.getY(), pos.getZ(), ModSounds.CRUSHER_HAMMER_USE.get(),
+                SoundSource.AMBIENT);
+    }
+
+    public static void playChunkBreakSound(Level level, BlockPos pos) {
+        level.playSound(null, pos.getX(), pos.getY(), pos.getZ(), ModSounds.CHUNK_BREAK.get(),
                 SoundSource.AMBIENT);
     }
 
@@ -60,7 +66,7 @@ public class Chunks {
             if (Math.random() < 0.3) {
                 serverLevel.sendParticles(
                         ParticleTypes.FLAME,
-                        pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 20, 0, 0, 0, 0.05);
+                        pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 5, 0, 0, 0, 0.05);
             }
         }
     }

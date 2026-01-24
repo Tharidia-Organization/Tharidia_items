@@ -7,5 +7,10 @@
             "tharidiathings:crusher_hammer/use4",
             "tharidiathings:crusher_hammer/use5"
         ]
+    },
+    "chunk_break": {
+        "sounds": [
+            "tharidiathings:chunk_break"
+        ]
     }
 }

@@ -14,6 +14,7 @@ public class ModSounds {
             .create(BuiltInRegistries.SOUND_EVENT, TharidiaThings.MODID);
 
     public static final Supplier<SoundEvent> CRUSHER_HAMMER_USE = registerSoundEvent("crusher_hammer_use");
+    public static final Supplier<SoundEvent> CHUNK_BREAK = registerSoundEvent("chunk_break");
 
     public static Supplier<SoundEvent> registerSoundEvent(String name) {
         ResourceLocation id = ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, name);
