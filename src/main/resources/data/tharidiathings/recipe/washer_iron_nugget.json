@@ -1,0 +1,11 @@
+{
+    "type": "tharidiathings:washer",
+    "input": {
+        "item": "minecraft:gravel"
+    },
+    "output": {
+        "id": "minecraft:iron_nugget",
+        "count": 1
+    },
+    "processingTime": 40
+}

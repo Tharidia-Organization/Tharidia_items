@@ -19,13 +19,11 @@ public class WasherRecipe implements Recipe<RecipeWrapper> {
 
     private final Ingredient input;
     private final ItemStack output;
-    private final int fluidAmount;
     private final int processingTime;
 
-    public WasherRecipe(Ingredient input, ItemStack output, int fluidAmount, int processingTime) {
+    public WasherRecipe(Ingredient input, ItemStack output, int processingTime) {
         this.input = input;
         this.output = output;
-        this.fluidAmount = fluidAmount;
         this.processingTime = processingTime;
     }
 
@@ -64,10 +62,6 @@ public class WasherRecipe implements Recipe<RecipeWrapper> {
         return input;
     }
 
-    public int getFluidAmount() {
-        return fluidAmount;
-    }
-
     public int getProcessingTime() {
         return processingTime;
     }
@@ -77,14 +71,12 @@ public class WasherRecipe implements Recipe<RecipeWrapper> {
                 instance -> instance.group(
                         Ingredient.CODEC_NONEMPTY.fieldOf("input").forGetter(WasherRecipe::getInput),
                         ItemStack.STRICT_CODEC.fieldOf("output").forGetter(r -> r.output),
-                        Codec.INT.fieldOf("fluidAmount").orElse(50).forGetter(WasherRecipe::getFluidAmount),
                         Codec.INT.fieldOf("processingTime").orElse(40).forGetter(WasherRecipe::getProcessingTime))
                         .apply(instance, WasherRecipe::new));
 
         public static final StreamCodec<RegistryFriendlyByteBuf, WasherRecipe> STREAM_CODEC = StreamCodec.composite(
                 Ingredient.CONTENTS_STREAM_CODEC, WasherRecipe::getInput,
                 ItemStack.STREAM_CODEC, r -> r.output,
-                net.minecraft.network.codec.ByteBufCodecs.INT, WasherRecipe::getFluidAmount,
                 net.minecraft.network.codec.ByteBufCodecs.INT, WasherRecipe::getProcessingTime,
                 WasherRecipe::new);
 

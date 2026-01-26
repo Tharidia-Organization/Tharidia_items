@@ -1,0 +1,11 @@
+{
+    "type": "tharidiathings:washer",
+    "input": {
+        "item": "tharidiathings:vein_sediment"
+    },
+    "output": {
+        "id": "tharidiathings:iron_chunk",
+        "count": 1
+    },
+    "processingTime": 40
+}

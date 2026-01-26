@@ -13,7 +13,6 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -25,6 +24,8 @@ import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
 import net.neoforged.neoforge.items.ItemStackHandler;
 
 public class WasherBlockEntity extends BlockEntity {
+    public final int FLUID_CONSUMPTION_TICK = 1;
+
     public final FluidTank tank = new FluidTank(8000) {
         @Override
         protected void onContentsChanged() {
@@ -69,13 +70,14 @@ public class WasherBlockEntity extends BlockEntity {
         Optional<RecipeHolder<WasherRecipe>> recipe = level.getRecipeManager()
                 .getRecipeFor(TharidiaThings.WASHER_RECIPE_TYPE.get(), recipeWrapper, level);
 
+        blockEntity.tank.drain(blockEntity.FLUID_CONSUMPTION_TICK, IFluidHandler.FluidAction.EXECUTE);
+
         if (recipe.isPresent()) {
             WasherRecipe washerRecipe = recipe.get().value();
             blockEntity.maxProgress = washerRecipe.getProcessingTime();
 
             ItemStack result = washerRecipe.getResultItem(level.registryAccess());
-            if (blockEntity.tank.getFluidAmount() >= washerRecipe.getFluidAmount()
-                    && blockEntity.canInsertItem(result)) {
+            if (blockEntity.tank.getFluidAmount() > 0 && blockEntity.canInsertItem(result)) {
                 blockEntity.progress++;
                 if (blockEntity.progress >= blockEntity.maxProgress) {
                     blockEntity.craftItem(washerRecipe);
@@ -102,8 +104,6 @@ public class WasherBlockEntity extends BlockEntity {
         } else {
             outputStack.grow(result.getCount());
         }
-
-        tank.drain(recipe.getFluidAmount(), IFluidHandler.FluidAction.EXECUTE);
     }
 
     private void resetProgress() {
