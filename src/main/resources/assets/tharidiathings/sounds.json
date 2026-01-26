@@ -12,5 +12,13 @@
         "sounds": [
             "tharidiathings:chunk_break"
         ]
+    },
+    "dungeon_start": {
+        "sounds": [
+            {
+                "name": "minecraft:ambient/nether/crimson_forest/mood4",
+                "stream": true
+            }
+        ]
     }
 }

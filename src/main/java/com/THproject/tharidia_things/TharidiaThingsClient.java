@@ -116,8 +116,14 @@ public class TharidiaThingsClient {
         
         // Set render type for Stable block to support transparency
         net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(
-            TharidiaThings.STABLE.get(), 
+            TharidiaThings.STABLE.get(),
             RenderType.cutout()
+        );
+
+        // Set render type for Dungeon Portal block to support translucency
+        net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(
+            TharidiaThings.DUNGEON_PORTAL.get(),
+            RenderType.translucent()
         );
     }
 

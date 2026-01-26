@@ -34,6 +34,7 @@ import com.THproject.tharidia_things.block.entity.HotIronAnvilEntity;
 import com.THproject.tharidia_things.block.entity.HotGoldAnvilEntity;
 import com.THproject.tharidia_things.block.entity.HotCopperAnvilEntity;
 import com.THproject.tharidia_things.block.entity.StableBlockEntity;
+import com.THproject.tharidia_things.block.DungeonPortalBlock;
 import com.THproject.tharidia_things.block.ore_chunks.IronChunkBlock;
 import com.THproject.tharidia_things.block.ore_chunks.IronChunkBlockEntity;
 import com.THproject.tharidia_things.item.HotIronItem;
@@ -111,6 +112,7 @@ import net.minecraft.world.item.Rarity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
+import net.minecraft.world.level.material.PushReaction;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.Mod;
@@ -209,6 +211,18 @@ public class TharidiaThings {
                             .noOcclusion()));
     public static final DeferredItem<BlockItem> IRON_CHUNK_ITEM = ITEMS.registerSimpleBlockItem("iron_chunk",
             IRON_CHUNK);
+
+    // Dungeon Portal Block (red portal, no teleportation)
+    public static final DeferredBlock<DungeonPortalBlock> DUNGEON_PORTAL = BLOCKS.register("dungeon_portal",
+            () -> new DungeonPortalBlock(
+                    BlockBehaviour.Properties.of()
+                            .noCollission()
+                            .noOcclusion()
+                            .strength(-1.0F)
+                            .noLootTable()
+                            .sound(net.minecraft.world.level.block.SoundType.GLASS)
+                            .lightLevel(state -> 11)
+                            .pushReaction(PushReaction.BLOCK)));
 
     // Creates a new BlockEntityType for the Pietro block
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<PietroBlockEntity>> PIETRO_BLOCK_ENTITY = BLOCK_ENTITIES

@@ -7,6 +7,7 @@ import java.util.UUID;
 
 import com.THproject.tharidia_features.dungeon.DungeonInstance;
 import com.THproject.tharidia_features.dungeon.DungeonManager;
+import com.THproject.tharidia_things.sounds.ModSounds;
 import com.mojang.logging.LogUtils;
 
 import net.minecraft.core.particles.ParticleTypes;
@@ -17,6 +18,7 @@ import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
 import net.minecraft.server.level.ServerBossEvent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.BossEvent.BossBarColor;
 import net.minecraft.world.BossEvent.BossBarOverlay;
 import net.minecraft.world.entity.player.Player;
@@ -107,6 +109,11 @@ public class DungeonQueryInstance {
         }
 
         if (!playersToTeleport.isEmpty()) {
+            // Play crimson forest mood sound to all players
+            for (ServerPlayer p : playersToTeleport) {
+                p.playNotifySound(ModSounds.DUNGEON_START.get(), SoundSource.MASTER, 1.0f, 1.0f);
+            }
+
             boolean success = manager.joinGroupQueue(playersToTeleport);
             if (success) {
                 LOGGER.info("[GROUP DUNGEON] Teleported {} players to dungeon", playersToTeleport.size());
