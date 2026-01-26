@@ -69,14 +69,27 @@ public class WasherBlock extends BaseEntityBlock {
                     return ItemInteractionResult.SUCCESS;
                 }
             } else {
-                if (stack.isEmpty()) {
-                    ItemStack extracted = washer.inventory.extractItem(1, 64, false);
-                    if (!extracted.isEmpty()) {
-                        player.setItemInHand(hand, extracted);
-                        return ItemInteractionResult.SUCCESS;
-                    } else {
-                        return ItemInteractionResult.CONSUME;
+                if (stack.isEmpty() && !player.isShiftKeyDown()) {
+                    boolean success = false;
+                    for (int i = 1; i < washer.inventory.getSlots(); i++) {
+                        ItemStack extracted = washer.inventory.extractItem(i, 64, false);
+                        if (!extracted.isEmpty()) {
+                            if (!player.getInventory().add(extracted.copy())) {
+                                player.drop(extracted.copy(), false);
+                            }
+                            success = true;
+                        }
                     }
+                    return success ? ItemInteractionResult.SUCCESS : ItemInteractionResult.CONSUME;
+                } else if (stack.isEmpty() && player.isShiftKeyDown()) {
+                    ItemStack extracted = washer.inventory.extractItem(0, 64, false);
+                    if (!extracted.isEmpty()) {
+                        if (!player.getInventory().add(extracted.copy())) {
+                            player.drop(extracted.copy(), false);
+                        }
+                        return ItemInteractionResult.SUCCESS;
+                    }
+                    return ItemInteractionResult.CONSUME;
                 } else {
                     ItemStack remainder = washer.inventory.insertItem(0, stack.copy(), false);
                     if (remainder.getCount() != stack.getCount()) {

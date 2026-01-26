@@ -36,7 +36,7 @@ public class WasherBlockEntity extends BlockEntity {
         }
     };
 
-    public final ItemStackHandler inventory = new ItemStackHandler(2) {
+    public final ItemStackHandler inventory = new ItemStackHandler(10) {
         @Override
         protected void onContentsChanged(int slot) {
             setChanged();
@@ -98,12 +98,24 @@ public class WasherBlockEntity extends BlockEntity {
         ItemStack result = recipe.getResultItem(this.level.registryAccess());
         inventory.extractItem(0, 1, false);
 
-        ItemStack outputStack = inventory.getStackInSlot(1);
-        if (outputStack.isEmpty()) {
-            inventory.setStackInSlot(1, result.copy());
-        } else {
-            outputStack.grow(result.getCount());
+        for(int i=1;i<inventory.getSlots();i++){
+            ItemStack outputStack = inventory.getStackInSlot(i);
+            if (outputStack.isEmpty()) {
+                inventory.setStackInSlot(i, result.copy());
+                return;
+            } else if (!outputStack.isEmpty() && outputStack.getItem() == result.getItem()
+                    && outputStack.getCount() + result.getCount() <= outputStack.getMaxStackSize()) {
+                outputStack.grow(result.getCount());
+                return;
+            }
         }
+        
+        // ItemStack outputStack = inventory.getStackInSlot(1);
+        // if (outputStack.isEmpty()) {
+        //     inventory.setStackInSlot(1, result.copy());
+        // } else {
+        //     outputStack.grow(result.getCount());
+        // }
     }
 
     private void resetProgress() {
@@ -111,9 +123,16 @@ public class WasherBlockEntity extends BlockEntity {
     }
 
     private boolean canInsertItem(ItemStack item) {
-        ItemStack outputStack = inventory.getStackInSlot(1);
-        return outputStack.isEmpty() || (outputStack.getItem() == item.getItem()
-                && outputStack.getCount() + item.getCount() <= outputStack.getMaxStackSize());
+        for (int i = 1; i < inventory.getSlots(); i++) {
+            ItemStack outputStack = inventory.getStackInSlot(i);
+            if (outputStack.isEmpty()) {
+                return true;
+            } else if (!outputStack.isEmpty() && outputStack.getItem() == item.getItem()
+                    && outputStack.getCount() + item.getCount() <= outputStack.getMaxStackSize()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -155,7 +174,7 @@ public class WasherBlockEntity extends BlockEntity {
     }
 
     public boolean isTankFull() {
-        return tank.getFluidAmount() >= tank.getCapacity();
+        return tank.getFluidAmount() >= tank.getCapacity() - 1000;
     }
 
     public boolean isTankEmpty() {

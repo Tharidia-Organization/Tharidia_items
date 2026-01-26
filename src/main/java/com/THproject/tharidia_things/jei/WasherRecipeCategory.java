@@ -26,7 +26,7 @@ public class WasherRecipeCategory implements IRecipeCategory<WasherRecipe> {
     private final IDrawable icon;
 
     public WasherRecipeCategory(IGuiHelper helper) {
-        this.background = helper.createBlankDrawable(68, 26);
+        this.background = helper.createBlankDrawable(67, 26);
         this.arrow = helper.createAnimatedRecipeArrow(100);
         this.slot = helper.getSlotDrawable();
         this.icon = helper.createDrawableIngredient(VanillaTypes.ITEM_STACK,
@@ -70,6 +70,15 @@ public class WasherRecipeCategory implements IRecipeCategory<WasherRecipe> {
 
         // Output Item
         builder.addSlot(RecipeIngredientRole.OUTPUT, 50, 5)
-                .addItemStack(recipe.getResultItem(null));
+                .addItemStacks(recipe.getOutputs().stream().map(WasherRecipe.WeightedOutput::item).toList())
+                .addRichTooltipCallback((recipeSlotView, tooltip) -> {
+                    recipeSlotView.getDisplayedIngredient(VanillaTypes.ITEM_STACK).ifPresent(stack -> {
+                        for (WasherRecipe.WeightedOutput output : recipe.getOutputs()) {
+                            if (ItemStack.isSameItemSameComponents(stack, output.item())) {
+                                tooltip.add(Component.literal(Math.round(output.chance() * 100) + "% Chance"));
+                            }
+                        }
+                    });
+                });
     }
 }
