@@ -1,5 +1,9 @@
 package com.THproject.tharidia_things.block.washer;
 
+import com.THproject.tharidia_things.recipe.WasherRecipe;
+import net.minecraft.world.item.crafting.RecipeHolder;
+import net.neoforged.neoforge.items.wrapper.RecipeWrapper;
+import java.util.Optional;
 import com.THproject.tharidia_things.TharidiaThings;
 
 import net.minecraft.core.BlockPos;
@@ -40,7 +44,11 @@ public class WasherBlockEntity extends BlockEntity {
         @Override
         public boolean isItemValid(int slot, ItemStack stack) {
             if (slot == 0) {
-                return stack.getItem() == TharidiaThings.VEIN_SEDIMENT.asItem();
+                if (level == null)
+                    return true;
+                return level.getRecipeManager().getAllRecipesFor(TharidiaThings.WASHER_RECIPE_TYPE.get())
+                        .stream()
+                        .anyMatch(recipe -> recipe.value().getInput().test(stack));
             }
             return false;
         }
@@ -57,39 +65,45 @@ public class WasherBlockEntity extends BlockEntity {
         if (level.isClientSide)
             return;
 
-        if (blockEntity.hasRecipe()) {
-            blockEntity.progress++;
-            if (blockEntity.progress >= blockEntity.maxProgress) {
-                blockEntity.craftItem();
-                blockEntity.progress = 0;
+        RecipeWrapper recipeWrapper = new RecipeWrapper(blockEntity.inventory);
+        Optional<RecipeHolder<WasherRecipe>> recipe = level.getRecipeManager()
+                .getRecipeFor(TharidiaThings.WASHER_RECIPE_TYPE.get(), recipeWrapper, level);
+
+        if (recipe.isPresent()) {
+            WasherRecipe washerRecipe = recipe.get().value();
+            blockEntity.maxProgress = washerRecipe.getProcessingTime();
+
+            ItemStack result = washerRecipe.getResultItem(level.registryAccess());
+            if (blockEntity.tank.getFluidAmount() >= washerRecipe.getFluidAmount()
+                    && blockEntity.canInsertItem(result)) {
+                blockEntity.progress++;
+                if (blockEntity.progress >= blockEntity.maxProgress) {
+                    blockEntity.craftItem(washerRecipe);
+                    blockEntity.progress = 0;
+                }
+                blockEntity.setChanged();
+            } else {
+                blockEntity.resetProgress();
+                blockEntity.setChanged();
             }
-            blockEntity.setChanged(); // Mark as changed to save progress
         } else {
             blockEntity.resetProgress();
             blockEntity.setChanged();
         }
     }
 
-    private boolean hasRecipe() {
-        ItemStack input = inventory.getStackInSlot(0);
-        ItemStack result = new ItemStack(TharidiaThings.IRON_CHUNK.asItem());
-        boolean hasWater = tank.getFluidAmount() >= 50;
-
-        return input.getItem() == TharidiaThings.VEIN_SEDIMENT.asItem() && hasWater && canInsertItem(result);
-    }
-
-    private void craftItem() {
-        ItemStack result = new ItemStack(TharidiaThings.IRON_CHUNK.asItem());
+    private void craftItem(WasherRecipe recipe) {
+        ItemStack result = recipe.getResultItem(this.level.registryAccess());
         inventory.extractItem(0, 1, false);
 
         ItemStack outputStack = inventory.getStackInSlot(1);
         if (outputStack.isEmpty()) {
-            inventory.setStackInSlot(1, result);
+            inventory.setStackInSlot(1, result.copy());
         } else {
             outputStack.grow(result.getCount());
         }
 
-        tank.drain(50, IFluidHandler.FluidAction.EXECUTE);
+        tank.drain(recipe.getFluidAmount(), IFluidHandler.FluidAction.EXECUTE);
     }
 
     private void resetProgress() {

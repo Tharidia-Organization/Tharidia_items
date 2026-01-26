@@ -86,6 +86,9 @@ import com.THproject.tharidia_things.servertransfer.TransferTokenManager;
 import com.THproject.tharidia_things.sounds.ModSounds;
 import com.THproject.tharidia_things.servertransfer.DevWhitelistManager;
 
+import com.THproject.tharidia_things.recipe.WasherRecipe;
+import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.crafting.RecipeType;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -151,6 +154,17 @@ public class TharidiaThings {
     // under the "tharidiathings" namespace
     public static final DeferredRegister<net.minecraft.world.inventory.MenuType<?>> MENU_TYPES = DeferredRegister
             .create(BuiltInRegistries.MENU, MODID);
+
+    // Washer Recipes
+    public static final DeferredRegister<RecipeType<?>> RECIPE_TYPES = DeferredRegister.create(Registries.RECIPE_TYPE,
+            MODID);
+    public static final DeferredRegister<RecipeSerializer<?>> RECIPE_SERIALIZERS = DeferredRegister
+            .create(Registries.RECIPE_SERIALIZER, MODID);
+
+    public static final DeferredHolder<RecipeType<?>, RecipeType<WasherRecipe>> WASHER_RECIPE_TYPE = RECIPE_TYPES
+            .register("washer", () -> RecipeType.simple(ResourceLocation.fromNamespaceAndPath(MODID, "washer")));
+    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<WasherRecipe>> WASHER_RECIPE_SERIALIZER = RECIPE_SERIALIZERS
+            .register("washer", WasherRecipe.Serializer::new);
 
     // Database system for cross-server communication
     private DatabaseManager databaseManager;
@@ -439,6 +453,8 @@ public class TharidiaThings {
         CREATIVE_MODE_TABS.register(modEventBus);
         // Register the Deferred Register to the mod event bus so menus get registered
         MENU_TYPES.register(modEventBus);
+        RECIPE_TYPES.register(modEventBus);
+        RECIPE_SERIALIZERS.register(modEventBus);
         // Register the Deferred Register to the mod event bus so attachment types get
         // registered
         FatigueAttachments.ATTACHMENT_TYPES.register(modEventBus);
