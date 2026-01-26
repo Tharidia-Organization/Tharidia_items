@@ -36,6 +36,10 @@ import com.THproject.tharidia_things.block.entity.HotCopperAnvilEntity;
 import com.THproject.tharidia_things.block.entity.StableBlockEntity;
 import com.THproject.tharidia_things.block.ore_chunks.IronChunkBlock;
 import com.THproject.tharidia_things.block.ore_chunks.IronChunkBlockEntity;
+import com.THproject.tharidia_things.block.veins.VeinBlock;
+import com.THproject.tharidia_things.block.veins.VeinSediment;
+import com.THproject.tharidia_things.block.washer.WasherBlock;
+import com.THproject.tharidia_things.block.washer.WasherBlockEntity;
 import com.THproject.tharidia_things.item.HotIronItem;
 import com.THproject.tharidia_things.item.HotGoldItem;
 import com.THproject.tharidia_things.item.HotCopperItem;
@@ -69,20 +73,6 @@ import com.THproject.tharidia_things.fatigue.FatigueAttachments;
 import com.THproject.tharidia_things.houseboundry.AnimalWellnessAttachments;
 import com.THproject.tharidia_things.houseboundry.config.AnimalConfigLoader;
 import com.THproject.tharidia_things.stable.StableConfigLoader;
-import com.THproject.tharidia_things.network.BattlePackets;
-import com.THproject.tharidia_things.network.ClaimOwnerSyncPacket;
-import com.THproject.tharidia_things.network.FatigueSyncPacket;
-import com.THproject.tharidia_things.network.DungeonQueuePacket;
-import com.THproject.tharidia_things.network.JoinGroupQueuePacket;
-import com.THproject.tharidia_things.network.LeaveGroupQueuePacket;
-import com.THproject.tharidia_things.network.StartGroupDungeonPacket;
-import com.THproject.tharidia_things.network.SyncGroupQueuePacket;
-import com.THproject.tharidia_things.network.HierarchySyncPacket;
-import com.THproject.tharidia_things.network.RealmSyncPacket;
-import com.THproject.tharidia_things.network.UpdateHierarchyPacket;
-import com.THproject.tharidia_things.network.SelectComponentPacket;
-import com.THproject.tharidia_things.network.SubmitNamePacket;
-import com.THproject.tharidia_things.network.SyncGateRestrictionsPacket;
 import com.THproject.tharidia_things.realm.RealmManager;
 import com.THproject.tharidia_things.registry.ModAttributes;
 import com.THproject.tharidia_things.registry.ModStats;
@@ -108,6 +98,8 @@ import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Rarity;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
@@ -209,6 +201,51 @@ public class TharidiaThings {
                             .noOcclusion()));
     public static final DeferredItem<BlockItem> IRON_CHUNK_ITEM = ITEMS.registerSimpleBlockItem("iron_chunk",
             IRON_CHUNK);
+
+    // Veins
+    public static final DeferredBlock<VeinBlock> VEIN_BLOCK = BLOCKS.register(
+            "vein_block",
+            () -> new VeinBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.STONE)
+                    .destroyTime(1.5F)
+                    .explosionResistance(1.0F)
+                    .sound(SoundType.STONE)
+                    .requiresCorrectToolForDrops()));
+
+    public static final DeferredItem<BlockItem> VEIN_BLOCK_ITEM = ITEMS.register(
+            "vein_block",
+            () -> new BlockItem(VEIN_BLOCK.get(), new Item.Properties()));
+
+    public static final DeferredBlock<VeinSediment> VEIN_SEDIMENT = BLOCKS.register(
+            "vein_sediment",
+            () -> new VeinSediment(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.STONE)
+                    .destroyTime(0.3F)
+                    .explosionResistance(1.0F)
+                    .sound(SoundType.GRAVEL)));
+
+    public static final DeferredItem<BlockItem> VEIN_SEDIMENT_ITEM = ITEMS.register(
+            "vein_sediment",
+            () -> new BlockItem(VEIN_SEDIMENT.get(), new Item.Properties()));
+
+    // Washer
+    public static final DeferredBlock<WasherBlock> WASHER_BLOCK = BLOCKS.register(
+            "washer",
+            () -> new WasherBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.METAL)
+                    .destroyTime(1.0f)
+                    .explosionResistance(1.0F)
+                    .sound(SoundType.METAL)
+                    .requiresCorrectToolForDrops()));
+
+    public static final DeferredItem<BlockItem> WASHER_ITEM = ITEMS.register(
+            "washer",
+            () -> new BlockItem(WASHER_BLOCK.get(), new Item.Properties()));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<WasherBlockEntity>> WASHER_BLOCK_ENTITY = BLOCK_ENTITIES
+            .register("washer",
+                    () -> BlockEntityType.Builder.of(WasherBlockEntity::new,
+                            WASHER_BLOCK.get()).build(null));
 
     // Creates a new BlockEntityType for the Pietro block
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<PietroBlockEntity>> PIETRO_BLOCK_ENTITY = BLOCK_ENTITIES
@@ -350,6 +387,13 @@ public class TharidiaThings {
 
                         // Chunks
                         output.accept(IRON_CHUNK.get());
+
+                        // Veins
+                        output.accept(VEIN_BLOCK.get());
+                        output.accept(VEIN_SEDIMENT.get());
+
+                        // Washer
+                        output.accept(WASHER_BLOCK.get());
 
                         // Add all dynamically registered baby mob items
                         BabyMobRegistry.addToCreativeTab(output);
