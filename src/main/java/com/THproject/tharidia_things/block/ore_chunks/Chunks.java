@@ -16,7 +16,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
@@ -28,24 +27,6 @@ public class Chunks {
     public static final VoxelShape SHAPE_STAGE2 = Block.box(4, 0, 4, 12, 8, 12);
     public static final VoxelShape SHAPE_STAGE3 = Block.box(4, 0, 4, 12, 8, 12);
     public static final VoxelShape SHAPE_STAGE4 = Block.box(4, 0, 4, 12, 8, 12);
-
-    public static void attackChunk(Level level, BlockPos pos, Player player) {
-        if (!level.isClientSide) {
-            if (isCorrectTool(player.getMainHandItem())) {
-                BlockEntity blockEntity = level.getBlockEntity(pos);
-                if (blockEntity instanceof IronChunkBlockEntity ironChunkBlockEntity) {
-                    ironChunkBlockEntity.hit();
-                    playHammerSound(level, pos);
-                    spawnParticle(level, pos);
-                    destroyHandItem(player, 1);
-                    if (ironChunkBlockEntity.getHit() >= ironChunkBlockEntity.getMaxHit()) {
-                        playChunkBreakSound(level, pos);
-                        destroyAndPop(level, pos, ironChunkBlockEntity.getDrop());
-                    }
-                }
-            }
-        }
-    }
 
     public static void playHammerSound(Level level, BlockPos pos) {
         level.playSound(null, pos.getX(), pos.getY(), pos.getZ(), ModSounds.CRUSHER_HAMMER_USE.get(),

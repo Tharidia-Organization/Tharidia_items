@@ -34,6 +34,8 @@ import com.THproject.tharidia_things.block.entity.HotIronAnvilEntity;
 import com.THproject.tharidia_things.block.entity.HotGoldAnvilEntity;
 import com.THproject.tharidia_things.block.entity.HotCopperAnvilEntity;
 import com.THproject.tharidia_things.block.entity.StableBlockEntity;
+import com.THproject.tharidia_things.block.ore_chunks.CopperChunkBlock;
+import com.THproject.tharidia_things.block.ore_chunks.CopperChunkBlockEntity;
 import com.THproject.tharidia_things.block.ore_chunks.IronChunkBlock;
 import com.THproject.tharidia_things.block.ore_chunks.IronChunkBlockEntity;
 import com.THproject.tharidia_things.block.veins.VeinBlock;
@@ -101,7 +103,6 @@ import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Rarity;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -209,12 +210,30 @@ public class TharidiaThings {
     public static final DeferredBlock<IronChunkBlock> IRON_CHUNK = BLOCKS.register("iron_chunk",
             () -> new IronChunkBlock(
                     BlockBehaviour.Properties.of()
-                            .mapColor(MapColor.METAL)
+                            .mapColor(MapColor.STONE)
                             .destroyTime(4.0f)
                             .explosionResistance(6.0f)
                             .noOcclusion()));
     public static final DeferredItem<BlockItem> IRON_CHUNK_ITEM = ITEMS.registerSimpleBlockItem("iron_chunk",
             IRON_CHUNK);
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<IronChunkBlockEntity>> IRON_CHUNK_BLOCK_ENTITY = BLOCK_ENTITIES
+            .register("iron_chunk",
+                    () -> BlockEntityType.Builder.of(IronChunkBlockEntity::new, IRON_CHUNK.get()).build(null));
+
+    public static final DeferredBlock<CopperChunkBlock> COPPER_CHUNK = BLOCKS.register("copper_chunk",
+            () -> new CopperChunkBlock(
+                    BlockBehaviour.Properties.of()
+                            .mapColor(MapColor.STONE)
+                            .destroyTime(4.0f)
+                            .explosionResistance(6.0f)
+                            .noOcclusion()));
+    public static final DeferredItem<BlockItem> COPPER_CHUNK_ITEM = ITEMS.registerSimpleBlockItem("copper_chunk",
+            COPPER_CHUNK);
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<CopperChunkBlockEntity>> COPPER_CHUNK_BLOCK_ENTITY = BLOCK_ENTITIES
+            .register("copper_chunk",
+                    () -> BlockEntityType.Builder.of(CopperChunkBlockEntity::new, COPPER_CHUNK.get()).build(null));
 
     // Veins
     public static final DeferredBlock<VeinBlock> VEIN_BLOCK = BLOCKS.register(
@@ -283,10 +302,6 @@ public class TharidiaThings {
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<StableBlockEntity>> STABLE_BLOCK_ENTITY = BLOCK_ENTITIES
             .register("stable",
                     () -> BlockEntityType.Builder.of(StableBlockEntity::new, STABLE.get()).build(null));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<IronChunkBlockEntity>> IRON_CHUNK_BLOCK_ENTITY = BLOCK_ENTITIES
-            .register("iron_chunk",
-                    () -> BlockEntityType.Builder.of(IronChunkBlockEntity::new, IRON_CHUNK.get()).build(null));
 
     // Creates a MenuType for the Claim GUI
     public static final DeferredHolder<net.minecraft.world.inventory.MenuType<?>, net.minecraft.world.inventory.MenuType<ClaimMenu>> CLAIM_MENU = MENU_TYPES
@@ -403,6 +418,7 @@ public class TharidiaThings {
 
                         // Chunks
                         output.accept(IRON_CHUNK.get());
+                        output.accept(COPPER_CHUNK.get());
 
                         // Veins
                         output.accept(VEIN_BLOCK.get());

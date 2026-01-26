@@ -1,6 +1,9 @@
 package com.THproject.tharidia_things.block.ore_chunks;
 
+import org.jetbrains.annotations.Nullable;
+
 import com.mojang.serialization.MapCodec;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.BlockGetter;
@@ -14,12 +17,10 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
-import org.jetbrains.annotations.Nullable;
+public class CopperChunkBlock extends BaseEntityBlock {
+    public static final MapCodec<CopperChunkBlock> CODEC = simpleCodec(CopperChunkBlock::new);
 
-public class IronChunkBlock extends BaseEntityBlock {
-    public static final MapCodec<IronChunkBlock> CODEC = simpleCodec(IronChunkBlock::new);
-
-    public IronChunkBlock(Properties properties) {
+    public CopperChunkBlock(Properties properties) {
         super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(Chunks.STAGE, 0));
     }
@@ -29,14 +30,14 @@ public class IronChunkBlock extends BaseEntityBlock {
         if (!level.isClientSide) {
             if (Chunks.isCorrectTool(player.getMainHandItem())) {
                 BlockEntity blockEntity = level.getBlockEntity(pos);
-                if (blockEntity instanceof IronChunkBlockEntity ironChunkBlockEntity) {
-                    ironChunkBlockEntity.hit();
+                if (blockEntity instanceof CopperChunkBlockEntity copperChunkBlockEntity) {
+                    copperChunkBlockEntity.hit();
                     Chunks.playHammerSound(level, pos);
                     Chunks.spawnParticle(level, pos);
                     Chunks.destroyHandItem(player, 1);
-                    if (ironChunkBlockEntity.getHit() >= ironChunkBlockEntity.getMaxHit()) {
+                    if (copperChunkBlockEntity.getHit() >= copperChunkBlockEntity.getMaxHit()) {
                         Chunks.playChunkBreakSound(level, pos);
-                        Chunks.destroyAndPop(level, pos, ironChunkBlockEntity.getDrop());
+                        Chunks.destroyAndPop(level, pos, copperChunkBlockEntity.getDrop());
                     }
                 }
             }
@@ -64,7 +65,7 @@ public class IronChunkBlock extends BaseEntityBlock {
     @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return new IronChunkBlockEntity(pos, state);
+        return new CopperChunkBlockEntity(pos, state);
     }
 
     @Override
