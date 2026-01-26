@@ -342,6 +342,8 @@ public class TharidiaThings {
             () -> new AnimalFeedItem(new Item.Properties().stacksTo(64)));
     public static final DeferredItem<Item> MANURE = ITEMS.register("manure",
             () -> new Item(new Item.Properties().stacksTo(64)));
+    public static final DeferredItem<Item> MESH = ITEMS.register("mesh",
+            () -> new Item(new Item.Properties().stacksTo(64)));
 
     // Battle Gauntlet
     public static final DeferredItem<Item> BATTLE_GAUNTLE = ITEMS.register("battle_gauntlet",
@@ -408,6 +410,9 @@ public class TharidiaThings {
 
                         // Washer
                         output.accept(WASHER_BLOCK.get());
+
+                        // Mesh
+                        output.accept(MESH.get());
 
                         // Add all dynamically registered baby mob items
                         BabyMobRegistry.addToCreativeTab(output);

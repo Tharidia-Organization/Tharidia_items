@@ -45,6 +45,9 @@ public class WasherBlock extends BaseEntityBlock {
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hit) {
         BlockEntity blockEntity = level.getBlockEntity(pos);
+        if (hand != InteractionHand.MAIN_HAND)
+            return ItemInteractionResult.CONSUME;
+
         if (blockEntity instanceof WasherBlockEntity washer) {
             if (stack.getItem() == Items.WATER_BUCKET) {
                 if (!washer.isTankFull()) {
@@ -68,6 +71,13 @@ public class WasherBlock extends BaseEntityBlock {
                     }
                     return ItemInteractionResult.SUCCESS;
                 }
+            } else if (stack.getItem() == TharidiaThings.MESH.get()) {
+                if (!washer.hasMesh()) {
+                    washer.setMesh();
+                    stack.shrink(1);
+                    return ItemInteractionResult.SUCCESS;
+                }
+                return ItemInteractionResult.CONSUME;
             } else {
                 if (stack.isEmpty() && !player.isShiftKeyDown()) {
                     boolean success = false;
@@ -84,12 +94,18 @@ public class WasherBlock extends BaseEntityBlock {
                 } else if (stack.isEmpty() && player.isShiftKeyDown()) {
                     ItemStack extracted = washer.inventory.extractItem(0, 64, false);
                     if (!extracted.isEmpty()) {
-                        if (!player.getInventory().add(extracted.copy())) {
+                        if (!player.getInventory().add(extracted.copy()))
                             player.drop(extracted.copy(), false);
-                        }
                         return ItemInteractionResult.SUCCESS;
+                    } else {
+                        if (washer.hasMesh()) {
+                            washer.removeMesh();
+                            if (!player.getInventory().add(new ItemStack(TharidiaThings.MESH.get())))
+                                player.drop(new ItemStack(TharidiaThings.MESH.get()), false);
+                            return ItemInteractionResult.SUCCESS;
+                        }
+                        return ItemInteractionResult.CONSUME;
                     }
-                    return ItemInteractionResult.CONSUME;
                 } else {
                     ItemStack remainder = washer.inventory.insertItem(0, stack.copy(), false);
                     if (remainder.getCount() != stack.getCount()) {
@@ -112,6 +128,9 @@ public class WasherBlock extends BaseEntityBlock {
                 for (int i = 0; i < washer.inventory.getSlots(); i++) {
                     Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(),
                             washer.inventory.getStackInSlot(i));
+                }
+                if (washer.hasMesh()) {
+                    BaseEntityBlock.popResource(level, pos, new ItemStack(TharidiaThings.MESH.get()));
                 }
             }
             super.onRemove(state, level, pos, newState, isMoving);

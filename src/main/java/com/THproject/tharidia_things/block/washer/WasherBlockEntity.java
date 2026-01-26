@@ -25,6 +25,7 @@ import net.neoforged.neoforge.items.ItemStackHandler;
 
 public class WasherBlockEntity extends BlockEntity {
     public final int FLUID_CONSUMPTION_TICK = 1;
+    private boolean mesh = false;
 
     public final FluidTank tank = new FluidTank(8000) {
         @Override
@@ -77,7 +78,7 @@ public class WasherBlockEntity extends BlockEntity {
             blockEntity.maxProgress = washerRecipe.getProcessingTime();
 
             ItemStack result = washerRecipe.getResultItem(level.registryAccess());
-            if (blockEntity.tank.getFluidAmount() > 0 && blockEntity.canInsertItem(result)) {
+            if (blockEntity.tank.getFluidAmount() > 0 && blockEntity.hasMesh() && blockEntity.canInsertItem(result)) {
                 blockEntity.progress++;
                 if (blockEntity.progress >= blockEntity.maxProgress) {
                     blockEntity.craftItem(washerRecipe);
@@ -98,7 +99,7 @@ public class WasherBlockEntity extends BlockEntity {
         ItemStack result = recipe.getResultItem(this.level.registryAccess());
         inventory.extractItem(0, 1, false);
 
-        for(int i=1;i<inventory.getSlots();i++){
+        for (int i = 1; i < inventory.getSlots(); i++) {
             ItemStack outputStack = inventory.getStackInSlot(i);
             if (outputStack.isEmpty()) {
                 inventory.setStackInSlot(i, result.copy());
@@ -109,13 +110,6 @@ public class WasherBlockEntity extends BlockEntity {
                 return;
             }
         }
-        
-        // ItemStack outputStack = inventory.getStackInSlot(1);
-        // if (outputStack.isEmpty()) {
-        //     inventory.setStackInSlot(1, result.copy());
-        // } else {
-        //     outputStack.grow(result.getCount());
-        // }
     }
 
     private void resetProgress() {
@@ -141,6 +135,7 @@ public class WasherBlockEntity extends BlockEntity {
         tag.put("Tank", tank.writeToNBT(registries, new CompoundTag()));
         tag.put("Inventory", inventory.serializeNBT(registries));
         tag.putInt("WasherProgress", progress);
+        tag.putBoolean("mesh", mesh);
     }
 
     @Override
@@ -154,6 +149,9 @@ public class WasherBlockEntity extends BlockEntity {
         }
         if (tag.contains("WasherProgress")) {
             progress = tag.getInt("WasherProgress");
+        }
+        if (tag.contains("mesh")) {
+            mesh = tag.getBoolean("mesh");
         }
     }
 
@@ -171,6 +169,18 @@ public class WasherBlockEntity extends BlockEntity {
 
     public void addWaterBucket() {
         tank.fill(new FluidStack(Fluids.WATER, 1000), IFluidHandler.FluidAction.EXECUTE);
+    }
+
+    public void setMesh() {
+        mesh = true;
+    }
+
+    public void removeMesh() {
+        mesh = false;
+    }
+
+    public boolean hasMesh() {
+        return mesh;
     }
 
     public boolean isTankFull() {
