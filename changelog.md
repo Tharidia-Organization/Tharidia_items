@@ -1,113 +1,111 @@
 
 
-# Changelog 0.5.0
+# Changelog 0.5.7
 
-### Info generiche
-- **QUESTO CHANGELOG RACCHIUDE TUTTE LE NOVITÀ E IN PIÙ TUTTE LE MODALITÀ/FUNZIONALITÀ AD OGGI IMPLEMENTATE E FUNZIONANTI**.
-- Rimosse **15** mod, queste erano mod per cibo e simili, abbiamo aggiunto e tenuto solo le mod specifiche per ciò che ci serve.
-- Il client ora conta 266 mod, dalle 327 da cui eravamo partiti.
-- Dev server aggiornato, a breve aggiornerò il main, per permettere a chi ha piacere di accedere alla **Taverna**.
-- I dettagli tecnici dei dungeon stanno venendo scritti in questi giorni, di seguito troverete quello che è stato deciso sin ad oggi.
-- Stanno venendo revisionati tutti i concetti fondamentali sin dal principio, ci saranno successivi changelog in merito, al completamento di ciascuna definizione.
-- Abbiamo una stima di completamento per una prima release **ALPHA**, questa versione verrà aperta a tutti e servirà come primo debug, test e review del lavoro fatto, **Avrà la durata di un mese, dopo il quale il server verrà chiuso per completare lo sviluppo e risolvere bug**. -- **SEGUIRANNO COMUNICAZIONI**
-
-## 🎮 Nuove Funzionalità
-
-### Sistema Dieta
-- **Nuovo sistema nutrizionale completo** - Ogni cibo ha profili nutrizionali (Grano, Proteine, Verdure, Frutta, Zuccheri, Acqua)
-- GUI dedicata per visualizzare lo stato della dieta
-- Buff e debuff applicati in base ai valori nutrizionali
-- Compatibilità con mod esterne per i cibi
-- Cache persistente per ottimizzare le performance
-
-### Sistema Stamina
-- **Stamina di combattimento** integrata con Epic Fight
-- Consumo stamina per attacchi (basato sul peso dell'arma)
-- Roll consuma stamina in base al peso dell'armatura
-- Scudo alzato blocca la rigenerazione stamina
-- Archi consumano stamina in base al tempo di tensione
-- Rigenerazione ridotta durante il combattimento
-
-### Sistema Peso
-- Velocità movimento influenzata dalla pesantezza dell'inventario
-- Sistema di merge configurazioni da file multipli
-- Sincronizzazione config peso tra server e client
-
-### Battle Gauntlet (Guanto da Duello)
-- Nuovo item per sfidare altri giocatori a duello
-- GUI di invito/accettazione battaglia
-- Effetti visivi e sonori all'inizio e fine battaglia
-- Sistema freeze durante il duello
-- Gestione logout durante battaglia
-
-### Sistema Fallen/Revive
-- Logica "caduto" per morte in battaglia
-- Sistema di revive per player morti
-- Comandi per gestione fallen
-
-### Realm & Claims
-- **Nuovo modello 3D animato** per il blocco Realm (GeckoLib)
-- Fix collision e boundaries dei regni
-- Fix claim piazzabili: max 4 claim per player, 1 solo regno per mondo
-- Blocco PvP dentro i claim
-- Blocco esplosioni dentro i claim
-
-### Video In-Game
-- Riproduzione video YouTube e stream Twitch in gioco
-- Supporto Windows e Linux
-- Installer automatico dipendenze (FFmpeg, yt-dlp)
-
-### Character Creation
-- Nuova dimensione dedicata alla creazione personaggio
-- Piattaforma con bordo world border personalizzato
-- Teleport automatico per nuovi player
-
-## 🔧 Fix Importanti
-
-- Fix dieta che si resettava a 0 al relog
-- Fix nametag visibili attraverso i muri
-- Fix crash vector realm boundaries
-- Fix database chat sempre vuoto
-- Fix sonno di giorno
-- Fix ambient model occlusion
-- Fix HashMap → ConcurrentHashMap (thread safety)
-
-## 🎨 Assets
-
-- Nuova texture dado
-- Nuova texture e modello Realm Stage 1
-- Nuova texture Battle Gauntlet
+> **I dungeon prendono vita.** Ogni istanza viene ora generata proceduralmente: stanze, corridoi e ponti non saranno mai gli stessi. Scendete al secondo piano, affrontate il boss, e preparatevi — il terzo piano è in costruzione. Nel frattempo, in superficie, un nuovo sistema minerario vi mette in mano un martello per frantumare i minerali colpo dopo colpo, e la stalla vi aspetta con animali da accudire e un intero ciclo di gestione da padroneggiare.
 
 ---
 
-# 📋 Regole e Decisioni di Design
+## ⚔️ Dungeon Procedurale
 
-## Sistema Stamina - Regole Core
-- **Scopo**: Combat più "action" e skill-based, stile Dark Souls
-- La stamina è attiva **solo in combat** (ultimi X secondi di danno dato/ricevuto)
-- **Correre**: non consuma stamina, ma disabilitato sotto una % minima
-- **Roll**: consuma stamina con curva basata su peso armatura
-- **Parry**: non consuma stamina
-- **Scudo alzato**: blocca rigenerazione stamina
-- **Nessun consumabile** ripristina stamina
-- Progressione lineare con passive e stat che modificano la stamina
+**Ogni dungeon è unico.** 
+La generazione procedurale costruisce stanze, corridoi e ponti in modo diverso ad ogni nuova istanza. Al momento abbiamo progettato 5 istanza contemporanee. Nessuna run sarà mai uguale alla precedente.
 
-## Movimento
-- Velocità base vanilla, non incrementabile con tier
-- Roll: sì | Dash: no (categorico)
-- Velocità influenzata dal peso inventario
-- Armatura peso standardizzato indipendente da classe/tier
-- Movimento equiparato per tutte le taglie
+- **Primo piano** — Accessibile da un anello che corre attorno al dungeon
+- **Secondo piano** — raggiungibile attraverso portali animati che collegano i livelli
+- **Stanza Boss** — Un nemico vi aspetta in fondo. Spawn dedicato, meccaniche di sconfitta e ricompense
+- **Coda di gruppo** — Entrate nel dungeon con la vostra squadra. GUI dedicata direttamente dalla schermata del Realm
+- **Istanze multiple** in contemporanea con sistema di coda d'attesa
+- **Audio immersivo** — Suoni ambientali all'interno del dungeon e feedback sonoro all'entrata e all'uscita
 
-## Dungeon PvE
-- **Adventure mode** obbligatorio
-- Alla morte: perdi consumabili, loot dungeon, % durabilità equip, % monete
-- Moduli consumabili con wave di mob
-- Loot chest sbloccata dopo completamento modulo
-- Mob scelti randomicamente con sistema peso/difficoltà
-- Piani superiori con difficoltà e loot aumentati
-- Stanze boss opzionali con mini-boss
-- XP al passaggio di piano, bonus XP completando piano 2
+## 🎨 Assets & GUI
+
+- **GUI medievale completamente rinnovata** — Nuovo font Crimson Text, barre di progresso grafiche, pulsanti con texture dedicata per Claims, Dungeon ed Espansione
+- Slot inventario con **texture PNG personalizzate**
+- Nuove texture e modelli: **Stalla** (con 10 livelli di letame), **Portale Dungeon** animato, **Minerale di Ferro** (5 stadi), **Martello da Frantumazione**
+- Nuove texture: **animali baby** (5 specie), **strumenti stalla** (forcone, spazzola, paglia, letame, mangime)
+- Nuovi suoni: **martello** (5 varianti), **rottura minerale**, **ambientali dungeon**, **entrata/uscita dungeon**
+
+## 🔧 Fix
+
+- Fix dieta che non si rigenerava correttamente dopo il login
+- Fix teletrasporto dal Realm al Dungeon
+- Fix blocchi minerali che a volte non rilasciavano il drop
+- Fix lettura nomi per l'integrazione Discord
+- Fix permessi admin mancanti su alcuni comandi
+- Fix errore database nel salvataggio eventi di combattimento
+- Fix bioma della dimensione Dungeon
+
+---
+
+# Changelog 0.5.6
+
+## ⛏️ Sistema Minerario — Ore Chunks
+
+**Dimenticate il mining tradizionale.** I minerali ora si frantumano colpo dopo colpo con un martello dedicato. Ogni impatto è visibile, udibile e costa stamina.
+
+- **Blocchi minerali di Ferro** frantumabili attraverso **5 stadi progressivi** — il modello 3D cambia ad ogni colpo
+- **Martello da Frantumazione** — Nuovo strumento esclusivo per la raccolta dei minerali
+- **Scintille e particelle** ad ogni impatto, **5 varianti di suoni** per il martello e un suono dedicato alla rottura finale
+- **Consumo stamina** reale durante la frantumazione — non è solo estetico, è gameplay
+
+### 🔜 In arrivo
+- **Blocco minerale di Rame** con modello e texture dedicati
+- **Vene Minerarie e Sedimenti** — Nuovi blocchi naturali nel mondo
+- **Lavatore** (Washer) — Blocco per processare i minerali frantumati in risorse raffinate, con **drop a probabilità variabile**
+- **Retina Filtrante** (Mesh) — Componente per il Lavatore
+- **Integrazione JEI** — Tutte le ricette del Lavatore consultabili nel browser ricette
+
+---
+
+# Changelog 0.5.5
+
+## 🐄 Sistema Stalla
+
+**Un intero ciclo di gestione animale.** Mucche, pecore, maiali, capre e galline possono essere allevati nella vostra stalla. Ogni animale ha bisogno di cure, e trascurarli ha conseguenze.
+
+- **Blocco Stalla** con modello 3D multicomponente — fieno, abbeveratoio, latte e letame visibili direttamente sul blocco
+- **Benessere animale** — Fame, sete e pulizia da tenere sotto controllo
+- **Animali baby** trasportabili come oggetti e piazzabili nella stalla
+- **HUD informativo** sopra la stalla per monitorare lo stato degli animali
+- **Effetti meteo** — Il tempo atmosferico influenza il benessere
+- **Nuovi strumenti e materiali:**
+  - Forcone, Spazzola Animali, Paglia Fresca, Paglia Sporca
+  - Letame (raccoglibile), Mangime, Kit Potenziamento Riparo
+
+---
+
+# Changelog 0.5.4
+
+## 🎭 Identità del Personaggio
+
+- **Il vostro nome scelto in creazione personaggio ora è ovunque** — In chat, nella tab list, in tutto il gioco. Nessun nickname Minecraft visibile
+- I nomi dei giocatori **non appaiono più nei suggerimenti chat** — Solo gli admin possono vederli
+
+---
+
+## 💀 Sistema Fallen/Revive — Potenziato
+
+- **Sfocatura visiva** quando siete caduti — sentite il peso della sconfitta
+- **Invulnerabilità** in stato caduto — nessuno può finirvi mentre siete a terra
+- L'oggetto revive **si consuma** all'uso
+- Al posto di usare una mod per la revive abbiano scritto noi la funzionalità
+
+---
+
+## 🕳️ Grotte Procedurali [WIP]
+
+- **Nuova dimensione grotta** con generazione basata su rumore OpenSimplex2
+- Preset configurabili: **caverne ampie, tunnel densi, compatte, ricche di minerali**
+
+---
+
+
+## 🌍 Mondo
+
+- **Semi rimossi** dal drop di tutte le foglie
+- Miglioramenti al **blocco spawn mob** nelle zone protette
+
 
 ---
 
