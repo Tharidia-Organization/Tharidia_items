@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "tharidiathings:item/station_crystal_repairer"
+  }
+}
