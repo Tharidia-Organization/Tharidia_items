@@ -22,7 +22,7 @@ public class SieveRenderer extends GeoBlockRenderer<SieveBlockEntity> {
 
             @Override
             public ResourceLocation getAnimationResource(SieveBlockEntity animatable) {
-                return ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, "animations/sieve.animation.json");
+                return null;
             }
         });
     }

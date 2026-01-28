@@ -22,7 +22,7 @@ public class TankRenderer extends GeoBlockRenderer<TankBlockEntity> {
 
             @Override
             public ResourceLocation getAnimationResource(TankBlockEntity animatable) {
-                return ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, "animations/tank.animation.json");
+                return null;
             }
         });
     }
