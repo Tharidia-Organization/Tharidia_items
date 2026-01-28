@@ -24,11 +24,13 @@ public class StationCrystalTool extends Item {
 
         if (level.isClientSide) {
             BlockEntity be = level.getBlockEntity(pos);
-            return (be instanceof StationCrystalBlockEntity) ? InteractionResult.SUCCESS : InteractionResult.PASS;
+            BlockEntity beBelow = level.getBlockEntity(new BlockPos(pos.getX(), pos.getY() - 1, pos.getZ()));
+            return ((be instanceof StationCrystalBlockEntity) || (beBelow instanceof StationCrystalBlockEntity))
+                    ? InteractionResult.SUCCESS
+                    : InteractionResult.PASS;
         }
 
-        if (level.getBlockEntity(
-                pos) instanceof StationCrystalBlockEntity blockEntity) {
+        if (level.getBlockEntity(pos) instanceof StationCrystalBlockEntity blockEntity) {
             long tick = blockEntity.getRemainingTime();
             int totalSeconds = (int) (tick / 1000);
             int days = totalSeconds / 86400;
@@ -37,10 +39,24 @@ public class StationCrystalTool extends Item {
             int seconds = totalSeconds % 60;
 
             player.displayClientMessage(Component.literal(
-                    String.format("Remaining %02d:%02d:%02d:%02d", days, hours, minutes, seconds))
+                    String.format("Remaining %02d:%02d:%02d:%02d (%d%%)", days, hours, minutes, seconds,
+                            (int) (blockEntity.getTimePercentage() * 100)))
                     .withColor(0x00FF00),
                     true);
+        } else if (level.getBlockEntity(new BlockPos(pos.getX(), pos.getY() - 1,
+                pos.getZ())) instanceof StationCrystalBlockEntity stationBelow) {
+            long tick = stationBelow.getRemainingTime();
+            int totalSeconds = (int) (tick / 1000);
+            int days = totalSeconds / 86400;
+            int hours = (totalSeconds % 86400) / 3600;
+            int minutes = (totalSeconds % 3600) / 60;
+            int seconds = totalSeconds % 60;
 
+            player.displayClientMessage(Component.literal(
+                    String.format("Remaining %02d:%02d:%02d:%02d (%d%%)", days, hours, minutes, seconds,
+                            (int) (stationBelow.getTimePercentage() * 100)))
+                    .withColor(0x00FF00),
+                    true);
         }
         return super.useOn(context);
     }

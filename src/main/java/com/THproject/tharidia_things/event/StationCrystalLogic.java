@@ -1,5 +1,6 @@
 package com.THproject.tharidia_things.event;
 
+import com.THproject.tharidia_things.TharidiaThings;
 import com.THproject.tharidia_things.block.station_crystal.StationCrystalBlockEntity;
 
 import net.minecraft.core.BlockPos;
@@ -24,7 +25,7 @@ public class StationCrystalLogic {
                 new BlockPos(event.getPos().getX(), event.getPos().getY() - 1, event.getPos().getZ()));
         if (event.getEntity() instanceof Player player) {
             if (event.getPlacedBlock().is(TagKey.create(Registries.BLOCK,
-                    ResourceLocation.fromNamespaceAndPath("tharidiathings", "placeable_station_crystal")))) {
+                    ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, "placeable_station_crystal")))) {
                 if (!(be_bottom instanceof StationCrystalBlockEntity)) {
                     player.displayClientMessage(Component.literal("You have to place stations on Station Crystal"),
                             true);

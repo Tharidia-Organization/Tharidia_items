@@ -27,7 +27,10 @@ public class StationCrystalBlock extends BaseEntityBlock {
 
     @Override
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
-        level.destroyBlock(new BlockPos(pos.getX(), pos.getY() + 1, pos.getZ()), true);
+        BlockPos posAbove = new BlockPos(pos.getX(), pos.getY() + 1, pos.getZ());
+        if (level.getBlockEntity(pos) instanceof StationCrystalBlockEntity blockEntity) {
+            blockEntity.removeBlockAbove(posAbove);
+        }
         super.onRemove(state, level, pos, newState, movedByPiston);
     }
 
