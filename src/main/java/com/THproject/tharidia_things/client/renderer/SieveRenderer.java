@@ -1,7 +1,8 @@
 package com.THproject.tharidia_things.client.renderer;
 
 import com.THproject.tharidia_things.TharidiaThings;
-import com.THproject.tharidia_things.block.sieve.SieveBlockEntity;
+import com.THproject.tharidia_things.block.washer.sieve.SieveBlockEntity;
+
 import net.minecraft.resources.ResourceLocation;
 import software.bernie.geckolib.model.GeoModel;
 import software.bernie.geckolib.renderer.GeoBlockRenderer;

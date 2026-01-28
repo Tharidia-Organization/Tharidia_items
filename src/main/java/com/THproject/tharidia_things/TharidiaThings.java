@@ -40,8 +40,8 @@ import com.THproject.tharidia_things.block.ore_chunks.IronChunkBlock;
 import com.THproject.tharidia_things.block.ore_chunks.IronChunkBlockEntity;
 import com.THproject.tharidia_things.block.veins.VeinBlock;
 import com.THproject.tharidia_things.block.veins.VeinSediment;
-import com.THproject.tharidia_things.block.sieve.SieveBlock;
-import com.THproject.tharidia_things.block.sieve.SieveBlockEntity;
+import com.THproject.tharidia_things.block.washer.sieve.SieveBlock;
+import com.THproject.tharidia_things.block.washer.sieve.SieveBlockEntity;
 import com.THproject.tharidia_things.item.HotIronItem;
 import com.THproject.tharidia_things.item.HotGoldItem;
 import com.THproject.tharidia_things.item.HotCopperItem;
@@ -276,9 +276,9 @@ public class TharidiaThings {
             "sieve",
             () -> new BlockItem(SIEVE_BLOCK.get(), new Item.Properties()));
 
-    public static final DeferredBlock<com.THproject.tharidia_things.block.sieve.SieveDummyBlock> SIEVE_DUMMY = BLOCKS
+    public static final DeferredBlock<com.THproject.tharidia_things.block.washer.sieve.SieveDummyBlock> SIEVE_DUMMY = BLOCKS
             .register("sieve_dummy",
-                    () -> new com.THproject.tharidia_things.block.sieve.SieveDummyBlock());
+                    () -> new com.THproject.tharidia_things.block.washer.sieve.SieveDummyBlock());
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<SieveBlockEntity>> SIEVE_BLOCK_ENTITY = BLOCK_ENTITIES
             .register("sieve",

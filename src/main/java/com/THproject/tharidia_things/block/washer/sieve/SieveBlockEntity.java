@@ -1,4 +1,4 @@
-package com.THproject.tharidia_things.block.sieve;
+package com.THproject.tharidia_things.block.washer.sieve;
 
 import com.THproject.tharidia_things.recipe.SieveRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;

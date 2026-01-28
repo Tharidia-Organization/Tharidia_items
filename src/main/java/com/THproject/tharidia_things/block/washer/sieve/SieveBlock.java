@@ -1,4 +1,4 @@
-package com.THproject.tharidia_things.block.sieve;
+package com.THproject.tharidia_things.block.washer.sieve;
 
 import com.mojang.serialization.MapCodec;
 
