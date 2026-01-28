@@ -13,6 +13,7 @@ import com.THproject.tharidia_things.client.video.DependencyCheckHandler;
 import com.THproject.tharidia_things.client.renderer.PietroBlockRenderer;
 import com.THproject.tharidia_things.client.renderer.SieveRenderer;
 import com.THproject.tharidia_things.client.renderer.TankRenderer;
+import com.THproject.tharidia_things.client.renderer.SinkRenderer;
 import com.THproject.tharidia_things.client.renderer.HotIronAnvilRenderer;
 import com.THproject.tharidia_things.client.renderer.HotGoldAnvilRenderer;
 import com.THproject.tharidia_things.client.renderer.HotCopperAnvilRenderer;
@@ -111,6 +112,7 @@ public class TharidiaThingsClient {
         event.registerBlockEntityRenderer(TharidiaThings.STABLE_BLOCK_ENTITY.get(), StableBlockRenderer::new);
         event.registerBlockEntityRenderer(TharidiaThings.SIEVE_BLOCK_ENTITY.get(), context -> new SieveRenderer());
         event.registerBlockEntityRenderer(TharidiaThings.TANK_BLOCK_ENTITY.get(), context -> new TankRenderer());
+        event.registerBlockEntityRenderer(TharidiaThings.SINK_BLOCK_ENTITY.get(), context -> new SinkRenderer());
     }
 
     @SubscribeEvent

@@ -312,6 +312,36 @@ public class TharidiaThings {
                                     TANK_BLOCK.get())
                             .build(null));
 
+    // Sink
+    public static final DeferredBlock<com.THproject.tharidia_things.block.washer.sink.SinkBlock> SINK_BLOCK = BLOCKS
+            .register(
+                    "sink",
+                    () -> new com.THproject.tharidia_things.block.washer.sink.SinkBlock(BlockBehaviour.Properties.of()
+                            .mapColor(MapColor.METAL)
+                            .destroyTime(1.0f)
+                            .explosionResistance(1.0F)
+                            .sound(SoundType.METAL)
+                            .noOcclusion()
+                            .requiresCorrectToolForDrops()));
+
+    public static final DeferredItem<BlockItem> SINK_ITEM = ITEMS.register(
+            "sink",
+            () -> new BlockItem(SINK_BLOCK.get(), new Item.Properties()));
+
+    public static final DeferredBlock<com.THproject.tharidia_things.block.washer.sink.SinkDummyBlock> SINK_DUMMY_BLOCK = BLOCKS
+            .register("sink_dummy",
+                    () -> new com.THproject.tharidia_things.block.washer.sink.SinkDummyBlock(BlockBehaviour.Properties.of()
+                            .mapColor(MapColor.METAL)
+                            .strength(1.0F)
+                            .noOcclusion()));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.THproject.tharidia_things.block.washer.sink.SinkBlockEntity>> SINK_BLOCK_ENTITY = BLOCK_ENTITIES
+            .register("sink",
+                    () -> BlockEntityType.Builder
+                            .of(com.THproject.tharidia_things.block.washer.sink.SinkBlockEntity::new,
+                                    SINK_BLOCK.get())
+                            .build(null));
+
     // Creates a new BlockEntityType for the Pietro block
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<PietroBlockEntity>> PIETRO_BLOCK_ENTITY = BLOCK_ENTITIES
             .register("pietro", () -> BlockEntityType.Builder.of(PietroBlockEntity::new, PIETRO.get()).build(null));
@@ -461,6 +491,9 @@ public class TharidiaThings {
 
                         // Tank
                         output.accept(TANK_BLOCK.get());
+
+                        // Sink
+                        output.accept(SINK_BLOCK.get());
 
                         // Mesh
                         output.accept(MESH.get());
