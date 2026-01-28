@@ -11,7 +11,7 @@ import net.minecraft.world.level.block.state.BlockState;
 
 public class StationCrystalBlockEntity extends BlockEntity {
     // 10 seconds in milliseconds
-    private static final long MAX_TIME = 10L * 1000;
+    private static final long MAX_TIME = 10L * 24 * 60 * 60 * 1000;
     private long placedTime;
 
     public StationCrystalBlockEntity(BlockPos pos, BlockState blockState) {
@@ -25,6 +25,7 @@ public class StationCrystalBlockEntity extends BlockEntity {
 
         if (System.currentTimeMillis() >= blockEntity.placedTime + MAX_TIME) {
             level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
+            level.destroyBlock(new BlockPos(pos.getX(),pos.getY()+1,pos.getZ()), true);
         }
     }
 
@@ -45,7 +46,7 @@ public class StationCrystalBlockEntity extends BlockEntity {
         return false;
     }
 
-    public long getRemainingTime(){
+    public long getRemainingTime() {
         long elapsedTime = System.currentTimeMillis() - this.placedTime;
         long remainingTime = MAX_TIME - elapsedTime;
         return Math.max(remainingTime, 0);

@@ -394,6 +394,7 @@ public class TharidiaThings {
                         // Station Crystal
                         output.accept(STATION_CRYSTAL_BLOCK_ITEM.get());
                         output.accept(STATION_CRYSTAL_TOOL.get());
+                        output.accept(STATION_CRYSTAL_REPAIRER.get());
 
                         // Add all dynamically registered baby mob items
                         BabyMobRegistry.addToCreativeTab(output);

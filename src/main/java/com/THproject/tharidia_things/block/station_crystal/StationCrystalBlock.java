@@ -25,6 +25,12 @@ public class StationCrystalBlock extends BaseEntityBlock {
         return CODEC;
     }
 
+    @Override
+    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+        level.destroyBlock(new BlockPos(pos.getX(), pos.getY() + 1, pos.getZ()), true);
+        super.onRemove(state, level, pos, newState, movedByPiston);
+    }
+
     @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
