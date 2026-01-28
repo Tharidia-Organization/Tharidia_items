@@ -269,11 +269,16 @@ public class TharidiaThings {
                     .destroyTime(1.0f)
                     .explosionResistance(1.0F)
                     .sound(SoundType.METAL)
+                    .noOcclusion()
                     .requiresCorrectToolForDrops()));
 
     public static final DeferredItem<BlockItem> WASHER_ITEM = ITEMS.register(
             "washer",
             () -> new BlockItem(WASHER_BLOCK.get(), new Item.Properties()));
+
+    public static final DeferredBlock<com.THproject.tharidia_things.block.washer.WasherDummyBlock> WASHER_DUMMY = BLOCKS
+            .register("washer_dummy",
+                    () -> new com.THproject.tharidia_things.block.washer.WasherDummyBlock());
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<WasherBlockEntity>> WASHER_BLOCK_ENTITY = BLOCK_ENTITIES
             .register("washer",

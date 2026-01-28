@@ -15,6 +15,7 @@ import com.THproject.tharidia_things.client.renderer.HotIronAnvilRenderer;
 import com.THproject.tharidia_things.client.renderer.HotGoldAnvilRenderer;
 import com.THproject.tharidia_things.client.renderer.HotCopperAnvilRenderer;
 import com.THproject.tharidia_things.client.renderer.StableBlockRenderer;
+import com.THproject.tharidia_things.client.renderer.WasherRenderer;
 import com.THproject.tharidia_things.diet.ClientDietProfileCache;
 import com.THproject.tharidia_things.diet.DietRegistry;
 import net.minecraft.client.renderer.RenderType;
@@ -104,6 +105,7 @@ public class TharidiaThingsClient {
         event.registerBlockEntityRenderer(TharidiaThings.HOT_GOLD_ANVIL_ENTITY.get(), HotGoldAnvilRenderer::new);
         event.registerBlockEntityRenderer(TharidiaThings.HOT_COPPER_ANVIL_ENTITY.get(), HotCopperAnvilRenderer::new);
         event.registerBlockEntityRenderer(TharidiaThings.STABLE_BLOCK_ENTITY.get(), StableBlockRenderer::new);
+        event.registerBlockEntityRenderer(TharidiaThings.WASHER_BLOCK_ENTITY.get(), context -> new WasherRenderer());
     }
     
     @SubscribeEvent
