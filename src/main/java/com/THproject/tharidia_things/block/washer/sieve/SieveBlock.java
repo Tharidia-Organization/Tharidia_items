@@ -4,12 +4,10 @@ import com.mojang.serialization.MapCodec;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
@@ -23,11 +21,6 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.phys.BlockHitResult;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-
-import net.minecraft.world.level.block.entity.BlockEntityTicker;
-import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.minecraft.world.Containers;
 import javax.annotation.Nullable;
 
 import com.THproject.tharidia_things.TharidiaThings;
@@ -201,12 +194,6 @@ public class SieveBlock extends BaseEntityBlock {
     }
 
     @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state,
-            BlockEntityType<T> type) {
-        return createTickerHelper(type, TharidiaThings.SIEVE_BLOCK_ENTITY.get(), SieveBlockEntity::tick);
-    }
-
-    @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hit) {
         BlockEntity blockEntity = level.getBlockEntity(pos);
@@ -214,49 +201,17 @@ public class SieveBlock extends BaseEntityBlock {
             return ItemInteractionResult.CONSUME;
 
         if (blockEntity instanceof SieveBlockEntity sieve) {
-            if (stack.getItem() == Items.WATER_BUCKET) {
-                if (!sieve.isTankFull()) {
-                    sieve.addWaterBucket();
-                    player.playSound(SoundEvents.BUCKET_EMPTY);
-                    if (!player.isCreative())
-                        player.setItemInHand(hand, new ItemStack(Items.BUCKET));
-                    return ItemInteractionResult.SUCCESS;
-                } else {
-                    return ItemInteractionResult.CONSUME;
-                }
-            } else if (stack.getItem() == Items.BUCKET) {
-                if (sieve.tank.getFluidAmount() >= 1000) {
-                    sieve.tank.drain(1000, IFluidHandler.FluidAction.EXECUTE);
-                    player.playSound(SoundEvents.BUCKET_FILL);
-                    stack.shrink(1);
-                    if (stack.isEmpty()) {
-                        player.setItemInHand(hand, new ItemStack(Items.WATER_BUCKET));
-                    } else if (!player.getInventory().add(new ItemStack(Items.WATER_BUCKET))) {
-                        player.drop(new ItemStack(Items.WATER_BUCKET), false);
-                    }
-                    return ItemInteractionResult.SUCCESS;
-                }
-            } else if (stack.getItem() == TharidiaThings.MESH.get()) {
+
+            if (stack.getItem() == TharidiaThings.MESH.get()) {
                 if (!sieve.hasMesh()) {
                     sieve.setMesh();
                     stack.shrink(1);
                     return ItemInteractionResult.SUCCESS;
                 }
-                return ItemInteractionResult.CONSUME;
+                return ItemInteractionResult.SUCCESS;
             } else {
-                if (stack.isEmpty() && !player.isShiftKeyDown()) {
-                    boolean success = false;
-                    for (int i = 1; i < sieve.inventory.getSlots(); i++) {
-                        ItemStack extracted = sieve.inventory.extractItem(i, 64, false);
-                        if (!extracted.isEmpty()) {
-                            if (!player.getInventory().add(extracted.copy())) {
-                                player.drop(extracted.copy(), false);
-                            }
-                            success = true;
-                        }
-                    }
-                    return success ? ItemInteractionResult.SUCCESS : ItemInteractionResult.CONSUME;
-                } else if (stack.isEmpty() && player.isShiftKeyDown()) {
+                // Remove input or mesh
+                if (stack.isEmpty() && player.isShiftKeyDown()) {
                     ItemStack extracted = sieve.inventory.extractItem(0, 64, false);
                     if (!extracted.isEmpty()) {
                         if (!player.getInventory().add(extracted.copy()))
@@ -269,42 +224,25 @@ public class SieveBlock extends BaseEntityBlock {
                                 player.drop(new ItemStack(TharidiaThings.MESH.get()), false);
                             return ItemInteractionResult.SUCCESS;
                         }
-                        return ItemInteractionResult.CONSUME;
+                        return ItemInteractionResult.SUCCESS;
                     }
                 } else {
+                    // Insert input
                     ItemStack remainder = sieve.inventory.insertItem(0, stack.copy(), false);
                     if (remainder.getCount() != stack.getCount()) {
                         player.setItemInHand(hand, remainder);
                         return ItemInteractionResult.SUCCESS;
-                    } else {
-                        return ItemInteractionResult.CONSUME;
                     }
+                    return ItemInteractionResult.SUCCESS;
                 }
             }
         }
-        return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        return ItemInteractionResult.SUCCESS;
     }
 
     @Override
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
         if (!state.is(newState.getBlock()) && !level.isClientSide) {
-            // Drop the sieve item manually if it's the master block being removed
-            // Note: SieveBlock has dropResource handled by standard loot tables if not for
-            // this special logic
-            // But StableBlock pops it manually.
-            // If this block is broken, we should destroy multiblock.
-
-            BlockEntity blockEntity = level.getBlockEntity(pos);
-            if (blockEntity instanceof SieveBlockEntity sieve) {
-                for (int i = 0; i < sieve.inventory.getSlots(); i++) {
-                    Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(),
-                            sieve.inventory.getStackInSlot(i));
-                }
-                if (sieve.hasMesh()) {
-                    BaseEntityBlock.popResource(level, pos, new ItemStack(TharidiaThings.MESH.get()));
-                }
-            }
-
             destroyMultiblock(level, pos, state.getValue(FACING));
             super.onRemove(state, level, pos, newState, isMoving);
         }

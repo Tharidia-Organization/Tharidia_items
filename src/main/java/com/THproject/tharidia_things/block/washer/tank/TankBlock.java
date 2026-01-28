@@ -7,6 +7,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -18,6 +19,8 @@ import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityTicker;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -27,8 +30,6 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 
-import net.minecraft.world.level.block.entity.BlockEntityTicker;
-import net.minecraft.world.level.block.entity.BlockEntityType;
 import javax.annotation.Nullable;
 
 import com.THproject.tharidia_things.TharidiaThings;
@@ -65,7 +66,7 @@ public class TankBlock extends BaseEntityBlock {
 
     @Override
     public void setPlacedBy(Level level, BlockPos pos, BlockState state,
-            @Nullable net.minecraft.world.entity.LivingEntity placer, ItemStack stack) {
+            @Nullable LivingEntity placer, ItemStack stack) {
         super.setPlacedBy(level, pos, state, placer, stack);
         if (!level.isClientSide) {
             Direction facing = state.getValue(FACING);
@@ -90,9 +91,6 @@ public class TankBlock extends BaseEntityBlock {
         // Let's implement a consistent logic:
         // Always build 2x2 in local coordinates: (0,0) to (1,1)
         // And Y: 0 to 2.
-
-        Direction right = facing.getClockWise();
-        Direction back = facing.getOpposite(); // No, Sieve used length.
 
         for (int y = 0; y < 3; y++) {
             for (int w = 0; w < 2; w++) { // Width (Right)
@@ -144,7 +142,6 @@ public class TankBlock extends BaseEntityBlock {
                     if (y == 0 && w == 0 && d == 0)
                         continue; // Master
 
-                    BlockPos checkPos = masterPos.offset(x, y, z); // Incorrect rotation logic above
                     // Correct way: masterPos.relative(right, w).relative(back, d).above(y)
                     // But Rotation with simple offset loop is risky.
                 }
@@ -162,7 +159,6 @@ public class TankBlock extends BaseEntityBlock {
         // I will implement 2x2x3.
 
         // We will execute a simpler loop using `relative` direction helpers
-        Direction rightDir = facing.getClockWise();
         // Since we want 2x2, let's expand 1 block to Right, 1 block Up (2 more layers),
         // and maybe 1 block Backward (or Forward).
         // Let's just do 2x1x3 (Width 2, Depth 1, Height 3). This is "1 block larger"
@@ -249,7 +245,7 @@ public class TankBlock extends BaseEntityBlock {
                 }
             }
         }
-        return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        return ItemInteractionResult.SUCCESS;
     }
 
     @Override

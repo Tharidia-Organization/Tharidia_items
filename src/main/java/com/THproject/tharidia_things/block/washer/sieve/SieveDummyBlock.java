@@ -9,10 +9,16 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.material.MapColor;
 
 public class SieveDummyBlock extends Block {
@@ -67,26 +73,22 @@ public class SieveDummyBlock extends Block {
     }
 
     @Override
-    protected net.minecraft.world.ItemInteractionResult useItemOn(net.minecraft.world.item.ItemStack stack,
-            BlockState state, net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos,
-            net.minecraft.world.entity.player.Player player, net.minecraft.world.InteractionHand hand,
-            net.minecraft.world.phys.BlockHitResult hitResult) {
-        // Forward interaction to master block
+    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
+            Player player, InteractionHand hand, BlockHitResult hitResult) { // Forward interaction to master block
         net.minecraft.core.BlockPos masterPos = findMaster(level, pos, state);
         if (masterPos != null) {
             BlockState masterState = level.getBlockState(masterPos);
             if (masterState.getBlock() instanceof SieveBlock sieveBlock) {
-                net.minecraft.world.phys.BlockHitResult newHit = new net.minecraft.world.phys.BlockHitResult(
+                BlockHitResult newHit = new BlockHitResult(
                         hitResult.getLocation(), hitResult.getDirection(), masterPos, hitResult.isInside());
                 return sieveBlock.useItemOn(stack, masterState, level, masterPos, player, hand, newHit);
             }
         }
-        return net.minecraft.world.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
     }
 
     @Override
-    public void onRemove(BlockState state, net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos,
-            BlockState newState, boolean isMoving) {
+    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
         if (!state.is(newState.getBlock())) {
             // Find and destroy master block when dummy is broken
             if (!level.isClientSide) {
@@ -96,20 +98,19 @@ public class SieveDummyBlock extends Block {
         super.onRemove(state, level, pos, newState, isMoving);
     }
 
-    private net.minecraft.core.BlockPos findMaster(net.minecraft.world.level.Level level,
-            net.minecraft.core.BlockPos dummyPos, BlockState dummyState) {
+    private BlockPos findMaster(Level level, BlockPos dummyPos, BlockState dummyState) {
         int offsetX = dummyState.getValue(OFFSET_X) - 2;
         int offsetZ = dummyState.getValue(OFFSET_Z) - 2;
-        net.minecraft.core.BlockPos masterPos = dummyPos.offset(offsetX, 0, offsetZ);
+        BlockPos masterPos = dummyPos.offset(offsetX, 0, offsetZ);
         if (level.getBlockState(masterPos).getBlock() instanceof SieveBlock) {
             return masterPos;
         }
         return null;
     }
 
-    private void findAndDestroyMaster(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos dummyPos,
+    private void findAndDestroyMaster(Level level, BlockPos dummyPos,
             BlockState dummyState) {
-        net.minecraft.core.BlockPos masterPos = findMaster(level, dummyPos, dummyState);
+        BlockPos masterPos = findMaster(level, dummyPos, dummyState);
         if (masterPos != null) {
             level.destroyBlock(masterPos, true); // True to drop loot/resources
         }
