@@ -239,5 +239,6 @@
   "gui.tharidiathings.stable.production.resting": "Animali a riposo (notte)",
   "gui.tharidiathings.stable.production.active": "Attiva",
   "gui.tharidiathings.stable.production.milk_available": "Latte disponibile!",
-  "gui.tharidiathings.stable.production.eggs_available": "Uova disponibili: %d"
+  "gui.tharidiathings.stable.production.eggs_available": "Uova disponibili: %d",
+  "block.tharidiathings.sieve": "Setaccio"
 }

@@ -1,5 +1,5 @@
 {
-    "type": "tharidiathings:washer",
+    "type": "tharidiathings:sieve",
     "input": {
         "item": "tharidiathings:vein_sediment"
     },

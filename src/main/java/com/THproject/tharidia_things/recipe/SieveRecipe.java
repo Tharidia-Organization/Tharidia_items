@@ -18,12 +18,12 @@ import net.neoforged.neoforge.items.wrapper.RecipeWrapper;
 import java.util.List;
 import java.util.Random;
 
-public class WasherRecipe implements Recipe<RecipeWrapper> {
+public class SieveRecipe implements Recipe<RecipeWrapper> {
     private final Ingredient input;
     private final List<WeightedOutput> outputs;
     private final int processingTime;
 
-    public WasherRecipe(Ingredient input, List<WeightedOutput> outputs, int processingTime) {
+    public SieveRecipe(Ingredient input, List<WeightedOutput> outputs, int processingTime) {
         this.input = input;
         this.outputs = outputs;
         this.processingTime = processingTime;
@@ -67,45 +67,16 @@ public class WasherRecipe implements Recipe<RecipeWrapper> {
                 return output.item().copy();
         }
         return ItemStack.EMPTY;
-
-        // double value = random.nextDouble();
-
-        // for (WeightedOutput output : outputs) {
-        // value -= output.chance();
-
-        // if (value <= 0) {
-        // return output.item();
-        // }
-        // }
-
-        // return ItemStack.EMPTY;
-
-        // -------------------------
-
-        // double totalWeight = 0.0;
-        // for (WeightedOutput output : outputs) {
-        // totalWeight += output.chance();
-        // }
-
-        // double random = Math.random() * totalWeight;
-
-        // for (WeightedOutput output : outputs) {
-        // random -= output.chance();
-        // if (random <= 0) {
-        // return output.item().copy();
-        // }
-        // }
-        // return outputs.get(0).item().copy();
     }
 
     @Override
     public RecipeSerializer<?> getSerializer() {
-        return TharidiaThings.WASHER_RECIPE_SERIALIZER.get();
+        return TharidiaThings.SIEVE_RECIPE_SERIALIZER.get();
     }
 
     @Override
     public RecipeType<?> getType() {
-        return TharidiaThings.WASHER_RECIPE_TYPE.get();
+        return TharidiaThings.SIEVE_RECIPE_TYPE.get();
     }
 
     public Ingredient getInput() {
@@ -136,28 +107,28 @@ public class WasherRecipe implements Recipe<RecipeWrapper> {
                 WeightedOutput::new);
     }
 
-    public static class Serializer implements RecipeSerializer<WasherRecipe> {
-        public static final MapCodec<WasherRecipe> CODEC = RecordCodecBuilder.mapCodec(
+    public static class Serializer implements RecipeSerializer<SieveRecipe> {
+        public static final MapCodec<SieveRecipe> CODEC = RecordCodecBuilder.mapCodec(
                 instance -> instance.group(
-                        Ingredient.CODEC_NONEMPTY.fieldOf("input").forGetter(WasherRecipe::getInput),
-                        WeightedOutput.CODEC.listOf().fieldOf("outputs").forGetter(WasherRecipe::getOutputs),
-                        Codec.INT.fieldOf("processingTime").orElse(40).forGetter(WasherRecipe::getProcessingTime))
-                        .apply(instance, WasherRecipe::new));
+                        Ingredient.CODEC_NONEMPTY.fieldOf("input").forGetter(SieveRecipe::getInput),
+                        WeightedOutput.CODEC.listOf().fieldOf("outputs").forGetter(SieveRecipe::getOutputs),
+                        Codec.INT.fieldOf("processingTime").orElse(40).forGetter(SieveRecipe::getProcessingTime))
+                        .apply(instance, SieveRecipe::new));
 
-        public static final StreamCodec<RegistryFriendlyByteBuf, WasherRecipe> STREAM_CODEC = StreamCodec.composite(
-                Ingredient.CONTENTS_STREAM_CODEC, WasherRecipe::getInput,
+        public static final StreamCodec<RegistryFriendlyByteBuf, SieveRecipe> STREAM_CODEC = StreamCodec.composite(
+                Ingredient.CONTENTS_STREAM_CODEC, SieveRecipe::getInput,
                 WeightedOutput.STREAM_CODEC.apply(net.minecraft.network.codec.ByteBufCodecs.list()),
-                WasherRecipe::getOutputs,
-                net.minecraft.network.codec.ByteBufCodecs.INT, WasherRecipe::getProcessingTime,
-                WasherRecipe::new);
+                SieveRecipe::getOutputs,
+                net.minecraft.network.codec.ByteBufCodecs.INT, SieveRecipe::getProcessingTime,
+                SieveRecipe::new);
 
         @Override
-        public MapCodec<WasherRecipe> codec() {
+        public MapCodec<SieveRecipe> codec() {
             return CODEC;
         }
 
         @Override
-        public StreamCodec<RegistryFriendlyByteBuf, WasherRecipe> streamCodec() {
+        public StreamCodec<RegistryFriendlyByteBuf, SieveRecipe> streamCodec() {
             return STREAM_CODEC;
         }
     }

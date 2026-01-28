@@ -239,5 +239,6 @@
   "gui.tharidiathings.stable.production.resting": "Animals resting (night)",
   "gui.tharidiathings.stable.production.active": "Active",
   "gui.tharidiathings.stable.production.milk_available": "Milk available!",
-  "gui.tharidiathings.stable.production.eggs_available": "Eggs available: %d"
+  "gui.tharidiathings.stable.production.eggs_available": "Eggs available: %d",
+  "block.tharidiathings.sieve": "Sieve"
 }

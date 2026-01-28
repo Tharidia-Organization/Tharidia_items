@@ -1,6 +1,6 @@
-package com.THproject.tharidia_things.block.washer;
+package com.THproject.tharidia_things.block.sieve;
 
-import com.THproject.tharidia_things.recipe.WasherRecipe;
+import com.THproject.tharidia_things.recipe.SieveRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.neoforged.neoforge.items.wrapper.RecipeWrapper;
 import java.util.Optional;
@@ -31,7 +31,7 @@ import software.bernie.geckolib.animation.RawAnimation;
 import software.bernie.geckolib.animation.PlayState;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
-public class WasherBlockEntity extends BlockEntity implements GeoBlockEntity {
+public class SieveBlockEntity extends BlockEntity implements GeoBlockEntity {
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
     public final int FLUID_CONSUMPTION_TICK = 1;
     private boolean mesh = false;
@@ -73,7 +73,7 @@ public class WasherBlockEntity extends BlockEntity implements GeoBlockEntity {
             if (slot == 0) {
                 if (level == null)
                     return true;
-                return level.getRecipeManager().getAllRecipesFor(TharidiaThings.WASHER_RECIPE_TYPE.get())
+                return level.getRecipeManager().getAllRecipesFor(TharidiaThings.SIEVE_RECIPE_TYPE.get())
                         .stream()
                         .anyMatch(recipe -> recipe.value().getInput().test(stack));
             }
@@ -84,29 +84,29 @@ public class WasherBlockEntity extends BlockEntity implements GeoBlockEntity {
     private int progress = 0;
     private int maxProgress = 40;
 
-    public WasherBlockEntity(BlockPos pos, BlockState blockState) {
-        super(TharidiaThings.WASHER_BLOCK_ENTITY.get(), pos, blockState);
+    public SieveBlockEntity(BlockPos pos, BlockState blockState) {
+        super(TharidiaThings.SIEVE_BLOCK_ENTITY.get(), pos, blockState);
     }
 
-    public static void tick(Level level, BlockPos pos, BlockState state, WasherBlockEntity blockEntity) {
+    public static void tick(Level level, BlockPos pos, BlockState state, SieveBlockEntity blockEntity) {
         if (level.isClientSide)
             return;
 
         RecipeWrapper recipeWrapper = new RecipeWrapper(blockEntity.inventory);
-        Optional<RecipeHolder<WasherRecipe>> recipe = level.getRecipeManager()
-                .getRecipeFor(TharidiaThings.WASHER_RECIPE_TYPE.get(), recipeWrapper, level);
+        Optional<RecipeHolder<SieveRecipe>> recipe = level.getRecipeManager()
+                .getRecipeFor(TharidiaThings.SIEVE_RECIPE_TYPE.get(), recipeWrapper, level);
 
         blockEntity.tank.drain(blockEntity.FLUID_CONSUMPTION_TICK, IFluidHandler.FluidAction.EXECUTE);
 
         if (recipe.isPresent()) {
-            WasherRecipe washerRecipe = recipe.get().value();
-            blockEntity.maxProgress = washerRecipe.getProcessingTime();
+            SieveRecipe sieveRecipe = recipe.get().value();
+            blockEntity.maxProgress = sieveRecipe.getProcessingTime();
 
-            ItemStack result = washerRecipe.getResultItem(level.registryAccess());
+            ItemStack result = sieveRecipe.getResultItem(level.registryAccess());
             if (blockEntity.tank.getFluidAmount() > 0 && blockEntity.hasMesh() && blockEntity.canInsertItem(result)) {
                 blockEntity.progress++;
                 if (blockEntity.progress >= blockEntity.maxProgress) {
-                    blockEntity.craftItem(washerRecipe);
+                    blockEntity.craftItem(sieveRecipe);
                     blockEntity.progress = 0;
                 }
                 blockEntity.setChanged();
@@ -120,7 +120,7 @@ public class WasherBlockEntity extends BlockEntity implements GeoBlockEntity {
         }
     }
 
-    private void craftItem(WasherRecipe recipe) {
+    private void craftItem(SieveRecipe recipe) {
         ItemStack result = recipe.getResultItem(this.level.registryAccess());
         inventory.extractItem(0, 1, false);
 
@@ -159,7 +159,7 @@ public class WasherBlockEntity extends BlockEntity implements GeoBlockEntity {
         super.saveAdditional(tag, registries);
         tag.put("Tank", tank.writeToNBT(registries, new CompoundTag()));
         tag.put("Inventory", inventory.serializeNBT(registries));
-        tag.putInt("WasherProgress", progress);
+        tag.putInt("SieveProgress", progress);
         tag.putBoolean("mesh", mesh);
     }
 
@@ -172,8 +172,8 @@ public class WasherBlockEntity extends BlockEntity implements GeoBlockEntity {
         if (tag.contains("Inventory")) {
             inventory.deserializeNBT(registries, tag.getCompound("Inventory"));
         }
-        if (tag.contains("WasherProgress")) {
-            progress = tag.getInt("WasherProgress");
+        if (tag.contains("SieveProgress")) {
+            progress = tag.getInt("SieveProgress");
         }
         if (tag.contains("mesh")) {
             mesh = tag.getBoolean("mesh");

@@ -7,7 +7,7 @@
             "entries": [
                 {
                     "type": "minecraft:item",
-                    "name": "emberforge:washer"
+                    "name": "tharidiathings:sieve"
                 }
             ],
             "conditions": [

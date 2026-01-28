@@ -1,7 +1,7 @@
 package com.THproject.tharidia_things.jei;
 
 import com.THproject.tharidia_things.TharidiaThings;
-import com.THproject.tharidia_things.recipe.WasherRecipe;
+import com.THproject.tharidia_things.recipe.SieveRecipe;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
 import mezz.jei.api.registration.IRecipeCatalystRegistration;
@@ -23,23 +23,23 @@ public class TharidiaThingsJEIPlugin implements IModPlugin {
 
     @Override
     public void registerCategories(IRecipeCategoryRegistration registration) {
-        registration.addRecipeCategories(new WasherRecipeCategory(registration.getJeiHelpers().getGuiHelper()));
+        registration.addRecipeCategories(new SieveRecipeCategory(registration.getJeiHelpers().getGuiHelper()));
     }
 
     @Override
     public void registerRecipes(IRecipeRegistration registration) {
         assert Minecraft.getInstance().level != null;
-        List<WasherRecipe> recipes = Minecraft.getInstance().level.getRecipeManager()
-                .getAllRecipesFor(TharidiaThings.WASHER_RECIPE_TYPE.get())
+        List<SieveRecipe> recipes = Minecraft.getInstance().level.getRecipeManager()
+                .getAllRecipesFor(TharidiaThings.SIEVE_RECIPE_TYPE.get())
                 .stream()
                 .map(RecipeHolder::value)
                 .toList();
 
-        registration.addRecipes(WasherRecipeCategory.TYPE, recipes);
+        registration.addRecipes(SieveRecipeCategory.TYPE, recipes);
     }
 
     @Override
     public void registerRecipeCatalysts(IRecipeCatalystRegistration registration) {
-        registration.addRecipeCatalyst(new ItemStack(TharidiaThings.WASHER_BLOCK.get()), WasherRecipeCategory.TYPE);
+        registration.addRecipeCatalyst(new ItemStack(TharidiaThings.SIEVE_BLOCK.get()), SieveRecipeCategory.TYPE);
     }
 }

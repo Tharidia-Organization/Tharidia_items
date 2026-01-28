@@ -40,8 +40,8 @@ import com.THproject.tharidia_things.block.ore_chunks.IronChunkBlock;
 import com.THproject.tharidia_things.block.ore_chunks.IronChunkBlockEntity;
 import com.THproject.tharidia_things.block.veins.VeinBlock;
 import com.THproject.tharidia_things.block.veins.VeinSediment;
-import com.THproject.tharidia_things.block.washer.WasherBlock;
-import com.THproject.tharidia_things.block.washer.WasherBlockEntity;
+import com.THproject.tharidia_things.block.sieve.SieveBlock;
+import com.THproject.tharidia_things.block.sieve.SieveBlockEntity;
 import com.THproject.tharidia_things.item.HotIronItem;
 import com.THproject.tharidia_things.item.HotGoldItem;
 import com.THproject.tharidia_things.item.HotCopperItem;
@@ -88,7 +88,7 @@ import com.THproject.tharidia_things.servertransfer.TransferTokenManager;
 import com.THproject.tharidia_things.sounds.ModSounds;
 import com.THproject.tharidia_things.servertransfer.DevWhitelistManager;
 
-import com.THproject.tharidia_things.recipe.WasherRecipe;
+import com.THproject.tharidia_things.recipe.SieveRecipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.neoforged.api.distmarker.Dist;
@@ -156,16 +156,16 @@ public class TharidiaThings {
     public static final DeferredRegister<net.minecraft.world.inventory.MenuType<?>> MENU_TYPES = DeferredRegister
             .create(BuiltInRegistries.MENU, MODID);
 
-    // Washer Recipes
+    // Sieve Recipes
     public static final DeferredRegister<RecipeType<?>> RECIPE_TYPES = DeferredRegister.create(Registries.RECIPE_TYPE,
             MODID);
     public static final DeferredRegister<RecipeSerializer<?>> RECIPE_SERIALIZERS = DeferredRegister
             .create(Registries.RECIPE_SERIALIZER, MODID);
 
-    public static final DeferredHolder<RecipeType<?>, RecipeType<WasherRecipe>> WASHER_RECIPE_TYPE = RECIPE_TYPES
-            .register("washer", () -> RecipeType.simple(ResourceLocation.fromNamespaceAndPath(MODID, "washer")));
-    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<WasherRecipe>> WASHER_RECIPE_SERIALIZER = RECIPE_SERIALIZERS
-            .register("washer", WasherRecipe.Serializer::new);
+    public static final DeferredHolder<RecipeType<?>, RecipeType<SieveRecipe>> SIEVE_RECIPE_TYPE = RECIPE_TYPES
+            .register("sieve", () -> RecipeType.simple(ResourceLocation.fromNamespaceAndPath(MODID, "sieve")));
+    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<SieveRecipe>> SIEVE_RECIPE_SERIALIZER = RECIPE_SERIALIZERS
+            .register("sieve", SieveRecipe.Serializer::new);
 
     // Database system for cross-server communication
     private DatabaseManager databaseManager;
@@ -261,10 +261,10 @@ public class TharidiaThings {
             "vein_sediment",
             () -> new BlockItem(VEIN_SEDIMENT.get(), new Item.Properties()));
 
-    // Washer
-    public static final DeferredBlock<WasherBlock> WASHER_BLOCK = BLOCKS.register(
-            "washer",
-            () -> new WasherBlock(BlockBehaviour.Properties.of()
+    // Sieve
+    public static final DeferredBlock<SieveBlock> SIEVE_BLOCK = BLOCKS.register(
+            "sieve",
+            () -> new SieveBlock(BlockBehaviour.Properties.of()
                     .mapColor(MapColor.METAL)
                     .destroyTime(1.0f)
                     .explosionResistance(1.0F)
@@ -272,18 +272,18 @@ public class TharidiaThings {
                     .noOcclusion()
                     .requiresCorrectToolForDrops()));
 
-    public static final DeferredItem<BlockItem> WASHER_ITEM = ITEMS.register(
-            "washer",
-            () -> new BlockItem(WASHER_BLOCK.get(), new Item.Properties()));
+    public static final DeferredItem<BlockItem> SIEVE_ITEM = ITEMS.register(
+            "sieve",
+            () -> new BlockItem(SIEVE_BLOCK.get(), new Item.Properties()));
 
-    public static final DeferredBlock<com.THproject.tharidia_things.block.washer.WasherDummyBlock> WASHER_DUMMY = BLOCKS
-            .register("washer_dummy",
-                    () -> new com.THproject.tharidia_things.block.washer.WasherDummyBlock());
+    public static final DeferredBlock<com.THproject.tharidia_things.block.sieve.SieveDummyBlock> SIEVE_DUMMY = BLOCKS
+            .register("sieve_dummy",
+                    () -> new com.THproject.tharidia_things.block.sieve.SieveDummyBlock());
 
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<WasherBlockEntity>> WASHER_BLOCK_ENTITY = BLOCK_ENTITIES
-            .register("washer",
-                    () -> BlockEntityType.Builder.of(WasherBlockEntity::new,
-                            WASHER_BLOCK.get()).build(null));
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<SieveBlockEntity>> SIEVE_BLOCK_ENTITY = BLOCK_ENTITIES
+            .register("sieve",
+                    () -> BlockEntityType.Builder.of(SieveBlockEntity::new,
+                            SIEVE_BLOCK.get()).build(null));
 
     // Creates a new BlockEntityType for the Pietro block
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<PietroBlockEntity>> PIETRO_BLOCK_ENTITY = BLOCK_ENTITIES
@@ -429,8 +429,8 @@ public class TharidiaThings {
                         output.accept(VEIN_BLOCK.get());
                         output.accept(VEIN_SEDIMENT.get());
 
-                        // Washer
-                        output.accept(WASHER_BLOCK.get());
+                        // Sieve
+                        output.accept(SIEVE_BLOCK.get());
 
                         // Mesh
                         output.accept(MESH.get());
