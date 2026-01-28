@@ -285,6 +285,33 @@ public class TharidiaThings {
                     () -> BlockEntityType.Builder.of(SieveBlockEntity::new,
                             SIEVE_BLOCK.get()).build(null));
 
+    // Tank
+    public static final DeferredBlock<com.THproject.tharidia_things.block.washer.tank.TankBlock> TANK_BLOCK = BLOCKS
+            .register(
+                    "tank",
+                    () -> new com.THproject.tharidia_things.block.washer.tank.TankBlock(BlockBehaviour.Properties.of()
+                            .mapColor(MapColor.METAL)
+                            .destroyTime(1.0f)
+                            .explosionResistance(1.0F)
+                            .sound(SoundType.METAL)
+                            .noOcclusion()
+                            .requiresCorrectToolForDrops()));
+
+    public static final DeferredItem<BlockItem> TANK_ITEM = ITEMS.register(
+            "tank",
+            () -> new BlockItem(TANK_BLOCK.get(), new Item.Properties()));
+
+    public static final DeferredBlock<com.THproject.tharidia_things.block.washer.tank.TankDummyBlock> TANK_DUMMY = BLOCKS
+            .register("tank_dummy",
+                    () -> new com.THproject.tharidia_things.block.washer.tank.TankDummyBlock());
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.THproject.tharidia_things.block.washer.tank.TankBlockEntity>> TANK_BLOCK_ENTITY = BLOCK_ENTITIES
+            .register("tank",
+                    () -> BlockEntityType.Builder
+                            .of(com.THproject.tharidia_things.block.washer.tank.TankBlockEntity::new,
+                                    TANK_BLOCK.get())
+                            .build(null));
+
     // Creates a new BlockEntityType for the Pietro block
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<PietroBlockEntity>> PIETRO_BLOCK_ENTITY = BLOCK_ENTITIES
             .register("pietro", () -> BlockEntityType.Builder.of(PietroBlockEntity::new, PIETRO.get()).build(null));
@@ -431,6 +458,9 @@ public class TharidiaThings {
 
                         // Sieve
                         output.accept(SIEVE_BLOCK.get());
+
+                        // Tank
+                        output.accept(TANK_BLOCK.get());
 
                         // Mesh
                         output.accept(MESH.get());

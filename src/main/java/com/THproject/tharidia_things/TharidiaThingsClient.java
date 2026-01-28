@@ -12,6 +12,7 @@ import com.THproject.tharidia_things.client.ZoneMusicPlayer;
 import com.THproject.tharidia_things.client.video.DependencyCheckHandler;
 import com.THproject.tharidia_things.client.renderer.PietroBlockRenderer;
 import com.THproject.tharidia_things.client.renderer.SieveRenderer;
+import com.THproject.tharidia_things.client.renderer.TankRenderer;
 import com.THproject.tharidia_things.client.renderer.HotIronAnvilRenderer;
 import com.THproject.tharidia_things.client.renderer.HotGoldAnvilRenderer;
 import com.THproject.tharidia_things.client.renderer.HotCopperAnvilRenderer;
@@ -36,20 +37,23 @@ import net.neoforged.neoforge.common.NeoForge;
 
 // This class will not load on dedicated servers. Accessing client side code from here is safe.
 @Mod(value = TharidiaThings.MODID, dist = Dist.CLIENT)
-// You can use EventBusSubscriber to automatically register all static methods in the class annotated with @SubscribeEvent
+// You can use EventBusSubscriber to automatically register all static methods
+// in the class annotated with @SubscribeEvent
 @EventBusSubscriber(modid = TharidiaThings.MODID, value = Dist.CLIENT)
 public class TharidiaThingsClient {
     private static ClientDietProfileCache clientDietCache = null;
-    
+
     public TharidiaThingsClient(ModContainer container) {
         // Allows NeoForge to create a config screen for this mod's configs.
-        // The config screen is accessed by going to the Mods screen > clicking on your mod > clicking on config.
-        // Do not forget to add translations for your config options to the en_us.json file.
+        // The config screen is accessed by going to the Mods screen > clicking on your
+        // mod > clicking on config.
+        // Do not forget to add translations for your config options to the en_us.json
+        // file.
         container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
-        
+
         // Initialize zone music player
         ZoneMusicPlayer.initialize();
-        
+
         // Register client-side event handlers to the NeoForge event bus
         NeoForge.EVENT_BUS.register(RealmBoundaryRenderer.class);
         NeoForge.EVENT_BUS.register(ClaimBoundaryRenderer.class);
@@ -57,7 +61,7 @@ public class TharidiaThingsClient {
         NeoForge.EVENT_BUS.register(ClientConnectionHandler.class);
         NeoForge.EVENT_BUS.register(VideoScreenRenderHandler.class);
         NeoForge.EVENT_BUS.register(DependencyCheckHandler.class);
-        
+
         // Debug: Verify the new code is running
         TharidiaThings.LOGGER.info("[VIDEO DEPENDENCIES] DependencyCheckHandler registered on NeoForge EVENT_BUS");
     }
@@ -69,17 +73,17 @@ public class TharidiaThingsClient {
             // Trigger dependency check immediately after client setup
             TharidiaThings.LOGGER.info("[VIDEO DEPENDENCIES] Triggering dependency check from client setup");
             DependencyCheckHandler.forceRecheck();
-            
+
             // Initialize client diet profile cache
             initializeClientDietCache();
         });
     }
-    
+
     private static void initializeClientDietCache() {
         try {
             clientDietCache = new ClientDietProfileCache();
             clientDietCache.load();
-            
+
             // Start background calculation if needed
             if (clientDietCache.needsRecalculation()) {
                 TharidiaThings.LOGGER.info("[DIET CLIENT] Starting background calculation of diet profiles...");
@@ -92,11 +96,11 @@ public class TharidiaThingsClient {
             clientDietCache = null;
         }
     }
-    
+
     public static ClientDietProfileCache getClientDietCache() {
         return clientDietCache;
     }
-    
+
     @SubscribeEvent
     static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
         // Register block entity renderers using the event method
@@ -106,21 +110,20 @@ public class TharidiaThingsClient {
         event.registerBlockEntityRenderer(TharidiaThings.HOT_COPPER_ANVIL_ENTITY.get(), HotCopperAnvilRenderer::new);
         event.registerBlockEntityRenderer(TharidiaThings.STABLE_BLOCK_ENTITY.get(), StableBlockRenderer::new);
         event.registerBlockEntityRenderer(TharidiaThings.SIEVE_BLOCK_ENTITY.get(), context -> new SieveRenderer());
+        event.registerBlockEntityRenderer(TharidiaThings.TANK_BLOCK_ENTITY.get(), context -> new TankRenderer());
     }
-    
+
     @SubscribeEvent
     static void onRegisterLayerDefinitions(EntityRenderersEvent.RegisterLayerDefinitions event) {
         // Set render type for Pietro block to support transparency
         net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(
-            TharidiaThings.PIETRO.get(), 
-            RenderType.cutout()
-        );
-        
+                TharidiaThings.PIETRO.get(),
+                RenderType.cutout());
+
         // Set render type for Stable block to support transparency
         net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(
-            TharidiaThings.STABLE.get(), 
-            RenderType.cutout()
-        );
+                TharidiaThings.STABLE.get(),
+                RenderType.cutout());
     }
 
     @SubscribeEvent
@@ -128,61 +131,51 @@ public class TharidiaThingsClient {
         // Register progressive hot iron 3D models for anvil renderer (0-4 strikes)
         for (int i = 0; i <= 4; i++) {
             event.register(net.minecraft.client.resources.model.ModelResourceLocation.standalone(
-                ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/hot_iron_anvil_" + i)
-            ));
+                    ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/hot_iron_anvil_" + i)));
         }
-        
+
         // Register progressive hot gold 3D models for anvil renderer (0-4 strikes)
         for (int i = 0; i <= 4; i++) {
             event.register(net.minecraft.client.resources.model.ModelResourceLocation.standalone(
-                ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/hot_gold_anvil_" + i)
-            ));
+                    ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/hot_gold_anvil_" + i)));
         }
-        
+
         // Register progressive hot copper 3D models for anvil renderer (0-4 strikes)
         for (int i = 0; i <= 4; i++) {
             event.register(net.minecraft.client.resources.model.ModelResourceLocation.standalone(
-                ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/hot_copper_anvil_" + i)
-            ));
+                    ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/hot_copper_anvil_" + i)));
         }
 
         // Register stall overlay models for conditional rendering (hay and water)
         event.register(net.minecraft.client.resources.model.ModelResourceLocation.standalone(
-            ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/stall_hay")
-        ));
+                ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/stall_hay")));
         event.register(net.minecraft.client.resources.model.ModelResourceLocation.standalone(
-            ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/stall_water")
-        ));
+                ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/stall_water")));
         event.register(net.minecraft.client.resources.model.ModelResourceLocation.standalone(
-            ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/stall_milk")
-        ));
+                ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/stall_milk")));
 
         // Register stall manure overlay models (10 stages for 10%, 20%, ..., 100%)
         for (int i = 1; i <= 10; i++) {
             event.register(net.minecraft.client.resources.model.ModelResourceLocation.standalone(
-                ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/stall_shit_" + i)
-            ));
+                    ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/stall_shit_" + i)));
         }
     }
 
     @SubscribeEvent
     static void onRegisterGuiLayers(RegisterGuiLayersEvent event) {
         event.registerAbove(
-            VanillaGuiLayers.HOTBAR,
-            TharidiaThings.modLoc("realm_overlay"),
-            new RealmOverlay()
-        );
-        
-        event.registerAbove(
-            VanillaGuiLayers.HOTBAR,
-            TharidiaThings.modLoc("weight_overlay"),
-            new WeightHudOverlay()
-        );
+                VanillaGuiLayers.HOTBAR,
+                TharidiaThings.modLoc("realm_overlay"),
+                new RealmOverlay());
 
         event.registerAbove(
-            VanillaGuiLayers.HOTBAR,
-            TharidiaThings.modLoc("stamina_overlay"),
-            new StaminaHudOverlay()
-        );
+                VanillaGuiLayers.HOTBAR,
+                TharidiaThings.modLoc("weight_overlay"),
+                new WeightHudOverlay());
+
+        event.registerAbove(
+                VanillaGuiLayers.HOTBAR,
+                TharidiaThings.modLoc("stamina_overlay"),
+                new StaminaHudOverlay());
     }
 }

@@ -1,0 +1,53 @@
+{
+	"format_version": "1.8.0",
+	"animations": {
+		"levitate": {
+			"animation_length": 10.9585,
+			"bones": {
+				"bone": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"5.1": {
+							"vector": [119.93, 120.27, 0],
+							"easing": "easeOutSine"
+						},
+						"10.9": {
+							"vector": [0, 0, 0],
+							"easing": "easeInQuad"
+						}
+					},
+					"position": {
+						"0.0": {
+							"post": {
+								"vector": [0, -0.5, 0]
+							},
+							"lerp_mode": "catmullrom"
+						},
+						"6.3": {
+							"vector": [0, 0.425, 0],
+							"easing": "step"
+						},
+						"10.9": {
+							"pre": {
+								"vector": [0, -0.5, 0]
+							},
+							"post": {
+								"vector": [0, -0.5, 0]
+							},
+							"lerp_mode": "catmullrom"
+						}
+					}
+				}
+			},
+			"sound_effects": {},
+			"particle_effects": {},
+			"timeline": {}
+		},
+		"gru": {
+			"animation_length": 10
+		}
+	},
+	"geckolib_format_version": 2
+}
