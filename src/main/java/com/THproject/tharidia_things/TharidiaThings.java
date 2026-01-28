@@ -28,12 +28,15 @@ import com.THproject.tharidia_things.block.HotGoldMarkerBlock;
 import com.THproject.tharidia_things.block.HotCopperMarkerBlock;
 import com.THproject.tharidia_things.block.StableBlock;
 import com.THproject.tharidia_things.block.StableDummyBlock;
+import com.THproject.tharidia_things.block.SmithingFurnaceBlock;
+import com.THproject.tharidia_things.block.SmithingFurnaceDummyBlock;
 import com.THproject.tharidia_things.block.entity.PietroBlockEntity;
 import com.THproject.tharidia_things.block.entity.ClaimBlockEntity;
 import com.THproject.tharidia_things.block.entity.HotIronAnvilEntity;
 import com.THproject.tharidia_things.block.entity.HotGoldAnvilEntity;
 import com.THproject.tharidia_things.block.entity.HotCopperAnvilEntity;
 import com.THproject.tharidia_things.block.entity.StableBlockEntity;
+import com.THproject.tharidia_things.block.entity.SmithingFurnaceBlockEntity;
 import com.THproject.tharidia_things.block.DungeonPortalBlock;
 import com.THproject.tharidia_things.block.ore_chunks.IronChunkBlock;
 import com.THproject.tharidia_things.block.ore_chunks.IronChunkBlockEntity;
@@ -201,6 +204,14 @@ public class TharidiaThings {
     public static final DeferredBlock<StableDummyBlock> STABLE_DUMMY = BLOCKS.register("stable_dummy",
             () -> new StableDummyBlock());
 
+    // Smithing Furnace Block (5x2x3 multiblock, GeckoLib animated)
+    public static final DeferredBlock<SmithingFurnaceBlock> SMITHING_FURNACE = BLOCKS.register("smithing_furnace",
+            () -> new SmithingFurnaceBlock());
+    public static final DeferredItem<BlockItem> SMITHING_FURNACE_ITEM = ITEMS.registerSimpleBlockItem("smithing_furnace", SMITHING_FURNACE);
+    // Smithing Furnace Dummy Block (multiblock slave)
+    public static final DeferredBlock<SmithingFurnaceDummyBlock> SMITHING_FURNACE_DUMMY = BLOCKS.register("smithing_furnace_dummy",
+            () -> new SmithingFurnaceDummyBlock());
+
     // Chunks Block
     public static final DeferredBlock<IronChunkBlock> IRON_CHUNK = BLOCKS.register("iron_chunk",
             () -> new IronChunkBlock(
@@ -246,6 +257,11 @@ public class TharidiaThings {
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<StableBlockEntity>> STABLE_BLOCK_ENTITY = BLOCK_ENTITIES
             .register("stable",
                     () -> BlockEntityType.Builder.of(StableBlockEntity::new, STABLE.get()).build(null));
+
+    // Creates a new BlockEntityType for the Smithing Furnace
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<SmithingFurnaceBlockEntity>> SMITHING_FURNACE_BLOCK_ENTITY = BLOCK_ENTITIES
+            .register("smithing_furnace",
+                    () -> BlockEntityType.Builder.of(SmithingFurnaceBlockEntity::new, SMITHING_FURNACE.get()).build(null));
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<IronChunkBlockEntity>> IRON_CHUNK_BLOCK_ENTITY = BLOCK_ENTITIES
             .register("iron_chunk",
@@ -364,6 +380,9 @@ public class TharidiaThings {
 
                         // Chunks
                         output.accept(IRON_CHUNK.get());
+
+                        // Smithing
+                        output.accept(SMITHING_FURNACE_ITEM.get());
 
                         // Add all dynamically registered baby mob items
                         BabyMobRegistry.addToCreativeTab(output);

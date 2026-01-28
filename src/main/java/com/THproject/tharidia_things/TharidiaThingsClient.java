@@ -15,6 +15,7 @@ import com.THproject.tharidia_things.client.renderer.HotIronAnvilRenderer;
 import com.THproject.tharidia_things.client.renderer.HotGoldAnvilRenderer;
 import com.THproject.tharidia_things.client.renderer.HotCopperAnvilRenderer;
 import com.THproject.tharidia_things.client.renderer.StableBlockRenderer;
+import com.THproject.tharidia_things.client.renderer.SmithingFurnaceRenderer;
 import com.THproject.tharidia_things.diet.ClientDietProfileCache;
 import com.THproject.tharidia_things.diet.DietRegistry;
 import net.minecraft.client.renderer.RenderType;
@@ -104,6 +105,7 @@ public class TharidiaThingsClient {
         event.registerBlockEntityRenderer(TharidiaThings.HOT_GOLD_ANVIL_ENTITY.get(), HotGoldAnvilRenderer::new);
         event.registerBlockEntityRenderer(TharidiaThings.HOT_COPPER_ANVIL_ENTITY.get(), HotCopperAnvilRenderer::new);
         event.registerBlockEntityRenderer(TharidiaThings.STABLE_BLOCK_ENTITY.get(), StableBlockRenderer::new);
+        event.registerBlockEntityRenderer(TharidiaThings.SMITHING_FURNACE_BLOCK_ENTITY.get(), SmithingFurnaceRenderer::new);
     }
     
     @SubscribeEvent
@@ -124,6 +126,12 @@ public class TharidiaThingsClient {
         net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(
             TharidiaThings.DUNGEON_PORTAL.get(),
             RenderType.translucent()
+        );
+
+        // Set render type for Smithing Furnace block (GeckoLib) to support transparency
+        net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(
+            TharidiaThings.SMITHING_FURNACE.get(),
+            RenderType.cutout()
         );
     }
 
