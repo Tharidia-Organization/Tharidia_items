@@ -29,8 +29,8 @@ public class StationCrystalTool extends Item {
 
         if (level.getBlockEntity(
                 pos) instanceof StationCrystalBlockEntity blockEntity) {
-            int tick = blockEntity.getRemainingTick();
-            int totalSeconds = tick / 20;
+            long tick = blockEntity.getRemainingTime();
+            int totalSeconds = (int) (tick / 1000);
             int days = totalSeconds / 86400;
             int hours = (totalSeconds % 86400) / 3600;
             int minutes = (totalSeconds % 3600) / 60;

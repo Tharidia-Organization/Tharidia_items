@@ -10,66 +10,70 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 public class StationCrystalBlockEntity extends BlockEntity {
-    private static final int MAX_TICK = 20 * 60 * 60 * 24 * 10; // 10 days
-    private int tick;
+    // 10 seconds in milliseconds
+    private static final long MAX_TIME = 10L * 1000;
+    private long placedTime;
 
     public StationCrystalBlockEntity(BlockPos pos, BlockState blockState) {
         super(TharidiaThings.STATION_CRYSTAL_BLOCK_ENTITY.get(), pos, blockState);
+        this.placedTime = System.currentTimeMillis();
     }
 
     public static void tick(Level level, BlockPos pos, BlockState state, StationCrystalBlockEntity blockEntity) {
         if (level.isClientSide)
             return;
 
-        if (level.getBlockEntity(pos) instanceof StationCrystalBlockEntity be) {
-            be.addTick();
-            if (be.getTick() >= be.getMaxTick()) {
-                level.setBlock(pos, Blocks.AIR.defaultBlockState(), 1 | 2);
-            }
+        if (System.currentTimeMillis() >= blockEntity.placedTime + MAX_TIME) {
+            level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
         }
     }
 
-    public void addTick() {
-        tick++;
-    }
+    public boolean removeTimePercentage(double percentage) {
+        if (getTimePercentage() <= 0.75) {
+            long repairAmount = (long) (MAX_TIME * percentage);
+            long currentTime = System.currentTimeMillis();
 
-    public boolean removeTickPercentage(double percentage) {
-        if (getTickPercentage() <= 0.75) {
-            tick -= (int) (MAX_TICK * percentage);
+            this.placedTime += repairAmount;
+
+            // Ensure placedTime doesn't exceed currentTime
+            if (this.placedTime > currentTime) {
+                this.placedTime = currentTime;
+            }
+            setChanged();
             return true;
         }
         return false;
     }
 
-    public double getTickPercentage() {
-        return (double) (MAX_TICK - tick) / MAX_TICK;
+    public long getRemainingTime(){
+        long elapsedTime = System.currentTimeMillis() - this.placedTime;
+        long remainingTime = MAX_TIME - elapsedTime;
+        return Math.max(remainingTime, 0);
     }
 
-    public void setTick(int duration) {
-        this.tick = duration;
+    public double getTimePercentage() {
+        long elapsedTime = System.currentTimeMillis() - this.placedTime;
+        return (double) (MAX_TIME - elapsedTime) / MAX_TIME;
     }
 
-    public int getTick() {
-        return tick;
-    }
-
-    public int getMaxTick() {
-        return MAX_TICK;
-    }
-
-    public int getRemainingTick() {
-        return getMaxTick() - getTick();
+    public long getMaxTime() {
+        return MAX_TIME;
     }
 
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
-        tag.putInt("Tick", this.tick);
+        tag.putLong("PlacedTime", this.placedTime);
     }
 
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
-        this.tick = tag.getInt("Tick");
+        if (tag.contains("PlacedTime")) {
+            this.placedTime = tag.getLong("PlacedTime");
+        } else {
+            // Default to current time if tag missing (new placement or migration)
+            this.placedTime = System.currentTimeMillis();
+        }
     }
 }

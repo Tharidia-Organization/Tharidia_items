@@ -22,7 +22,7 @@ public class StationCrystalRepairerItem extends Item {
         Player player = context.getPlayer();
 
         if (level.getBlockEntity(pos) instanceof StationCrystalBlockEntity station) {
-            if (station.removeTickPercentage(0.25)) {
+            if (station.removeTimePercentage(0.25)) {
                 context.getItemInHand().shrink(1);
                 player.displayClientMessage(
                         Component.literal("Repaired 25% of the Station Crystal's durability!").withColor(0x00FF00),
