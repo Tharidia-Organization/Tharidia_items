@@ -1,6 +1,10 @@
 {
     "replace": false,
     "values": [
-        "tharidiathings:vein_sediment"
+        "tharidiathings:vein_sediment_t0",
+        "tharidiathings:vein_sediment_t1",
+        "tharidiathings:vein_sediment_t2",
+        "tharidiathings:vein_sediment_t3",
+        "tharidiathings:vein_sediment_t4"
     ]
 }

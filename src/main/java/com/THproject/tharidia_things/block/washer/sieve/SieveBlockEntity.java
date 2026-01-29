@@ -23,6 +23,7 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 
 public class SieveBlockEntity extends BlockEntity implements GeoBlockEntity {
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
+    private boolean Active = false;
     private boolean Mesh = false;
 
     public SieveBlockEntity(BlockPos pos, BlockState blockState) {
@@ -75,11 +76,25 @@ public class SieveBlockEntity extends BlockEntity implements GeoBlockEntity {
         setChanged();
     }
 
+    public boolean toogleActive() {
+        this.Active = !Active;
+        setChanged();
+        if (level != null) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+        }
+        return Active;
+    }
+
+    public boolean getActive() {
+        return this.Active;
+    }
+
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
         tag.put("Inventory", inventory.serializeNBT(registries));
         tag.putBoolean("Mesh", Mesh);
+        tag.putBoolean("Active", Active);
     }
 
     @Override
@@ -90,6 +105,9 @@ public class SieveBlockEntity extends BlockEntity implements GeoBlockEntity {
         }
         if (tag.contains("Mesh")) {
             Mesh = tag.getBoolean("Mesh");
+        }
+        if (tag.contains("Active")) {
+            Active = tag.getBoolean("Active");
         }
     }
 

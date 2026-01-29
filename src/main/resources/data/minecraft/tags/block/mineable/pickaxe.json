@@ -2,7 +2,13 @@
     "replace": false,
     "values": [
         "tharidiathings:iron_chunk",
-        "tharidiathings:vein_block",
-        "tharidiathings:washer"
+        "tharidiathings:vein_block_t0",
+        "tharidiathings:vein_block_t1",
+        "tharidiathings:vein_block_t2",
+        "tharidiathings:vein_block_t3",
+        "tharidiathings:vein_block_t4",
+        "tharidiathings:tank",
+        "tharidiathings:sieve",
+        "tharidiathings:sink"
     ]
 }

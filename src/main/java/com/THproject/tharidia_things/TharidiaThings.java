@@ -39,8 +39,8 @@ import com.THproject.tharidia_things.block.ore_chunks.CopperChunkBlock;
 import com.THproject.tharidia_things.block.ore_chunks.CopperChunkBlockEntity;
 import com.THproject.tharidia_things.block.ore_chunks.IronChunkBlock;
 import com.THproject.tharidia_things.block.ore_chunks.IronChunkBlockEntity;
-import com.THproject.tharidia_things.block.veins.VeinBlock;
-import com.THproject.tharidia_things.block.veins.VeinSediment;
+import com.THproject.tharidia_things.block.veins.VeinBlocks;
+import com.THproject.tharidia_things.block.veins.VeinSediments;
 import com.THproject.tharidia_things.block.washer.sieve.SieveBlock;
 import com.THproject.tharidia_things.block.washer.sieve.SieveBlockEntity;
 import com.THproject.tharidia_things.item.HotIronItem;
@@ -263,32 +263,6 @@ public class TharidiaThings {
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<CopperChunkBlockEntity>> COPPER_CHUNK_BLOCK_ENTITY = BLOCK_ENTITIES
             .register("copper_chunk",
                     () -> BlockEntityType.Builder.of(CopperChunkBlockEntity::new, COPPER_CHUNK.get()).build(null));
-
-    // Veins
-    public static final DeferredBlock<VeinBlock> VEIN_BLOCK = BLOCKS.register(
-            "vein_block",
-            () -> new VeinBlock(BlockBehaviour.Properties.of()
-                    .mapColor(MapColor.STONE)
-                    .destroyTime(1.5F)
-                    .explosionResistance(1.0F)
-                    .sound(SoundType.STONE)
-                    .requiresCorrectToolForDrops()));
-
-    public static final DeferredItem<BlockItem> VEIN_BLOCK_ITEM = ITEMS.register(
-            "vein_block",
-            () -> new BlockItem(VEIN_BLOCK.get(), new Item.Properties()));
-
-    public static final DeferredBlock<VeinSediment> VEIN_SEDIMENT = BLOCKS.register(
-            "vein_sediment",
-            () -> new VeinSediment(BlockBehaviour.Properties.of()
-                    .mapColor(MapColor.STONE)
-                    .destroyTime(0.3F)
-                    .explosionResistance(1.0F)
-                    .sound(SoundType.GRAVEL)));
-
-    public static final DeferredItem<BlockItem> VEIN_SEDIMENT_ITEM = ITEMS.register(
-            "vein_sediment",
-            () -> new BlockItem(VEIN_SEDIMENT.get(), new Item.Properties()));
 
     // Sieve
     public static final DeferredBlock<SieveBlock> SIEVE_BLOCK = BLOCKS.register(
@@ -513,8 +487,16 @@ public class TharidiaThings {
                         output.accept(COPPER_CHUNK.get());
 
                         // Veins
-                        output.accept(VEIN_BLOCK.get());
-                        output.accept(VEIN_SEDIMENT.get());
+                        output.accept(VeinBlocks.VEIN_BLOCK_T0_ITEM.get());
+                        output.accept(VeinBlocks.VEIN_BLOCK_T1_ITEM.get());
+                        output.accept(VeinBlocks.VEIN_BLOCK_T2_ITEM.get());
+                        output.accept(VeinBlocks.VEIN_BLOCK_T3_ITEM.get());
+                        output.accept(VeinBlocks.VEIN_BLOCK_T4_ITEM.get());
+                        output.accept(VeinSediments.VEIN_SEDIMENT_T0_ITEM.get());
+                        output.accept(VeinSediments.VEIN_SEDIMENT_T1_ITEM.get());
+                        output.accept(VeinSediments.VEIN_SEDIMENT_T2_ITEM.get());
+                        output.accept(VeinSediments.VEIN_SEDIMENT_T3_ITEM.get());
+                        output.accept(VeinSediments.VEIN_SEDIMENT_T4_ITEM.get());
 
                         // Tank
                         output.accept(TANK_BLOCK.get());
@@ -623,6 +605,10 @@ public class TharidiaThings {
         ReviveAttachments.register(modEventBus);
 
         modEventBus.addListener(BattlePackets::register);
+
+        // Veins
+        VeinBlocks.init();
+        VeinSediments.init();
 
         // Register handshake bypass (CLIENT ONLY)
         if (FMLEnvironment.dist == Dist.CLIENT) {

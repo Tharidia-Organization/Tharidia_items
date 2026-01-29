@@ -24,6 +24,8 @@ public class TankBlockEntity extends BlockEntity implements GeoBlockEntity {
     private final static int FLUID_CONSUMPTION_PER_TICK = 1; // 1 mB per tick
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
+    private boolean Open = false;
+
     public final FluidTank tank = new FluidTank(8000) { // 8 Buckets
         @Override
         protected void onContentsChanged() {
@@ -38,8 +40,17 @@ public class TankBlockEntity extends BlockEntity implements GeoBlockEntity {
         super(TharidiaThings.TANK_BLOCK_ENTITY.get(), pos, blockState);
     }
 
+    public boolean toogleOpen() {
+        this.Open = !this.Open;
+        return Open;
+    }
+
+    public boolean isOpen() {
+        return Open;
+    }
+
     public static void tick(Level level, BlockPos pos, BlockState state, TankBlockEntity blockEntity) {
-        if (blockEntity.tank.getFluidAmount() > 0)
+        if (blockEntity.tank.getFluidAmount() > 0 && blockEntity.isOpen())
             blockEntity.tank.drain(FLUID_CONSUMPTION_PER_TICK, FluidAction.EXECUTE);
     }
 
@@ -59,6 +70,7 @@ public class TankBlockEntity extends BlockEntity implements GeoBlockEntity {
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
         tag.put("Tank", tank.writeToNBT(registries, new CompoundTag()));
+        tag.putBoolean("Open", Open);
     }
 
     @Override
@@ -66,6 +78,9 @@ public class TankBlockEntity extends BlockEntity implements GeoBlockEntity {
         super.loadAdditional(tag, registries);
         if (tag.contains("Tank")) {
             tank.readFromNBT(registries, tag.getCompound("Tank"));
+        }
+        if (tag.contains("Open")) {
+            Open = tag.getBoolean("Open");
         }
     }
 
