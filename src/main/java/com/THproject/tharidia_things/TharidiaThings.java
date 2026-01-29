@@ -123,6 +123,7 @@ import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -860,6 +861,19 @@ public class TharidiaThings {
     }
 
     @SubscribeEvent
+    public void onPlayerLoggedOut(PlayerLoggedOutEvent event) {
+        // Cancel any active trade sessions when a player disconnects
+        if (event.getEntity() instanceof ServerPlayer player) {
+            try {
+                com.THproject.tharidia_things.trade.TradeManager.cancelPlayerSession(player.getUUID());
+                LOGGER.debug("Cleaned up trade session for disconnecting player: {}", player.getName().getString());
+            } catch (Exception e) {
+                LOGGER.error("Error cleaning up trade session for player {}: {}", player.getName().getString(), e.getMessage());
+            }
+        }
+    }
+
+    @SubscribeEvent
     public void onDatapackSync(net.neoforged.neoforge.event.OnDatapackSyncEvent event) {
         WeightConfigSyncPacket packet = WeightConfigSyncPacket.fromCurrentRegistry();
         if (event.getPlayer() != null) {
@@ -1018,6 +1032,13 @@ public class TharidiaThings {
                     LOGGER.debug("Token cleanup completed");
                 } catch (Exception e) {
                     LOGGER.error("Error cleaning up expired tokens: {}", e.getMessage());
+                }
+
+                // Cleanup expired trade sessions
+                try {
+                    com.THproject.tharidia_things.trade.TradeManager.cleanupExpiredSessions();
+                } catch (Exception e) {
+                    LOGGER.error("Error cleaning up expired trade sessions: {}", e.getMessage());
                 }
 
                 // Reset counter
