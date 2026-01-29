@@ -121,13 +121,22 @@ public class TharidiaThingsClient {
         // Set render type for Pietro block to support transparency
         net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(
                 TharidiaThings.PIETRO.get(),
-                RenderType.cutout());
+                RenderType.cutout()
+        );
 
         // Set render type for Stable block to support transparency
         net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(
                 TharidiaThings.STABLE.get(),
-                RenderType.cutout());
+                RenderType.cutout()
+        );
+
+        // Set render type for Dungeon Portal block to support translucency
+        net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(
+                TharidiaThings.DUNGEON_PORTAL.get(),
+                RenderType.translucent()
+        );
     }
+
 
     @SubscribeEvent
     static void onRegisterAdditionalModels(ModelEvent.RegisterAdditional event) {

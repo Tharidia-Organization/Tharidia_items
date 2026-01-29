@@ -1,21 +1,16 @@
 package com.THproject.tharidia_things.event;
 
+import com.THproject.tharidia_things.util.CurrencyHelper;
 import com.THproject.tharidia_things.util.PlayerNameHelper;
-import com.THproject.tharidia_things.Config;
-import com.THproject.tharidia_things.TharidiaThings;
 import com.THproject.tharidia_things.network.TradeRequestPacket;
 import com.THproject.tharidia_things.trade.TradeManager;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
-
-import java.util.List;
 
 /**
  * Handles player right-click interactions to initiate trades
@@ -52,14 +47,14 @@ public class TradeInteractionHandler {
 
         // Check if either player is already in a trade
         if (TradeManager.isPlayerInTrade(serverInitiator.getUUID())) {
-            serverInitiator.sendSystemMessage(Component.literal("§cSiete già impegnati in uno scambio!"));
+            serverInitiator.sendSystemMessage(Component.translatable("message.tharidiathings.trade.already_in_trade"));
             event.setCanceled(true);
             return;
         }
 
         if (TradeManager.isPlayerInTrade(targetPlayer.getUUID())) {
             String targetName = PlayerNameHelper.getChosenName(targetPlayer);
-            serverInitiator.sendSystemMessage(Component.literal("§c" + targetName + " è già impegnato in uno scambio!"));
+            serverInitiator.sendSystemMessage(Component.translatable("message.tharidiathings.trade.target_in_trade", targetName));
             event.setCanceled(true);
             return;
         }
@@ -67,56 +62,34 @@ public class TradeInteractionHandler {
         // Check if target already has a pending request
         if (TradeManager.hasPendingRequest(targetPlayer.getUUID())) {
             String targetName = PlayerNameHelper.getChosenName(targetPlayer);
-            serverInitiator.sendSystemMessage(Component.literal("§c" + targetName + " ha già una richiesta di scambio in sospeso!"));
+            serverInitiator.sendSystemMessage(Component.translatable("message.tharidiathings.trade.target_has_pending", targetName));
             event.setCanceled(true);
             return;
         }
 
-        // Create trade request
-        TradeManager.createTradeRequest(serverInitiator, targetPlayer);
+        // Create trade request (synchronized to prevent race conditions)
+        String targetName = PlayerNameHelper.getChosenName(targetPlayer);
+        if (!TradeManager.createTradeRequest(serverInitiator, targetPlayer)) {
+            serverInitiator.sendSystemMessage(Component.translatable("message.tharidiathings.trade.request_failed"));
+            event.setCanceled(true);
+            return;
+        }
 
         // Send packet to target player to show request screen
         String initiatorName = PlayerNameHelper.getChosenName(serverInitiator);
-        String targetName = PlayerNameHelper.getChosenName(targetPlayer);
-        
+
         PacketDistributor.sendToPlayer(targetPlayer, new TradeRequestPacket(
             serverInitiator.getUUID(),
             initiatorName
         ));
 
         // Notify initiator
-        serverInitiator.sendSystemMessage(Component.literal("§6Richiesta di scambio inviata a " + targetName));
+        serverInitiator.sendSystemMessage(Component.translatable("message.tharidiathings.trade.request_sent", targetName));
 
         event.setCanceled(true);
     }
 
     private static boolean isCurrencyItem(ItemStack stack) {
-        if (stack.isEmpty()) {
-            return false;
-        }
-
-        ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
-        String itemIdString = itemId.toString();
-        
-        // Check if it's a Numismatic Overhaul coin or money bag
-        if (itemIdString.equals("numismaticoverhaul:bronze_coin") ||
-            itemIdString.equals("numismaticoverhaul:silver_coin") ||
-            itemIdString.equals("numismaticoverhaul:gold_coin") ||
-            itemIdString.equals("numismaticoverhaul:money_bag")) {
-            return true;
-        }
-        
-        // Check config list
-        List<? extends String> currencyItems = Config.TRADE_CURRENCY_ITEMS.get();
-        return currencyItems.stream()
-                .anyMatch(currency -> {
-                    try {
-                        ResourceLocation currencyId = ResourceLocation.parse(currency);
-                        return currencyId.equals(itemId);
-                    } catch (Exception e) {
-                        TharidiaThings.LOGGER.warn("Invalid currency item in config: {}", currency);
-                        return false;
-                    }
-                });
+        return CurrencyHelper.isCurrencyItem(stack);
     }
 }

@@ -2,6 +2,7 @@ package com.THproject.tharidia_things.event;
 
 import com.THproject.tharidia_things.gui.TradeMenu;
 import com.THproject.tharidia_things.Config;
+import com.THproject.tharidia_things.util.CurrencyHelper;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -337,22 +338,7 @@ public class CurrencyProtectionHandler {
     }
 
     private static boolean isCurrencyItem(ItemStack stack) {
-        if (stack.isEmpty()) {
-            return false;
-        }
-
-        List<? extends String> currencyItems = Config.TRADE_CURRENCY_ITEMS.get();
-        ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
-
-        return currencyItems.stream()
-                .anyMatch(currency -> {
-                    try {
-                        ResourceLocation currencyId = ResourceLocation.parse(currency);
-                        return currencyId.equals(itemId);
-                    } catch (Exception e) {
-                        return false;
-                    }
-                });
+        return CurrencyHelper.isCurrencyItem(stack);
     }
     
     /**

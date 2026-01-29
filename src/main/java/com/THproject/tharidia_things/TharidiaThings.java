@@ -34,6 +34,7 @@ import com.THproject.tharidia_things.block.entity.HotIronAnvilEntity;
 import com.THproject.tharidia_things.block.entity.HotGoldAnvilEntity;
 import com.THproject.tharidia_things.block.entity.HotCopperAnvilEntity;
 import com.THproject.tharidia_things.block.entity.StableBlockEntity;
+import com.THproject.tharidia_things.block.DungeonPortalBlock;
 import com.THproject.tharidia_things.block.ore_chunks.CopperChunkBlock;
 import com.THproject.tharidia_things.block.ore_chunks.CopperChunkBlockEntity;
 import com.THproject.tharidia_things.block.ore_chunks.IronChunkBlock;
@@ -75,6 +76,20 @@ import com.THproject.tharidia_things.fatigue.FatigueAttachments;
 import com.THproject.tharidia_things.houseboundry.AnimalWellnessAttachments;
 import com.THproject.tharidia_things.houseboundry.config.AnimalConfigLoader;
 import com.THproject.tharidia_things.stable.StableConfigLoader;
+import com.THproject.tharidia_things.network.BattlePackets;
+import com.THproject.tharidia_things.network.ClaimOwnerSyncPacket;
+import com.THproject.tharidia_things.network.FatigueSyncPacket;
+import com.THproject.tharidia_things.network.DungeonQueuePacket;
+import com.THproject.tharidia_things.network.JoinGroupQueuePacket;
+import com.THproject.tharidia_things.network.LeaveGroupQueuePacket;
+import com.THproject.tharidia_things.network.StartGroupDungeonPacket;
+import com.THproject.tharidia_things.network.SyncGroupQueuePacket;
+import com.THproject.tharidia_things.network.HierarchySyncPacket;
+import com.THproject.tharidia_things.network.RealmSyncPacket;
+import com.THproject.tharidia_things.network.UpdateHierarchyPacket;
+import com.THproject.tharidia_things.network.SelectComponentPacket;
+import com.THproject.tharidia_things.network.SubmitNamePacket;
+import com.THproject.tharidia_things.network.SyncGateRestrictionsPacket;
 import com.THproject.tharidia_things.realm.RealmManager;
 import com.THproject.tharidia_things.registry.ModAttributes;
 import com.THproject.tharidia_things.registry.ModStats;
@@ -107,6 +122,7 @@ import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
+import net.minecraft.world.level.material.PushReaction;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.Mod;
@@ -117,6 +133,7 @@ import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -216,6 +233,18 @@ public class TharidiaThings {
                             .noOcclusion()));
     public static final DeferredItem<BlockItem> IRON_CHUNK_ITEM = ITEMS.registerSimpleBlockItem("iron_chunk",
             IRON_CHUNK);
+
+    // Dungeon Portal Block (red portal, no teleportation)
+    public static final DeferredBlock<DungeonPortalBlock> DUNGEON_PORTAL = BLOCKS.register("dungeon_portal",
+            () -> new DungeonPortalBlock(
+                    BlockBehaviour.Properties.of()
+                            .noCollission()
+                            .noOcclusion()
+                            .strength(-1.0F)
+                            .noLootTable()
+                            .sound(net.minecraft.world.level.block.SoundType.GLASS)
+                            .lightLevel(state -> 11)
+                            .pushReaction(PushReaction.BLOCK)));
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<IronChunkBlockEntity>> IRON_CHUNK_BLOCK_ENTITY = BLOCK_ENTITIES
             .register("iron_chunk",
@@ -996,6 +1025,19 @@ public class TharidiaThings {
     }
 
     @SubscribeEvent
+    public void onPlayerLoggedOut(PlayerLoggedOutEvent event) {
+        // Cancel any active trade sessions when a player disconnects
+        if (event.getEntity() instanceof ServerPlayer player) {
+            try {
+                com.THproject.tharidia_things.trade.TradeManager.cancelPlayerSession(player.getUUID());
+                LOGGER.debug("Cleaned up trade session for disconnecting player: {}", player.getName().getString());
+            } catch (Exception e) {
+                LOGGER.error("Error cleaning up trade session for player {}: {}", player.getName().getString(), e.getMessage());
+            }
+        }
+    }
+
+    @SubscribeEvent
     public void onDatapackSync(net.neoforged.neoforge.event.OnDatapackSyncEvent event) {
         WeightConfigSyncPacket packet = WeightConfigSyncPacket.fromCurrentRegistry();
         if (event.getPlayer() != null) {
@@ -1154,6 +1196,13 @@ public class TharidiaThings {
                     LOGGER.debug("Token cleanup completed");
                 } catch (Exception e) {
                     LOGGER.error("Error cleaning up expired tokens: {}", e.getMessage());
+                }
+
+                // Cleanup expired trade sessions
+                try {
+                    com.THproject.tharidia_things.trade.TradeManager.cleanupExpiredSessions();
+                } catch (Exception e) {
+                    LOGGER.error("Error cleaning up expired trade sessions: {}", e.getMessage());
                 }
 
                 // Reset counter

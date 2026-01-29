@@ -12,26 +12,38 @@ import java.util.concurrent.ConcurrentHashMap;
 public class TradeManager {
     private static final Map<UUID, TradeSession> activeSessions = new ConcurrentHashMap<>();
     private static final Map<UUID, UUID> pendingRequests = new ConcurrentHashMap<>(); // target -> requester
+    private static final Object tradeLock = new Object(); // Lock for atomic trade operations
 
     /**
      * Create a pending trade request
+     * @return true if request was created, false if player is busy
      */
-    public static void createTradeRequest(ServerPlayer requester, ServerPlayer target) {
+    public static boolean createTradeRequest(ServerPlayer requester, ServerPlayer target) {
         UUID targetId = target.getUUID();
         UUID requesterId = requester.getUUID();
 
-        // Check if target already has a pending request
-        if (pendingRequests.containsKey(targetId)) {
-            return;
+        // Synchronized to prevent race conditions
+        synchronized (tradeLock) {
+            // Check if target already has a pending request
+            if (pendingRequests.containsKey(targetId)) {
+                return false;
+            }
+
+            // Check if either player is already in a trade
+            if (isPlayerInTrade(requesterId) || isPlayerInTrade(targetId)) {
+                return false;
+            }
+
+            // Check if requester already has a pending request to someone else
+            if (pendingRequests.containsValue(requesterId)) {
+                return false;
+            }
+
+            pendingRequests.put(targetId, requesterId);
         }
 
-        // Check if either player is already in a trade
-        if (isPlayerInTrade(requesterId) || isPlayerInTrade(targetId)) {
-            return;
-        }
-
-        pendingRequests.put(targetId, requesterId);
         TharidiaThings.LOGGER.info("Trade request created: {} -> {}", requester.getName().getString(), target.getName().getString());
+        return true;
     }
 
     /**
@@ -39,25 +51,33 @@ public class TradeManager {
      */
     public static TradeSession acceptTradeRequest(ServerPlayer target) {
         UUID targetId = target.getUUID();
-        UUID requesterId = pendingRequests.remove(targetId);
 
-        if (requesterId == null) {
-            return null;
+        synchronized (tradeLock) {
+            UUID requesterId = pendingRequests.remove(targetId);
+
+            if (requesterId == null) {
+                return null;
+            }
+
+            ServerPlayer requester = target.getServer().getPlayerList().getPlayer(requesterId);
+            if (requester == null) {
+                return null;
+            }
+
+            // Double-check neither player is now in a trade (race condition prevention)
+            if (isPlayerInTrade(requesterId) || isPlayerInTrade(targetId)) {
+                return null;
+            }
+
+            // Create trade session
+            TradeSession session = new TradeSession(requester, target);
+            activeSessions.put(session.getSessionId(), session);
+
+            TharidiaThings.LOGGER.info("Trade session created: {} <-> {}",
+                requester.getName().getString(), target.getName().getString());
+
+            return session;
         }
-
-        ServerPlayer requester = target.getServer().getPlayerList().getPlayer(requesterId);
-        if (requester == null) {
-            return null;
-        }
-
-        // Create trade session
-        TradeSession session = new TradeSession(requester, target);
-        activeSessions.put(session.getSessionId(), session);
-        
-        TharidiaThings.LOGGER.info("Trade session created: {} <-> {}", 
-            requester.getName().getString(), target.getName().getString());
-
-        return session;
     }
 
     /**
@@ -115,11 +135,17 @@ public class TradeManager {
     }
 
     /**
-     * Cancel any session involving a player
+     * Cancel any session involving a player and notify the other player
      */
     public static void cancelPlayerSession(UUID playerId) {
         TradeSession session = getPlayerSession(playerId);
         if (session != null) {
+            // Notify the other player before cancelling
+            ServerPlayer otherPlayer = session.getOtherPlayer(playerId);
+            if (otherPlayer != null && !otherPlayer.hasDisconnected()) {
+                otherPlayer.closeContainer();
+                otherPlayer.sendSystemMessage(net.minecraft.network.chat.Component.translatable("message.tharidiathings.trade.other_disconnected"));
+            }
             cancelSession(session.getSessionId());
         }
         // Also remove any pending requests
