@@ -3,6 +3,7 @@ package com.THproject.tharidia_things.block.washer.sink;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.LivingEntity;
@@ -16,6 +17,8 @@ import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityTicker;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -33,6 +36,12 @@ public class SinkBlock extends BaseEntityBlock {
     public SinkBlock(Properties properties) {
         super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH));
+    }
+
+    @Override
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state,
+            BlockEntityType<T> type) {
+        return createTickerHelper(type, TharidiaThings.SINK_BLOCK_ENTITY.get(), SinkBlockEntity::tick);
     }
 
     @Override
@@ -59,6 +68,19 @@ public class SinkBlock extends BaseEntityBlock {
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hit) {
+        BlockEntity blockEntity = level.getBlockEntity(pos);
+        if (hand != InteractionHand.MAIN_HAND)
+            return ItemInteractionResult.CONSUME;
+
+        if (blockEntity instanceof SinkBlockEntity sink) {
+            for (int i = 0; i < sink.sinkInventory.getSlots(); i++) {
+                ItemStack extracted = sink.sinkInventory.extractItem(i, stack.getCount(), false);
+                if (!player.getInventory().add(extracted)) {
+                    player.drop(stack, false);
+                }
+            }
+        }
+
         return ItemInteractionResult.SUCCESS;
     }
 
@@ -112,6 +134,13 @@ public class SinkBlock extends BaseEntityBlock {
     @Override
     public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
         if (!state.is(newState.getBlock())) {
+            BlockEntity blockEntity = level.getBlockEntity(pos);
+            if (blockEntity instanceof SinkBlockEntity sink) {
+                for (int i = 0; i < sink.sinkInventory.getSlots(); i++) {
+                    Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(),
+                            sink.sinkInventory.getStackInSlot(i));
+                }
+            }
             Direction facing = state.getValue(FACING);
             Direction right = facing.getClockWise();
 

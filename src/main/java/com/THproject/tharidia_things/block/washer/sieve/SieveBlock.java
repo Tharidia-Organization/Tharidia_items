@@ -4,6 +4,7 @@ import com.mojang.serialization.MapCodec;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -71,27 +72,20 @@ public class SieveBlock extends BaseEntityBlock {
     }
 
     private boolean canFormMultiblock(Level level, BlockPos masterPos, Direction facing) {
-        // Determine check area based on facing
         int xMin, xMax, zMin, zMax;
 
         if (facing.getAxis() == Direction.Axis.Z) {
-            // North/South: Facing Parallel to Z axis (Deep structure)
-            // Width X is minimal (1 block), Depth Z is 3 blocks.
-            // Check 3x1 area: Z from -1 to 1. X is 0.
-            // Buffer: +1 all around.
-            xMin = -1;
-            xMax = 1; // Width Buffer
-            zMin = -2;
-            zMax = 2; // Length (-1 to 1) + Buffer
-        } else {
-            // East/West: Facing Parallel to X axis (Long structure)
-            // Width Z is minimal (1 block), Depth X is 3 blocks.
-            // Check 3x1 area: X from -1 to 1. Z is 0.
-            // Buffer: +1 all around.
-            xMin = -2;
-            xMax = 2; // Length buffer
+            // North/South: Length along Z axis (Parallel)
+            xMin = 0;
+            xMax = 0;
             zMin = -1;
-            zMax = 1; // Width Buffer
+            zMax = 1;
+        } else {
+            // East/West: Length along X axis (Parallel)
+            xMin = -1;
+            xMax = 1;
+            zMin = 0;
+            zMax = 0;
         }
 
         for (int x = xMin; x <= xMax; x++) {
@@ -102,9 +96,7 @@ public class SieveBlock extends BaseEntityBlock {
                 BlockPos checkPos = masterPos.offset(x, 0, z);
                 BlockState existingState = level.getBlockState(checkPos);
 
-                // If there's already a sieve master or dummy here, can't form
-                if (existingState.getBlock() instanceof SieveBlock ||
-                        existingState.getBlock() instanceof SieveDummyBlock) {
+                if (!existingState.canBeReplaced()) {
                     return false;
                 }
             }
@@ -152,6 +144,16 @@ public class SieveBlock extends BaseEntityBlock {
     }
 
     private void destroyMultiblock(Level level, BlockPos masterPos, Direction facing) {
+        BlockEntity blockEntity = level.getBlockEntity(masterPos);
+        if (blockEntity instanceof SieveBlockEntity sieve) {
+            Containers.dropItemStack(level, masterPos.getX(), masterPos.getY(), masterPos.getZ(),
+                    sieve.inventory.getStackInSlot(0));
+            if (sieve.hasMesh()) {
+                Containers.dropItemStack(level, masterPos.getX(), masterPos.getY(), masterPos.getZ(),
+                        new ItemStack(TharidiaThings.MESH.get()));
+            }
+        }
+
         int xMin, xMax, zMin, zMax;
 
         if (facing.getAxis() == Direction.Axis.Z) {

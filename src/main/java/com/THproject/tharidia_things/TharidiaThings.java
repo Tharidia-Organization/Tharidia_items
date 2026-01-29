@@ -88,7 +88,7 @@ import com.THproject.tharidia_things.servertransfer.TransferTokenManager;
 import com.THproject.tharidia_things.sounds.ModSounds;
 import com.THproject.tharidia_things.servertransfer.DevWhitelistManager;
 
-import com.THproject.tharidia_things.recipe.SieveRecipe;
+import com.THproject.tharidia_things.recipe.WasherRecipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.neoforged.api.distmarker.Dist;
@@ -162,10 +162,10 @@ public class TharidiaThings {
     public static final DeferredRegister<RecipeSerializer<?>> RECIPE_SERIALIZERS = DeferredRegister
             .create(Registries.RECIPE_SERIALIZER, MODID);
 
-    public static final DeferredHolder<RecipeType<?>, RecipeType<SieveRecipe>> SIEVE_RECIPE_TYPE = RECIPE_TYPES
-            .register("sieve", () -> RecipeType.simple(ResourceLocation.fromNamespaceAndPath(MODID, "sieve")));
-    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<SieveRecipe>> SIEVE_RECIPE_SERIALIZER = RECIPE_SERIALIZERS
-            .register("sieve", SieveRecipe.Serializer::new);
+    public static final DeferredHolder<RecipeType<?>, RecipeType<WasherRecipe>> WASHER_RECIPE_TYPE = RECIPE_TYPES
+            .register("washing", () -> RecipeType.simple(ResourceLocation.fromNamespaceAndPath(MODID, "washing")));
+    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<WasherRecipe>> WASHER_RECIPE_SERIALIZER = RECIPE_SERIALIZERS
+            .register("washing", WasherRecipe.Serializer::new);
 
     // Database system for cross-server communication
     private DatabaseManager databaseManager;
@@ -330,10 +330,11 @@ public class TharidiaThings {
 
     public static final DeferredBlock<com.THproject.tharidia_things.block.washer.sink.SinkDummyBlock> SINK_DUMMY_BLOCK = BLOCKS
             .register("sink_dummy",
-                    () -> new com.THproject.tharidia_things.block.washer.sink.SinkDummyBlock(BlockBehaviour.Properties.of()
-                            .mapColor(MapColor.METAL)
-                            .strength(1.0F)
-                            .noOcclusion()));
+                    () -> new com.THproject.tharidia_things.block.washer.sink.SinkDummyBlock(
+                            BlockBehaviour.Properties.of()
+                                    .mapColor(MapColor.METAL)
+                                    .strength(1.0F)
+                                    .noOcclusion()));
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.THproject.tharidia_things.block.washer.sink.SinkBlockEntity>> SINK_BLOCK_ENTITY = BLOCK_ENTITIES
             .register("sink",
@@ -486,11 +487,11 @@ public class TharidiaThings {
                         output.accept(VEIN_BLOCK.get());
                         output.accept(VEIN_SEDIMENT.get());
 
-                        // Sieve
-                        output.accept(SIEVE_BLOCK.get());
-
                         // Tank
                         output.accept(TANK_BLOCK.get());
+
+                        // Sieve
+                        output.accept(SIEVE_BLOCK.get());
 
                         // Sink
                         output.accept(SINK_BLOCK.get());

@@ -1,5 +1,5 @@
 {
-    "type": "tharidiathings:sieve",
+    "type": "tharidiathings:washing",
     "input": {
         "item": "tharidiathings:vein_sediment"
     },
@@ -8,8 +8,7 @@
             "item": {
                 "id": "tharidiathings:iron_chunk",
                 "count": 1
-            },
-            "chance": 0.4
+            }
         }
     ],
     "processingTime": 40

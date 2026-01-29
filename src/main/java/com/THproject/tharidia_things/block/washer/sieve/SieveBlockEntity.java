@@ -53,7 +53,7 @@ public class SieveBlockEntity extends BlockEntity implements GeoBlockEntity {
             if (slot == 0) {
                 if (level == null)
                     return true;
-                return level.getRecipeManager().getAllRecipesFor(TharidiaThings.SIEVE_RECIPE_TYPE.get())
+                return level.getRecipeManager().getAllRecipesFor(TharidiaThings.WASHER_RECIPE_TYPE.get())
                         .stream()
                         .anyMatch(recipe -> recipe.value().getInput().test(stack));
             }
@@ -74,78 +74,6 @@ public class SieveBlockEntity extends BlockEntity implements GeoBlockEntity {
         this.Mesh = false;
         setChanged();
     }
-
-    // public static void tick(Level level, BlockPos pos, BlockState state,
-    // SieveBlockEntity blockEntity) {
-    // if (level.isClientSide)
-    // return;
-
-    // RecipeWrapper recipeWrapper = new RecipeWrapper(blockEntity.inventory);
-    // Optional<RecipeHolder<SieveRecipe>> recipe = level.getRecipeManager()
-    // .getRecipeFor(TharidiaThings.SIEVE_RECIPE_TYPE.get(), recipeWrapper, level);
-
-    // blockEntity.tank.drain(blockEntity.FLUID_CONSUMPTION_TICK,
-    // IFluidHandler.FluidAction.EXECUTE);
-
-    // if (recipe.isPresent()) {
-    // SieveRecipe sieveRecipe = recipe.get().value();
-    // blockEntity.maxProgress = sieveRecipe.getProcessingTime();
-
-    // ItemStack result = sieveRecipe.getResultItem(level.registryAccess());
-    // if (blockEntity.tank.getFluidAmount() > 0 && blockEntity.hasMesh() &&
-    // blockEntity.canInsertItem(result)) {
-    // blockEntity.progress++;
-    // if (blockEntity.progress >= blockEntity.maxProgress) {
-    // blockEntity.craftItem(sieveRecipe);
-    // blockEntity.progress = 0;
-    // }
-    // blockEntity.setChanged();
-    // } else {
-    // blockEntity.resetProgress();
-    // blockEntity.setChanged();
-    // }
-    // } else {
-    // blockEntity.resetProgress();
-    // blockEntity.setChanged();
-    // }
-    // }
-
-    // private void craftItem(SieveRecipe recipe) {
-    // ItemStack result = recipe.getResultItem(this.level.registryAccess());
-    // inventory.extractItem(0, 1, false);
-
-    // for (int i = 1; i < inventory.getSlots(); i++) {
-    // ItemStack outputStack = inventory.getStackInSlot(i);
-    // if (outputStack.isEmpty()) {
-    // inventory.setStackInSlot(i, result.copy());
-    // return;
-    // } else if (!outputStack.isEmpty() && outputStack.getItem() ==
-    // result.getItem()
-    // && outputStack.getCount() + result.getCount() <=
-    // outputStack.getMaxStackSize()) {
-    // outputStack.grow(result.getCount());
-    // return;
-    // }
-    // }
-    // }
-
-    // private void resetProgress() {
-    // this.progress = 0;
-    // }
-
-    // private boolean canInsertItem(ItemStack item) {
-    // for (int i = 1; i < inventory.getSlots(); i++) {
-    // ItemStack outputStack = inventory.getStackInSlot(i);
-    // if (outputStack.isEmpty()) {
-    // return true;
-    // } else if (!outputStack.isEmpty() && outputStack.getItem() == item.getItem()
-    // && outputStack.getCount() + item.getCount() <= outputStack.getMaxStackSize())
-    // {
-    // return true;
-    // }
-    // }
-    // return false;
-    // }
 
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {

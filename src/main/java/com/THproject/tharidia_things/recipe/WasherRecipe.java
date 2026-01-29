@@ -18,12 +18,12 @@ import net.neoforged.neoforge.items.wrapper.RecipeWrapper;
 import java.util.List;
 import java.util.Random;
 
-public class SieveRecipe implements Recipe<RecipeWrapper> {
+public class WasherRecipe implements Recipe<RecipeWrapper> {
     private final Ingredient input;
     private final List<WeightedOutput> outputs;
     private final int processingTime;
 
-    public SieveRecipe(Ingredient input, List<WeightedOutput> outputs, int processingTime) {
+    public WasherRecipe(Ingredient input, List<WeightedOutput> outputs, int processingTime) {
         this.input = input;
         this.outputs = outputs;
         this.processingTime = processingTime;
@@ -71,12 +71,12 @@ public class SieveRecipe implements Recipe<RecipeWrapper> {
 
     @Override
     public RecipeSerializer<?> getSerializer() {
-        return TharidiaThings.SIEVE_RECIPE_SERIALIZER.get();
+        return TharidiaThings.WASHER_RECIPE_SERIALIZER.get();
     }
 
     @Override
     public RecipeType<?> getType() {
-        return TharidiaThings.SIEVE_RECIPE_TYPE.get();
+        return TharidiaThings.WASHER_RECIPE_TYPE.get();
     }
 
     public Ingredient getInput() {
@@ -107,28 +107,28 @@ public class SieveRecipe implements Recipe<RecipeWrapper> {
                 WeightedOutput::new);
     }
 
-    public static class Serializer implements RecipeSerializer<SieveRecipe> {
-        public static final MapCodec<SieveRecipe> CODEC = RecordCodecBuilder.mapCodec(
+    public static class Serializer implements RecipeSerializer<WasherRecipe> {
+        public static final MapCodec<WasherRecipe> CODEC = RecordCodecBuilder.mapCodec(
                 instance -> instance.group(
-                        Ingredient.CODEC_NONEMPTY.fieldOf("input").forGetter(SieveRecipe::getInput),
-                        WeightedOutput.CODEC.listOf().fieldOf("outputs").forGetter(SieveRecipe::getOutputs),
-                        Codec.INT.fieldOf("processingTime").orElse(40).forGetter(SieveRecipe::getProcessingTime))
-                        .apply(instance, SieveRecipe::new));
+                        Ingredient.CODEC_NONEMPTY.fieldOf("input").forGetter(WasherRecipe::getInput),
+                        WeightedOutput.CODEC.listOf().fieldOf("outputs").forGetter(WasherRecipe::getOutputs),
+                        Codec.INT.fieldOf("processingTime").orElse(40).forGetter(WasherRecipe::getProcessingTime))
+                        .apply(instance, WasherRecipe::new));
 
-        public static final StreamCodec<RegistryFriendlyByteBuf, SieveRecipe> STREAM_CODEC = StreamCodec.composite(
-                Ingredient.CONTENTS_STREAM_CODEC, SieveRecipe::getInput,
+        public static final StreamCodec<RegistryFriendlyByteBuf, WasherRecipe> STREAM_CODEC = StreamCodec.composite(
+                Ingredient.CONTENTS_STREAM_CODEC, WasherRecipe::getInput,
                 WeightedOutput.STREAM_CODEC.apply(net.minecraft.network.codec.ByteBufCodecs.list()),
-                SieveRecipe::getOutputs,
-                net.minecraft.network.codec.ByteBufCodecs.INT, SieveRecipe::getProcessingTime,
-                SieveRecipe::new);
+                WasherRecipe::getOutputs,
+                net.minecraft.network.codec.ByteBufCodecs.INT, WasherRecipe::getProcessingTime,
+                WasherRecipe::new);
 
         @Override
-        public MapCodec<SieveRecipe> codec() {
+        public MapCodec<WasherRecipe> codec() {
             return CODEC;
         }
 
         @Override
-        public StreamCodec<RegistryFriendlyByteBuf, SieveRecipe> streamCodec() {
+        public StreamCodec<RegistryFriendlyByteBuf, WasherRecipe> streamCodec() {
             return STREAM_CODEC;
         }
     }
