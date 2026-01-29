@@ -78,6 +78,10 @@ public class SieveBlockEntity extends BlockEntity implements GeoBlockEntity {
 
     public boolean toogleActive() {
         this.Active = !Active;
+        setChanged();
+        if (level != null) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+        }
         return Active;
     }
 

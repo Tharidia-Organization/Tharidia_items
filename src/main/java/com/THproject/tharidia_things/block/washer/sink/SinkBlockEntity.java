@@ -73,24 +73,26 @@ public class SinkBlockEntity extends BlockEntity implements GeoBlockEntity {
             return;
 
         if (sieveBlockEntity instanceof SieveBlockEntity sieve && tankBlockEntity instanceof TankBlockEntity tank) {
-            if (!sieve.getActive() || !tank.isOpen())
-                return;
+            if (sieve.getActive() && tank.isOpen()) {
+                RecipeWrapper recipeWrapper = new RecipeWrapper(sieve.inventory);
+                Optional<RecipeHolder<WasherRecipe>> recipe = level.getRecipeManager()
+                        .getRecipeFor(TharidiaThings.WASHER_RECIPE_TYPE.get(), recipeWrapper, level);
+                if (recipe.isPresent()) {
+                    WasherRecipe sieveRecipe = recipe.get().value();
+                    sink.maxProgress = sieveRecipe.getProcessingTime();
 
-            RecipeWrapper recipeWrapper = new RecipeWrapper(sieve.inventory);
-            Optional<RecipeHolder<WasherRecipe>> recipe = level.getRecipeManager()
-                    .getRecipeFor(TharidiaThings.WASHER_RECIPE_TYPE.get(), recipeWrapper, level);
-            if (recipe.isPresent()) {
-                WasherRecipe sieveRecipe = recipe.get().value();
-                sink.maxProgress = sieveRecipe.getProcessingTime();
-
-                ItemStack result = sieveRecipe.getResultItem(level.registryAccess());
-                if (tank.tank.getFluidAmount() > 0 && sieve.hasMesh() && sink.canInsertItem(result)) {
-                    sink.progress++;
-                    if (sink.progress >= sink.maxProgress) {
-                        sink.craftItem(sieveRecipe, sieve.inventory);
+                    ItemStack result = sieveRecipe.getResultItem(level.registryAccess());
+                    if (tank.tank.getFluidAmount() > 0 && sieve.hasMesh() && sink.canInsertItem(result)) {
+                        sink.progress++;
+                        if (sink.progress >= sink.maxProgress) {
+                            sink.craftItem(sieveRecipe, sieve.inventory);
+                            sink.resetProgress();
+                        }
+                        sink.setChanged();
+                    } else {
                         sink.resetProgress();
+                        sink.setChanged();
                     }
-                    sink.setChanged();
                 } else {
                     sink.resetProgress();
                     sink.setChanged();
