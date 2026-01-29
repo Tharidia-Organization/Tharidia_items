@@ -4,6 +4,7 @@ import com.THproject.tharidia_things.TharidiaThings;
 import com.THproject.tharidia_things.block.washer.sieve.SieveBlockEntity;
 
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.phys.AABB;
 import software.bernie.geckolib.model.GeoModel;
 import software.bernie.geckolib.renderer.GeoBlockRenderer;
 
@@ -25,5 +26,13 @@ public class SieveRenderer extends GeoBlockRenderer<SieveBlockEntity> {
                 return null;
             }
         });
+    }
+
+    @Override
+    public AABB getRenderBoundingBox(SieveBlockEntity blockEntity) {
+        var pos = blockEntity.getBlockPos();
+        return new AABB(
+                pos.getX() - 3, pos.getY(), pos.getZ() - 3,
+                pos.getX() + 5, pos.getY() + 3, pos.getZ() + 5);
     }
 }

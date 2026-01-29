@@ -14,6 +14,7 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.inventory.InventoryMenu;
+import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
 import net.neoforged.neoforge.fluids.FluidStack;
 import org.joml.Matrix4f;
@@ -49,6 +50,14 @@ public class TankRenderer extends GeoBlockRenderer<TankBlockEntity> {
         if (animatable.tank.getFluidAmount() > 0) {
             renderFluid(animatable, partialTick, poseStack, bufferSource, packedLight, packedOverlay);
         }
+    }
+
+    @Override
+    public AABB getRenderBoundingBox(TankBlockEntity blockEntity) {
+        var pos = blockEntity.getBlockPos();
+        return new AABB(
+                pos.getX() - 3, pos.getY(), pos.getZ() - 3,
+                pos.getX() + 5, pos.getY() + 3, pos.getZ() + 5);
     }
 
     private void renderFluid(TankBlockEntity animatable, float partialTick, PoseStack poseStack,

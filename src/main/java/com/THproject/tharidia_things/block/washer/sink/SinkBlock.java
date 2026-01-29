@@ -72,11 +72,19 @@ public class SinkBlock extends BaseEntityBlock {
         if (hand != InteractionHand.MAIN_HAND)
             return ItemInteractionResult.CONSUME;
 
-        if (blockEntity instanceof SinkBlockEntity sink) {
+        // Execute only on server to properly handle inventory and drops
+        if (!level.isClientSide && blockEntity instanceof SinkBlockEntity sink) {
             for (int i = 0; i < sink.sinkInventory.getSlots(); i++) {
-                ItemStack extracted = sink.sinkInventory.extractItem(i, stack.getCount(), false);
-                if (!player.getInventory().add(extracted)) {
-                    player.drop(stack, false);
+                // Extract based on amount currently in the slot, not the player's hand
+                int amountInSlot = sink.sinkInventory.getStackInSlot(i).getCount();
+                if (amountInSlot > 0) {
+                    ItemStack extracted = sink.sinkInventory.extractItem(i, amountInSlot, false);
+                    if (!extracted.isEmpty()) {
+                        if (!player.getInventory().add(extracted)) {
+                            // Drop the extracted item, not the player's stack
+                            player.drop(extracted, false);
+                        }
+                    }
                 }
             }
         }
