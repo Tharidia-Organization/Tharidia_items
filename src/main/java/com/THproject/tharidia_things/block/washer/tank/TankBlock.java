@@ -5,6 +5,7 @@ import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.LivingEntity;
@@ -153,6 +154,12 @@ public class TankBlock extends BaseEntityBlock {
                         player.drop(new ItemStack(Items.WATER_BUCKET), false);
                     }
                     return ItemInteractionResult.SUCCESS;
+                }
+            } else if (stack.isEmpty()) {
+                if (tank.toogleOpen()) {
+                    level.playSound(null, pos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 1.0F, 0.8F);
+                } else {
+                    level.playSound(null, pos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 1.0F, 0.5F);
                 }
             }
         }

@@ -46,17 +46,19 @@ public class TankFluidLayer extends GeoRenderLayer<TankBlockEntity> {
         // Definisci il RenderType usando la texture del fluido
         RenderType fluidRenderType = RenderType.entityTranslucent(texturePath);
 
-        getRenderer().reRender(
-                this.getGeoModel().getBakedModel(ResourceLocation.fromNamespaceAndPath(
-                        TharidiaThings.MODID, "geo/tank_water.geo.json")),
-                poseStack,
-                bufferSource,
-                animatable,
-                fluidRenderType,
-                bufferSource.getBuffer(fluidRenderType),
-                partialTick,
-                highLight,
-                packedOverlay,
-                color);
+        if (animatable.isOpen()) {
+            getRenderer().reRender(
+                    this.getGeoModel().getBakedModel(ResourceLocation.fromNamespaceAndPath(
+                            TharidiaThings.MODID, "geo/tank_water.geo.json")),
+                    poseStack,
+                    bufferSource,
+                    animatable,
+                    fluidRenderType,
+                    bufferSource.getBuffer(fluidRenderType),
+                    partialTick,
+                    highLight,
+                    packedOverlay,
+                    color);
+        }
     }
 }

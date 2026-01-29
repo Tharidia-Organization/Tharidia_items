@@ -29,6 +29,7 @@ import software.bernie.geckolib.animation.AnimatableManager;
 import software.bernie.geckolib.animation.AnimationController;
 import software.bernie.geckolib.animation.PlayState;
 import software.bernie.geckolib.util.GeckoLibUtil;
+import uk.co.caprica.vlcj.binding.internal.renderer_discoverer_item_added;
 
 public class SinkBlockEntity extends BlockEntity implements GeoBlockEntity {
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
@@ -72,6 +73,9 @@ public class SinkBlockEntity extends BlockEntity implements GeoBlockEntity {
             return;
 
         if (sieveBlockEntity instanceof SieveBlockEntity sieve && tankBlockEntity instanceof TankBlockEntity tank) {
+            if (!sieve.getActive() || !tank.isOpen())
+                return;
+
             RecipeWrapper recipeWrapper = new RecipeWrapper(sieve.inventory);
             Optional<RecipeHolder<WasherRecipe>> recipe = level.getRecipeManager()
                     .getRecipeFor(TharidiaThings.WASHER_RECIPE_TYPE.get(), recipeWrapper, level);
