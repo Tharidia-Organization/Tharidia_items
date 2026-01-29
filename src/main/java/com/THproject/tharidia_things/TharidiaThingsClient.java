@@ -21,6 +21,7 @@ import com.THproject.tharidia_things.client.renderer.StableBlockRenderer;
 import com.THproject.tharidia_things.diet.ClientDietProfileCache;
 import com.THproject.tharidia_things.diet.DietRegistry;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -161,6 +162,9 @@ public class TharidiaThingsClient {
             event.register(net.minecraft.client.resources.model.ModelResourceLocation.standalone(
                     ResourceLocation.fromNamespaceAndPath("tharidiathings", "block/stall_shit_" + i)));
         }
+
+        event.register(ModelResourceLocation.standalone(
+                ResourceLocation.fromNamespaceAndPath("tharidiathings", "geo/tank_water.geo.json")));
     }
 
     @SubscribeEvent

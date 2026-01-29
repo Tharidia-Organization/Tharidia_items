@@ -19,6 +19,9 @@ import net.neoforged.neoforge.fluids.FluidStack;
 import org.joml.Matrix4f;
 
 public class TankRenderer extends GeoBlockRenderer<TankBlockEntity> {
+    public static final ResourceLocation WATER_MODEL = ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID,
+            "geo/tank_water.geo.json");
+
     public TankRenderer() {
         super(new GeoModel<TankBlockEntity>() {
             @Override
@@ -36,13 +39,13 @@ public class TankRenderer extends GeoBlockRenderer<TankBlockEntity> {
                 return null;
             }
         });
+        addRenderLayer(new TankFluidLayer(this));
     }
 
     @Override
     public void render(TankBlockEntity animatable, float partialTick, PoseStack poseStack,
             MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
         super.render(animatable, partialTick, poseStack, bufferSource, packedLight, packedOverlay);
-
         if (animatable.tank.getFluidAmount() > 0) {
             renderFluid(animatable, partialTick, poseStack, bufferSource, packedLight, packedOverlay);
         }
