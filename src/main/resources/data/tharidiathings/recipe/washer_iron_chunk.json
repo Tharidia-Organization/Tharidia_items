@@ -1,14 +1,15 @@
 {
     "type": "tharidiathings:washing",
     "input": {
-        "item": "tharidiathings:vein_sediment"
+        "item": "tharidiathings:vein_sediment_t0"
     },
     "outputs": [
         {
             "item": {
                 "id": "tharidiathings:iron_chunk",
                 "count": 1
-            }
+            },
+            "chance": 1.0
         }
     ],
     "processingTime": 40

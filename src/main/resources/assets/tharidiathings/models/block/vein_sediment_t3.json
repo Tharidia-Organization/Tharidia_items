@@ -1,6 +1,6 @@
 {
     "parent": "minecraft:block/cube_all",
     "textures": {
-        "all": "tharidiathings:block/vein_sediment"
+        "all": "tharidiathings:block/vein_sediment_t3"
     }
 }

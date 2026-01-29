@@ -7,7 +7,7 @@
             "entries": [
                 {
                     "type": "minecraft:item",
-                    "name": "tharidiathings:vein_sediment"
+                    "name": "tharidiathings:vein_sediment_t1"
                 }
             ],
             "conditions": [
