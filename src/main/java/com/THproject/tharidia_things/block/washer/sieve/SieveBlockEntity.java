@@ -85,7 +85,7 @@ public class SieveBlockEntity extends BlockEntity implements GeoBlockEntity {
         return Active;
     }
 
-    public boolean getActive() {
+    public boolean isActive() {
         return this.Active;
     }
 
