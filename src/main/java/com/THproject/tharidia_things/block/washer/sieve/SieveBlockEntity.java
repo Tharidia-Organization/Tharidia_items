@@ -23,6 +23,7 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 
 public class SieveBlockEntity extends BlockEntity implements GeoBlockEntity {
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
+    private float processPercentage = 0.0F;
     private boolean Active = false;
     private boolean Mesh = false;
 
@@ -89,12 +90,25 @@ public class SieveBlockEntity extends BlockEntity implements GeoBlockEntity {
         return this.Active;
     }
 
+    public void setProcessPercentage(float percentage) {
+        this.processPercentage = percentage;
+        setChanged();
+        if (level != null && !level.isClientSide) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+        }
+    }
+
+    public float getProcessPercentage() {
+        return this.processPercentage;
+    }
+
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
         tag.put("Inventory", inventory.serializeNBT(registries));
         tag.putBoolean("Mesh", Mesh);
         tag.putBoolean("Active", Active);
+        tag.putFloat("ProcessPercentage", processPercentage);
     }
 
     @Override
@@ -108,6 +122,9 @@ public class SieveBlockEntity extends BlockEntity implements GeoBlockEntity {
         }
         if (tag.contains("Active")) {
             Active = tag.getBoolean("Active");
+            if (tag.contains("ProcessPercentage")) {
+                processPercentage = tag.getFloat("ProcessPercentage");
+            }
         }
     }
 

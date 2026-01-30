@@ -52,14 +52,6 @@ public class TankRenderer extends GeoBlockRenderer<TankBlockEntity> {
         }
     }
 
-    @Override
-    public AABB getRenderBoundingBox(TankBlockEntity blockEntity) {
-        var pos = blockEntity.getBlockPos();
-        return new AABB(
-                pos.getX() - 3, pos.getY(), pos.getZ() - 3,
-                pos.getX() + 5, pos.getY() + 3, pos.getZ() + 5);
-    }
-
     private void renderFluid(TankBlockEntity animatable, float partialTick, PoseStack poseStack,
             MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
         FluidStack fluidStack = animatable.tank.getFluid();
@@ -86,7 +78,7 @@ public class TankRenderer extends GeoBlockRenderer<TankBlockEntity> {
         // 3. Altezza
         float yFloor = 26.05f / 16.0f;
         float fillRatio = (float) animatable.tank.getFluidAmount() / (float) animatable.tank.getCapacity();
-        float yMax = yFloor + (21.9f / 16.0f * fillRatio);
+        float yMax = yFloor + (21.0f / 16.0f * fillRatio);
 
         Matrix4f matrix = poseStack.last().pose();
         VertexConsumer builder = bufferSource.getBuffer(RenderType.translucent());
@@ -112,5 +104,13 @@ public class TankRenderer extends GeoBlockRenderer<TankBlockEntity> {
                 .setOverlay(packedOverlay)
                 .setLight(packedLight)
                 .setNormal(0, 1, 0); // Simplified normal
+    }
+
+    @Override
+    public AABB getRenderBoundingBox(TankBlockEntity blockEntity) {
+        var pos = blockEntity.getBlockPos();
+        return new AABB(
+                pos.getX() - 3, pos.getY(), pos.getZ() - 3,
+                pos.getX() + 5, pos.getY() + 3, pos.getZ() + 5);
     }
 }
