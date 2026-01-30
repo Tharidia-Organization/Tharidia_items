@@ -20,9 +20,6 @@ public class SieveRenderer extends GeoBlockRenderer<SieveBlockEntity> {
         super(new GeoModel<SieveBlockEntity>() {
             @Override
             public ResourceLocation getModelResource(SieveBlockEntity animatable) {
-                if (animatable.isActive()) {
-                    return ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, "geo/sieve_active.geo.json");
-                }
                 return ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, "geo/sieve.geo.json");
             }
 
@@ -36,6 +33,8 @@ public class SieveRenderer extends GeoBlockRenderer<SieveBlockEntity> {
                 return null;
             }
         });
+        addRenderLayer(new SieveLeverRenderer(this));
+        addRenderLayer(new SieveWaterRenderer(this));
     }
 
     @Override

@@ -26,6 +26,7 @@ public class SieveBlockEntity extends BlockEntity implements GeoBlockEntity {
     private float processPercentage = 0.0F;
     private boolean Active = false;
     private boolean Mesh = false;
+    private boolean CanRenderWater = false;
 
     public SieveBlockEntity(BlockPos pos, BlockState blockState) {
         super(TharidiaThings.SIEVE_BLOCK_ENTITY.get(), pos, blockState);
@@ -90,6 +91,18 @@ public class SieveBlockEntity extends BlockEntity implements GeoBlockEntity {
         return this.Active;
     }
 
+    public void setCanRenderwater(boolean val) {
+        this.CanRenderWater = val;
+        setChanged();
+        if (level != null) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+        }
+    }
+
+    public boolean canRenderWater() {
+        return this.CanRenderWater;
+    }
+
     public void setProcessPercentage(float percentage) {
         this.processPercentage = percentage;
         setChanged();
@@ -108,6 +121,7 @@ public class SieveBlockEntity extends BlockEntity implements GeoBlockEntity {
         tag.put("Inventory", inventory.serializeNBT(registries));
         tag.putBoolean("Mesh", Mesh);
         tag.putBoolean("Active", Active);
+        tag.putBoolean("CanRenderWater", CanRenderWater);
         tag.putFloat("ProcessPercentage", processPercentage);
     }
 
@@ -119,6 +133,9 @@ public class SieveBlockEntity extends BlockEntity implements GeoBlockEntity {
         }
         if (tag.contains("Mesh")) {
             Mesh = tag.getBoolean("Mesh");
+        }
+        if (tag.contains("CanRenderWater")) {
+            CanRenderWater = tag.getBoolean("CanRenderWater");
         }
         if (tag.contains("Active")) {
             Active = tag.getBoolean("Active");
