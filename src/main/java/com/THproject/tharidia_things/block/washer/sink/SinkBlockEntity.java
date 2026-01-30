@@ -119,10 +119,7 @@ public class SinkBlockEntity extends BlockEntity implements GeoBlockEntity {
 
         int workingTanks = getWorkingTanks(tanks, tanksDirections);
         SieveBlockEntity sieve = (SieveBlockEntity) sieveBlockEntity;
-        if (sieve == null)
-            return;
-
-        if (sieve.getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING) != sieveDirection)
+        if (sieve == null || sieve.getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING) != sieveDirection)
             return;
 
         RecipeWrapper recipeWrapper = new RecipeWrapper(sieve.inventory);
