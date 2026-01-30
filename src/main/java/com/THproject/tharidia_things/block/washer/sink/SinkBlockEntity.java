@@ -118,35 +118,41 @@ public class SinkBlockEntity extends BlockEntity implements GeoBlockEntity {
         }
 
         int workingTanks = getWorkingTanks(tanks, tanksDirections);
-        if (sieveBlockEntity instanceof SieveBlockEntity sieve
-                && sieve.getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING) == sieveDirection
-                && tanks.size() > 0 && sieve.isActive() && workingTanks > 0) {
+        SieveBlockEntity sieve = (SieveBlockEntity) sieveBlockEntity;
+        if (sieve == null)
+            return;
 
-            RecipeWrapper recipeWrapper = new RecipeWrapper(sieve.inventory);
-            Optional<RecipeHolder<WasherRecipe>> recipe = level.getRecipeManager()
-                    .getRecipeFor(TharidiaThings.WASHER_RECIPE_TYPE.get(), recipeWrapper, level);
+        if (sieve.getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING) != sieveDirection)
+            return;
 
-            if (recipe.isPresent()) {
-                WasherRecipe sieveRecipe = recipe.get().value();
+        RecipeWrapper recipeWrapper = new RecipeWrapper(sieve.inventory);
+        Optional<RecipeHolder<WasherRecipe>> recipe = level.getRecipeManager()
+                .getRecipeFor(TharidiaThings.WASHER_RECIPE_TYPE.get(), recipeWrapper, level);
 
-                sink.maxProgress = sieveRecipe.getProcessingTime();
-                sink.maxProgress -= (int) Math.floor(sieveRecipe.getProcessingTime()
-                        * (sink.PERCENTAGE_PER_TANK * (workingTanks - 1)));
-                sieve.setProcessPercentage((float) sink.progress / sink.maxProgress);
+        if (!recipe.isPresent()) {
+            sink.resetProgress();
+            sieve.setProcessPercentage(0.0F);
+            return;
+        }
 
-                ItemStack result = sieveRecipe.getResultItem(level.registryAccess());
-                if (workingTanks > 0 && sieve.hasMesh() && sink.canInsertItem(result)) {
-                    sink.progress++;
-                    if (sink.progress >= sink.maxProgress) {
-                        sink.craftItem(sieveRecipe, sieve.inventory);
-                        sink.resetProgress();
-                    }
-                    sink.setChanged();
-                }
-            } else {
+        WasherRecipe sieveRecipe = recipe.get().value();
+        if (sieve.isActive() && workingTanks > 0) {
+            calcPercentage(sink, sieve, sieveRecipe, workingTanks);
+
+            ItemStack result = sieveRecipe.getResultItem(level.registryAccess());
+            if (workingTanks > 0 && sieve.hasMesh() && sink.canInsertItem(result)
+                    && (sink.progress++ >= sink.maxProgress)) {
+                sink.craftItem(sieveRecipe, sieve.inventory);
                 sink.resetProgress();
             }
         }
+    }
+
+    private static void calcPercentage(SinkBlockEntity sink, SieveBlockEntity sieve,
+            WasherRecipe recipe, int workingTanks) {
+        sink.maxProgress = recipe.getProcessingTime();
+        sink.maxProgress -= (int) (recipe.getProcessingTime() * (sink.PERCENTAGE_PER_TANK * (workingTanks - 1)));
+        sieve.setProcessPercentage((float) sink.progress / sink.maxProgress);
     }
 
     private static int getWorkingTanks(List<TankBlockEntity> tanks, List<Direction> tanksDirections) {
