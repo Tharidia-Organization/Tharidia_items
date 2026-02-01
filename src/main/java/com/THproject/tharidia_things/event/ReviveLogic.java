@@ -14,10 +14,8 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
-import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent;
-import net.neoforged.neoforge.event.level.BlockEvent;
 
 @EventBusSubscriber(modid = TharidiaThings.MODID)
 public class ReviveLogic {
@@ -87,37 +85,6 @@ public class ReviveLogic {
                 }
             }
         }
-    }
-
-    @SubscribeEvent
-    public static void onFallenPlaceBlock(BlockEvent.EntityPlaceEvent event) {
-        if (event.getEntity() instanceof Player player) {
-            if (player.level().isClientSide())
-                return;
-
-            if (Revive.isPlayerFallen(player))
-                event.setCanceled(true);
-        }
-    }
-
-    @SubscribeEvent
-    public static void onFallenBreakBlock(BlockEvent.BreakEvent event) {
-        if (event.getPlayer().level().isClientSide())
-            return;
-
-        Player player = event.getPlayer();
-
-        if (Revive.isPlayerFallen(player))
-            event.setCanceled(true);
-    }
-
-    @SubscribeEvent
-    public static void onFallenAttackEntity(AttackEntityEvent event) {
-        if (event.getEntity().level().isClientSide())
-            return;
-
-        if (Revive.isPlayerFallen(event.getEntity()))
-            event.setCanceled(true);
     }
 
     @SubscribeEvent
