@@ -28,14 +28,14 @@ public class StationCrystalBlockEntity extends BlockEntity {
         if (level.isClientSide)
             return;
 
-        if (blockEntity.getTimePercentage() <= 0.25) {
-            if (level instanceof ServerLevel serverLevel) {
-                if (System.currentTimeMillis() % 5 == 0)
-                    serverLevel.sendParticles(
-                            ParticleTypes.END_ROD,
-                            pos.getX() + 0.5, pos.getY() + 2.2, pos.getZ() + 0.5,
-                            1, 0, 0, 0, 0.05);
-            }
+        if (blockEntity.getTimePercentage() <= 0.25
+                && System.currentTimeMillis() % 5 == 0
+                && level instanceof ServerLevel serverLevel) {
+
+            serverLevel.sendParticles(
+                    ParticleTypes.END_ROD,
+                    pos.getX() + 0.5, pos.getY() + 2.2, pos.getZ() + 0.5,
+                    1, 0, 0, 0, 0.05);
         }
 
         if (System.currentTimeMillis() >= blockEntity.placedTime + MAX_TIME) {
@@ -49,7 +49,7 @@ public class StationCrystalBlockEntity extends BlockEntity {
         BlockState blockAbove = level.getBlockState(pos);
         if (blockAbove.is(TagKey.create(Registries.BLOCK,
                 ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, "placeable_station_crystal"))))
-            level.destroyBlock(pos, true);
+            level.destroyBlock(pos, false);
     }
 
     public boolean removeTimePercentage(double percentage) {
