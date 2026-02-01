@@ -69,6 +69,14 @@ public class StationCrystalBlockEntity extends BlockEntity {
         return false;
     }
 
+    public void addTime(long time) {
+        this.placedTime -= time;
+    }
+
+    public long getDurationTime() {
+        return System.currentTimeMillis() - this.placedTime;
+    }
+
     public long getRemainingTime() {
         long elapsedTime = System.currentTimeMillis() - this.placedTime;
         long remainingTime = MAX_TIME - elapsedTime;

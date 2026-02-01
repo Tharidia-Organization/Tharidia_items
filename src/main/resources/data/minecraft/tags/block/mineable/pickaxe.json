@@ -1,6 +1,7 @@
 {
     "replace": false,
     "values": [
-        "tharidiathings:iron_chunk"
+        "tharidiathings:iron_chunk",
+        "tharidiathings:station_crystal"
     ]
 }
