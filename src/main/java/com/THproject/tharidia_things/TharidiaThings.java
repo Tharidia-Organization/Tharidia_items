@@ -35,10 +35,7 @@ import com.THproject.tharidia_things.block.entity.HotGoldAnvilEntity;
 import com.THproject.tharidia_things.block.entity.HotCopperAnvilEntity;
 import com.THproject.tharidia_things.block.entity.StableBlockEntity;
 import com.THproject.tharidia_things.block.DungeonPortalBlock;
-import com.THproject.tharidia_things.block.ore_chunks.CopperChunkBlock;
-import com.THproject.tharidia_things.block.ore_chunks.CopperChunkBlockEntity;
-import com.THproject.tharidia_things.block.ore_chunks.IronChunkBlock;
-import com.THproject.tharidia_things.block.ore_chunks.IronChunkBlockEntity;
+import com.THproject.tharidia_things.block.ore_chunks.ChunksRegistry;
 import com.THproject.tharidia_things.block.veins.VeinBlocks;
 import com.THproject.tharidia_things.block.veins.VeinSediments;
 import com.THproject.tharidia_things.block.washer.sieve.SieveBlock;
@@ -223,17 +220,6 @@ public class TharidiaThings {
     public static final DeferredBlock<StableDummyBlock> STABLE_DUMMY = BLOCKS.register("stable_dummy",
             () -> new StableDummyBlock());
 
-    // Chunks Block
-    public static final DeferredBlock<IronChunkBlock> IRON_CHUNK = BLOCKS.register("iron_chunk",
-            () -> new IronChunkBlock(
-                    BlockBehaviour.Properties.of()
-                            .mapColor(MapColor.STONE)
-                            .destroyTime(4.0f)
-                            .explosionResistance(6.0f)
-                            .noOcclusion()));
-    public static final DeferredItem<BlockItem> IRON_CHUNK_ITEM = ITEMS.registerSimpleBlockItem("iron_chunk",
-            IRON_CHUNK);
-
     // Dungeon Portal Block (red portal, no teleportation)
     public static final DeferredBlock<DungeonPortalBlock> DUNGEON_PORTAL = BLOCKS.register("dungeon_portal",
             () -> new DungeonPortalBlock(
@@ -245,24 +231,6 @@ public class TharidiaThings {
                             .sound(net.minecraft.world.level.block.SoundType.GLASS)
                             .lightLevel(state -> 11)
                             .pushReaction(PushReaction.BLOCK)));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<IronChunkBlockEntity>> IRON_CHUNK_BLOCK_ENTITY = BLOCK_ENTITIES
-            .register("iron_chunk",
-                    () -> BlockEntityType.Builder.of(IronChunkBlockEntity::new, IRON_CHUNK.get()).build(null));
-
-    public static final DeferredBlock<CopperChunkBlock> COPPER_CHUNK = BLOCKS.register("copper_chunk",
-            () -> new CopperChunkBlock(
-                    BlockBehaviour.Properties.of()
-                            .mapColor(MapColor.STONE)
-                            .destroyTime(4.0f)
-                            .explosionResistance(6.0f)
-                            .noOcclusion()));
-    public static final DeferredItem<BlockItem> COPPER_CHUNK_ITEM = ITEMS.registerSimpleBlockItem("copper_chunk",
-            COPPER_CHUNK);
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<CopperChunkBlockEntity>> COPPER_CHUNK_BLOCK_ENTITY = BLOCK_ENTITIES
-            .register("copper_chunk",
-                    () -> BlockEntityType.Builder.of(CopperChunkBlockEntity::new, COPPER_CHUNK.get()).build(null));
 
     // Sieve
     public static final DeferredBlock<SieveBlock> SIEVE_BLOCK = BLOCKS.register(
@@ -483,8 +451,8 @@ public class TharidiaThings {
                         output.accept(PITCHFORK.get());
 
                         // Chunks
-                        output.accept(IRON_CHUNK.get());
-                        output.accept(COPPER_CHUNK.get());
+                        output.accept(ChunksRegistry.IRON_CHUNK_ITEM.get());
+                        output.accept(ChunksRegistry.COPPER_CHUNK_ITEM.get());
 
                         // Veins
                         output.accept(VeinBlocks.VEIN_BLOCK_T0_ITEM.get());
@@ -606,7 +574,10 @@ public class TharidiaThings {
 
         modEventBus.addListener(BattlePackets::register);
 
-        // Veins
+        // Register Chunks
+        ChunksRegistry.init();
+
+        // Register Veins
         VeinBlocks.init();
         VeinSediments.init();
 
@@ -1018,7 +989,8 @@ public class TharidiaThings {
                 com.THproject.tharidia_things.trade.TradeManager.cancelPlayerSession(player.getUUID());
                 LOGGER.debug("Cleaned up trade session for disconnecting player: {}", player.getName().getString());
             } catch (Exception e) {
-                LOGGER.error("Error cleaning up trade session for player {}: {}", player.getName().getString(), e.getMessage());
+                LOGGER.error("Error cleaning up trade session for player {}: {}", player.getName().getString(),
+                        e.getMessage());
             }
         }
     }
