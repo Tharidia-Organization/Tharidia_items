@@ -14,33 +14,24 @@ public class MinecraftMixin {
     @Inject(method = "startAttack", at = @At("HEAD"), cancellable = true)
     private void cancelAttack(CallbackInfoReturnable<Boolean> cir) {
         Minecraft mc = (Minecraft) (Object) this;
-        if (mc.player != null) {
-            if (Revive.isPlayerFallen(mc.player)) {
-                cir.setReturnValue(false);
-            }
+        if (mc.player != null && Revive.isPlayerFallen(mc.player)) {
+            cir.setReturnValue(false);
         }
-        mc.close();
     }
 
     @Inject(method = "startUseItem", at = @At("HEAD"), cancellable = true)
     private void cancelUseItem(CallbackInfo ci) {
         Minecraft mc = (Minecraft) (Object) this;
-        if (mc.player != null) {
-            if (Revive.isPlayerFallen(mc.player)) {
-                ci.cancel();
-            }
+        if (mc.player != null && Revive.isPlayerFallen(mc.player)) {
+            ci.cancel();
         }
-        mc.close();
     }
 
     @Inject(method = "continueAttack", at = @At("HEAD"), cancellable = true)
     private void cancelContinueAttack(boolean p_91387_, CallbackInfo ci) {
         Minecraft mc = (Minecraft) (Object) this;
-        if (mc.player != null) {
-            if (Revive.isPlayerFallen(mc.player)) {
-                ci.cancel();
-            }
+        if (mc.player != null && Revive.isPlayerFallen(mc.player)) {
+            ci.cancel();
         }
-        mc.close();
     }
 }

@@ -35,17 +35,6 @@ public class ClientKeyHandler {
             RealmBoundaryRenderer.toggleBoundaries();
         }
         
-        // Debug: Press F10 to force-show video tools installation GUI
-        if (org.lwjgl.glfw.GLFW.glfwGetKey(mc.getWindow().getWindow(), GLFW.GLFW_KEY_F10) == GLFW.GLFW_PRESS) {
-            long currentTime = System.currentTimeMillis();
-            if (currentTime - lastPress > 500) { // 500ms debounce
-                lastPress = currentTime;
-                TharidiaThings.LOGGER.info("[VIDEO TOOLS] F10 key pressed - triggering GUI");
-                mc.player.sendSystemMessage(net.minecraft.network.chat.Component.literal("§e[DEBUG] Showing video tools installation GUI"));
-                VideoToolsManager.getInstance().forceShowInstallationGUI();
-            }
-        }
-        
         // Update video players
         VideoScreenRenderHandler.onClientTick();
         
