@@ -41,6 +41,9 @@
   "item.tharidiathings.baby_mob.tooltip": "Baby %s",
   "item.tharidiathings.baby_mob.name": "Baby %s",
   "block.tharidiathings.stable": "Stable",
+  "block.tharidiathings.station_crystal": "Station Crystal",
+  "item.tharidiathings.station_crystal_tool": "Station Crystal Tool",
+  "item.tharidiathings.station_crystal_repairer": "Station Crystal Repairer",
 
   "item.tharidiathings.pinza.holding.hot_iron": "Holding: Hot Iron",
   "item.tharidiathings.pinza.holding.hot_gold": "Holding: Hot Gold",
