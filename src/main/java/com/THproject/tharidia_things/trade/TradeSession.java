@@ -36,12 +36,22 @@ public class TradeSession {
     public void updatePlayerItems(UUID playerId, List<ItemStack> items) {
         if (player1.getUUID().equals(playerId)) {
             player1Items.clear();
-            player1Items.addAll(items);
+            // Make deep copies to prevent reference issues
+            for (ItemStack stack : items) {
+                if (!stack.isEmpty()) {
+                    player1Items.add(stack.copy());
+                }
+            }
             player1Confirmed = false; // Reset confirmation when items change
             player1FinalConfirmed = false; // Reset final confirmation
         } else if (player2.getUUID().equals(playerId)) {
             player2Items.clear();
-            player2Items.addAll(items);
+            // Make deep copies to prevent reference issues
+            for (ItemStack stack : items) {
+                if (!stack.isEmpty()) {
+                    player2Items.add(stack.copy());
+                }
+            }
             player2Confirmed = false; // Reset confirmation when items change
             player2FinalConfirmed = false; // Reset final confirmation
         }

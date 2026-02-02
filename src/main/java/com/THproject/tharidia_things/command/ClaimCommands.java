@@ -34,7 +34,6 @@ public class ClaimCommands {
                 .then(Commands.literal("untrust")
                     .then(Commands.argument("player", EntityArgument.player())
                         .executes(ClaimCommands::executeUntrust)))
-                .requires(source -> source.hasPermission(4)) // Admin only
                 .then(Commands.literal("info")
                         .executes(ClaimCommands::executeInfo))
                 .then(Commands.literal("flag")
@@ -49,7 +48,23 @@ public class ClaimCommands {
                         .then(Commands.literal("deny").executes(ctx -> executeFlag(ctx, "mobs", false))))
                     .then(Commands.literal("fire")
                         .then(Commands.literal("allow").executes(ctx -> executeFlag(ctx, "fire", true)))
-                        .then(Commands.literal("deny").executes(ctx -> executeFlag(ctx, "fire", false)))))
+                        .then(Commands.literal("deny").executes(ctx -> executeFlag(ctx, "fire", false))))
+                    // Granular flags
+                    .then(Commands.literal("containers")
+                        .then(Commands.literal("allow").executes(ctx -> executeFlag(ctx, "containers", true)))
+                        .then(Commands.literal("deny").executes(ctx -> executeFlag(ctx, "containers", false))))
+                    .then(Commands.literal("doors")
+                        .then(Commands.literal("allow").executes(ctx -> executeFlag(ctx, "doors", true)))
+                        .then(Commands.literal("deny").executes(ctx -> executeFlag(ctx, "doors", false))))
+                    .then(Commands.literal("switches")
+                        .then(Commands.literal("allow").executes(ctx -> executeFlag(ctx, "switches", true)))
+                        .then(Commands.literal("deny").executes(ctx -> executeFlag(ctx, "switches", false))))
+                    .then(Commands.literal("vehicles")
+                        .then(Commands.literal("allow").executes(ctx -> executeFlag(ctx, "vehicles", true)))
+                        .then(Commands.literal("deny").executes(ctx -> executeFlag(ctx, "vehicles", false))))
+                    .then(Commands.literal("animals")
+                        .then(Commands.literal("allow").executes(ctx -> executeFlag(ctx, "animals", true)))
+                        .then(Commands.literal("deny").executes(ctx -> executeFlag(ctx, "animals", false)))))
                 .then(Commands.literal("abandon")
                     .executes(ClaimCommands::executeAbandon))
                 .then(Commands.literal("list")
@@ -121,7 +136,15 @@ public class ClaimCommands {
             player.sendSystemMessage(Component.literal("§ePvP: " + (claim.getAllowPvP() ? "§aAllowed" : "§cDenied")));
             player.sendSystemMessage(Component.literal("§eMob Spawning: " + (claim.getAllowMobSpawning() ? "§aAllowed" : "§cDenied")));
             player.sendSystemMessage(Component.literal("§eFire Spread: " + (claim.getAllowFireSpread() ? "§aAllowed" : "§cDenied")));
-            
+
+            // Granular flags
+            player.sendSystemMessage(Component.literal("§6§l=== Access Flags ==="));
+            player.sendSystemMessage(Component.literal("§eContainers: " + (claim.getAllowContainerAccess() ? "§aAllowed" : "§cDenied")));
+            player.sendSystemMessage(Component.literal("§eDoors: " + (claim.getAllowDoorUse() ? "§aAllowed" : "§cDenied")));
+            player.sendSystemMessage(Component.literal("§eSwitches: " + (claim.getAllowSwitchUse() ? "§aAllowed" : "§cDenied")));
+            player.sendSystemMessage(Component.literal("§eVehicles: " + (claim.getAllowVehiclePlace() ? "§aAllowed" : "§cDenied")));
+            player.sendSystemMessage(Component.literal("§eAnimals: " + (claim.getAllowAnimalInteract() ? "§aAllowed" : "§cDenied")));
+
             // Trusted players
             if (!claim.getTrustedPlayers().isEmpty()) {
                 player.sendSystemMessage(Component.literal("§6§l=== Trusted Players ==="));
@@ -242,6 +265,21 @@ public class ClaimCommands {
                     break;
                 case "fire":
                     claim.setAllowFireSpread(value);
+                    break;
+                case "containers":
+                    claim.setAllowContainerAccess(value);
+                    break;
+                case "doors":
+                    claim.setAllowDoorUse(value);
+                    break;
+                case "switches":
+                    claim.setAllowSwitchUse(value);
+                    break;
+                case "vehicles":
+                    claim.setAllowVehiclePlace(value);
+                    break;
+                case "animals":
+                    claim.setAllowAnimalInteract(value);
                     break;
                 default:
                     player.sendSystemMessage(Component.literal("§cUnknown flag: " + flagName));

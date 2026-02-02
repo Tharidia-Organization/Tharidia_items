@@ -1,9 +1,9 @@
 package com.THproject.tharidia_things.dungeon_query;
 
-import com.THproject.tharidia_features.dungeon.DungeonManager;
 import com.THproject.tharidia_things.TharidiaThings;
 
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
@@ -89,11 +89,30 @@ public class DungeonInstanceManager {
         }
 
         // If there are waiting groups and free instance slots, start next group
-        while (activeInstances.size() < DungeonManager.getInstance().getMaxInstances() && !waitingQueue.isEmpty()) {
-            DungeonQueryInstance nextGroup = waitingQueue.remove(0);
-            registerInstance(nextGroup);
-            nextGroup.callPlayers();
-            TharidiaThings.LOGGER.info("[DUNGEON] Called next group from waiting queue.");
+        // Only process waiting queue if tharidia_features is loaded (provides DungeonManager)
+        if (!waitingQueue.isEmpty() && ModList.get().isLoaded("tharidia_features")) {
+            int maxInstances = getMaxInstancesFromFeatures();
+            while (activeInstances.size() < maxInstances && !waitingQueue.isEmpty()) {
+                DungeonQueryInstance nextGroup = waitingQueue.remove(0);
+                registerInstance(nextGroup);
+                nextGroup.callPlayers();
+                TharidiaThings.LOGGER.info("[DUNGEON] Called next group from waiting queue.");
+            }
+        }
+    }
+
+    /**
+     * Gets max instances from DungeonManager via reflection to avoid hard dependency.
+     * Returns Integer.MAX_VALUE if tharidia_features is not available.
+     */
+    private static int getMaxInstancesFromFeatures() {
+        try {
+            Class<?> dungeonManagerClass = Class.forName("com.THproject.tharidia_features.dungeon.DungeonManager");
+            Object manager = dungeonManagerClass.getMethod("getInstance").invoke(null);
+            return (int) dungeonManagerClass.getMethod("getMaxInstances").invoke(manager);
+        } catch (Exception e) {
+            TharidiaThings.LOGGER.debug("[DUNGEON] Could not get max instances from DungeonManager: {}", e.getMessage());
+            return Integer.MAX_VALUE;
         }
     }
 }

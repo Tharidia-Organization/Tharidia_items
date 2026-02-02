@@ -5,6 +5,7 @@ import com.THproject.tharidia_things.gui.TradeMenu;
 import com.THproject.tharidia_things.network.TradeCancelPacket;
 import com.THproject.tharidia_things.network.TradeUpdatePacket;
 import com.THproject.tharidia_things.network.TradeFinalConfirmPacket;
+import com.THproject.tharidia_things.util.CurrencyHelper;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -214,18 +215,7 @@ public class TradeScreen extends AbstractContainerScreen<TradeMenu> {
     }
     
     private boolean isCurrencyItem(ItemStack stack) {
-        if (stack.isEmpty()) {
-            return false;
-        }
-        
-        // This is a simplified check - in production, use Config.TRADE_CURRENCY_ITEMS
-        return stack.getItem().toString().contains("potato") || 
-               stack.getItem().toString().contains("gold_nugget");
-    }
-    
-    private double getTaxRate() {
-        // Default 10% - in production, use Config.TRADE_TAX_RATE.get()
-        return 0.1;
+        return CurrencyHelper.isCurrencyItem(stack);
     }
 
     @Override
