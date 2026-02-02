@@ -7,7 +7,6 @@ import com.THproject.tharidia_things.client.ClientConnectionHandler;
 import com.THproject.tharidia_things.client.RealmBoundaryRenderer;
 import com.THproject.tharidia_things.client.RealmClientHandler;
 import com.THproject.tharidia_things.client.RealmOverlay;
-import com.THproject.tharidia_things.client.ReviveProgressHudOverlay;
 import com.THproject.tharidia_things.client.StaminaHudOverlay;
 import com.THproject.tharidia_things.client.ZoneMusicPlayer;
 import com.THproject.tharidia_things.client.video.DependencyCheckHandler;
@@ -179,10 +178,5 @@ public class TharidiaThingsClient {
                 VanillaGuiLayers.HOTBAR,
                 TharidiaThings.modLoc("stamina_overlay"),
                 new StaminaHudOverlay());
-
-        event.registerAbove(
-                VanillaGuiLayers.HOTBAR,
-                TharidiaThings.modLoc("revive_overlay"),
-                new ReviveProgressHudOverlay());
     }
 }

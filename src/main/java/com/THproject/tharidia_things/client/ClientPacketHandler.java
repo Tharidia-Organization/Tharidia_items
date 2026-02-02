@@ -6,9 +6,11 @@ import com.THproject.tharidia_things.client.screen.RaceSelectionScreen;
 import com.THproject.tharidia_things.client.video.ClientVideoScreenManager;
 import com.THproject.tharidia_things.compoundTag.ReviveAttachments;
 import com.THproject.tharidia_things.network.*;
+import com.THproject.tharidia_things.network.revive.ReviveSyncPayload;
 import com.mojang.logging.LogUtils;
 import com.THproject.tharidia_things.block.entity.PietroBlockEntity;
 import net.minecraft.client.Minecraft;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -376,20 +378,17 @@ public class ClientPacketHandler {
         });
     }
 
-    public static void handleReviveProgress(ReviveProgressPacket packet, IPayloadContext context) {
+    /**
+     * Handles revive sync payload from server
+     */
+    public static void handleReviveSync(final ReviveSyncPayload packet, IPayloadContext context) {
         context.enqueueWork(() -> {
-            ReviveProgressHudOverlay.currentResTime = packet.currentResTime();
-            ReviveProgressHudOverlay.maxResTime = packet.maxResTime();
-            ReviveProgressHudOverlay.text = packet.text();
-            ReviveProgressHudOverlay.lastUpdateTime = System.currentTimeMillis();
-        });
-    }
-
-    public static void handleReviveSync(ReviveSyncPacket packet, IPayloadContext context) {
-        context.enqueueWork(() -> {
-            Player player = Minecraft.getInstance().player;
-            if (player != null) {
-                player.getData(ReviveAttachments.REVIVE_DATA.get()).setCanRevive(packet.canRevive());
+            Entity entity = Minecraft.getInstance().level.getEntity(packet.entityId());
+            if (entity != null) {
+                // Aggiorna i dati sul client
+                entity.setData(ReviveAttachments.REVIVE_DATA, new ReviveAttachments()); // Opzionale: pulizia
+                entity.getData(ReviveAttachments.REVIVE_DATA).deserializeNBT(entity.level().registryAccess(),
+                        packet.data());
             }
         });
     }

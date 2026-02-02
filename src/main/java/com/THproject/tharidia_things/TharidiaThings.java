@@ -81,6 +81,7 @@ import com.THproject.tharidia_things.network.SyncGroupQueuePacket;
 import com.THproject.tharidia_things.network.HierarchySyncPacket;
 import com.THproject.tharidia_things.network.RealmSyncPacket;
 import com.THproject.tharidia_things.network.UpdateHierarchyPacket;
+import com.THproject.tharidia_things.network.revive.ReviveSyncPayload;
 import com.THproject.tharidia_things.network.SelectComponentPacket;
 import com.THproject.tharidia_things.network.SubmitNamePacket;
 import com.THproject.tharidia_things.network.SyncGateRestrictionsPacket;
@@ -528,14 +529,6 @@ public class TharidiaThings {
                     FatigueSyncPacket.STREAM_CODEC,
                     ClientPacketHandler::handleFatigueSync);
             registrar.playToClient(
-                    ReviveProgressPacket.TYPE,
-                    ReviveProgressPacket.STREAM_CODEC,
-                    ClientPacketHandler::handleReviveProgress);
-            registrar.playToClient(
-                    ReviveSyncPacket.TYPE,
-                    ReviveSyncPacket.STREAM_CODEC,
-                    ClientPacketHandler::handleReviveSync);
-            registrar.playToClient(
                     StaminaSyncPacket.TYPE,
                     StaminaSyncPacket.STREAM_CODEC,
                     ClientPacketHandler::handleStaminaSync);
@@ -567,12 +560,6 @@ public class TharidiaThings {
                     SelectRacePacket.TYPE,
                     SelectRacePacket.STREAM_CODEC,
                     SelectRacePacket::handle);
-
-            // Give up packet
-            registrar.playToServer(
-                    GiveUpPacket.TYPE,
-                    GiveUpPacket.STREAM_CODEC,
-                    GiveUpPacket::handle);
             // Zone music packet from tharidiatweaks
             registrar.playToClient(
                     ZoneMusicPacket.TYPE,
@@ -599,6 +586,11 @@ public class TharidiaThings {
                     TradeSyncPacket.STREAM_CODEC,
                     (packet, context) -> TradeClientHandler
                             .handleTradeSync(packet));
+            // Revive sync packet (client-bound)
+            registrar.playToClient(
+                    ReviveSyncPayload.TYPE,
+                    ReviveSyncPayload.STREAM_CODEC,
+                    ClientPacketHandler::handleReviveSync);
 
             // Register bungeecord:main channel to satisfy server requirement (dummy
             // handler)
@@ -670,11 +662,6 @@ public class TharidiaThings {
                     (packet, context) -> {
                     });
             registrar.playToClient(
-                    ReviveProgressPacket.TYPE,
-                    ReviveProgressPacket.STREAM_CODEC,
-                    (packet, context) -> {
-                    });
-            registrar.playToClient(
                     StaminaSyncPacket.TYPE,
                     StaminaSyncPacket.STREAM_CODEC,
                     (packet, context) -> {
@@ -712,12 +699,6 @@ public class TharidiaThings {
                     SelectRacePacket.TYPE,
                     SelectRacePacket.STREAM_CODEC,
                     SelectRacePacket::handle);
-
-            // Give up packet (server-side handler)
-            registrar.playToServer(
-                    GiveUpPacket.TYPE,
-                    GiveUpPacket.STREAM_CODEC,
-                    GiveUpPacket::handle);
             // Zone music packet (dummy handler)
             registrar.playToClient(
                     ZoneMusicPacket.TYPE,

@@ -5,12 +5,12 @@ import com.THproject.tharidia_things.compoundTag.ReviveAttachments;
 import com.THproject.tharidia_things.config.ReviveConfig;
 import com.THproject.tharidia_things.features.Revive;
 import com.THproject.tharidia_things.network.RightClickReleasePayload;
-import com.THproject.tharidia_things.network.ReviveProgressPacket;
-import net.neoforged.neoforge.network.PacketDistributor;
-import net.minecraft.server.level.ServerPlayer;
+import com.THproject.tharidia_things.network.revive.ReviveSyncPayload;
 
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -19,12 +19,27 @@ import net.neoforged.neoforge.common.Tags.DamageTypes;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 @EventBusSubscriber(modid = TharidiaThings.MODID)
 public class ReviveLogic {
+
+    // Sync revive data of all players to loggedIn player
+    @SubscribeEvent
+    public static void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
+        if (event.getEntity() instanceof ServerPlayer joinedPlayer) {
+            for (ServerPlayer otherPlayer : joinedPlayer.server.getPlayerList().getPlayers()) {
+                if (Revive.isPlayerFallen(otherPlayer)) {
+                    ReviveSyncPayload.sync(otherPlayer, joinedPlayer);
+                }
+            }
+        }
+    }
+
+    // Cancel death event and fall player
     @SubscribeEvent
     public static void onPlayerDeath(LivingDeathEvent event) {
         if (event.getEntity().level().isClientSide())
@@ -34,7 +49,6 @@ public class ReviveLogic {
             if (!Revive.isPlayerFallen(player)) {
                 ReviveAttachments playerAttachments = player.getData(ReviveAttachments.REVIVE_DATA.get());
                 if (playerAttachments.canFall()) {
-                    playerAttachments.resetResTime();
                     Revive.fallPlayer(player, true);
                     event.setCanceled(true);
                     event.getEntity().setHealth(1);
@@ -49,8 +63,10 @@ public class ReviveLogic {
     public static void onFallenLogout(PlayerLoggedOutEvent event) {
         if (event.getEntity().level().isClientSide())
             return;
-        if (Revive.isPlayerFallen(event.getEntity()))
+        if (Revive.isPlayerFallen(event.getEntity())) {
             event.getEntity().kill();
+            Revive.revivePlayer(event.getEntity());
+        }
     }
 
     @SubscribeEvent
@@ -66,7 +82,8 @@ public class ReviveLogic {
             if (!(attacker instanceof Player)) {
                 if (Revive.isPlayerFallen(player)) {
                     ReviveAttachments playerReviveAttachments = player.getData(ReviveAttachments.REVIVE_DATA.get());
-                    if ((player.tickCount - playerReviveAttachments.getInvulnerabilityTick()) < 200
+                    if ((playerReviveAttachments.getResTick()
+                            - player.tickCount) < ReviveAttachments.INVULNERABILITY_TICK
                             && !event.getSource().is(DamageTypes.IS_TECHNICAL)) {
                         event.setCanceled(true);
                     }
@@ -99,17 +116,9 @@ public class ReviveLogic {
                             || event.getEntity().getMainHandItem().getItem().toString().equals(item_to_revive)) {
 
                         playerReviveAttachments.setRevivingPlayer(interactedPlayer.getUUID());
-                        interractReviveAttachments.decreaseResTime();
+                        interractReviveAttachments.decreaseResTick();
 
-                        int maxTime = Integer.parseInt(ReviveConfig.config.TIME_TO_RES.get("Value").toString());
-                        if (event.getEntity() instanceof ServerPlayer serverPlayer) {
-                            PacketDistributor.sendToPlayer(
-                                    serverPlayer,
-                                    new ReviveProgressPacket(interractReviveAttachments.getResTime(), maxTime,
-                                            "Reviving..."));
-                        }
-
-                        if (interractReviveAttachments.getResTime() == 0) {
+                        if (interractReviveAttachments.getResTick() == 0) {
                             Revive.revivePlayer(interactedPlayer);
                             interractReviveAttachments.resetResTime();
                             playerReviveAttachments.setRevivingPlayer(null);
@@ -144,25 +153,26 @@ public class ReviveLogic {
 
     @SubscribeEvent
     public static void onPlayerTick(PlayerTickEvent.Post event) {
-        if (event.getEntity().level().isClientSide())
-            return;
-
         Player player = event.getEntity();
+
+        if (player.level().isClientSide()) {
+            if (player.getData(ReviveAttachments.REVIVE_DATA.get()).isFallen()) {
+                player.setForcedPose(Pose.SWIMMING);
+                player.setSwimming(true);
+            } else {
+                player.setForcedPose(null);
+                player.setSwimming(false);
+            }
+            return;
+        }
+
         if (Revive.isPlayerFallen(player)) {
             ReviveAttachments attachments = player.getData(ReviveAttachments.REVIVE_DATA.get());
             attachments.increaseTimeFallen();
 
-            int maxTime = Integer.parseInt(ReviveConfig.config.TIME_FALLEN.get("Value").toString());
-
-            if (attachments.getTimeFallen() >= maxTime) {
+            if (attachments.getTimeFallen() >= ReviveAttachments.MAX_FALLEN_TICK) {
                 player.kill();
                 Revive.revivePlayer(player);
-            } else {
-                if (player instanceof ServerPlayer serverPlayer) {
-                    PacketDistributor.sendToPlayer(
-                            serverPlayer,
-                            new ReviveProgressPacket(maxTime - attachments.getTimeFallen(), maxTime, "Dying..."));
-                }
             }
         }
     }

@@ -6,16 +6,14 @@ import java.util.UUID;
 
 import com.THproject.tharidia_things.TharidiaThings;
 import com.THproject.tharidia_things.compoundTag.ReviveAttachments;
-import com.THproject.tharidia_things.network.ReviveSyncPacket;
+import com.THproject.tharidia_things.network.revive.ReviveSyncPayload;
 
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 public class Revive {
     public static final List<UUID> fallenPlayers = new ArrayList<>();
@@ -35,11 +33,9 @@ public class Revive {
         reviveAttachments.resetResTime();
         reviveAttachments.setTimeFallen(0);
         reviveAttachments.setCanRevive(can_revive);
-        reviveAttachments.setInvulnerabilityTick(player.tickCount);
+        reviveAttachments.setIsFallen(true);
 
-        if (player instanceof ServerPlayer serverPlayer) {
-            PacketDistributor.sendToPlayer(serverPlayer, new ReviveSyncPacket(can_revive));
-        }
+        ReviveSyncPayload.sync(player);
 
         // Apply attributes to prevent movement and jumping
         AttributeInstance movement = player.getAttribute(Attributes.MOVEMENT_SPEED);
@@ -62,9 +58,9 @@ public class Revive {
 
         ReviveAttachments reviveAttachments = player.getData(ReviveAttachments.REVIVE_DATA.get());
         reviveAttachments.setCanRevive(false);
-        if (player instanceof ServerPlayer serverPlayer) {
-            PacketDistributor.sendToPlayer(serverPlayer, new ReviveSyncPacket(false));
-        }
+        reviveAttachments.setIsFallen(false);
+
+        ReviveSyncPayload.sync(player);
 
         // Remove attributes
         AttributeInstance movement = player.getAttribute(Attributes.MOVEMENT_SPEED);
@@ -80,5 +76,9 @@ public class Revive {
 
     public static boolean isPlayerFallen(Player player) {
         return fallenPlayers.contains(player.getUUID());
+    }
+
+    public static List<UUID> getFallenPlayers() {
+        return fallenPlayers;
     }
 }
