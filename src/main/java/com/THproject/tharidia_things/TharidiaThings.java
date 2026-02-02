@@ -34,6 +34,8 @@ import com.THproject.tharidia_things.block.entity.HotIronAnvilEntity;
 import com.THproject.tharidia_things.block.entity.HotGoldAnvilEntity;
 import com.THproject.tharidia_things.block.entity.HotCopperAnvilEntity;
 import com.THproject.tharidia_things.block.entity.StableBlockEntity;
+import com.THproject.tharidia_things.block.station_crystal.StationCrystalBlock;
+import com.THproject.tharidia_things.block.station_crystal.StationCrystalBlockEntity;
 import com.THproject.tharidia_things.block.DungeonPortalBlock;
 import com.THproject.tharidia_things.block.ore_chunks.IronChunkBlock;
 import com.THproject.tharidia_things.block.ore_chunks.IronChunkBlockEntity;
@@ -57,6 +59,7 @@ import com.THproject.tharidia_things.item.AnimalBrushItem;
 import com.THproject.tharidia_things.item.FreshStrawItem;
 import com.THproject.tharidia_things.item.DirtyStrawItem;
 import com.THproject.tharidia_things.item.ShelterUpgradeKitItem;
+import com.THproject.tharidia_things.item.StationCrystalRepairerItem;
 import com.THproject.tharidia_things.item.crusher_hammers.IronCrusherHammer;
 import com.THproject.tharidia_things.registry.BabyMobRegistry;
 import com.THproject.tharidia_things.client.ClientPacketHandler;
@@ -225,6 +228,16 @@ public class TharidiaThings {
                             .lightLevel(state -> 11)
                             .pushReaction(PushReaction.BLOCK)));
 
+    // Station Crystal Block
+    public static final DeferredBlock<StationCrystalBlock> STATION_CRYSTAL_BLOCK = BLOCKS.register("station_crystal",
+            () -> new StationCrystalBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.DIAMOND)
+                    .strength(3.0F, 6.0F)
+                    .noOcclusion()));
+    public static final DeferredItem<BlockItem> STATION_CRYSTAL_BLOCK_ITEM = ITEMS.registerSimpleBlockItem(
+            "station_crystal",
+            STATION_CRYSTAL_BLOCK);
+
     // Creates a new BlockEntityType for the Pietro block
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<PietroBlockEntity>> PIETRO_BLOCK_ENTITY = BLOCK_ENTITIES
             .register("pietro", () -> BlockEntityType.Builder.of(PietroBlockEntity::new, PIETRO.get()).build(null));
@@ -251,6 +264,11 @@ public class TharidiaThings {
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<IronChunkBlockEntity>> IRON_CHUNK_BLOCK_ENTITY = BLOCK_ENTITIES
             .register("iron_chunk",
                     () -> BlockEntityType.Builder.of(IronChunkBlockEntity::new, IRON_CHUNK.get()).build(null));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<StationCrystalBlockEntity>> STATION_CRYSTAL_BLOCK_ENTITY = BLOCK_ENTITIES
+            .register("station_crystal",
+                    () -> BlockEntityType.Builder.of(StationCrystalBlockEntity::new, STATION_CRYSTAL_BLOCK.get())
+                            .build(null));
 
     // Creates a MenuType for the Claim GUI
     public static final DeferredHolder<net.minecraft.world.inventory.MenuType<?>, net.minecraft.world.inventory.MenuType<ClaimMenu>> CLAIM_MENU = MENU_TYPES
@@ -300,6 +318,10 @@ public class TharidiaThings {
             () -> new CopperLamaCortaItem(new Item.Properties()));
     public static final DeferredItem<Item> COPPER_ELSA = ITEMS.register("copper_elsa",
             () -> new CopperElsaItem(new Item.Properties()));
+
+    public static final DeferredItem<Item> STATION_CRYSTAL_REPAIRER = ITEMS.register("station_crystal_repairer",
+            () -> new StationCrystalRepairerItem(new Item.Properties()));
+
     public static final DeferredItem<Item> DICE = ITEMS.register("dice",
             () -> new DiceItem(new Item.Properties().stacksTo(16)));
     public static final DeferredItem<Item> ANIMAL_FEED = ITEMS.register("animal_feed",
@@ -326,6 +348,10 @@ public class TharidiaThings {
             () -> new ShelterUpgradeKitItem(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<Item> PITCHFORK = ITEMS.register("pitchfork",
             () -> new com.THproject.tharidia_things.item.PitchforkItem(new Item.Properties()));
+
+    // Station Crystal Tool
+    public static final DeferredItem<Item> STATION_CRYSTAL_TOOL = ITEMS.register("station_crystal_tool",
+            () -> new com.THproject.tharidia_things.item.StationCrystalTool(new Item.Properties()));
 
     // Creates a creative tab with the id "tharidiathings:tharidia_tab" for the mod
     // items, that is placed after the combat tab
@@ -365,6 +391,11 @@ public class TharidiaThings {
 
                         // Chunks
                         output.accept(IRON_CHUNK.get());
+
+                        // Station Crystal
+                        output.accept(STATION_CRYSTAL_BLOCK_ITEM.get());
+                        output.accept(STATION_CRYSTAL_TOOL.get());
+                        output.accept(STATION_CRYSTAL_REPAIRER.get());
 
                         // Add all dynamically registered baby mob items
                         BabyMobRegistry.addToCreativeTab(output);
