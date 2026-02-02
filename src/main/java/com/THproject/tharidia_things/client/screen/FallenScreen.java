@@ -3,7 +3,6 @@ package com.THproject.tharidia_things.client.screen;
 import com.THproject.tharidia_things.client.ReviveProgressHudOverlay;
 import com.THproject.tharidia_things.compoundTag.ReviveAttachments;
 import com.THproject.tharidia_things.network.GiveUpPacket;
-import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -36,13 +35,22 @@ public class FallenScreen extends Screen {
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         // Draw background
-        this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
-
         if (Minecraft.getInstance().player != null
                 && !Minecraft.getInstance().player.getData(ReviveAttachments.REVIVE_DATA.get()).canRevive()) {
             return;
         }
+
+        this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
+        super.render(guiGraphics, mouseX, mouseY, partialTick);
+
+        guiGraphics.pose().pushPose();
+        float scale = 3.0F;
+        guiGraphics.pose().scale(scale, scale, scale);
+        Component fallenTitle = Component.literal("You are fallen");
+        int titleWidth = this.font.width(fallenTitle);
+        guiGraphics.drawString(this.font, fallenTitle, (int) ((this.width / (2 * scale)) - (titleWidth / 2)),
+                (int) ((this.height / (2 * scale)) - 30), 0xFFFF0000);
+        guiGraphics.pose().popPose();
 
         // Render Progress Bar (using static fields from ReviveProgressHudOverlay)
         if (ReviveProgressHudOverlay.currentResTime >= 0 && ReviveProgressHudOverlay.maxResTime > 0) {
