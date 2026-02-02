@@ -528,6 +528,10 @@ public class TharidiaThings {
                     FatigueSyncPacket.STREAM_CODEC,
                     ClientPacketHandler::handleFatigueSync);
             registrar.playToClient(
+                    ReviveProgressPacket.TYPE,
+                    ReviveProgressPacket.STREAM_CODEC,
+                    ClientPacketHandler::handleReviveProgress);
+            registrar.playToClient(
                     StaminaSyncPacket.TYPE,
                     StaminaSyncPacket.STREAM_CODEC,
                     ClientPacketHandler::handleStaminaSync);
@@ -653,6 +657,11 @@ public class TharidiaThings {
             registrar.playToClient(
                     FatigueSyncPacket.TYPE,
                     FatigueSyncPacket.STREAM_CODEC,
+                    (packet, context) -> {
+                    });
+            registrar.playToClient(
+                    ReviveProgressPacket.TYPE,
+                    ReviveProgressPacket.STREAM_CODEC,
                     (packet, context) -> {
                     });
             registrar.playToClient(

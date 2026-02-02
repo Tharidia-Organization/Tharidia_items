@@ -5,6 +5,9 @@ import com.THproject.tharidia_things.compoundTag.ReviveAttachments;
 import com.THproject.tharidia_things.config.ReviveConfig;
 import com.THproject.tharidia_things.features.Revive;
 import com.THproject.tharidia_things.network.RightClickReleasePayload;
+import com.THproject.tharidia_things.network.ReviveProgressPacket;
+import net.neoforged.neoforge.network.PacketDistributor;
+import net.minecraft.server.level.ServerPlayer;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
@@ -71,8 +74,13 @@ public class ReviveLogic {
 
                         playerReviveAttachments.setRevivingPlayer(interactedPlayer.getUUID());
                         interractReviveAttachments.decreaseResTime();
-                        event.getEntity().displayClientMessage(
-                                Component.literal(String.valueOf(interractReviveAttachments.getResTime())), true);
+
+                        int maxTime = Integer.parseInt(ReviveConfig.config.TIME_TO_RES.get("Value").toString());
+                        if (event.getEntity() instanceof ServerPlayer serverPlayer) {
+                            PacketDistributor.sendToPlayer(
+                                    serverPlayer,
+                                    new ReviveProgressPacket(interractReviveAttachments.getResTime(), maxTime));
+                        }
 
                         if (interractReviveAttachments.getResTime() == 0) {
                             Revive.revivePlayer(interactedPlayer);
