@@ -11,11 +11,15 @@ import net.minecraft.server.level.ServerPlayer;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.ai.goal.UseItemGoal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.item.ItemEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
@@ -46,11 +50,81 @@ public class ReviveLogic {
     }
 
     @SubscribeEvent
-    public static void onPlayerLogout(PlayerLoggedOutEvent event) {
+    public static void onFallenLogout(PlayerLoggedOutEvent event) {
         if (event.getEntity().level().isClientSide())
             return;
         if (Revive.isPlayerFallen(event.getEntity()))
             event.getEntity().kill();
+    }
+
+    @SubscribeEvent
+    public static void onFallenBreakBlock(PlayerInteractEvent.LeftClickBlock event) {
+        if (event.getEntity().level().isClientSide())
+            return;
+
+        if (Revive.isPlayerFallen(event.getEntity())) {
+            event.setCanceled(true);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onFallenPlaceBlock(PlayerInteractEvent.RightClickBlock event) {
+        if (event.getEntity().level().isClientSide())
+            return;
+
+        if (Revive.isPlayerFallen(event.getEntity())) {
+            event.setCanceled(true);
+            event.setCancellationResult(InteractionResult.FAIL);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onFallenAttackEntities(LivingIncomingDamageEvent event){
+        if (event.getEntity().level().isClientSide())
+            return;
+
+        if (event.getSource().getEntity() instanceof Player player) {
+            if (Revive.isPlayerFallen(player)) {
+                event.setCanceled(true);
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public static void onFallenUseItem(PlayerInteractEvent.RightClickItem event) {
+        if (event.getEntity().level().isClientSide())
+            return;
+
+        if (Revive.isPlayerFallen(event.getEntity())) {
+            event.setCanceled(true);
+            event.setCancellationResult(InteractionResult.FAIL);
+        }
+    }
+
+
+
+    @SubscribeEvent
+    public static void onFallenBeingAttacked(LivingIncomingDamageEvent event) {
+        if (event.getEntity().level().isClientSide())
+            return;
+
+        Entity attacker = event.getSource().getDirectEntity();
+        if (attacker instanceof Projectile p) {
+            attacker = p.getOwner();
+        }
+        if (event.getEntity() instanceof Player player) {
+            if (!(attacker instanceof Player)) {
+                if (Revive.isPlayerFallen(player)) {
+                    ReviveAttachments playerReviveAttachments = player.getData(ReviveAttachments.REVIVE_DATA.get());
+                    if ((player.tickCount - playerReviveAttachments.getInvulnerabilityTick()) < 200) {
+                        event.setCanceled(true);
+                    }
+                }
+            } else {
+                if (Revive.isPlayerFallen(player))
+                    event.setCanceled(true);
+            }
+        }
     }
 
     @SubscribeEvent
@@ -115,30 +189,6 @@ public class ReviveLogic {
                 playerReviveAttachments.setRevivingPlayer(null);
             }
         });
-    }
-
-    @SubscribeEvent
-    public static void onFallenBeingAttacked(LivingIncomingDamageEvent event) {
-        if (event.getEntity().level().isClientSide())
-            return;
-
-        Entity attacker = event.getSource().getDirectEntity();
-        if (attacker instanceof Projectile p) {
-            attacker = p.getOwner();
-        }
-        if (event.getEntity() instanceof Player player) {
-            if (!(attacker instanceof Player)) {
-                if (Revive.isPlayerFallen(player)) {
-                    ReviveAttachments playerReviveAttachments = player.getData(ReviveAttachments.REVIVE_DATA.get());
-                    if ((player.tickCount - playerReviveAttachments.getInvulnerabilityTick()) < 200) {
-                        event.setCanceled(true);
-                    }
-                }
-            } else {
-                if (Revive.isPlayerFallen(player))
-                    event.setCanceled(true);
-            }
-        }
     }
 
     @SubscribeEvent
