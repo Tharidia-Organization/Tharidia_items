@@ -28,6 +28,11 @@ public class ReviveProgressHudOverlay implements LayeredDraw.Layer {
             return;
         }
 
+        // Don't render if FallenScreen is open
+        if (mc.screen instanceof com.THproject.tharidia_things.client.screen.FallenScreen) {
+            return;
+        }
+
         // Hide if data is stale (over 1s old)
         if (System.currentTimeMillis() - lastUpdateTime > 1000) {
             reset();

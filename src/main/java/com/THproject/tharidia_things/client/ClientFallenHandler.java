@@ -1,6 +1,7 @@
 package com.THproject.tharidia_things.client;
 
 import com.THproject.tharidia_things.TharidiaThings;
+import com.THproject.tharidia_things.client.screen.FallenScreen;
 import com.THproject.tharidia_things.features.Revive;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
@@ -34,6 +35,7 @@ public class ClientFallenHandler {
         if (player == Minecraft.getInstance().player) {
             checkCameraChange();
             handleClientPlayerBlur(player);
+            handleFallenScreen(player);
         }
 
         // Check if player has the fallen freeze attribute
@@ -92,6 +94,22 @@ public class ClientFallenHandler {
             if (isBlurActive) {
                 Minecraft.getInstance().gameRenderer.shutdownEffect();
                 isBlurActive = false;
+            }
+        }
+    }
+
+    private static void handleFallenScreen(Player player) {
+        AttributeInstance movement = player.getAttribute(Attributes.MOVEMENT_SPEED);
+        boolean isFallen = movement != null && movement.getModifier(Revive.FREEZE_MOVEMENT_ID) != null;
+        Minecraft mc = Minecraft.getInstance();
+
+        if (isFallen) {
+            if (!(mc.screen instanceof FallenScreen)) {
+                mc.setScreen(new FallenScreen());
+            }
+        } else {
+            if (mc.screen instanceof FallenScreen) {
+                mc.setScreen(null);
             }
         }
     }

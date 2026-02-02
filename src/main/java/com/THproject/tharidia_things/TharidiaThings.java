@@ -563,6 +563,12 @@ public class TharidiaThings {
                     SelectRacePacket.TYPE,
                     SelectRacePacket.STREAM_CODEC,
                     SelectRacePacket::handle);
+
+            // Give up packet
+            registrar.playToServer(
+                    GiveUpPacket.TYPE,
+                    GiveUpPacket.STREAM_CODEC,
+                    GiveUpPacket::handle);
             // Zone music packet from tharidiatweaks
             registrar.playToClient(
                     ZoneMusicPacket.TYPE,
@@ -702,6 +708,12 @@ public class TharidiaThings {
                     SelectRacePacket.TYPE,
                     SelectRacePacket.STREAM_CODEC,
                     SelectRacePacket::handle);
+
+            // Give up packet (server-side handler)
+            registrar.playToServer(
+                    GiveUpPacket.TYPE,
+                    GiveUpPacket.STREAM_CODEC,
+                    GiveUpPacket::handle);
             // Zone music packet (dummy handler)
             registrar.playToClient(
                     ZoneMusicPacket.TYPE,
