@@ -9,7 +9,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(Minecraft.class)
-public class MinecraftMixin {
+public class ReviveMixin {
 
     @Inject(method = "startAttack", at = @At("HEAD"), cancellable = true)
     private void cancelAttack(CallbackInfoReturnable<Boolean> cir) {

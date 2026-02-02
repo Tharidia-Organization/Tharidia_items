@@ -9,7 +9,7 @@
   "client": [
     "ClientSuggestionsMixin",
     "MapwrightRenderingMixin",
-    "MinecraftMixin"
+    "ReviveMixin"
   ],
   "injectors": {
     "defaultRequire": 0
