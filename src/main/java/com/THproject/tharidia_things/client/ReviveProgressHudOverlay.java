@@ -9,11 +9,13 @@ public class ReviveProgressHudOverlay implements LayeredDraw.Layer {
 
     public static int currentResTime = -1;
     public static int maxResTime = -1;
+    public static String text = "";
     public static long lastUpdateTime = 0;
 
     public static void reset() {
         currentResTime = -1;
         maxResTime = -1;
+        text = "";
     }
 
     private static final int BAR_WIDTH = 182;
@@ -58,7 +60,6 @@ public class ReviveProgressHudOverlay implements LayeredDraw.Layer {
         guiGraphics.fill(x, y, x + filledWidth, y + BAR_HEIGHT, 0xFF00FF00);
 
         // Text
-        String text = "Reviving...";
         int textWidth = mc.font.width(text);
         guiGraphics.drawString(mc.font, text, (screenWidth - textWidth) / 2, y + BAR_HEIGHT + 2, 0xFFFFFFFF, true);
     }

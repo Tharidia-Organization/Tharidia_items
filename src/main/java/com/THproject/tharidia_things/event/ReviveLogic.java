@@ -20,6 +20,7 @@ import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 @EventBusSubscriber(modid = TharidiaThings.MODID)
@@ -79,7 +80,8 @@ public class ReviveLogic {
                         if (event.getEntity() instanceof ServerPlayer serverPlayer) {
                             PacketDistributor.sendToPlayer(
                                     serverPlayer,
-                                    new ReviveProgressPacket(interractReviveAttachments.getResTime(), maxTime));
+                                    new ReviveProgressPacket(interractReviveAttachments.getResTime(), maxTime,
+                                            "Reviving..."));
                         }
 
                         if (interractReviveAttachments.getResTime() == 0) {
@@ -135,6 +137,31 @@ public class ReviveLogic {
             } else {
                 if (Revive.isPlayerFallen(player))
                     event.setCanceled(true);
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public static void onPlayerTick(PlayerTickEvent.Post event) {
+        if (event.getEntity().level().isClientSide())
+            return;
+
+        Player player = event.getEntity();
+        if (Revive.isPlayerFallen(player)) {
+            ReviveAttachments attachments = player.getData(ReviveAttachments.REVIVE_DATA.get());
+            attachments.increaseTimeFallen();
+
+            int maxTime = Integer.parseInt(ReviveConfig.config.TIME_FALLEN.get("Value").toString());
+
+            if (attachments.getTimeFallen() >= maxTime) {
+                player.kill();
+                Revive.revivePlayer(player);
+            } else {
+                if (player instanceof ServerPlayer serverPlayer) {
+                    PacketDistributor.sendToPlayer(
+                            serverPlayer,
+                            new ReviveProgressPacket(maxTime - attachments.getTimeFallen(), maxTime, "Dying..."));
+                }
             }
         }
     }

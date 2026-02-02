@@ -379,6 +379,7 @@ public class ClientPacketHandler {
         context.enqueueWork(() -> {
             ReviveProgressHudOverlay.currentResTime = packet.currentResTime();
             ReviveProgressHudOverlay.maxResTime = packet.maxResTime();
+            ReviveProgressHudOverlay.text = packet.text();
             ReviveProgressHudOverlay.lastUpdateTime = System.currentTimeMillis();
         });
     }

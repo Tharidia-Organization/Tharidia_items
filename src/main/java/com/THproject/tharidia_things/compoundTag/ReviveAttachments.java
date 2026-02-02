@@ -16,6 +16,7 @@ import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
 public class ReviveAttachments implements INBTSerializable<CompoundTag> {
     private int res_time = 0;
+    private int time_fallen = 0;
     private boolean death_from_battle = false;
     private int invulnerability_tick = 0; // 10 seconds
     private boolean can_fall = true;
@@ -35,6 +36,18 @@ public class ReviveAttachments implements INBTSerializable<CompoundTag> {
 
     public void setResTime(int time) {
         this.res_time = time;
+    }
+
+    public int getTimeFallen() {
+        return time_fallen;
+    }
+
+    public void setTimeFallen(int time) {
+        this.time_fallen = time;
+    }
+
+    public void increaseTimeFallen() {
+        this.time_fallen++;
     }
 
     public void setCanRevive(boolean val) {
@@ -74,6 +87,7 @@ public class ReviveAttachments implements INBTSerializable<CompoundTag> {
     public CompoundTag serializeNBT(Provider provider) {
         CompoundTag nbt = new CompoundTag();
         nbt.putInt("res_time", this.res_time);
+        nbt.putInt("time_fallen", this.time_fallen);
         nbt.putBoolean("death_from_battle", death_from_battle);
         nbt.putInt("invulnerability_time", invulnerability_tick);
         if (revivingPlayer != null)
@@ -84,6 +98,8 @@ public class ReviveAttachments implements INBTSerializable<CompoundTag> {
     @Override
     public void deserializeNBT(Provider provider, CompoundTag nbt) {
         this.res_time = nbt.getInt("res_time");
+        if (nbt.contains("time_fallen"))
+            this.time_fallen = nbt.getInt("time_fallen");
         this.death_from_battle = nbt.getBoolean("death_from_battle");
         this.invulnerability_tick = nbt.getInt("invulnerability_time");
         if (nbt.hasUUID("reviving_player"))
