@@ -353,6 +353,10 @@ public class TharidiaThings {
     public static final DeferredItem<Item> STATION_CRYSTAL_TOOL = ITEMS.register("station_crystal_tool",
             () -> new com.THproject.tharidia_things.item.StationCrystalTool(new Item.Properties()));
 
+    // Trust Contract (for granting trust to other players)
+    public static final DeferredItem<Item> TRUST_CONTRACT = ITEMS.register("trust_contract",
+            () -> new com.THproject.tharidia_things.item.TrustContractItem(new Item.Properties().stacksTo(16)));
+
     // Creates a creative tab with the id "tharidiathings:tharidia_tab" for the mod
     // items, that is placed after the combat tab
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> THARIDIA_TAB = CREATIVE_MODE_TABS
@@ -396,6 +400,9 @@ public class TharidiaThings {
                         output.accept(STATION_CRYSTAL_BLOCK_ITEM.get());
                         output.accept(STATION_CRYSTAL_TOOL.get());
                         output.accept(STATION_CRYSTAL_REPAIRER.get());
+
+                        // Claim utilities
+                        output.accept(TRUST_CONTRACT.get());
 
                         // Add all dynamically registered baby mob items
                         BabyMobRegistry.addToCreativeTab(output);
@@ -458,14 +465,16 @@ public class TharidiaThings {
         // Do not add this line if there are no @SubscribeEvent-annotated functions in
         // this class, like onServerStarting() below.
         NeoForge.EVENT_BUS.register(this);
-        // Register server stopping event
-        NeoForge.EVENT_BUS.addListener(this::onServerStopping);
         // Register the claim protection handler
         NeoForge.EVENT_BUS.register(ClaimProtectionHandler.class);
         // Register the player kill handler
         NeoForge.EVENT_BUS.register(PlayerStatsIncrementHandler.class);
         // Register the claim expiration handler
         NeoForge.EVENT_BUS.register(ClaimExpirationHandler.class);
+        // Register the claim decay manager
+        NeoForge.EVENT_BUS.register(com.THproject.tharidia_things.claim.ClaimDecayManager.class);
+        // Register the realm rank indicator (particle badge for rank)
+        NeoForge.EVENT_BUS.register(com.THproject.tharidia_things.realm.RealmRankIndicator.class);
         // Register the realm placement handler
         NeoForge.EVENT_BUS.register(RealmPlacementHandler.class);
         // Register the weight debuff handler
@@ -1081,12 +1090,21 @@ public class TharidiaThings {
     /**
      * Called when the server is stopping
      */
+    @SubscribeEvent
     public void onServerStopping(net.neoforged.neoforge.event.server.ServerStoppingEvent event) {
         LOGGER.info("Server stopping, cleaning up resources...");
 
         // Clear server reference
         currentServer = null;
         tickCounter = 0;
+
+        // Shutdown GodEye integration executor first (fast, has timeout)
+        try {
+            LOGGER.info("Shutting down GodEye integration...");
+            com.THproject.tharidia_things.integration.GodEyeIntegration.shutdown();
+        } catch (Exception e) {
+            LOGGER.error("Error shutting down GodEye integration: {}", e.getMessage(), e);
+        }
 
         // Then shutdown database
         if (databaseManager != null) {
