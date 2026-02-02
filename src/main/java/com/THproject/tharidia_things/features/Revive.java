@@ -29,6 +29,7 @@ public class Revive {
         player.setSwimming(true);
 
         ReviveAttachments reviveAttachments = player.getData(ReviveAttachments.REVIVE_DATA.get());
+        reviveAttachments.resetResTime();
         reviveAttachments.setCanRevive(can_revive);
         reviveAttachments.setInvulnerabilityTick(player.tickCount);
 

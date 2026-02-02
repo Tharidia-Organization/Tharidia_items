@@ -1,5 +1,6 @@
 package com.THproject.tharidia_things.compoundTag;
 
+import java.util.UUID;
 import java.util.function.Supplier;
 
 import com.THproject.tharidia_things.TharidiaThings;
@@ -15,10 +16,18 @@ import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
 public class ReviveAttachments implements INBTSerializable<CompoundTag> {
     private int res_time = 0;
-    private long last_revived_time = 0;
     private boolean death_from_battle = false;
     private int invulnerability_tick = 0; // 10 seconds
     private boolean can_fall = true;
+    private UUID revivingPlayer = null;
+
+    public void setRevivingPlayer(UUID playerUUID) {
+        this.revivingPlayer = playerUUID;
+    }
+
+    public UUID getRevivingPlayer() {
+        return revivingPlayer;
+    }
 
     public void resetResTime() {
         this.res_time = Integer.parseInt(ReviveConfig.config.TIME_TO_RES.get("Value").toString());
@@ -26,10 +35,6 @@ public class ReviveAttachments implements INBTSerializable<CompoundTag> {
 
     public void setResTime(int time) {
         this.res_time = time;
-    }
-
-    public void setLastRevivedTime(long time) {
-        this.last_revived_time = time;
     }
 
     public void setCanRevive(boolean val) {
@@ -46,10 +51,6 @@ public class ReviveAttachments implements INBTSerializable<CompoundTag> {
 
     public int getResTime() {
         return res_time;
-    }
-
-    public long getLastRevivedTime() {
-        return last_revived_time;
     }
 
     public boolean canRevive() {
@@ -73,18 +74,20 @@ public class ReviveAttachments implements INBTSerializable<CompoundTag> {
     public CompoundTag serializeNBT(Provider provider) {
         CompoundTag nbt = new CompoundTag();
         nbt.putInt("res_time", this.res_time);
-        nbt.putLong("last_revived_time", last_revived_time);
         nbt.putBoolean("death_from_battle", death_from_battle);
         nbt.putInt("invulnerability_time", invulnerability_tick);
+        if (revivingPlayer != null)
+            nbt.putUUID("reviving_player", revivingPlayer);
         return nbt;
     }
 
     @Override
     public void deserializeNBT(Provider provider, CompoundTag nbt) {
         this.res_time = nbt.getInt("res_time");
-        this.last_revived_time = nbt.getLong("last_revived_time");
         this.death_from_battle = nbt.getBoolean("death_from_battle");
         this.invulnerability_tick = nbt.getInt("invulnerability_time");
+        if (nbt.hasUUID("reviving_player"))
+            this.revivingPlayer = nbt.getUUID("reviving_player");
     }
 
     public static final DeferredRegister<AttachmentType<?>> ATTACHMENT_TYPES = DeferredRegister

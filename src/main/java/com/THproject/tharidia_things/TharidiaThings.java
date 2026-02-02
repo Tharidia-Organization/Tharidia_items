@@ -769,6 +769,11 @@ public class TharidiaThings {
 
         // Register server-bound packets (works on both sides)
         registrar.playToServer(
+                RightClickReleasePayload.TYPE,
+                RightClickReleasePayload.CODEC,
+                ReviveLogic::onStopReviving);
+
+        registrar.playToServer(
                 UpdateHierarchyPacket.TYPE,
                 UpdateHierarchyPacket.STREAM_CODEC,
                 UpdateHierarchyPacket::handle);
@@ -868,7 +873,8 @@ public class TharidiaThings {
                 com.THproject.tharidia_things.trade.TradeManager.cancelPlayerSession(player.getUUID());
                 LOGGER.debug("Cleaned up trade session for disconnecting player: {}", player.getName().getString());
             } catch (Exception e) {
-                LOGGER.error("Error cleaning up trade session for player {}: {}", player.getName().getString(), e.getMessage());
+                LOGGER.error("Error cleaning up trade session for player {}: {}", player.getName().getString(),
+                        e.getMessage());
             }
         }
     }

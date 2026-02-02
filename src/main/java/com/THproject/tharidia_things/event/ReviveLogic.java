@@ -4,6 +4,7 @@ import com.THproject.tharidia_things.TharidiaThings;
 import com.THproject.tharidia_things.compoundTag.ReviveAttachments;
 import com.THproject.tharidia_things.config.ReviveConfig;
 import com.THproject.tharidia_things.features.Revive;
+import com.THproject.tharidia_things.network.RightClickReleasePayload;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
@@ -16,6 +17,7 @@ import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 @EventBusSubscriber(modid = TharidiaThings.MODID)
 public class ReviveLogic {
@@ -48,43 +50,61 @@ public class ReviveLogic {
     }
 
     @SubscribeEvent
-    public static void onPlayerInteractFallen(PlayerInteractEvent.EntityInteract event) {
+    public static void onReviving(PlayerInteractEvent.EntityInteract event) {
         if (event.getEntity().level().isClientSide())
             return;
 
         if (event.getHand() != InteractionHand.MAIN_HAND)
             return;
 
-        if (event.getTarget() instanceof Player interractedPlayer) {
-            if (Revive.isPlayerFallen(interractedPlayer) && !Revive.isPlayerFallen(event.getEntity())) {
-                ReviveAttachments playerReviveAttachments = interractedPlayer
+        if (event.getTarget() instanceof Player interactedPlayer) {
+            if (Revive.isPlayerFallen(interactedPlayer) && !Revive.isPlayerFallen(event.getEntity())) {
+                ReviveAttachments interractReviveAttachments = interactedPlayer
+                        .getData(ReviveAttachments.REVIVE_DATA.get());
+                ReviveAttachments playerReviveAttachments = event.getEntity()
                         .getData(ReviveAttachments.REVIVE_DATA.get());
 
-                if (playerReviveAttachments.canRevive()) {
+                if (interractReviveAttachments.canRevive()) {
                     String item_to_revive = ReviveConfig.config.REVIVE_ITEM.get("Value").toString();
                     if (item_to_revive.equals("")
                             || event.getEntity().getMainHandItem().getItem().toString().equals(item_to_revive)) {
 
-                        long timeDiff = event.getEntity().level().getGameTime()
-                                - playerReviveAttachments.getLastRevivedTime();
-                        if (timeDiff > 5) {
-                            playerReviveAttachments.resetResTime();
-                        }
-
-                        playerReviveAttachments.decreaseResTime();
-                        playerReviveAttachments.setLastRevivedTime(event.getEntity().level().getGameTime());
+                        playerReviveAttachments.setRevivingPlayer(interactedPlayer.getUUID());
+                        interractReviveAttachments.decreaseResTime();
                         event.getEntity().displayClientMessage(
-                                Component.literal(String.valueOf(playerReviveAttachments.getResTime())), true);
+                                Component.literal(String.valueOf(interractReviveAttachments.getResTime())), true);
 
-                        if (playerReviveAttachments.getResTime() == 0) {
+                        if (interractReviveAttachments.getResTime() == 0) {
+                            Revive.revivePlayer(interactedPlayer);
+                            interractReviveAttachments.resetResTime();
+                            playerReviveAttachments.setRevivingPlayer(null);
                             if (!item_to_revive.equals(""))
                                 event.getEntity().getMainHandItem().shrink(1);
-                            Revive.revivePlayer(interractedPlayer);
                         }
                     }
                 }
             }
         }
+    }
+
+    public static void onStopReviving(final RightClickReleasePayload payload, final IPayloadContext context) {
+        context.enqueueWork(() -> {
+            Player player = context.player();
+            ReviveAttachments playerReviveAttachments = player.getData(ReviveAttachments.REVIVE_DATA.get());
+
+            if (playerReviveAttachments.getRevivingPlayer() == null)
+                return;
+
+            Player interactedPlayer = player.level().getPlayerByUUID(playerReviveAttachments.getRevivingPlayer());
+            if (interactedPlayer == null)
+                return;
+            ReviveAttachments interReviveAttachments = interactedPlayer.getData(ReviveAttachments.REVIVE_DATA.get());
+
+            if (Revive.isPlayerFallen(interactedPlayer)) {
+                interReviveAttachments.resetResTime();
+                playerReviveAttachments.setRevivingPlayer(null);
+            }
+        });
     }
 
     @SubscribeEvent
