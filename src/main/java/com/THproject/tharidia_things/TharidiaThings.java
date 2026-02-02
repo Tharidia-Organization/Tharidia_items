@@ -532,6 +532,10 @@ public class TharidiaThings {
                     ReviveProgressPacket.STREAM_CODEC,
                     ClientPacketHandler::handleReviveProgress);
             registrar.playToClient(
+                    ReviveSyncPacket.TYPE,
+                    ReviveSyncPacket.STREAM_CODEC,
+                    ClientPacketHandler::handleReviveSync);
+            registrar.playToClient(
                     StaminaSyncPacket.TYPE,
                     StaminaSyncPacket.STREAM_CODEC,
                     ClientPacketHandler::handleStaminaSync);

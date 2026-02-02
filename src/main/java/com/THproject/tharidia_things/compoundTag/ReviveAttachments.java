@@ -17,7 +17,7 @@ import net.neoforged.neoforge.registries.NeoForgeRegistries;
 public class ReviveAttachments implements INBTSerializable<CompoundTag> {
     private int res_time = 0;
     private int time_fallen = 0;
-    private boolean death_from_battle = false;
+    private boolean can_revive = false;
     private int invulnerability_tick = 0; // 10 seconds
     private boolean can_fall = true;
     private UUID revivingPlayer = null;
@@ -51,7 +51,7 @@ public class ReviveAttachments implements INBTSerializable<CompoundTag> {
     }
 
     public void setCanRevive(boolean val) {
-        this.death_from_battle = val;
+        this.can_revive = val;
     }
 
     public void setInvulnerabilityTick(int tick) {
@@ -67,7 +67,7 @@ public class ReviveAttachments implements INBTSerializable<CompoundTag> {
     }
 
     public boolean canRevive() {
-        return death_from_battle;
+        return can_revive;
     }
 
     public int getInvulnerabilityTick() {
@@ -88,7 +88,7 @@ public class ReviveAttachments implements INBTSerializable<CompoundTag> {
         CompoundTag nbt = new CompoundTag();
         nbt.putInt("res_time", this.res_time);
         nbt.putInt("time_fallen", this.time_fallen);
-        nbt.putBoolean("death_from_battle", death_from_battle);
+        nbt.putBoolean("can_revive", can_revive);
         nbt.putInt("invulnerability_time", invulnerability_tick);
         if (revivingPlayer != null)
             nbt.putUUID("reviving_player", revivingPlayer);
@@ -98,9 +98,8 @@ public class ReviveAttachments implements INBTSerializable<CompoundTag> {
     @Override
     public void deserializeNBT(Provider provider, CompoundTag nbt) {
         this.res_time = nbt.getInt("res_time");
-        if (nbt.contains("time_fallen"))
-            this.time_fallen = nbt.getInt("time_fallen");
-        this.death_from_battle = nbt.getBoolean("death_from_battle");
+        this.time_fallen = nbt.getInt("time_fallen");
+        this.can_revive = nbt.getBoolean("can_revive");
         this.invulnerability_tick = nbt.getInt("invulnerability_time");
         if (nbt.hasUUID("reviving_player"))
             this.revivingPlayer = nbt.getUUID("reviving_player");

@@ -1,8 +1,10 @@
 package com.THproject.tharidia_things.client.screen;
 
 import com.THproject.tharidia_things.client.ReviveProgressHudOverlay;
+import com.THproject.tharidia_things.compoundTag.ReviveAttachments;
 import com.THproject.tharidia_things.network.GiveUpPacket;
 import com.mojang.blaze3d.systems.RenderSystem;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
@@ -20,12 +22,15 @@ public class FallenScreen extends Screen {
         super.init();
 
         // Add "Give Up" button
-        this.addRenderableWidget(Button.builder(Component.literal("Give Up"), button -> {
-            PacketDistributor.sendToServer(new GiveUpPacket());
-            this.onClose();
-        })
-                .bounds(this.width / 2 - 50, this.height / 2 + 50, 100, 20)
-                .build());
+        if (Minecraft.getInstance().player != null
+                && Minecraft.getInstance().player.getData(ReviveAttachments.REVIVE_DATA.get()).canRevive()) {
+            this.addRenderableWidget(Button.builder(Component.literal("Give Up"), button -> {
+                PacketDistributor.sendToServer(new GiveUpPacket());
+                this.onClose();
+            })
+                    .bounds(this.width / 2 - 50, this.height / 2 + 50, 100, 20)
+                    .build());
+        }
     }
 
     @Override
@@ -33,6 +38,11 @@ public class FallenScreen extends Screen {
         // Draw background
         this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
         super.render(guiGraphics, mouseX, mouseY, partialTick);
+
+        if (Minecraft.getInstance().player != null
+                && !Minecraft.getInstance().player.getData(ReviveAttachments.REVIVE_DATA.get()).canRevive()) {
+            return;
+        }
 
         // Render Progress Bar (using static fields from ReviveProgressHudOverlay)
         if (ReviveProgressHudOverlay.currentResTime >= 0 && ReviveProgressHudOverlay.maxResTime > 0) {
