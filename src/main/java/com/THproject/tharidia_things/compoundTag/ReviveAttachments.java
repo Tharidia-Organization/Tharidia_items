@@ -19,10 +19,10 @@ public class ReviveAttachments implements INBTSerializable<CompoundTag> {
     // Max time to be fallen after death
     public static int MAX_FALLEN_TICK = 400;
     // Time to res
-    public static int MAX_RES_TICK = 50;
+    public static int MAX_RES_TICK = 100;
 
     // Time to res the player
-    private int res_time = 50;
+    private int res_time = 0;
 
     // Tick count when player fallen (Used for kill after certain time)
     private int fallen_time = 0;
@@ -67,6 +67,11 @@ public class ReviveAttachments implements INBTSerializable<CompoundTag> {
         return res_time;
     }
 
+    public void decreaseResTick() {
+        if (this.res_time > 0)
+            this.res_time -= 1;
+    }
+
     public int getTimeFallen() {
         return fallen_time;
     }
@@ -77,6 +82,10 @@ public class ReviveAttachments implements INBTSerializable<CompoundTag> {
 
     public void increaseTimeFallen() {
         this.fallen_time++;
+    }
+
+    public void decreaseTimeFallen() {
+        this.fallen_time--;
     }
 
     public void setCanRevive(boolean val) {
@@ -93,11 +102,6 @@ public class ReviveAttachments implements INBTSerializable<CompoundTag> {
 
     public boolean canFall() {
         return can_fall;
-    }
-
-    public void decreaseResTick() {
-        if (this.res_time > 0)
-            this.res_time -= 1;
     }
 
     @Override
