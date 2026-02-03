@@ -27,6 +27,11 @@ public record ReviveSyncPayload(int entityId, CompoundTag data) implements Custo
         return TYPE;
     }
 
+    /**
+     * Sync revive data of a player to all connected players
+     * 
+     * @param player
+     */
     public static void sync(Player player) {
         if (player instanceof ServerPlayer) {
             ReviveAttachments data = player.getData(ReviveAttachments.REVIVE_DATA.get());
@@ -37,12 +42,35 @@ public record ReviveSyncPayload(int entityId, CompoundTag data) implements Custo
         }
     }
 
+    /**
+     * Sync revive data of a player to a specific player
+     * 
+     * @param player         The player whose data is to be sent
+     * @param receiverPlayer The player who will receive the data
+     */
     public static void sync(Player dataPlayer, Player receiverPlayer) {
         if (receiverPlayer instanceof ServerPlayer serverReceiver) {
             ReviveAttachments data = dataPlayer.getData(ReviveAttachments.REVIVE_DATA.get());
             CompoundTag nbt = data.serializeNBT(dataPlayer.level().registryAccess());
 
             ReviveSyncPayload payload = new ReviveSyncPayload(dataPlayer.getId(), nbt);
+
+            // Invio mirato al singolo giocatore
+            PacketDistributor.sendToPlayer(serverReceiver, payload);
+        }
+    }
+
+    /**
+     * Sync revive data to self
+     * 
+     * @param player The player whose data is to be sent
+     */
+    public static void syncSelf(Player player) {
+        if (player instanceof ServerPlayer serverReceiver) {
+            ReviveAttachments data = player.getData(ReviveAttachments.REVIVE_DATA.get());
+            CompoundTag nbt = data.serializeNBT(player.level().registryAccess());
+
+            ReviveSyncPayload payload = new ReviveSyncPayload(player.getId(), nbt);
 
             // Invio mirato al singolo giocatore
             PacketDistributor.sendToPlayer(serverReceiver, payload);

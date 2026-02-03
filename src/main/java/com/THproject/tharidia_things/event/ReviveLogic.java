@@ -163,7 +163,15 @@ public class ReviveLogic {
                 player.setForcedPose(null);
                 player.setSwimming(false);
             }
+
+            ReviveAttachments clientAttachments = player.getData(ReviveAttachments.REVIVE_DATA.get());
+            if (clientAttachments.isFallen())
+                clientAttachments.increaseTimeFallen();
             return;
+        }
+
+        if (player.tickCount % 20 != 0) {
+            ReviveSyncPayload.syncSelf(player);
         }
 
         if (Revive.isPlayerFallen(player)) {

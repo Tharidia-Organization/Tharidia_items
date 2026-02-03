@@ -82,6 +82,7 @@ import com.THproject.tharidia_things.network.HierarchySyncPacket;
 import com.THproject.tharidia_things.network.RealmSyncPacket;
 import com.THproject.tharidia_things.network.UpdateHierarchyPacket;
 import com.THproject.tharidia_things.network.revive.ReviveSyncPayload;
+import com.THproject.tharidia_things.network.revive.ReviveGiveUpPacket;
 import com.THproject.tharidia_things.network.SelectComponentPacket;
 import com.THproject.tharidia_things.network.SubmitNamePacket;
 import com.THproject.tharidia_things.network.SyncGateRestrictionsPacket;
@@ -728,6 +729,13 @@ public class TharidiaThings {
                     (packet, context) -> {
                     });
 
+            // Revive sync packet (client-bound, dummy handler)
+            registrar.playToClient(
+                    ReviveSyncPayload.TYPE,
+                    ReviveSyncPayload.STREAM_CODEC,
+                    (packet, context) -> {
+                    });
+
             // Register bungeecord:main channel on server side (dummy handler for
             // consistency)
             registrar.playToClient(
@@ -774,6 +782,11 @@ public class TharidiaThings {
         }
 
         // Register server-bound packets (works on both sides)
+        registrar.playToServer(
+                ReviveGiveUpPacket.TYPE,
+                ReviveGiveUpPacket.STREAM_CODEC,
+                ReviveGiveUpPacket::handle);
+
         registrar.playToServer(
                 RightClickReleasePayload.TYPE,
                 RightClickReleasePayload.CODEC,
