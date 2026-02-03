@@ -36,6 +36,7 @@ import com.THproject.tharidia_things.block.entity.HotCopperAnvilEntity;
 import com.THproject.tharidia_things.block.entity.StableBlockEntity;
 import com.THproject.tharidia_things.block.DungeonPortalBlock;
 import com.THproject.tharidia_things.block.ore_chunks.ChunksRegistry;
+import com.THproject.tharidia_things.block.crystals.CrystalsRegistry;
 import com.THproject.tharidia_things.block.veins.VeinBlocks;
 import com.THproject.tharidia_things.block.veins.VeinSediments;
 import com.THproject.tharidia_things.block.washer.sieve.SieveBlock;
@@ -454,6 +455,18 @@ public class TharidiaThings {
                         output.accept(ChunksRegistry.IRON_CHUNK_ITEM.get());
                         output.accept(ChunksRegistry.COPPER_CHUNK_ITEM.get());
 
+                        // Crystals
+                        output.accept(CrystalsRegistry.CRYSTAL_1_ITEM.get());
+                        output.accept(CrystalsRegistry.CRYSTAL_2_ITEM.get());
+                        output.accept(CrystalsRegistry.CRYSTAL_3_ITEM.get());
+                        output.accept(CrystalsRegistry.CRYSTAL_4_ITEM.get());
+                        output.accept(CrystalsRegistry.CRYSTAL_5_ITEM.get());
+                        output.accept(CrystalsRegistry.PURE_CRYSTAL_1.get());
+                        output.accept(CrystalsRegistry.PURE_CRYSTAL_2.get());
+                        output.accept(CrystalsRegistry.PURE_CRYSTAL_3.get());
+                        output.accept(CrystalsRegistry.PURE_CRYSTAL_4.get());
+                        output.accept(CrystalsRegistry.PURE_CRYSTAL_5.get());
+
                         // Veins
                         output.accept(VeinBlocks.VEIN_BLOCK_T0_ITEM.get());
                         output.accept(VeinBlocks.VEIN_BLOCK_T1_ITEM.get());
@@ -576,6 +589,9 @@ public class TharidiaThings {
 
         // Register Chunks
         ChunksRegistry.init();
+
+        // Register Crystals
+        CrystalsRegistry.init();
 
         // Register Veins
         VeinBlocks.init();
