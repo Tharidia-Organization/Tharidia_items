@@ -26,8 +26,11 @@ public class SieveLeverRenderer extends GeoRenderLayer<SieveBlockEntity> {
 
         ResourceLocation modelLoc = ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID,
                 animatable.isActive() ? "geo/sieve_lever_active.geo.json" : "geo/sieve_lever_deactive.geo.json");
+        ResourceLocation textureLoc = ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID,
+                "textures/block/sieve.png");
+        RenderType reType = RenderType.entityCutout(textureLoc);
 
         getRenderer().reRender(getRenderer().getGeoModel().getBakedModel(modelLoc), poseStack, bufferSource, animatable,
-                renderType, buffer, partialTick, packedLight, packedOverlay, 10);
+                reType, bufferSource.getBuffer(reType), partialTick, packedLight, packedOverlay, -1);
     }
 }
