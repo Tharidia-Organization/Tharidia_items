@@ -491,8 +491,11 @@ Selezione completata
 |------|------|-------|-------|
 | ClaimRegistry | `claim/ClaimRegistry.java` | ~400 | Registry in-memory |
 | ClaimSavedData | `claim/ClaimSavedData.java` | ~300 | Persistent NBT |
-| ClaimProtectionHandler | `claim/ClaimProtectionHandler.java` | 635 | Event protection |
-| ClaimBlockEntity | `block/entity/ClaimBlockEntity.java` | 642 | Block entity |
+| ClaimProtectionHandler | `event/ClaimProtectionHandler.java` | ~1075 | Event protection |
+| ClaimBlockEntity | `block/entity/ClaimBlockEntity.java` | ~750 | Block entity |
+| ClaimDecayManager | `claim/ClaimDecayManager.java` | ~150 | Decay system |
+| ClaimCommands | `command/ClaimCommands.java` | ~300 | Player commands |
+| TrustContractItem | `item/TrustContractItem.java` | ~270 | Trust item |
 
 ### Struttura Dati
 ```java
@@ -500,28 +503,125 @@ Selezione completata
 Map<String, Map<BlockPos, ClaimData>> claims;  // dimension → pos → data
 Map<UUID, Set<BlockPos>> playerClaims;         // player → positions
 
-// ClaimData
+// ClaimBlockEntity
 BlockPos position;
 UUID ownerUUID;
 String claimName;
 String ownerName;
 long creationTime;
 String dimension;
+long expirationTime;         // Quando scade il claim
+Set<UUID> trustedPlayers;    // Lista giocatori fidati
+List<BlockPos> mergedClaims; // Claims unificati
+
+// Granular Flags (tutti default false = solo trusted)
+boolean allowContainerAccess;  // Contenitori (casse, fornaci, etc.)
+boolean allowDoorUse;          // Porte, botole, cancelli
+boolean allowSwitchUse;        // Leve, pulsanti, piastre a pressione
+boolean allowVehiclePlace;     // Barche, minecart
+boolean allowAnimalInteract;   // Interazione animali (sellare, guinzagliare)
+boolean allowExplosions;       // Esplosioni (default false)
+boolean allowFireSpread;       // Propagazione fuoco (default false)
+boolean allowMobSpawning;      // Spawn mob (non implementato)
+```
+
+### Sistema di Scadenza e Decay
+```
+CLAIM CREATO
+    │
+    ▼
+ATTIVO (Protezione ON)
+    │
+    │ expirationTime raggiunto
+    ▼
+SCADUTO - GRACE PERIOD (3 giorni)
+│   - Protezione DISATTIVATA (isProtectionActive = false)
+│   - Claim ancora visibile, può essere rinnovato
+    │
+    │ GRACE_PERIOD_MS passati
+    ▼
+DECAY PERIOD (14 giorni)
+│   - Protezione ancora OFF
+│   - Dopo 14 giorni: blocchi funzionali rimossi
+    │
+    │ shouldDecay() = true
+    ▼
+DECAY (ClaimDecayManager)
+    - Rimuove: casse, fornaci, shulker, letti, tavoli lavoro,
+      incantamento, anvil, barili, beacon, frame, etc.
+    - Preserva: blocchi costruzione (stone, wood, glass, etc.)
+```
+
+### Costanti Temporali
+```java
+GRACE_PERIOD_MS = 3 giorni   // 3L * 24L * 60L * 60L * 1000L
+DECAY_PERIOD_MS = 14 giorni  // 14L * 24L * 60L * 60L * 1000L
 ```
 
 ### Protezioni
-| Evento | Protezione |
-|--------|------------|
-| BlockEvent.BreakEvent | Blocca rottura (salvo owner) |
-| PlayerInteractEvent.RightClickBlock | Blocca interazione |
-| ExplosionEvent.Detonate | Rimuove blocchi protetti |
-| AttackEntityEvent | Blocca PvP in claim |
-| FarmlandTrampleEvent | Blocca calpestamento |
-| EntityPlaceEvent (fire) | Blocca fuoco |
+| Evento | Protezione | Flag Override |
+|--------|------------|---------------|
+| BlockEvent.BreakEvent | Blocca rottura | - |
+| BlockEvent.EntityPlaceEvent | Blocca piazzamento | - |
+| PlayerInteractEvent.RightClickBlock | Blocca interazione | Vedi flag granulari |
+| PlayerInteractEvent.LeftClickBlock | Blocca interazione | - |
+| ExplosionEvent.Detonate | Rimuove blocchi | allowExplosions |
+| AttackEntityEvent (PvP) | Blocca sempre | - |
+| FarmlandTrampleEvent | Blocca calpestamento | - |
+| BlockEvent.EntityPlaceEvent (fire) | Blocca fuoco | allowFireSpread |
+| BlockEvent.FluidPlaceBlockEvent | Blocca fluidi | - |
+| PistonEvent.Pre | Blocca pistoni | - |
+| PlayerInteractEvent.EntityInteract | Blocca animali | allowAnimalInteract |
+
+### Protezioni Flag Granulari
+| Flag | Blocchi Controllati |
+|------|---------------------|
+| allowContainerAccess | ChestBlock, BarrelBlock, ShulkerBoxBlock, HopperBlock, DispenserBlock, DropperBlock, AbstractFurnaceBlock, BrewingStandBlock, BeaconBlock, EnderChest, Jukebox, ChiseledBookshelf, Lectern |
+| allowDoorUse | DoorBlock, TrapDoorBlock, FenceGateBlock |
+| allowSwitchUse | ButtonBlock, LeverBlock, PressurePlateBlock, WeightedPressurePlateBlock, DaylightDetectorBlock, TripWireHookBlock, NoteBlock, RepeaterBlock, ComparatorBlock |
+| allowVehiclePlace | BoatItem, MinecartItem |
+| allowAnimalInteract | Animal (entity) |
+
+### Trust Contract (Contratto di Fiducia)
+Permette di concedere trust senza usare comandi.
+
+**Flow:**
+1. Giocatore crafta "Contratto Vuoto" (8 paper + 1 ink sac)
+2. Owner clicca destro sul proprio Claim Block → Contratto legato
+3. Owner dà il contratto a un altro giocatore
+4. Altro giocatore clicca destro (in aria) → Diventa trusted
+5. Contratto consumato
+
+**NBT Dati:**
+```java
+OwnerUUID, OwnerName, ClaimName, ClaimPos (long), ClaimDimension, CreationTime, Bound
+```
+
+### Comandi
+```
+/claim trust <player>           - Aggiunge giocatore ai fidati
+/claim untrust <player>         - Rimuove giocatore dai fidati
+/claim list                     - Lista claims del giocatore
+/claim info                     - Info sul claim attuale
+/claim flags                    - Mostra flag attuali
+
+/claim containers <allow|deny>  - Flag contenitori
+/claim doors <allow|deny>       - Flag porte
+/claim switches <allow|deny>    - Flag interruttori
+/claim vehicles <allow|deny>    - Flag veicoli
+/claim animals <allow|deny>     - Flag animali
+```
 
 ### Caching
 - `claimCache`: BlockPos → ClaimBlockEntity, clear ogni 10s
 - `outerLayerCache`: ChunkPos → PietroBlockEntity, clear ogni 5s
+
+### Integrazione GodEye
+**File:** `integration/GodEyeIntegration.java`
+- Sync claim data asincrono con timeout 5s
+- ExecutorService daemon thread per non bloccare JVM
+- Metodo `syncPlayerClaims()` non blocca mai il server thread
+- `syncPlayerClaimsBlocking()` per shutdown
 
 ---
 
@@ -531,8 +631,10 @@ String dimension;
 | File | Path | Linee | Ruolo |
 |------|------|-------|-------|
 | RealmManager | `realm/RealmManager.java` | ~300 | Gestione realm |
-| PietroBlockEntity | `block/entity/PietroBlockEntity.java` | 700 | Block entity |
-| RealmBoundaryRenderer | `realm/RealmBoundaryRenderer.java` | 724 | Rendering confini |
+| PietroBlockEntity | `block/entity/PietroBlockEntity.java` | ~750 | Block entity |
+| RealmBoundaryRenderer | `client/RealmBoundaryRenderer.java` | 724 | Rendering confini |
+| RealmRankIndicator | `realm/RealmRankIndicator.java` | ~100 | Particle badge |
+| HierarchyRank | `realm/HierarchyRank.java` | ~50 | Enum ranghi |
 
 ### Struttura Dati
 ```java
@@ -542,6 +644,48 @@ String ownerName;
 UUID ownerUUID;
 int centerChunkX, centerChunkZ;
 Map<UUID, Integer> hierarchy;  // player → rank level
+```
+
+### Sistema Gerarchia (HierarchyRank)
+| Rank | Level | Colore Particella |
+|------|-------|-------------------|
+| COLONO | 0 | Grigio pietra (0.55, 0.55, 0.55) |
+| MILIZIANO | 1 | Verde foresta (0.35, 0.70, 0.35) |
+| GUARDIA | 2 | Giallo pallido (0.90, 0.85, 0.20) |
+| CONSIGLIERE | 3 | Oro antico (0.85, 0.65, 0.10) |
+| LORD | 4 | Cremisi profondo (0.85, 0.12, 0.12) |
+
+### Indicatore Visivo Rank (RealmRankIndicator)
+- **Tick interval:** 70 tick (~3.5 secondi)
+- **Tipo particella:** DustParticleOptions (polvere colorata)
+- **Dimensione:** 0.7
+- **Posizione:** Spalla sinistra del giocatore
+  - Offset X: -0.3 (sinistra)
+  - Offset Y: 1.5 (altezza spalla)
+  - Offset Z: 0.0 (centro)
+- **Comportamento:**
+  - Una particella ogni ~3.5 secondi sulla spalla
+  - Colore dipende dal rank nel realm
+  - Visibile solo quando il giocatore è in un realm
+  - Server-side spawning (visibile a tutti)
+
+### Area del Realm
+- **Centro:** Chunk in cui è posizionato il Pietro Block
+- **Espansione:** `realmSize` chunks in ogni direzione
+- **Outer Layer:** 1 chunk di buffer esterno (protezione crop)
+- **Crop Protection:** Nell'outer layer solo giocatori con claim possono interagire con crop
+
+### Sync Packet
+```java
+// RealmSyncPacket (S2C)
+List<RealmData> realms;
+boolean fullSync;  // true = replace all, false = partial update
+
+// HierarchySyncPacket (S2C)
+BlockPos realmPos;
+Map<UUID, Integer> hierarchy;
+UUID ownerUUID;
+String ownerName;
 ```
 
 ---
@@ -728,9 +872,14 @@ testQuery: "SELECT 1"
 
 ### GodEye (Tharidia Features)
 **File:** `integration/GodEyeIntegration.java`
-- Reflection su `com.lucab.tharidia_features.main.getGodEyeDatabase()`
+- Reflection su `com.THproject.tharidia_features.main.getGodEyeDatabase()`
 - Metodo `updatePlayerClaims(UUID, int, String json)`
 - Sync quando claim creato/modificato/rimosso
+- **IMPORTANTE:** Operazioni asincrone con timeout 5s
+  - `syncPlayerClaims()` - Async, non blocca mai
+  - `syncPlayerClaimsBlocking()` - Solo per shutdown
+  - ExecutorService daemon thread (nome: "GodEye-Sync-Thread")
+  - Shutdown graceful con 3s timeout in onServerStopping
 
 ### Epic Fight
 - Runtime detection via `ModList.get().isLoaded("epicfight")`
@@ -765,7 +914,7 @@ testQuery: "SELECT 1"
 - lama_corta_kill, lancia_kill, martelli_kill, mazze_kill
 - spade_2_mani_kill, asce_kill, socchi_kill, archi_kill, armi_da_fuoco_kill
 
-### Items Registrati (15)
+### Items Registrati (16+)
 - HOT_IRON, HOT_GOLD, HOT_COPPER
 - PINZA (480 durabilità)
 - LAMA_LUNGA, LAMA_CORTA, ELSA
@@ -773,6 +922,7 @@ testQuery: "SELECT 1"
 - COPPER_LAMA_LUNGA, COPPER_LAMA_CORTA, COPPER_ELSA
 - DICE
 - BATTLE_GAUNTLET
+- TRUST_CONTRACT (Contratto di Fiducia, stack 16)
 
 ### Blocchi Registrati (6)
 - PIETRO, CLAIM
@@ -919,6 +1069,9 @@ src/main/resources/data/tharidiathings/
 | System.out.println spam | Rimosso debug | NametagVisibilityHandler.java | cedae34 |
 | Diet reset to 0 | Fix initialization | DietHandler.java | 7e3f6d8 |
 | Weight config sync | Sync packet system | WeightConfigSyncPacket | 1483ced |
+| GodEye blocking server | Async executor + timeout 5s | GodEyeIntegration.java | - |
+| Server shutdown hang | @SubscribeEvent + GodEye shutdown | TharidiaThings.java | - |
+| Hardcoded Italian text | Component.translatable() | ClaimProtectionHandler.java, TrustContractItem.java | - |
 
 ### Problemi Noti (Non Risolti)
 | Problema | Severity | Location | Note |
@@ -926,7 +1079,6 @@ src/main/resources/data/tharidiathings/
 | RealmSync ArrayList race | CRITICAL | ClientPacketHandler.syncedRealms | Usare synchronizedList |
 | ZoneMusic activeDownloads | CRITICAL | ZoneMusicPlayer | HashMap non thread-safe |
 | TradeSession item race | HIGH | TradePacketHandler | Sincronizzare item list |
-| GodEye init race | MEDIUM | GodEyeIntegration | initialized non volatile |
 | DB password plaintext | HIGH | Config.java | Usare env variables |
 
 ### Raccomandazioni Fix
@@ -938,10 +1090,6 @@ private static final List<PietroBlockEntity> syncedRealms =
 // 2. ZoneMusic - ZoneMusicPlayer.java
 private static final Map<String, DownloadState> activeDownloads =
     new ConcurrentHashMap<>();
-
-// 3. GodEye - GodEyeIntegration.java
-private static volatile boolean initialized = false;
-private static volatile boolean initializationFailed = false;
 ```
 
 ---
