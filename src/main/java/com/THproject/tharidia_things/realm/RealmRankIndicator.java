@@ -83,6 +83,11 @@ public class RealmRankIndicator {
             return;
         }
 
+        // Check if player has disabled their particle indicator
+        if (realm.isParticleDisabled(player.getUUID())) {
+            return;
+        }
+
         // Spawn the particle
         spawnRankParticle(level, player, rank);
     }

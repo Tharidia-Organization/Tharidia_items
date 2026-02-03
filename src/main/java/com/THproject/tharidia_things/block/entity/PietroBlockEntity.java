@@ -59,6 +59,9 @@ public class PietroBlockEntity extends BlockEntity implements MenuProvider, GeoB
     
     // Player hierarchy system - maps player UUID to their hierarchy rank
     private Map<UUID, HierarchyRank> playerHierarchy = new HashMap<>();
+
+    // Players who have disabled their rank particle indicator
+    private Set<UUID> particleDisabledPlayers = new HashSet<>();
     
     // Potato inventory (1 slot for potatoes)
     private final ItemStackHandler potatoInventory = new ItemStackHandler(1) {
@@ -335,7 +338,43 @@ public class PietroBlockEntity extends BlockEntity implements MenuProvider, GeoB
     public Map<UUID, HierarchyRank> getAllPlayerHierarchies() {
         return new HashMap<>(playerHierarchy);
     }
-    
+
+    /**
+     * Checks if a player has disabled their rank particle indicator
+     */
+    public boolean isParticleDisabled(UUID playerUUID) {
+        return particleDisabledPlayers.contains(playerUUID);
+    }
+
+    /**
+     * Toggles the particle disabled state for a player
+     * @return the new state (true = disabled, false = enabled)
+     */
+    public boolean toggleParticleDisabled(UUID playerUUID) {
+        boolean newState;
+        if (particleDisabledPlayers.contains(playerUUID)) {
+            particleDisabledPlayers.remove(playerUUID);
+            newState = false;
+        } else {
+            particleDisabledPlayers.add(playerUUID);
+            newState = true;
+        }
+        setChanged();
+
+        if (level != null && !level.isClientSide) {
+            level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+        }
+
+        return newState;
+    }
+
+    /**
+     * Gets the set of players who have disabled their particles
+     */
+    public Set<UUID> getParticleDisabledPlayers() {
+        return new HashSet<>(particleDisabledPlayers);
+    }
+
     /**
      * Adds potato payment from a claim to this realm's total
      */
@@ -617,6 +656,16 @@ public class PietroBlockEntity extends BlockEntity implements MenuProvider, GeoB
         }
         hierarchyTag.putInt("Count", i);
         tag.put("PlayerHierarchy", hierarchyTag);
+
+        // Save particle disabled players
+        CompoundTag particleTag = new CompoundTag();
+        int j = 0;
+        for (UUID uuid : particleDisabledPlayers) {
+            particleTag.putUUID("Player" + j, uuid);
+            j++;
+        }
+        particleTag.putInt("Count", j);
+        tag.put("ParticleDisabled", particleTag);
     }
     
     @Override
@@ -653,7 +702,19 @@ public class PietroBlockEntity extends BlockEntity implements MenuProvider, GeoB
                 }
             }
         }
-        
+
+        // Load particle disabled players
+        if (tag.contains("ParticleDisabled")) {
+            CompoundTag particleTag = tag.getCompound("ParticleDisabled");
+            int count = particleTag.getInt("Count");
+            particleDisabledPlayers.clear();
+            for (int i = 0; i < count; i++) {
+                if (particleTag.hasUUID("Player" + i)) {
+                    particleDisabledPlayers.add(particleTag.getUUID("Player" + i));
+                }
+            }
+        }
+
         // Update block state after loading (will be applied in onLoad)
         // Don't do it here as level might not be ready yet
     }

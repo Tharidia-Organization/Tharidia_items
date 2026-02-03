@@ -84,6 +84,7 @@ import com.THproject.tharidia_things.network.SyncGroupQueuePacket;
 import com.THproject.tharidia_things.network.HierarchySyncPacket;
 import com.THproject.tharidia_things.network.RealmSyncPacket;
 import com.THproject.tharidia_things.network.UpdateHierarchyPacket;
+import com.THproject.tharidia_things.network.ToggleParticlePacket;
 import com.THproject.tharidia_things.network.SelectComponentPacket;
 import com.THproject.tharidia_things.network.SubmitNamePacket;
 import com.THproject.tharidia_things.network.SyncGateRestrictionsPacket;
@@ -812,6 +813,10 @@ public class TharidiaThings {
                 UpdateHierarchyPacket.TYPE,
                 UpdateHierarchyPacket.STREAM_CODEC,
                 UpdateHierarchyPacket::handle);
+        registrar.playToServer(
+                ToggleParticlePacket.TYPE,
+                ToggleParticlePacket.STREAM_CODEC,
+                ToggleParticlePacket::handle);
         registrar.playToServer(
                 DungeonQueuePacket.TYPE,
                 DungeonQueuePacket.STREAM_CODEC,

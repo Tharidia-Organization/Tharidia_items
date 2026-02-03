@@ -106,6 +106,10 @@
   "gui.tharidiathings.realm.rank.consigliere": "Counselor",
   "gui.tharidiathings.realm.rank.lord": "Lord",
 
+  "gui.tharidiathings.realm.particle_toggle": "Toggle rank particle",
+  "gui.tharidiathings.realm.particle_enabled": "Rank particle: Enabled",
+  "gui.tharidiathings.realm.particle_disabled": "Rank particle: Disabled",
+
   "gui.tharidiathings.realm.dungeon_title": "Dungeon",
   "gui.tharidiathings.realm.dungeon_enter_label": "Enter the Dungeon:",
   "gui.tharidiathings.realm.dungeon_desc_1": "Face trials and fight monsters",
@@ -299,5 +303,41 @@
   "item.tharidiathings.trust_contract.use_hint_2": "§7and become trusted in the claim.",
   "item.tharidiathings.trust_contract.empty_title": "Empty Contract",
   "item.tharidiathings.trust_contract.bind_hint": "§eRight-click on a Claim Block",
-  "item.tharidiathings.trust_contract.bind_hint_2": "§7to bind this contract."
+  "item.tharidiathings.trust_contract.bind_hint_2": "§7to bind this contract.",
+
+  "tharidia_features.cave.timer.title": "Cave Time",
+  "tharidia_features.cave.timer.expired": "Time expired!",
+  "tharidia_features.cave.entrance.title": "Entering the Cave...",
+  "tharidia_features.cave.entrance.cancelled": "Entrance cancelled",
+  "tharidia_features.cave.entrance.success": "Teleporting to cave!",
+  "tharidia_features.cave.entrance.not_generated": "The cave has not been generated yet! Use /thmaster cave generate",
+  "tharidia_features.cave.exit.timer_expired": "Your time in the cave has expired! You have been teleported out.",
+  "tharidia_features.cave.death": "§6You died in the cave and have been teleported to the overworld.",
+  "tharidia_features.cave.disconnect": "§6You were disconnected in the cave and have been teleported to the overworld.",
+
+  "tharidia_features.dungeon.dimension_not_found": "§cError: The dungeon dimension does not exist. Contact an administrator.",
+  "tharidia_features.dungeon.teleported_in": "§aYou have been teleported to the dungeon!",
+  "tharidia_features.dungeon.exit_with_time": "§6You left the dungeon. Time spent: %1$02d:%2$02d",
+  "tharidia_features.dungeon.exit": "§6You left the dungeon.",
+  "tharidia_features.dungeon.not_in_dungeon": "Not in dungeon",
+  "tharidia_features.dungeon.instance_info": "Active instances: %1$d/%2$d, Queue: %3$d players",
+  "tharidia_features.dungeon.group_already_in_queue": "§cA player in the group is already in queue or in the dungeon!",
+  "tharidia_features.dungeon.instances_full": "§cAll dungeon instances are occupied. Try again later.",
+  "tharidia_features.dungeon.death": "§6You died in the dungeon and have been teleported to your realm.",
+  "tharidia_features.dungeon.disconnect": "§6You were disconnected in the dungeon and have been teleported to your realm.",
+  "tharidia_features.dungeon.exit_bossbar": "§eExiting Dungeon...",
+  "tharidia_features.dungeon.exit_cancelled": "§cExit cancelled.",
+  "tharidia_features.dungeon.exit_start": "§aStay on the block to exit...",
+
+  "tharidia_features.loot.locked": "§cDefeat all enemies to unlock the loot!",
+  "tharidia_features.loot.unlocked": "§aLoot unlocked!",
+  "tharidia_features.loot.unlock_title": "§6§l★ ROOM CLEARED ★",
+  "tharidia_features.loot.unlock_subtitle": "§aThe loot is now available!",
+
+  "tharidia_features.boss.exit_countdown": "§cExiting Boss Room...",
+  "tharidia_features.boss.spawning": "§6The boss is about to appear...",
+  "tharidia_features.boss.spawned": "§4A boss has appeared in the room!",
+  "tharidia_features.boss.defeated": "§aThe boss has been defeated! You have 30 seconds to collect the loot!",
+  "tharidia_features.boss.loot_time_ending": "§6Time's up! Exiting in 5 seconds...",
+  "tharidia_features.boss.late_arrival": "§6The boss has already been defeated. Exiting in 5 seconds..."
 }

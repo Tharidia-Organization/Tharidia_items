@@ -13,6 +13,7 @@ import com.THproject.tharidia_things.gui.inventory.PlayerInventoryPanelLayout;
 import com.THproject.tharidia_things.network.JoinGroupQueuePacket;
 import com.THproject.tharidia_things.network.LeaveGroupQueuePacket;
 import com.THproject.tharidia_things.network.StartGroupDungeonPacket;
+import com.THproject.tharidia_things.network.ToggleParticlePacket;
 import com.THproject.tharidia_things.network.UpdateHierarchyPacket;
 import com.THproject.tharidia_things.client.ClientGroupQueueHandler;
 import com.THproject.tharidia_things.realm.HierarchyRank;
@@ -109,6 +110,11 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
     private int rankTextX = 0;
     private int rankTextWidth = 60;
     private ImageTabButton startGroupButton;
+
+    // Particle toggle button tracking
+    private int particleToggleBtnX = 0;
+    private int particleToggleBtnY = 0;
+    private static final int PARTICLE_BTN_SIZE = 12;
 
     /**
      * Gets the Pietro block position for the particle system.
@@ -556,6 +562,46 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
             String displayName = entry.playerName.length() > 15 ? entry.playerName.substring(0, 15) : entry.playerName;
             renderMedievalTextLine(guiGraphics, displayName, textX + 5, yPos + 4, TEXT_DARK);
 
+            // If this is the current player, render a particle toggle button next to their name
+            boolean isCurrentPlayer = entry.playerUUID.equals(currentPlayerUUID);
+            if (isCurrentPlayer) {
+                int nameWidth = Minecraft.getInstance().font.width(displayName);
+                particleToggleBtnX = textX + 5 + nameWidth + 4;
+                particleToggleBtnY = yPos + 2;
+
+                // Check if particles are disabled for this player
+                PietroBlockEntity pietroEntity = this.menu.getBlockEntity();
+                boolean particlesDisabled = pietroEntity != null && pietroEntity.isParticleDisabled(currentPlayerUUID);
+
+                // Check hover state for the button
+                boolean isBtnHovered = mouseX >= particleToggleBtnX && mouseX <= particleToggleBtnX + PARTICLE_BTN_SIZE &&
+                                       mouseY >= particleToggleBtnY && mouseY <= particleToggleBtnY + PARTICLE_BTN_SIZE;
+
+                // Render a small toggle button with a particle icon (star symbol)
+                int btnBgColor = isBtnHovered ? 0x50000000 : 0x30000000;
+                guiGraphics.fill(particleToggleBtnX, particleToggleBtnY,
+                        particleToggleBtnX + PARTICLE_BTN_SIZE, particleToggleBtnY + PARTICLE_BTN_SIZE, btnBgColor);
+
+                // Draw border
+                int borderColor = isBtnHovered ? MedievalGuiRenderer.GOLD_MAIN : MedievalGuiRenderer.BRONZE;
+                guiGraphics.fill(particleToggleBtnX, particleToggleBtnY, particleToggleBtnX + PARTICLE_BTN_SIZE, particleToggleBtnY + 1, borderColor);
+                guiGraphics.fill(particleToggleBtnX, particleToggleBtnY + PARTICLE_BTN_SIZE - 1, particleToggleBtnX + PARTICLE_BTN_SIZE, particleToggleBtnY + PARTICLE_BTN_SIZE, borderColor);
+                guiGraphics.fill(particleToggleBtnX, particleToggleBtnY, particleToggleBtnX + 1, particleToggleBtnY + PARTICLE_BTN_SIZE, borderColor);
+                guiGraphics.fill(particleToggleBtnX + PARTICLE_BTN_SIZE - 1, particleToggleBtnY, particleToggleBtnX + PARTICLE_BTN_SIZE, particleToggleBtnY + PARTICLE_BTN_SIZE, borderColor);
+
+                // Draw star icon - colored if enabled, gray if disabled
+                String starIcon = "\u2726"; // ✦ four-pointed star
+                int starColor = particlesDisabled ? 0xFF666666 : MedievalGuiRenderer.GOLD_MAIN;
+                guiGraphics.drawString(Minecraft.getInstance().font, starIcon,
+                        particleToggleBtnX + 2, particleToggleBtnY + 2, starColor, false);
+
+                // Draw strikethrough line if disabled
+                if (particlesDisabled) {
+                    guiGraphics.fill(particleToggleBtnX + 1, particleToggleBtnY + PARTICLE_BTN_SIZE / 2,
+                            particleToggleBtnX + PARTICLE_BTN_SIZE - 1, particleToggleBtnY + PARTICLE_BTN_SIZE / 2 + 1, 0xFFAA0000);
+                }
+            }
+
             // Rank title - make clickable for lord (except for themselves)
             String rankText = Component.translatable(getRankTranslationKey(rank)).getString();
             boolean canChangeRank = isLord && !entry.playerUUID.equals(ownerUUID);
@@ -828,6 +874,19 @@ public class PietroScreen extends AbstractContainerScreen<PietroMenu> {
                 showRankSelectionMenu = false;
                 selectedPlayerForRankChange = null;
                 return true;
+            }
+
+            // Handle particle toggle button click
+            if (currentTab == TAB_CLAIMS && particleToggleBtnX > 0) {
+                if (relX >= particleToggleBtnX && relX <= particleToggleBtnX + PARTICLE_BTN_SIZE &&
+                        relY >= particleToggleBtnY && relY <= particleToggleBtnY + PARTICLE_BTN_SIZE) {
+                    // Send toggle packet to server
+                    if (this.menu.getBlockEntity() != null) {
+                        BlockPos pos = this.menu.getBlockEntity().getBlockPos();
+                        PacketDistributor.sendToServer(new ToggleParticlePacket(pos));
+                    }
+                    return true;
+                }
             }
 
             // Handle claims tab rank text clicks

@@ -106,6 +106,10 @@
   "gui.tharidiathings.realm.rank.consigliere": "Consigliere",
   "gui.tharidiathings.realm.rank.lord": "Signore",
 
+  "gui.tharidiathings.realm.particle_toggle": "Attiva/disattiva particella rango",
+  "gui.tharidiathings.realm.particle_enabled": "Particella rango: Attiva",
+  "gui.tharidiathings.realm.particle_disabled": "Particella rango: Disattivata",
+
   "gui.tharidiathings.realm.dungeon_title": "Dungeon",
   "gui.tharidiathings.realm.dungeon_enter_label": "Entra nel Dungeon:",
   "gui.tharidiathings.realm.dungeon_desc_1": "Affronta prove e mostri",
@@ -299,5 +303,41 @@
   "item.tharidiathings.trust_contract.use_hint_2": "§7e diventare fidato nel claim.",
   "item.tharidiathings.trust_contract.empty_title": "Contratto Vuoto",
   "item.tharidiathings.trust_contract.bind_hint": "§eClick destro su un Claim Block",
-  "item.tharidiathings.trust_contract.bind_hint_2": "§7per legare questo contratto."
+  "item.tharidiathings.trust_contract.bind_hint_2": "§7per legare questo contratto.",
+
+  "tharidia_features.cave.timer.title": "Tempo in Cava",
+  "tharidia_features.cave.timer.expired": "Tempo scaduto!",
+  "tharidia_features.cave.entrance.title": "Ingresso nella Cava...",
+  "tharidia_features.cave.entrance.cancelled": "Ingresso annullato",
+  "tharidia_features.cave.entrance.success": "Teletrasporto nella cava!",
+  "tharidia_features.cave.entrance.not_generated": "La cava non e' ancora stata generata! Usa /thmaster cave generate",
+  "tharidia_features.cave.exit.timer_expired": "Il tuo tempo nella cava e' scaduto! Sei stato teletrasportato fuori.",
+  "tharidia_features.cave.death": "§6Sei morto nella cava e sei stato teletrasportato all'overworld.",
+  "tharidia_features.cave.disconnect": "§6Sei stato disconnesso nella cava e sei stato teletrasportato all'overworld.",
+
+  "tharidia_features.dungeon.dimension_not_found": "§cErrore: La dimensione del dungeon non esiste. Contattare un amministratore.",
+  "tharidia_features.dungeon.teleported_in": "§aSei stato teletrasportato nel dungeon!",
+  "tharidia_features.dungeon.exit_with_time": "§6Sei uscito dal dungeon. Tempo trascorso: %1$02d:%2$02d",
+  "tharidia_features.dungeon.exit": "§6Sei uscito dal dungeon.",
+  "tharidia_features.dungeon.not_in_dungeon": "Non nel dungeon",
+  "tharidia_features.dungeon.instance_info": "Istanze attive: %1$d/%2$d, Coda: %3$d giocatori",
+  "tharidia_features.dungeon.group_already_in_queue": "§cUn giocatore del gruppo e' gia' in coda o nel dungeon!",
+  "tharidia_features.dungeon.instances_full": "§cTutte le istanze del dungeon sono occupate. Riprova piu' tardi.",
+  "tharidia_features.dungeon.death": "§6Sei morto nel dungeon e sei stato teletrasportato al tuo regno.",
+  "tharidia_features.dungeon.disconnect": "§6Sei stato disconnesso nel dungeon e sei stato teletrasportato al tuo regno.",
+  "tharidia_features.dungeon.exit_bossbar": "§eUscita dal Dungeon...",
+  "tharidia_features.dungeon.exit_cancelled": "§cUscita annullata.",
+  "tharidia_features.dungeon.exit_start": "§aResta sul blocco per uscire...",
+
+  "tharidia_features.loot.locked": "§cSconfiggi tutti i nemici per sbloccare il bottino!",
+  "tharidia_features.loot.unlocked": "§aBottino sbloccato!",
+  "tharidia_features.loot.unlock_title": "§6§l★ STANZA COMPLETATA ★",
+  "tharidia_features.loot.unlock_subtitle": "§aIl bottino e' ora disponibile!",
+
+  "tharidia_features.boss.exit_countdown": "§cUscita dalla Boss Room...",
+  "tharidia_features.boss.spawning": "§6Il boss sta per apparire...",
+  "tharidia_features.boss.spawned": "§4Un boss e' apparso nella stanza!",
+  "tharidia_features.boss.defeated": "§aIl boss e' stato sconfitto! Hai 30 secondi per raccogliere il bottino!",
+  "tharidia_features.boss.loot_time_ending": "§6Tempo scaduto! Uscita tra 5 secondi...",
+  "tharidia_features.boss.late_arrival": "§6Il boss e' gia' stato sconfitto. Uscita tra 5 secondi..."
 }
