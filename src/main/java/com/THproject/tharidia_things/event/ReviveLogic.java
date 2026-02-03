@@ -170,10 +170,6 @@ public class ReviveLogic {
             return;
         }
 
-        if (player.tickCount % 20 != 0) {
-            ReviveSyncPayload.syncSelf(player);
-        }
-
         if (Revive.isPlayerFallen(player)) {
             ReviveAttachments attachments = player.getData(ReviveAttachments.REVIVE_DATA.get());
             attachments.increaseTimeFallen();

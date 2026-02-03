@@ -171,6 +171,10 @@
   "gui.tharidiathings.trade_request.message_2": "desidera commerciare con voi.",
   "gui.tharidiathings.trade_request.message_3": "Accettate la proposta?",
 
+  "gui.tharidia_things.revive.fallen.title": "Sei caduto",
+  "gui.tharidia_things.revive.fallen.subtitle": "Aspetta di essere rianimato o rinuncia alla tua avventura",
+  "gui.tharidia_things.revive.fallen.give_up": "Arrenditi",
+
   "gui.tharidiathings.trade.title": "Scambio",
   "message.tharidiathings.trade.request_invalid": "§cLa richiesta di scambio non è più valida.",
   "message.tharidiathings.trade.accepted_by": "§6%s ha accettato lo scambio!",

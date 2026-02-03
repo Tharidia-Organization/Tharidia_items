@@ -9,10 +9,10 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-public class ReviveScreen extends Screen {
+public class FallenScreen extends Screen {
 
-    public ReviveScreen() {
-        super(Component.translatable("gui.tharidia_things.revive.title"));
+    public FallenScreen() {
+        super(Component.translatable("gui.tharidia_things.revive.fallen.title"));
     }
 
     @Override
@@ -24,13 +24,14 @@ public class ReviveScreen extends Screen {
         int barY = this.height / 2 + 10;
         if (Minecraft.getInstance().player != null
                 && Minecraft.getInstance().player.getData(ReviveAttachments.REVIVE_DATA.get()).canRevive()) {
-            this.addRenderableWidget(Button.builder(Component.literal("Arrenditi"), button -> {
-                PacketDistributor.sendToServer(new ReviveGiveUpPacket());
-                this.minecraft.setScreen(null);
-            })
-                    .pos(this.width / 2 - buttonWidth / 2, barY + 30)
-                    .size(buttonWidth, buttonHeight)
-                    .build());
+            this.addRenderableWidget(
+                    Button.builder(Component.translatable("gui.tharidia_things.revive.fallen.give_up"), button -> {
+                        PacketDistributor.sendToServer(new ReviveGiveUpPacket());
+                        this.minecraft.setScreen(null);
+                    })
+                            .pos(this.width / 2 - buttonWidth / 2, barY + 30)
+                            .size(buttonWidth, buttonHeight)
+                            .build());
         }
     }
 
@@ -52,14 +53,29 @@ public class ReviveScreen extends Screen {
         int height = this.height;
 
         // Title text
-        Component title = Component.literal("SEI A TERRA");
+        Component title = Component.translatable("gui.tharidia_things.revive.fallen.title");
         float titleScale = 2.0f;
 
         guiGraphics.pose().pushPose();
         guiGraphics.pose().scale(titleScale, titleScale, 1.0f);
         int titleWidth = this.font.width(title);
-        guiGraphics.drawString(this.font, title, (int) ((width / 2.0f / titleScale) - (titleWidth / 2.0f)),
-                (int) ((height / 2.0f / titleScale) - 20), 0xFFFFFF);
+        guiGraphics.drawString(this.font, title,
+                (int) ((width / 2.0f / titleScale) - (titleWidth / 2.0f)),
+                (int) ((height / 2.0f / titleScale) - 35),
+                0xF73528);
+        guiGraphics.pose().popPose();
+
+        // Subtitle text
+        Component subtitle = Component.translatable("gui.tharidia_things.revive.fallen.subtitle");
+        float subtitleScale = 1.5f;
+
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().scale(subtitleScale, subtitleScale, 1.0f);
+        int subtitleWidth = this.font.width(subtitle);
+        guiGraphics.drawString(this.font, subtitle,
+                (int) ((width / 2.0f / subtitleScale) - (subtitleWidth / 2.0f)),
+                (int) ((height / 2.0f / subtitleScale) - 20),
+                0xD1A400);
         guiGraphics.pose().popPose();
 
         // Get player data for progress bar
@@ -84,13 +100,6 @@ public class ReviveScreen extends Screen {
 
                 // Draw filled part (Red)
                 guiGraphics.fill(barX, barY, barX + filledWidth, barY + barHeight, 0xFFCC0000);
-
-                // Reviving status display
-                if (reviveData.getRevivingPlayer() != null) {
-                    Component revivingText = Component.literal("Qualcuno ti sta rianimando...");
-                    int revTextWidth = this.font.width(revivingText);
-                    guiGraphics.drawString(this.font, revivingText, (width - revTextWidth) / 2, barY + 15, 0x55FF55);
-                }
             }
         }
     }
