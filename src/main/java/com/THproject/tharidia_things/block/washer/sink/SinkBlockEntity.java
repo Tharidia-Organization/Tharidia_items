@@ -20,6 +20,7 @@ import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -47,6 +48,9 @@ public class SinkBlockEntity extends BlockEntity implements GeoBlockEntity {
         @Override
         protected void onContentsChanged(int slot) {
             setChanged();
+            if (level != null && !level.isClientSide) {
+                level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
+            }
         }
     };
 
@@ -119,7 +123,8 @@ public class SinkBlockEntity extends BlockEntity implements GeoBlockEntity {
 
         int workingTanks = getWorkingTanks(tanks, tanksDirections);
 
-        SieveBlockEntity sieve = (SieveBlockEntity) sieveBlockEntity;
+        SieveBlockEntity sieve = sieveBlockEntity instanceof SieveBlockEntity ? (SieveBlockEntity) sieveBlockEntity
+                : null;
         if (sieve == null || sieve.getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING) != sieveDirection)
             return;
 

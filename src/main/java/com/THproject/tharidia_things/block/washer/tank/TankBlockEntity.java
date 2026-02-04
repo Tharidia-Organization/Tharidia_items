@@ -30,7 +30,7 @@ public class TankBlockEntity extends BlockEntity implements GeoBlockEntity {
         @Override
         protected void onContentsChanged() {
             setChanged();
-            if (level != null) {
+            if (level != null && !level.isClientSide) {
                 level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
             }
         }
