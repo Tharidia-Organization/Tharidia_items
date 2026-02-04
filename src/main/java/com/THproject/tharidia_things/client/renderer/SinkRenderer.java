@@ -66,7 +66,7 @@ public class SinkRenderer extends GeoBlockRenderer<SinkBlockEntity> {
             Direction facing = animatable.getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING);
 
             // 1. Center in the block
-            poseStack.translate(0.5, 0.51, 0.55);
+            poseStack.translate(0.5, 0.51, 0.5);
 
             // 2. Rotate to match block facing
             poseStack.mulPose(Axis.YP.rotationDegrees(-facing.toYRot()));
