@@ -6,9 +6,12 @@ import java.util.List;
 import com.THproject.tharidia_things.TharidiaThings;
 import com.THproject.tharidia_things.block.washer.sink.SinkBlockEntity;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.entity.ItemRenderer;
+import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
@@ -18,6 +21,11 @@ import software.bernie.geckolib.model.GeoModel;
 import software.bernie.geckolib.renderer.GeoBlockRenderer;
 
 public class SinkRenderer extends GeoBlockRenderer<SinkBlockEntity> {
+
+    // Adjust these slightly if items clip into the sides
+    private static final float ITEM_SCALE = 0.25f;
+    private static final float GRID_SPACING = 0.7f;
+
     public SinkRenderer() {
         super(new GeoModel<SinkBlockEntity>() {
             @Override
@@ -44,7 +52,7 @@ public class SinkRenderer extends GeoBlockRenderer<SinkBlockEntity> {
 
         List<ItemStack> items = new ArrayList<>();
 
-        // 9 slots
+        // Collect valid items
         for (int i = 0; i < 9; i++) {
             ItemStack stack = animatable.sinkInventory.getStackInSlot(i);
             if (!stack.isEmpty()) {
@@ -55,47 +63,54 @@ public class SinkRenderer extends GeoBlockRenderer<SinkBlockEntity> {
         if (!items.isEmpty()) {
             poseStack.pushPose();
 
-            // Position the items in the sink
-            switch (animatable.getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING)) {
-                case NORTH:
-                    poseStack.translate(1.3, 0.45, 0.55);
-                    break;
-                case EAST:
-                    poseStack.translate(0.46, 0.45, 1.3);
-                    break;
-                case SOUTH:
-                    poseStack.translate(-0.41, 0.45, 0.46);
-                    break;
-                case WEST:
-                    poseStack.translate(0.55, 0.45, -0.41);
-                    break;
-                default:
-                    break;
-            }
+            Direction facing = animatable.getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING);
 
-            poseStack.scale(0.3f, 0.3f, 0.3f);
+            // 1. Center in the block
+            poseStack.translate(0.5, 0.51, 0.55);
+
+            // 2. Rotate to match block facing
+            poseStack.mulPose(Axis.YP.rotationDegrees(-facing.toYRot()));
+
+            // 3. APPLY OFFSET (FIXED)
+            poseStack.translate(-0.8, 0, 0.0);
+
+            // 4. Scale down
+            poseStack.scale(ITEM_SCALE, ITEM_SCALE, ITEM_SCALE);
+
+            // 5. Render items in a 3x3 grid
+            ItemRenderer itemRenderer = Minecraft.getInstance().getItemRenderer();
+
             for (int i = 0; i < items.size(); i++) {
                 ItemStack stack = items.get(i);
-                float offsetX = (i % 3 - 1) * 0.55f; // -0.55, 0, 0.55
-                float offsetZ = (i / 3 - 1) * 0.55f; // -0.55, 0, 0.55
+
+                // Calculate grid position
+                // i % 3 gives column (0, 1, 2) -> -1, 0, 1
+                // i / 3 gives row (0, 1, 2) -> -1, 0, 1
+                float offsetX = (i % 3 - 1) * GRID_SPACING;
+                float offsetZ = (i / 3 - 1) * GRID_SPACING;
+
                 poseStack.pushPose();
+
+                // Move to grid slot
                 poseStack.translate(offsetX, 0, offsetZ);
-                Minecraft.getInstance().getItemRenderer().renderStatic(stack, ItemDisplayContext.GROUND,
+
+                itemRenderer.renderStatic(stack, ItemDisplayContext.FIXED,
                         packedLight, packedOverlay, poseStack, bufferSource, animatable.getLevel(), 0);
+
                 poseStack.popPose();
             }
 
             poseStack.popPose();
         }
-
     }
 
     @Override
     public AABB getRenderBoundingBox(SinkBlockEntity blockEntity) {
+        // Reduced bounding box size slightly to be more reasonable, but large enough
+        // for animations
         var pos = blockEntity.getBlockPos();
         return new AABB(
-                pos.getX() - 3, pos.getY(), pos.getZ() - 3,
-                pos.getX() + 5, pos.getY() + 3, pos.getZ() + 5);
+                pos.getX() - 1, pos.getY(), pos.getZ() - 1,
+                pos.getX() + 2, pos.getY() + 2, pos.getZ() + 2);
     }
-
 }
