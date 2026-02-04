@@ -8,8 +8,7 @@
   ],
   "client": [
     "ClientSuggestionsMixin",
-    "MapwrightRenderingMixin",
-    "MinecraftMixin"
+    "MapwrightRenderingMixin"
   ],
   "injectors": {
     "defaultRequire": 0

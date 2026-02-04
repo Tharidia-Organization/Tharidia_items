@@ -85,6 +85,8 @@ import com.THproject.tharidia_things.network.HierarchySyncPacket;
 import com.THproject.tharidia_things.network.RealmSyncPacket;
 import com.THproject.tharidia_things.network.UpdateHierarchyPacket;
 import com.THproject.tharidia_things.network.ToggleParticlePacket;
+import com.THproject.tharidia_things.network.revive.ReviveSyncPayload;
+import com.THproject.tharidia_things.network.revive.ReviveGiveUpPacket;
 import com.THproject.tharidia_things.network.SelectComponentPacket;
 import com.THproject.tharidia_things.network.SubmitNamePacket;
 import com.THproject.tharidia_things.network.SyncGateRestrictionsPacket;
@@ -626,6 +628,11 @@ public class TharidiaThings {
                     TradeSyncPacket.STREAM_CODEC,
                     (packet, context) -> TradeClientHandler
                             .handleTradeSync(packet));
+            // Revive sync packet (client-bound)
+            registrar.playToClient(
+                    ReviveSyncPayload.TYPE,
+                    ReviveSyncPayload.STREAM_CODEC,
+                    ClientPacketHandler::handleReviveSync);
 
             // Register bungeecord:main channel to satisfy server requirement (dummy
             // handler)
@@ -763,6 +770,13 @@ public class TharidiaThings {
                     (packet, context) -> {
                     });
 
+            // Revive sync packet (client-bound, dummy handler)
+            registrar.playToClient(
+                    ReviveSyncPayload.TYPE,
+                    ReviveSyncPayload.STREAM_CODEC,
+                    (packet, context) -> {
+                    });
+
             // Register bungeecord:main channel on server side (dummy handler for
             // consistency)
             registrar.playToClient(
@@ -809,6 +823,16 @@ public class TharidiaThings {
         }
 
         // Register server-bound packets (works on both sides)
+        registrar.playToServer(
+                ReviveGiveUpPacket.TYPE,
+                ReviveGiveUpPacket.STREAM_CODEC,
+                ReviveGiveUpPacket::handle);
+
+        registrar.playToServer(
+                RightClickReleasePayload.TYPE,
+                RightClickReleasePayload.CODEC,
+                ReviveLogic::onStopReviving);
+
         registrar.playToServer(
                 UpdateHierarchyPacket.TYPE,
                 UpdateHierarchyPacket.STREAM_CODEC,
@@ -913,7 +937,8 @@ public class TharidiaThings {
                 com.THproject.tharidia_things.trade.TradeManager.cancelPlayerSession(player.getUUID());
                 LOGGER.debug("Cleaned up trade session for disconnecting player: {}", player.getName().getString());
             } catch (Exception e) {
-                LOGGER.error("Error cleaning up trade session for player {}: {}", player.getName().getString(), e.getMessage());
+                LOGGER.error("Error cleaning up trade session for player {}: {}", player.getName().getString(),
+                        e.getMessage());
             }
         }
     }

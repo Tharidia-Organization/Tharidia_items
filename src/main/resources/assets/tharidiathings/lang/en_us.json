@@ -179,6 +179,10 @@
   "gui.tharidiathings.trade_request.message_2": "wants to trade with you.",
   "gui.tharidiathings.trade_request.message_3": "Do you accept?",
 
+  "gui.tharidia_things.revive.fallen.title": "You are fallen",
+  "gui.tharidia_things.revive.fallen.subtitle": "Wait to be revived or give up your adventure",
+  "gui.tharidia_things.revive.fallen.give_up": "Give Up",
+
   "gui.tharidiathings.trade.title": "Trade",
   "message.tharidiathings.trade.request_invalid": "§cThe trade request is no longer valid.",
   "message.tharidiathings.trade.accepted_by": "§6%s accepted the trade!",
