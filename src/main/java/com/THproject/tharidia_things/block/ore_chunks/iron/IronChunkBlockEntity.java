@@ -1,4 +1,7 @@
-package com.THproject.tharidia_things.block.ore_chunks;
+package com.THproject.tharidia_things.block.ore_chunks.iron;
+
+import com.THproject.tharidia_things.block.ore_chunks.BaseChunkBlockEntity;
+import com.THproject.tharidia_things.block.ore_chunks.ChunksRegistry;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;

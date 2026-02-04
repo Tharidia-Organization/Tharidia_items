@@ -452,8 +452,10 @@ public class TharidiaThings {
                         output.accept(PITCHFORK.get());
 
                         // Chunks
-                        output.accept(ChunksRegistry.IRON_CHUNK_ITEM.get());
+                        output.accept(ChunksRegistry.COAL_CHUNK_ITEM.get());
                         output.accept(ChunksRegistry.COPPER_CHUNK_ITEM.get());
+                        output.accept(ChunksRegistry.TIN_CHUNK_ITEM.get());
+                        output.accept(ChunksRegistry.IRON_CHUNK_ITEM.get());
 
                         // Crystals
                         output.accept(CrystalsRegistry.CRYSTAL_1_ITEM.get());
