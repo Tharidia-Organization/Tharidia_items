@@ -84,7 +84,7 @@ public class SinkDummyBlock extends Block {
 
         BlockPos partPos = dummyPos.relative(left, 1);
         if (level.getBlockState(partPos).is(TharidiaThings.SINK_BLOCK.get())) {
-            level.destroyBlock(partPos, true);
+            return partPos;
         }
         return null;
     }
