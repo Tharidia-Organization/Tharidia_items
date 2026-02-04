@@ -1,5 +1,6 @@
 package com.THproject.tharidia_things.block.washer.sink;
 
+import com.THproject.tharidia_things.TharidiaThings;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RenderShape;
@@ -40,6 +41,7 @@ public class SinkDummyBlock extends Block {
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(FACING);
     }
+
     @Override
     public RenderShape getRenderShape(BlockState state) {
         return RenderShape.INVISIBLE;
@@ -51,14 +53,14 @@ public class SinkDummyBlock extends Block {
         // Forward to neighbor master if possible, or just ignore
         // Since we don't store offsets, we need to search for master
         // Search 2x1x2 area around this block to find the master SinkBlock
-        BlockPos masterPos = findMaster(level, pos);
+        BlockPos masterPos = findMaster(state, level, pos);
         if (masterPos != null) {
-              BlockState masterState = level.getBlockState(masterPos);
-             if (masterState.getBlock() instanceof SinkBlock sinkBlock) {
-                 BlockHitResult newHit = new BlockHitResult(
-                    hitResult.getLocation(), hitResult.getDirection(), masterPos, hitResult.isInside());
-                 return sinkBlock.useItemOn(stack, masterState, level, masterPos, player, hand, newHit);
-             }
+            BlockState masterState = level.getBlockState(masterPos);
+            if (masterState.getBlock() instanceof SinkBlock sinkBlock) {
+                BlockHitResult newHit = new BlockHitResult(
+                        hitResult.getLocation(), hitResult.getDirection(), masterPos, hitResult.isInside());
+                return sinkBlock.useItemOn(stack, masterState, level, masterPos, player, hand, newHit);
+            }
         }
         return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
     }
@@ -67,7 +69,7 @@ public class SinkDummyBlock extends Block {
     public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
         if (!state.is(newState.getBlock())) {
             if (!level.isClientSide) {
-                BlockPos masterPos = findMaster(level, pos);
+                BlockPos masterPos = findMaster(state, level, pos);
                 if (masterPos != null) {
                     level.destroyBlock(masterPos, true);
                 }
@@ -76,26 +78,13 @@ public class SinkDummyBlock extends Block {
         super.onRemove(state, level, pos, newState, isMoving);
     }
 
-    private BlockPos findMaster(Level level, BlockPos dummyPos) {
-        // Search -1 to +1 in X/Y/Z?
-        // Multiblock is 2 wide (Right), 2 high (Up).
-        // If this is dummy, Master is either Left, Down, or Left-Down.
-        // We need to check all variations relative to Facing if we had offset props.
-        // Without offset props, search surrounding.
-        
-        for (int x = -1; x <= 1; x++) {
-            for (int y = -1; y <= 1; y++) {
-                for (int z = -1; z <= 1; z++) {
-                    if (x==0 && y==0 && z==0) continue;
-                    BlockPos p = dummyPos.offset(x, y, z);
-                    if (level.getBlockState(p).getBlock() instanceof SinkBlock) {
-                         // Verify this master actually owns this dummy
-                         // (e.g. check facing and calculate expected dummy pos)
-                         // For now, simple adjacency check is likely sufficient for small multiblock
-                         return p;
-                    }
-                }
-            }
+    private BlockPos findMaster(BlockState state, Level level, BlockPos dummyPos) {
+        Direction facing = state.getValue(FACING);
+        Direction left = facing.getCounterClockWise();
+
+        BlockPos partPos = dummyPos.relative(left, 1);
+        if (level.getBlockState(partPos).is(TharidiaThings.SINK_BLOCK.get())) {
+            level.destroyBlock(partPos, true);
         }
         return null;
     }

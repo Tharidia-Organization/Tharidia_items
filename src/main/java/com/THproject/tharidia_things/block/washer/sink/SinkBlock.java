@@ -152,16 +152,9 @@ public class SinkBlock extends BaseEntityBlock {
             Direction facing = state.getValue(FACING);
             Direction right = facing.getClockWise();
 
-            for (int w = 0; w < 2; w++) {
-                for (int h = 0; h < 1; h++) {
-                    if (w == 0 && h == 0)
-                        continue;
-
-                    BlockPos partPos = pos.relative(right, w).above(h);
-                    if (level.getBlockState(partPos).is(TharidiaThings.SINK_DUMMY_BLOCK.get())) {
-                        level.destroyBlock(partPos, false);
-                    }
-                }
+            BlockPos partPos = pos.relative(right, 1);
+            if (level.getBlockState(partPos).is(TharidiaThings.SINK_DUMMY_BLOCK.get())) {
+                level.destroyBlock(partPos, false);
             }
         }
         super.onRemove(state, level, pos, newState, isMoving);
