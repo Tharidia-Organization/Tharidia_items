@@ -57,6 +57,7 @@ import com.THproject.tharidia_things.item.BattleGauntlet;
 import com.THproject.tharidia_things.item.CopperElsaItem;
 import com.THproject.tharidia_things.item.DiceItem;
 import com.THproject.tharidia_things.item.PietroBlockItem;
+import com.THproject.tharidia_things.item.SmithingFurnaceBlockItem;
 import com.THproject.tharidia_things.item.AnimalFeedItem;
 import com.THproject.tharidia_things.item.AnimalBrushItem;
 import com.THproject.tharidia_things.item.FreshStrawItem;
@@ -211,7 +212,8 @@ public class TharidiaThings {
     // Smithing Furnace Block (5x2x3 multiblock, GeckoLib animated)
     public static final DeferredBlock<SmithingFurnaceBlock> SMITHING_FURNACE = BLOCKS.register("smithing_furnace",
             () -> new SmithingFurnaceBlock());
-    public static final DeferredItem<BlockItem> SMITHING_FURNACE_ITEM = ITEMS.registerSimpleBlockItem("smithing_furnace", SMITHING_FURNACE);
+    public static final DeferredItem<SmithingFurnaceBlockItem> SMITHING_FURNACE_ITEM = ITEMS.register("smithing_furnace",
+            () -> new SmithingFurnaceBlockItem(SMITHING_FURNACE.get(), new Item.Properties()));
     // Smithing Furnace Dummy Block (multiblock slave)
     public static final DeferredBlock<SmithingFurnaceDummyBlock> SMITHING_FURNACE_DUMMY = BLOCKS.register("smithing_furnace_dummy",
             () -> new SmithingFurnaceDummyBlock());
@@ -1012,11 +1014,13 @@ public class TharidiaThings {
         // Register weight data loader
         event.getServer().getResourceManager();
 
-        // Initialize database system
-        initializeDatabaseSystem(event.getServer());
-
-        // Initialize server transfer system
-        initializeServerTransferSystem(event.getServer());
+        // Initialize database and transfer system only on dedicated servers (not singleplayer)
+        if (event.getServer().isDedicatedServer()) {
+            initializeDatabaseSystem(event.getServer());
+            initializeServerTransferSystem(event.getServer());
+        } else {
+            LOGGER.info("Singleplayer detected - skipping database and server transfer initialization");
+        }
     }
 
     /**
