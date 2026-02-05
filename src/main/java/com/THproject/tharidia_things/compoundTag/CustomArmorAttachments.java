@@ -8,6 +8,7 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.attachment.AttachmentType;
 import net.neoforged.neoforge.common.util.INBTSerializable;
@@ -22,16 +23,32 @@ public class CustomArmorAttachments extends SimpleContainer implements INBTSeria
 
     @Override
     public CompoundTag serializeNBT(HolderLookup.Provider provider) {
+        ListTag listtag = new ListTag();
+        for (int i = 0; i < this.getContainerSize(); ++i) {
+            ItemStack itemstack = this.getItem(i);
+            if (!itemstack.isEmpty()) {
+                CompoundTag compoundtag = new CompoundTag();
+                compoundtag.putByte("Slot", (byte) i);
+                listtag.add(itemstack.save(provider, compoundtag));
+            }
+        }
         CompoundTag nbt = new CompoundTag();
-        ListTag tag = this.createTag(provider);
-        nbt.put("Items", tag);
+        nbt.put("Items", listtag);
         return nbt;
     }
 
     @Override
     public void deserializeNBT(HolderLookup.Provider provider, CompoundTag nbt) {
         if (nbt.contains("Items")) {
-            this.fromTag(nbt.getList("Items", 10), provider);
+            ListTag listtag = nbt.getList("Items", 10);
+            this.clearContent();
+            for (int i = 0; i < listtag.size(); ++i) {
+                CompoundTag compoundtag = listtag.getCompound(i);
+                int j = compoundtag.getByte("Slot") & 255;
+                if (j >= 0 && j < this.getContainerSize()) {
+                    this.setItem(j, ItemStack.parse(provider, compoundtag).orElse(ItemStack.EMPTY));
+                }
+            }
         }
     }
 

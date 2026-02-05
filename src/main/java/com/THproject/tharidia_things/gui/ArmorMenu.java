@@ -1,16 +1,17 @@
 package com.THproject.tharidia_things.gui;
 
 import com.THproject.tharidia_things.TharidiaThings;
+import com.THproject.tharidia_things.compoundTag.CustomArmorAttachments;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.Container;
-import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
@@ -21,7 +22,8 @@ public class ArmorMenu extends AbstractContainerMenu {
 
     // Client-side constructor
     public ArmorMenu(int containerId, Inventory playerInventory) {
-        this(containerId, playerInventory, new SimpleContainer(CONTAINER_SIZE));
+        this(containerId, playerInventory,
+                playerInventory.player.getData(CustomArmorAttachments.CUSTOM_ARMOR_DATA.get()));
     }
 
     // Server-side constructor
@@ -45,10 +47,17 @@ public class ArmorMenu extends AbstractContainerMenu {
                 EquipmentSlot.LEGS,
                 EquipmentSlot.FEET
         };
+        ResourceLocation[] armorIcons = new ResourceLocation[] {
+                InventoryMenu.EMPTY_ARMOR_SLOT_HELMET,
+                InventoryMenu.EMPTY_ARMOR_SLOT_CHESTPLATE,
+                InventoryMenu.EMPTY_ARMOR_SLOT_LEGGINGS,
+                InventoryMenu.EMPTY_ARMOR_SLOT_BOOTS
+        };
+
         for (int row = 0; row < 4; ++row) {
             final EquipmentSlot slotType = equipmentSlots[row];
             final int slotIndex = row;
-            this.addSlot(new Slot(playerInventory, 39 - row, armor_startX, armor_startY + row * 18) {
+            Slot slot = new Slot(playerInventory, 39 - row, armor_startX, armor_startY + row * 18) {
                 @Override
                 public int getMaxStackSize() {
                     return 1;
@@ -59,14 +68,16 @@ public class ArmorMenu extends AbstractContainerMenu {
                     return stack.canEquip(slotType, playerInventory.player)
                             && !armorContainer.getItem(slotIndex).isEmpty();
                 }
-            });
+            };
+            slot.setBackground(InventoryMenu.BLOCK_ATLAS, armorIcons[row]);
+            this.addSlot(slot);
         }
 
         // Column 1: Custom Slots (from custom Container)
         // Indices 0 to 3
         for (int row = 0; row < 4; ++row) {
-            final int slotIndex = 39 - row;
-            this.addSlot(new Slot(container, row, armor_startX + armor_column_spacing,
+            final int slotRow = row;
+            Slot slot = new Slot(container, row, armor_startX + armor_column_spacing,
                     armor_startY + row * 18) {
                 @Override
                 public int getMaxStackSize() {
@@ -75,15 +86,32 @@ public class ArmorMenu extends AbstractContainerMenu {
 
                 @Override
                 public boolean mayPlace(ItemStack stack) {
-                    return stack.is(TagKey.create(Registries.ITEM,
-                            ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, "under_armor")));
+                    ResourceLocation tagLocation = ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID,
+                            "under_armor/");
+
+                    if (stack.is(TagKey.create(Registries.ITEM, tagLocation.withSuffix("helmet")))
+                            && slotRow == 0) {
+                        return true;
+                    } else if (stack.is(TagKey.create(Registries.ITEM, tagLocation.withSuffix("chestplate")))
+                            && slotRow == 1) {
+                        return true;
+                    } else if (stack.is(TagKey.create(Registries.ITEM, tagLocation.withSuffix("leggings")))
+                            && slotRow == 2) {
+                        return true;
+                    } else if (stack.is(TagKey.create(Registries.ITEM, tagLocation.withSuffix("boots")))
+                            && slotRow == 3) {
+                        return true;
+                    }
+                    return false;
                 }
 
                 @Override
                 public boolean mayPickup(Player player) {
-                    return player.getInventory().getItem(slotIndex).isEmpty();
+                    return player.getInventory().getItem(39 - slotRow).isEmpty();
                 }
-            });
+            };
+            slot.setBackground(InventoryMenu.BLOCK_ATLAS, armorIcons[row]);
+            this.addSlot(slot);
         }
 
         int inventory_startX = 6;
