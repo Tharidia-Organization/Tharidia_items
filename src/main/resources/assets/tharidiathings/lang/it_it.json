@@ -8,6 +8,7 @@
 
   "key.categories.tharidiathings": "Tharidia Things",
   "key.tharidiathings.toggle_claim_boundaries": "Attiva/Disattiva Confini Rivendicazione",
+  "key.tharidiathings.open_armor_menu":"Apri Menu Armatura",
 
   "tharidiathings.configuration.title": "Configurazioni Tharidia Things",
   "tharidiathings.configuration.section.tharidiathings.common.toml": "Configurazioni Tharidia Things",
@@ -170,6 +171,8 @@
   "message.tharidiathings.trade.final_confirmed_wait_other": "Hai confermato FINALMENTE! Aspetta che anche l'altro giocatore confermi.",
   "message.tharidiathings.trade.final_confirm_cancelled": "Conferma finale annullata.",
   "message.tharidiathings.trade.completed": "SCAMBIO COMPLETATO!",
+
+  "message.tharidiathings.equip.no_under_armor": "Devi equipaggiare la sotto armatura prima",
 
   "gui.tharidiathings.trade_request.title": "Richiesta di Scambio",
   "gui.tharidiathings.trade_request.panel_title": "⚜ Richiesta di Scambio ⚜",

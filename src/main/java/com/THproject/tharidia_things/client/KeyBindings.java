@@ -11,19 +11,26 @@ import org.lwjgl.glfw.GLFW;
 
 @EventBusSubscriber(modid = "tharidiathings", bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public class KeyBindings {
-    
+
     public static final String KEY_CATEGORY = "key.categories.tharidiathings";
-    
+
     public static final KeyMapping TOGGLE_CLAIM_BOUNDARIES = new KeyMapping(
-        "key.tharidiathings.toggle_claim_boundaries",
-        KeyConflictContext.IN_GAME,
-        InputConstants.Type.KEYSYM,
-        GLFW.GLFW_KEY_B, // Default to 'B' key
-        KEY_CATEGORY
-    );
-    
+            "key.tharidiathings.toggle_claim_boundaries",
+            KeyConflictContext.IN_GAME,
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_B, // Default to 'B' key
+            KEY_CATEGORY);
+
+    public static final KeyMapping OPEN_ARMOR_MENU = new KeyMapping(
+            "key.tharidiathings.open_armor_menu",
+            KeyConflictContext.IN_GAME,
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_H, // Default to 'H' key (Hero/Armor)
+            KEY_CATEGORY);
+
     @SubscribeEvent
     public static void registerKeyMappings(RegisterKeyMappingsEvent event) {
         event.register(TOGGLE_CLAIM_BOUNDARIES);
+        event.register(OPEN_ARMOR_MENU);
     }
 }

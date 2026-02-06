@@ -19,7 +19,7 @@ public class ClientMouseHandler {
         if (event.getButton() == GLFW.GLFW_MOUSE_BUTTON_2 && event.getAction() == GLFW.GLFW_RELEASE) {
             // Client side reset logic for Revive
             net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
-            if (mc.player != null) {
+            if (mc.player != null && mc.getConnection() != null) {
                 ReviveAttachments playerAttachments = mc.player
                         .getData(com.THproject.tharidia_things.compoundTag.ReviveAttachments.REVIVE_DATA.get());
 
@@ -33,10 +33,10 @@ public class ClientMouseHandler {
                     }
                     playerAttachments.setRevivingPlayer(null);
                 }
-            }
 
-            // Invio del pacchetto al server
-            PacketDistributor.sendToServer(new RightClickReleasePayload("Tasto rilasciato!"));
+                // Invio del pacchetto al server
+                PacketDistributor.sendToServer(new RightClickReleasePayload("Tasto rilasciato!"));
+            }
         }
     }
 }

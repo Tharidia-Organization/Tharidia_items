@@ -66,6 +66,7 @@ import com.THproject.tharidia_things.client.ClientPacketHandler;
 import com.THproject.tharidia_things.entity.ModEntities;
 import com.THproject.tharidia_things.compoundTag.BattleGauntleAttachments;
 import com.THproject.tharidia_things.compoundTag.ReviveAttachments;
+import com.THproject.tharidia_things.compoundTag.CustomArmorAttachments;
 import com.THproject.tharidia_things.character.CharacterAttachments;
 import com.THproject.tharidia_things.config.ItemCatalogueConfig;
 import com.THproject.tharidia_things.config.ReviveConfig;
@@ -301,6 +302,11 @@ public class TharidiaThings {
             .register("battle_invite_menu", () -> net.neoforged.neoforge.common.extensions.IMenuTypeExtension
                     .create(BattleInviteMenu::new));
 
+    // Creates a MenuType for the Armor GUI
+    public static final DeferredHolder<net.minecraft.world.inventory.MenuType<?>, net.minecraft.world.inventory.MenuType<ArmorMenu>> ARMOR_MENU = MENU_TYPES
+            .register("armor_menu", () -> net.neoforged.neoforge.common.extensions.IMenuTypeExtension
+                    .create((windowId, inv, data) -> new ArmorMenu(windowId, inv)));
+
     // Smithing items
     public static final DeferredItem<Item> HOT_IRON = ITEMS.register("hot_iron",
             () -> new HotIronItem(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)));
@@ -503,6 +509,7 @@ public class TharidiaThings {
         BattleGauntleAttachments.register(modEventBus);
 
         ReviveAttachments.register(modEventBus);
+        CustomArmorAttachments.register(modEventBus);
 
         modEventBus.addListener(BattlePackets::register);
 
@@ -844,6 +851,10 @@ public class TharidiaThings {
                 ToggleParticlePacket.TYPE,
                 ToggleParticlePacket.STREAM_CODEC,
                 ToggleParticlePacket::handle);
+        registrar.playToServer(
+                OpenArmorMenuPacket.TYPE,
+                OpenArmorMenuPacket.STREAM_CODEC,
+                OpenArmorMenuPacket::handle);
         registrar.playToServer(
                 DungeonQueuePacket.TYPE,
                 DungeonQueuePacket.STREAM_CODEC,
