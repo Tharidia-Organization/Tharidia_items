@@ -339,6 +339,30 @@
 				"custom_model_data": 7
 			},
 			"model": "tharidiathings:item/pinza_component_elsa"
+		},
+		{
+			"predicate": {
+				"custom_model_data": 8
+			},
+			"model": "tharidiathings:item/pinza_crucible"
+		},
+		{
+			"predicate": {
+				"custom_model_data": 9
+			},
+			"model": "tharidiathings:item/pinza_crucible_iron"
+		},
+		{
+			"predicate": {
+				"custom_model_data": 10
+			},
+			"model": "tharidiathings:item/pinza_crucible_gold"
+		},
+		{
+			"predicate": {
+				"custom_model_data": 11
+			},
+			"model": "tharidiathings:item/pinza_crucible_copper"
 		}
 	]
 }

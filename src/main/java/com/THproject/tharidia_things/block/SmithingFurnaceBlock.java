@@ -11,7 +11,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
-import com.THproject.tharidia_things.item.PinzaCrucibleItem;
+import com.THproject.tharidia_things.item.PinzaItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -190,9 +190,9 @@ public class SmithingFurnaceBlock extends BaseEntityBlock {
                 return ItemInteractionResult.FAIL;
             }
 
-            // Raw ore insertion (furnace must be active, no smelting in progress, no molten metal)
+            // Raw ore insertion (furnace must be active, tiny crucible present, no smelting in progress, no molten metal)
             if (stack.is(Items.RAW_IRON) || stack.is(Items.RAW_GOLD) || stack.is(Items.RAW_COPPER)) {
-                if (furnace.isActive() && !furnace.isSmeltingInProgress() && !furnace.hasMoltenMetal()) {
+                if (furnace.isActive() && furnace.hasTinyCrucible() && !furnace.isSmeltingInProgress() && !furnace.hasMoltenMetal()) {
                     if (!level.isClientSide) {
                         String type = stack.is(Items.RAW_IRON) ? "iron"
                                     : stack.is(Items.RAW_GOLD) ? "gold" : "copper";
@@ -207,50 +207,164 @@ public class SmithingFurnaceBlock extends BaseEntityBlock {
                 return ItemInteractionResult.FAIL;
             }
 
-            // Pinza crucible: pick up or pour molten metal
-            if (stack.getItem() instanceof PinzaCrucibleItem) {
-                String heldFluid = PinzaCrucibleItem.getFluidType(stack);
-
-                if (heldFluid.isEmpty()) {
-                    // PINZA VUOTA: pick up from tiny crucible (existing behavior)
-                    if (furnace.hasMoltenMetal()) {
+            // Ingot placement on embers (requires no tiny crucible)
+            if (stack.is(Items.IRON_INGOT) || stack.is(Items.GOLD_INGOT) || stack.is(Items.COPPER_INGOT)) {
+                if (!furnace.hasTinyCrucible() && furnace.getIngotCount() < 4) {
+                    String type = stack.is(Items.IRON_INGOT) ? "iron"
+                                : stack.is(Items.GOLD_INGOT) ? "gold" : "copper";
+                    if (furnace.placeIngot(type)) {
                         if (!level.isClientSide) {
-                            String metalType = furnace.removeMoltenMetal();
-                            PinzaCrucibleItem.setFluidType(stack, metalType);
-                            level.playSound(null, pos, SoundEvents.BUCKET_FILL_LAVA, SoundSource.BLOCKS, 0.5f, 1.0f);
-                        }
-                        return ItemInteractionResult.sidedSuccess(level.isClientSide);
-                    }
-                    return ItemInteractionResult.FAIL;
-                } else {
-                    // PINZA PIENA: pour into big crucible or cast_ingot
-                    if (furnace.hasCrucible()) {
-                        // Big crucible installed → pour into big crucible
-                        if (!level.isClientSide) {
-                            if (furnace.pourIntoBigCrucible(heldFluid)) {
-                                PinzaCrucibleItem.clearFluid(stack);
-                                level.playSound(null, pos, SoundEvents.BUCKET_EMPTY_LAVA, SoundSource.BLOCKS, 0.5f, 1.0f);
-                            } else {
-                                return ItemInteractionResult.FAIL;
+                            if (!player.getAbilities().instabuild) {
+                                stack.shrink(1);
                             }
-                        }
-                        return ItemInteractionResult.sidedSuccess(level.isClientSide);
-                    } else {
-                        // No big crucible → pour directly into cast_ingot
-                        if (!level.isClientSide) {
-                            if (furnace.pourIntoCast(heldFluid)) {
-                                PinzaCrucibleItem.clearFluid(stack);
-                                level.playSound(null, pos, SoundEvents.BUCKET_EMPTY_LAVA, SoundSource.BLOCKS, 0.5f, 1.0f);
-                            } else {
-                                return ItemInteractionResult.FAIL;
-                            }
+                            level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.5f, 0.8f);
                         }
                         return ItemInteractionResult.sidedSuccess(level.isClientSide);
                     }
                 }
+                return ItemInteractionResult.FAIL;
+            }
+
+            // Pinza interactions: pickup crucible, pickup cast ingot, pour, return crucible
+            if (stack.getItem() instanceof PinzaItem) {
+                PinzaItem.HoldingType holdingType = PinzaItem.getHoldingType(stack);
+
+                if (holdingType == PinzaItem.HoldingType.NONE) {
+                    // Priority 0: pick up fully heated ingot from embers
+                    if (furnace.areIngotsFullyHeated()) {
+                        if (!level.isClientSide) {
+                            String metalType = furnace.getIngotMetalType();
+                            PinzaItem.HoldingType hotType = switch (metalType) {
+                                case "iron" -> PinzaItem.HoldingType.HOT_IRON;
+                                case "gold" -> PinzaItem.HoldingType.HOT_GOLD;
+                                case "copper" -> PinzaItem.HoldingType.HOT_COPPER;
+                                default -> PinzaItem.HoldingType.HOT_IRON;
+                            };
+                            PinzaItem.setHoldingWithMaterial(stack, hotType, "hot_" + metalType, metalType);
+                            PinzaItem.damagePinza(stack, player);
+                            furnace.removeOneHotIngot();
+                            level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.5f, 1.0f);
+                        }
+                        return ItemInteractionResult.sidedSuccess(level.isClientSide);
+                    }
+                    // Priority 1: pick up crucible with molten metal (including expired)
+                    if (furnace.hasMoltenMetal() && furnace.hasTinyCrucible()) {
+                        if (!level.isClientSide) {
+                            boolean wasExpired = furnace.isTinyCrucibleExpired();
+                            String metalType = furnace.removeTinyCrucible();
+                            PinzaItem.HoldingType crucibleType = switch (metalType) {
+                                case "iron" -> PinzaItem.HoldingType.CRUCIBLE_IRON;
+                                case "gold" -> PinzaItem.HoldingType.CRUCIBLE_GOLD;
+                                case "copper" -> PinzaItem.HoldingType.CRUCIBLE_COPPER;
+                                default -> PinzaItem.HoldingType.CRUCIBLE_IRON;
+                            };
+                            PinzaItem.setHoldingWithMaterial(stack, crucibleType, "pinza_crucible", metalType);
+                            if (wasExpired) {
+                                PinzaItem.setExpired(stack, true);
+                            }
+                            PinzaItem.damagePinza(stack, player);
+                            level.playSound(null, pos, SoundEvents.BUCKET_FILL_LAVA, SoundSource.BLOCKS, 0.5f, 1.0f);
+                        }
+                        return ItemInteractionResult.sidedSuccess(level.isClientSide);
+                    }
+                    // Priority 2: pick up solidified ingot from cast (only from right/cast side, not expired)
+                    if (furnace.isCastSolidified() && !furnace.isCastExpired() && isClickOnCastSide(hitResult, pos, state.getValue(FACING))) {
+                        if (!level.isClientSide) {
+                            String metalType = furnace.getCastMetalType();
+                            PinzaItem.HoldingType hotType = switch (metalType) {
+                                case "iron" -> PinzaItem.HoldingType.HOT_IRON;
+                                case "gold" -> PinzaItem.HoldingType.HOT_GOLD;
+                                case "copper" -> PinzaItem.HoldingType.HOT_COPPER;
+                                default -> PinzaItem.HoldingType.HOT_IRON;
+                            };
+                            PinzaItem.setHoldingWithMaterial(stack, hotType, "hot_" + metalType, metalType);
+                            PinzaItem.damagePinza(stack, player);
+                            furnace.removeCastMetal();
+                            level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.5f, 1.0f);
+                        }
+                        return ItemInteractionResult.sidedSuccess(level.isClientSide);
+                    }
+                    // Priority 3: pick up empty crucible (no smelting in progress)
+                    if (furnace.hasTinyCrucible() && !furnace.isSmeltingInProgress()) {
+                        if (!level.isClientSide) {
+                            furnace.removeTinyCrucible();
+                            PinzaItem.setHoldingWithMaterial(stack, PinzaItem.HoldingType.CRUCIBLE_EMPTY, "pinza_crucible", "");
+                            PinzaItem.damagePinza(stack, player);
+                            level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.5f, 1.0f);
+                        }
+                        return ItemInteractionResult.sidedSuccess(level.isClientSide);
+                    }
+                    return ItemInteractionResult.FAIL;
+                }
+
+                // Pinza holding empty crucible: return it to furnace (blocked by ingots on embers)
+                if (holdingType == PinzaItem.HoldingType.CRUCIBLE_EMPTY) {
+                    if (!furnace.hasTinyCrucible() && furnace.getIngotCount() == 0) {
+                        if (!level.isClientSide) {
+                            furnace.returnTinyCrucible();
+                            PinzaItem.clearHolding(stack);
+                            PinzaItem.damagePinza(stack, player);
+                            level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.5f, 1.0f);
+                        }
+                        return ItemInteractionResult.sidedSuccess(level.isClientSide);
+                    }
+                    return ItemInteractionResult.FAIL;
+                }
+
+                // Pinza holding crucible with fluid: return to furnace, or pour into big crucible
+                if (holdingType == PinzaItem.HoldingType.CRUCIBLE_IRON
+                        || holdingType == PinzaItem.HoldingType.CRUCIBLE_GOLD
+                        || holdingType == PinzaItem.HoldingType.CRUCIBLE_COPPER) {
+                    String heldFluid = PinzaItem.getMaterialType(stack);
+                    // Priority: return crucible with metal to furnace if no tiny crucible (blocked by ingots)
+                    if (!furnace.hasTinyCrucible() && furnace.getIngotCount() == 0) {
+                        if (!level.isClientSide) {
+                            boolean expired = PinzaItem.isExpired(stack);
+                            furnace.returnTinyCrucibleWithMetal(heldFluid, expired);
+                            PinzaItem.clearHolding(stack);
+                            PinzaItem.damagePinza(stack, player);
+                            level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.5f, 1.0f);
+                        }
+                        return ItemInteractionResult.sidedSuccess(level.isClientSide);
+                    }
+                    // Pour into big crucible (requires big crucible installed)
+                    if (furnace.hasCrucible()) {
+                        if (!level.isClientSide) {
+                            if (furnace.pourIntoBigCrucible(heldFluid)) {
+                                PinzaItem.setHoldingWithMaterial(stack, PinzaItem.HoldingType.CRUCIBLE_EMPTY, "pinza_crucible", "");
+                                level.playSound(null, pos, SoundEvents.BUCKET_EMPTY_LAVA, SoundSource.BLOCKS, 0.5f, 1.0f);
+                            } else {
+                                return ItemInteractionResult.FAIL;
+                            }
+                        }
+                        return ItemInteractionResult.sidedSuccess(level.isClientSide);
+                    }
+                    return ItemInteractionResult.FAIL;
+                }
             }
         }
         return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+    }
+
+    /**
+     * Checks if the click was on the right/cast side of the furnace (localX >= 3).
+     * Transforms world-space hit position to local multiblock coordinates based on facing.
+     */
+    private boolean isClickOnCastSide(BlockHitResult hitResult, BlockPos masterPos, Direction facing) {
+        double dx = hitResult.getLocation().x - (masterPos.getX() + 0.5);
+        double dz = hitResult.getLocation().z - (masterPos.getZ() + 0.5);
+
+        // Transform to local X offset (positive = right/cast side)
+        double localOffset = switch (facing) {
+            case NORTH -> -dx;
+            case SOUTH -> dx;
+            case EAST -> -dz;
+            case WEST -> dz;
+            default -> 0;
+        };
+
+        // localOffset > 0.5 means we're past the master block, into offsetX >= 3 territory
+        return localOffset > 0.5;
     }
 
     @Override

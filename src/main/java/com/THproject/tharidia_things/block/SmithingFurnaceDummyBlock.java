@@ -21,7 +21,12 @@ import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.phys.BlockHitResult;
+import com.THproject.tharidia_things.TharidiaThings;
 import com.THproject.tharidia_things.block.entity.SmithingFurnaceBlockEntity;
+import net.minecraft.world.item.Items;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -121,18 +126,37 @@ public class SmithingFurnaceDummyBlock extends Block {
                 int offsetZ = state.getValue(OFFSET_Z);
 
                 if (!level.isClientSide) {
-                    // Check for door position: center (X=2), bottom (Y=0), front (Z=1)
-                    if (offsetX == 2 && offsetY == 0 && offsetZ == 1) {
-                        // Door block - toggle door animation
-                        furnace.toggleDoor();
-                    } else if (offsetX <= 1) {
-                        // Left side - toggle hoover (mantice) animation
-                        furnace.toggleHoover();
-                    } else if (offsetX >= 3) {
-                        // Right side - toggle cogiuolo animation
-                        furnace.toggleCogiuolo();
+                    // Expired metal cleanup (priority over animation toggles)
+                    if (offsetX == 2 && furnace.isBigCrucibleExpired()) {
+                        if (furnace.cleanExpiredBigCrucible()) {
+                            level.addFreshEntity(new ItemEntity(level,
+                                    pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5,
+                                    new ItemStack(TharidiaThings.METAL_FRAGMENT.get())));
+                            level.playSound(null, pos, SoundEvents.STONE_BREAK, SoundSource.BLOCKS, 0.7f, 0.8f);
+                        }
+                    } else if (offsetX >= 3 && furnace.isCastExpired()) {
+                        String castType = furnace.getCastMetalType();
+                        if (furnace.cleanExpiredCast()) {
+                            ItemStack ingotStack = switch (castType) {
+                                case "iron" -> new ItemStack(Items.IRON_INGOT);
+                                case "gold" -> new ItemStack(Items.GOLD_INGOT);
+                                case "copper" -> new ItemStack(Items.COPPER_INGOT);
+                                default -> new ItemStack(TharidiaThings.METAL_FRAGMENT.get());
+                            };
+                            level.addFreshEntity(new ItemEntity(level,
+                                    pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, ingotStack));
+                            level.playSound(null, pos, SoundEvents.STONE_BREAK, SoundSource.BLOCKS, 0.7f, 0.8f);
+                        }
+                    } else {
+                        // Normal animation toggles
+                        if (offsetX == 2 && offsetY == 0 && offsetZ == 1) {
+                            if (furnace.hasDoor()) furnace.toggleDoor();
+                        } else if (offsetX <= 1) {
+                            furnace.toggleHoover();
+                        } else if (offsetX >= 3) {
+                            furnace.toggleCogiuolo();
+                        }
                     }
-                    // Center blocks: no empty hand action - coal and flint&steel handled via useItemOn
                 }
                 return InteractionResult.sidedSuccess(level.isClientSide);
             }

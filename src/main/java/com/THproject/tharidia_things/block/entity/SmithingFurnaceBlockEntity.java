@@ -67,12 +67,13 @@ public class SmithingFurnaceBlockEntity extends BlockEntity implements GeoBlockE
     private boolean hasCrucible = false;  // Large crucible (stage_2) - enables cogiuolo animation
     private boolean hasHoover = false;    // Hoover/mantice (stage_3) - enables mantice animation
     private boolean hasChimney = false;   // Chimney (stage_4)
+    private boolean hasDoor = false;      // Door (stage_5)
 
     // Animation for hoover/mantice (the bellows mechanism)
     private static final RawAnimation HOOVER_ANIM = RawAnimation.begin().thenLoop("mantice");
 
     // Animation for cogiuolo
-    private static final RawAnimation COGIUOLO_ANIM = RawAnimation.begin().thenLoop("cogiuolo");
+    private static final RawAnimation COGIUOLO_ANIM = RawAnimation.begin().thenPlay("cogiuolo");
 
     // Animation for door
     private static final RawAnimation DOOR_OPEN_ANIM = RawAnimation.begin().thenPlayAndHold("door_open");
@@ -95,6 +96,10 @@ public class SmithingFurnaceBlockEntity extends BlockEntity implements GeoBlockE
     private int hooverParticleTicks = 0;
     private static final int HOOVER_PUFF_INTERVAL = 40; // 2 seconds
 
+    // ==================== Tiny Crucible State ====================
+    // Whether the tiny crucible is present in the furnace (removed when picked up with pinza)
+    private boolean hasTinyCrucible = true;
+
     // ==================== Smelting System ====================
     // Raw ore smelting in the tiny crucible
     private String smeltingRawType = "";   // "iron", "gold", "copper" or "" if empty
@@ -108,12 +113,36 @@ public class SmithingFurnaceBlockEntity extends BlockEntity implements GeoBlockE
     // Direct pour into the cast mold (no big crucible installed)
     private boolean hasCastMetal = false;
     private String castMetalType = "";
+    private int castSolidifyTicks = 0;
+    private boolean castSolidified = false;
+    private static final int CAST_SOLIDIFY_TIME = 60; // 3 seconds = 60 ticks
 
     // ==================== Big Crucible System ====================
     // Large crucible pour (when big crucible is installed), max 4 units
     private int bigCrucibleCount = 0;
-    private static final int MAX_BIG_CRUCIBLE = 4;
+    private static final int MAX_BIG_CRUCIBLE = 8;
     private String bigCrucibleMetalType = "";
+
+    // ==================== Expiration System ====================
+    // Molten metal expires after 1 minute of inactivity, turning into useless gray mass
+    private static final int EXPIRE_TIME = 1200; // 1 minute = 1200 ticks
+    private static final int BIG_CRUCIBLE_EXPIRE_TIME = 24000; // 20 minutes = 24000 ticks
+    // Tiny crucible: timer counts when fire is off and molten metal exists
+    private int tinyCrucibleExpireTicks = 0;
+    private boolean tinyCrucibleExpired = false;
+    // Big crucible: timer counts from when metal is poured
+    private int bigCrucibleExpireTicks = 0;
+    private boolean bigCrucibleExpired = false;
+    // Cast mold: timer counts from when solidification completes
+    private int castExpireTicks = 0;
+    private boolean castExpired = false;
+
+    // ==================== Ingots on Embers System ====================
+    private static final int INGOT_HEAT_TIME = 1200; // 1 minute to fully heat
+    private static final int MAX_INGOTS = 4;
+    private int ingotCount = 0;
+    private String ingotMetalType = "";
+    private int ingotHeatTicks = 0;
 
     public SmithingFurnaceBlockEntity(BlockPos pos, BlockState state) {
         super(TharidiaThings.SMITHING_FURNACE_BLOCK_ENTITY.get(), pos, state);
@@ -262,10 +291,26 @@ public class SmithingFurnaceBlockEntity extends BlockEntity implements GeoBlockE
     }
 
     /**
-     * Toggles the cogiuolo animation
+     * Triggers the cogiuolo animation (plays once).
+     * Pours 1 unit from the big crucible into the cast mold.
+     * Blocked if big crucible is empty/expired or cast mold is occupied/expired.
      */
     public void toggleCogiuolo() {
-        setCogiuoloActive(!this.cogiuoloActive);
+        if (!this.hasCrucible || this.bigCrucibleCount <= 0 || this.bigCrucibleExpired) {
+            return;
+        }
+        if (this.hasCastMetal || this.castExpired) {
+            return;
+        }
+        // Pour 1 unit into cast
+        this.bigCrucibleCount--;
+        String metalType = this.bigCrucibleMetalType;
+        if (this.bigCrucibleCount <= 0) {
+            this.bigCrucibleMetalType = "";
+            this.bigCrucibleExpireTicks = 0;
+        }
+        pourIntoCast(metalType);
+        triggerAnim("cogiuolo", "pour");
     }
 
     // ==================== Door System ====================
@@ -292,7 +337,7 @@ public class SmithingFurnaceBlockEntity extends BlockEntity implements GeoBlockE
      * Toggles the door animation (open/close)
      */
     public void toggleDoor() {
-        setDoorOpen(!this.doorOpen);
+        if (hasDoor) setDoorOpen(!this.doorOpen);
     }
 
     // ==================== Component Installation ====================
@@ -301,6 +346,7 @@ public class SmithingFurnaceBlockEntity extends BlockEntity implements GeoBlockE
     public boolean hasCrucible() { return hasCrucible; }
     public boolean hasHoover() { return hasHoover; }
     public boolean hasChimney() { return hasChimney; }
+    public boolean hasDoor() { return hasDoor; }
 
     /**
      * Installs a component on the furnace
@@ -334,6 +380,13 @@ public class SmithingFurnaceBlockEntity extends BlockEntity implements GeoBlockE
         return true;
     }
 
+    public boolean installDoor() {
+        if (hasDoor) return false;
+        hasDoor = true;
+        syncToClient();
+        return true;
+    }
+
     private void syncToClient() {
         setChanged();
         if (level != null && !level.isClientSide) {
@@ -341,15 +394,119 @@ public class SmithingFurnaceBlockEntity extends BlockEntity implements GeoBlockE
         }
     }
 
+    // ==================== Tiny Crucible System ====================
+
+    /**
+     * Whether the tiny crucible is present in the furnace.
+     */
+    public boolean hasTinyCrucible() {
+        return hasTinyCrucible;
+    }
+
+    /**
+     * Removes the tiny crucible from the furnace (player picks it up with pinza).
+     * Also removes the molten metal from the crucible.
+     * @return the type of molten metal that was in the crucible, or "" if none
+     */
+    public String removeTinyCrucible() {
+        hasTinyCrucible = false;
+        String metal = removeMoltenMetal();
+        tinyCrucibleExpireTicks = 0;
+        tinyCrucibleExpired = false;
+        syncToClient();
+        return metal;
+    }
+
+    /**
+     * Returns the tiny crucible to the furnace (player places it back with empty pinza_crucible).
+     */
+    public boolean returnTinyCrucible() {
+        if (ingotCount > 0) return false;
+        hasTinyCrucible = true;
+        syncToClient();
+        return true;
+    }
+
+    /**
+     * Returns the tiny crucible to the furnace with molten metal inside.
+     * @param metalType the type of molten metal
+     * @param expired whether the metal is already expired
+     * @return true if returned successfully, false if ingots block it
+     */
+    public boolean returnTinyCrucibleWithMetal(String metalType, boolean expired) {
+        if (ingotCount > 0) return false;
+        hasTinyCrucible = true;
+        hasMoltenMetal = true;
+        moltenMetalType = metalType;
+        tinyCrucibleExpired = expired;
+        tinyCrucibleExpireTicks = 0;
+        syncToClient();
+        return true;
+    }
+
+    // ==================== Ingots on Embers System ====================
+
+    public int getIngotCount() {
+        return ingotCount;
+    }
+
+    public String getIngotMetalType() {
+        return ingotMetalType;
+    }
+
+    public float getIngotHeatProgress() {
+        return ingotHeatTicks / (float) INGOT_HEAT_TIME;
+    }
+
+    public boolean areIngotsFullyHeated() {
+        return ingotCount > 0 && ingotHeatTicks >= INGOT_HEAT_TIME;
+    }
+
+    /**
+     * Places an ingot on the embers. Requires no tiny crucible, same metal type, and space.
+     * @return true if placed successfully
+     */
+    public boolean placeIngot(String metalType) {
+        if (hasTinyCrucible || ingotCount >= MAX_INGOTS) {
+            return false;
+        }
+        if (ingotCount > 0 && !ingotMetalType.equals(metalType)) {
+            return false;
+        }
+        ingotCount++;
+        ingotMetalType = metalType;
+        syncToClient();
+        return true;
+    }
+
+    /**
+     * Removes one fully heated ingot from the embers.
+     * @return the metal type of the removed ingot, or "" if none
+     */
+    public String removeOneHotIngot() {
+        if (ingotCount <= 0 || ingotHeatTicks < INGOT_HEAT_TIME) {
+            return "";
+        }
+        String type = ingotMetalType;
+        ingotCount--;
+        if (ingotCount <= 0) {
+            ingotMetalType = "";
+            ingotHeatTicks = 0;
+        }
+        syncToClient();
+        return type;
+    }
+
     // ==================== Smelting System ====================
 
     /**
      * Inserts raw ore into the crucible for smelting.
+     * Requires the tiny crucible to be present.
      * @param type "iron", "gold", or "copper"
      * @return true if insertion was successful
      */
     public boolean insertRawOre(String type) {
-        if (!smeltingRawType.isEmpty() || hasMoltenMetal) {
+        if (!hasTinyCrucible || !smeltingRawType.isEmpty() || hasMoltenMetal) {
             return false;
         }
         smeltingRawType = type;
@@ -399,17 +556,31 @@ public class SmithingFurnaceBlockEntity extends BlockEntity implements GeoBlockE
         return castMetalType;
     }
 
+    public boolean isCastSolidified() {
+        return castSolidified;
+    }
+
+    public int getCastSolidifyTicks() {
+        return castSolidifyTicks;
+    }
+
+    public float getCastSolidifyProgress() {
+        return Math.min(1.0f, (float) castSolidifyTicks / CAST_SOLIDIFY_TIME);
+    }
+
     /**
      * Pours molten metal into the cast ingot mold.
      * @param metalType the type of metal to pour
      * @return true if successful, false if cast is already full
      */
     public boolean pourIntoCast(String metalType) {
-        if (hasCastMetal) {
+        if (hasCastMetal || castExpired) {
             return false;
         }
         hasCastMetal = true;
         castMetalType = metalType;
+        castSolidifyTicks = 0;
+        castSolidified = false;
         syncToClient();
         return true;
     }
@@ -425,6 +596,10 @@ public class SmithingFurnaceBlockEntity extends BlockEntity implements GeoBlockE
         String type = castMetalType;
         hasCastMetal = false;
         castMetalType = "";
+        castSolidifyTicks = 0;
+        castSolidified = false;
+        castExpireTicks = 0;
+        castExpired = false;
         syncToClient();
         return type;
     }
@@ -449,6 +624,7 @@ public class SmithingFurnaceBlockEntity extends BlockEntity implements GeoBlockE
      * @return true if successful, false if full or type mismatch
      */
     public boolean pourIntoBigCrucible(String metalType) {
+        if (bigCrucibleExpired) return false;
         if (bigCrucibleCount >= MAX_BIG_CRUCIBLE) {
             return false;
         }
@@ -457,6 +633,7 @@ public class SmithingFurnaceBlockEntity extends BlockEntity implements GeoBlockE
         }
         bigCrucibleMetalType = metalType;
         bigCrucibleCount++;
+        bigCrucibleExpireTicks = 0; // Reset timer on each pour
         syncToClient();
         return true;
     }
@@ -472,8 +649,46 @@ public class SmithingFurnaceBlockEntity extends BlockEntity implements GeoBlockE
         String type = bigCrucibleMetalType;
         bigCrucibleCount = 0;
         bigCrucibleMetalType = "";
+        bigCrucibleExpireTicks = 0;
+        bigCrucibleExpired = false;
         syncToClient();
         return type;
+    }
+
+    // ==================== Expiration Getters & Cleanup ====================
+
+    public boolean isTinyCrucibleExpired() { return tinyCrucibleExpired; }
+    public boolean isBigCrucibleExpired() { return bigCrucibleExpired; }
+    public boolean isCastExpired() { return castExpired; }
+
+    /**
+     * Cleans expired solidified metal from the big crucible.
+     * @return true if cleanup was performed
+     */
+    public boolean cleanExpiredBigCrucible() {
+        if (!bigCrucibleExpired || bigCrucibleCount <= 0) return false;
+        bigCrucibleCount = 0;
+        bigCrucibleMetalType = "";
+        bigCrucibleExpireTicks = 0;
+        bigCrucibleExpired = false;
+        syncToClient();
+        return true;
+    }
+
+    /**
+     * Cleans expired solidified metal from the cast mold.
+     * @return true if cleanup was performed
+     */
+    public boolean cleanExpiredCast() {
+        if (!castExpired || !hasCastMetal) return false;
+        hasCastMetal = false;
+        castMetalType = "";
+        castSolidifyTicks = 0;
+        castSolidified = false;
+        castExpireTicks = 0;
+        castExpired = false;
+        syncToClient();
+        return true;
     }
 
     // ==================== Tier System ====================
@@ -549,6 +764,9 @@ public class SmithingFurnaceBlockEntity extends BlockEntity implements GeoBlockE
         tag.putBoolean("HasCrucible", hasCrucible);
         tag.putBoolean("HasHoover", hasHoover);
         tag.putBoolean("HasChimney", hasChimney);
+        tag.putBoolean("HasDoor", hasDoor);
+        // Tiny crucible state
+        tag.putBoolean("HasTinyCrucible", hasTinyCrucible);
         // Smelting system
         tag.putString("SmeltingRawType", smeltingRawType);
         tag.putInt("SmeltingTicks", smeltingTicks);
@@ -557,9 +775,22 @@ public class SmithingFurnaceBlockEntity extends BlockEntity implements GeoBlockE
         // Cast ingot system
         tag.putBoolean("HasCastMetal", hasCastMetal);
         tag.putString("CastMetalType", castMetalType);
+        tag.putInt("CastSolidifyTicks", castSolidifyTicks);
+        tag.putBoolean("CastSolidified", castSolidified);
         // Big crucible system
         tag.putInt("BigCrucibleCount", bigCrucibleCount);
         tag.putString("BigCrucibleMetalType", bigCrucibleMetalType);
+        // Expiration system
+        tag.putInt("TinyCrucibleExpireTicks", tinyCrucibleExpireTicks);
+        tag.putBoolean("TinyCrucibleExpired", tinyCrucibleExpired);
+        tag.putInt("BigCrucibleExpireTicks", bigCrucibleExpireTicks);
+        tag.putBoolean("BigCrucibleExpired", bigCrucibleExpired);
+        tag.putInt("CastExpireTicks", castExpireTicks);
+        tag.putBoolean("CastExpired", castExpired);
+        // Ingots on embers
+        tag.putInt("IngotCount", ingotCount);
+        tag.putString("IngotMetalType", ingotMetalType);
+        tag.putInt("IngotHeatTicks", ingotHeatTicks);
     }
 
     @Override
@@ -581,6 +812,9 @@ public class SmithingFurnaceBlockEntity extends BlockEntity implements GeoBlockE
         hasCrucible = tag.getBoolean("HasCrucible");
         hasHoover = tag.getBoolean("HasHoover");
         hasChimney = tag.getBoolean("HasChimney");
+        hasDoor = tag.getBoolean("HasDoor");
+        // Tiny crucible state
+        hasTinyCrucible = !tag.contains("HasTinyCrucible") || tag.getBoolean("HasTinyCrucible");
         // Smelting system
         smeltingRawType = tag.getString("SmeltingRawType");
         smeltingTicks = tag.getInt("SmeltingTicks");
@@ -589,9 +823,22 @@ public class SmithingFurnaceBlockEntity extends BlockEntity implements GeoBlockE
         // Cast ingot system
         hasCastMetal = tag.getBoolean("HasCastMetal");
         castMetalType = tag.getString("CastMetalType");
+        castSolidifyTicks = tag.getInt("CastSolidifyTicks");
+        castSolidified = tag.getBoolean("CastSolidified");
         // Big crucible system
         bigCrucibleCount = tag.getInt("BigCrucibleCount");
         bigCrucibleMetalType = tag.getString("BigCrucibleMetalType");
+        // Expiration system
+        tinyCrucibleExpireTicks = tag.getInt("TinyCrucibleExpireTicks");
+        tinyCrucibleExpired = tag.getBoolean("TinyCrucibleExpired");
+        bigCrucibleExpireTicks = tag.getInt("BigCrucibleExpireTicks");
+        bigCrucibleExpired = tag.getBoolean("BigCrucibleExpired");
+        castExpireTicks = tag.getInt("CastExpireTicks");
+        castExpired = tag.getBoolean("CastExpired");
+        // Ingots on embers
+        ingotCount = tag.getInt("IngotCount");
+        ingotMetalType = tag.getString("IngotMetalType");
+        ingotHeatTicks = tag.getInt("IngotHeatTicks");
     }
 
     @Override
@@ -614,6 +861,45 @@ public class SmithingFurnaceBlockEntity extends BlockEntity implements GeoBlockE
      * Consumes 1 coal per minute when active.
      */
     public static void serverTick(Level level, BlockPos pos, BlockState state, SmithingFurnaceBlockEntity blockEntity) {
+        // Cast solidification progresses always (metal cools naturally), even when furnace is off
+        if (blockEntity.hasCastMetal && !blockEntity.castSolidified) {
+            blockEntity.castSolidifyTicks++;
+            if (blockEntity.castSolidifyTicks >= CAST_SOLIDIFY_TIME) {
+                blockEntity.castSolidified = true;
+                blockEntity.syncToClient();
+            }
+        }
+
+        // ==================== Expiration Timers (always tick) ====================
+        // Tiny crucible: counts when fire is off and molten metal present, resets if fire relit
+        if (blockEntity.hasMoltenMetal && !blockEntity.tinyCrucibleExpired) {
+            if (!blockEntity.active) {
+                blockEntity.tinyCrucibleExpireTicks++;
+                if (blockEntity.tinyCrucibleExpireTicks >= EXPIRE_TIME) {
+                    blockEntity.tinyCrucibleExpired = true;
+                    blockEntity.syncToClient();
+                }
+            } else if (blockEntity.tinyCrucibleExpireTicks > 0) {
+                blockEntity.tinyCrucibleExpireTicks = 0;
+            }
+        }
+        // Big crucible: always counts when metal is present
+        if (blockEntity.bigCrucibleCount > 0 && !blockEntity.bigCrucibleExpired) {
+            blockEntity.bigCrucibleExpireTicks++;
+            if (blockEntity.bigCrucibleExpireTicks >= BIG_CRUCIBLE_EXPIRE_TIME) {
+                blockEntity.bigCrucibleExpired = true;
+                blockEntity.syncToClient();
+            }
+        }
+        // Cast mold: counts after solidification completes
+        if (blockEntity.castSolidified && !blockEntity.castExpired) {
+            blockEntity.castExpireTicks++;
+            if (blockEntity.castExpireTicks >= EXPIRE_TIME) {
+                blockEntity.castExpired = true;
+                blockEntity.syncToClient();
+            }
+        }
+
         if (!blockEntity.active) {
             // Reset overpressure when furnace goes inactive
             if (blockEntity.ashFullTicks > 0) {
@@ -647,9 +933,13 @@ public class SmithingFurnaceBlockEntity extends BlockEntity implements GeoBlockE
 
         // Ash accumulation: every 2 minutes (2400 ticks) while active, add 1 ash (max 6)
         // 2x speed when hoover/mantice is active (same as coal consumption)
+        // Half speed when door is open (better ventilation)
         if (blockEntity.ashCount < MAX_ASH) {
-            blockEntity.ashAccumulationTicks += (blockEntity.hasHoover && blockEntity.hooverActive) ? 2 : 1;
-            if (blockEntity.ashAccumulationTicks >= TICKS_PER_ASH) {
+            int ashRate = (blockEntity.hasHoover && blockEntity.hooverActive) ? 2 : 1;
+            boolean doorVentilation = blockEntity.hasDoor && blockEntity.doorOpen;
+            blockEntity.ashAccumulationTicks += ashRate;
+            int ashThreshold = doorVentilation ? TICKS_PER_ASH * 2 : TICKS_PER_ASH;
+            if (blockEntity.ashAccumulationTicks >= ashThreshold) {
                 blockEntity.ashAccumulationTicks = 0;
                 blockEntity.ashCount++;
                 blockEntity.syncToClient();
@@ -696,6 +986,27 @@ public class SmithingFurnaceBlockEntity extends BlockEntity implements GeoBlockE
                 blockEntity.smeltingRawType = "";  // raw ore consumed
                 blockEntity.smeltingTicks = 0;
                 blockEntity.syncToClient();
+            }
+        }
+
+        // ==================== Ingots on Embers Heating/Cooling ====================
+        if (blockEntity.ingotCount > 0) {
+            if (blockEntity.active && blockEntity.coalCount > 0) {
+                // Heating
+                if (blockEntity.ingotHeatTicks < INGOT_HEAT_TIME) {
+                    blockEntity.ingotHeatTicks++;
+                    if (blockEntity.ingotHeatTicks % 20 == 0) {
+                        blockEntity.syncToClient();
+                    }
+                }
+            } else {
+                // Cooling
+                if (blockEntity.ingotHeatTicks > 0) {
+                    blockEntity.ingotHeatTicks--;
+                    if (blockEntity.ingotHeatTicks % 20 == 0) {
+                        blockEntity.syncToClient();
+                    }
+                }
             }
         }
     }
@@ -933,24 +1244,17 @@ public class SmithingFurnaceBlockEntity extends BlockEntity implements GeoBlockE
             return PlayState.STOP;
         }));
 
-        // Register the cogiuolo animation controller
-        // Only plays when crucible is installed AND cogiuoloActive is true
-        controllers.add(new AnimationController<>(this, "cogiuolo", 5, state -> {
-            if (this.hasCrucible && this.cogiuoloActive) {
-                state.getController().setAnimation(COGIUOLO_ANIM);
-                return PlayState.CONTINUE;
-            }
-            return PlayState.STOP;
-        }));
+        // Register the cogiuolo animation controller (one-shot, triggered)
+        controllers.add(new AnimationController<>(this, "cogiuolo", 5, state -> PlayState.STOP)
+                .triggerableAnim("pour", COGIUOLO_ANIM));
 
         // Register the door animation controller
         // Plays door_open when opening, door_close when closing
         controllers.add(new AnimationController<>(this, "door", 5, state -> {
+            if (!this.hasDoor) return PlayState.STOP;
             if (this.doorOpen) {
-                // Play door open animation and hold at end
                 state.getController().setAnimation(DOOR_OPEN_ANIM);
             } else {
-                // Play door close animation and hold at end
                 state.getController().setAnimation(DOOR_CLOSE_ANIM);
             }
             return PlayState.CONTINUE;

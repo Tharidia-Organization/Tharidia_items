@@ -2,19 +2,15 @@
 	"format_version": "1.8.0",
 	"animations": {
 		"door_open": {
-			"animation_length": 1.5,
+			"animation_length": 1.4583,
 			"bones": {
 				"porta": {
 					"rotation": {
 						"0.0": {
 							"vector": [0, 0, 0]
 						},
-						"0.1667": {
-							"vector": [0, 6.06, 0],
-							"easing": "easeInSine"
-						},
-						"1.4167": {
-							"vector": [0, 76.5, 0],
+						"1.2083": {
+							"vector": [0, 94, 0],
 							"easing": "easeOutBack"
 						}
 					}
@@ -298,11 +294,12 @@
 				"porta": {
 					"rotation": {
 						"0.0": {
-							"vector": [0, 77.5, 0]
+							"vector": [0, 94, 0]
 						},
-						"1.4167": {
+						"1.25": {
 							"vector": [0, 0, 0],
-							"easing": "easeInBack"
+							"easing": "easeInBack",
+							"easingArgs": [0.8]
 						}
 					}
 				}

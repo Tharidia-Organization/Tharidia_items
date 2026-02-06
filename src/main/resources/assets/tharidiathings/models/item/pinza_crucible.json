@@ -630,96 +630,7 @@
 				"up": {"uv": [9.25, 1, 8.75, 0.5], "texture": "#0"},
 				"down": {"uv": [9.75, 0.5, 9.25, 1], "texture": "#0"}
 			}
-		},
-		{
-			"name": "tin",
-			"from": [8.7007, 4, 4.997],
-			"to": [15.6153, 4, 11.8423],
-			"rotation": {"angle": 0, "axis": "y", "origin": [13.236, 4, 10.233]},
-			"faces": {
-				"north": {"uv": [0.015, 0.25, 1.1375, 0.25], "texture": "#0"},
-				"east": {"uv": [0.02625, 0.25, 1.1375, 0.25], "texture": "#0"},
-				"south": {"uv": [0.2625, 0.25, 1.385, 0.25], "texture": "#0"},
-				"west": {"uv": [0, 0.25, 1.11125, 0.25], "texture": "#0"},
-				"up": {"uv": [0, 2.25, 1.1225, 3.36125], "texture": "#0"},
-				"down": {"uv": [0.2625, 0.02625, 1.385, 1.1375], "texture": "#0"}
-			}
-		},
-		{
-			"name": "gold",
-			"from": [8.7007, 4, 4.997],
-			"to": [15.6153, 4, 11.8423],
-			"rotation": {"angle": 0, "axis": "y", "origin": [13.236, 4, 10.233]},
-			"faces": {
-				"north": {"uv": [0.015, 0.25, 1.1375, 0.25], "texture": "#0"},
-				"east": {"uv": [0.02625, 0.25, 1.1375, 0.25], "texture": "#0"},
-				"south": {"uv": [0.2625, 0.25, 1.385, 0.25], "texture": "#0"},
-				"west": {"uv": [0, 0.25, 1.11125, 0.25], "texture": "#0"},
-				"up": {"uv": [0, 3.5, 1.1225, 4.61125], "texture": "#0"},
-				"down": {"uv": [0.2625, 0.02625, 1.385, 1.1375], "texture": "#0"}
-			}
-		},
-		{
-			"name": "iron",
-			"from": [8.7007, 4, 4.997],
-			"to": [15.6153, 4, 11.8423],
-			"rotation": {"angle": 0, "axis": "y", "origin": [13.236, 4, 10.233]},
-			"faces": {
-				"north": {"uv": [0.015, 0.25, 1.1375, 0.25], "texture": "#0"},
-				"east": {"uv": [0.02625, 0.25, 1.1375, 0.25], "texture": "#0"},
-				"south": {"uv": [0.2625, 0.25, 1.385, 0.25], "texture": "#0"},
-				"west": {"uv": [0, 0.25, 1.11125, 0.25], "texture": "#0"},
-				"up": {"uv": [0, 4.75, 1.1225, 5.86125], "texture": "#0"},
-				"down": {"uv": [0.2625, 0.02625, 1.385, 1.1375], "texture": "#0"}
-			}
-		},
-		{
-			"name": "steel",
-			"from": [8.7007, 4, 4.997],
-			"to": [15.6153, 4, 11.8423],
-			"rotation": {"angle": 0, "axis": "y", "origin": [13.236, 4, 10.233]},
-			"faces": {
-				"north": {"uv": [0.015, 0.25, 1.1375, 0.25], "texture": "#0"},
-				"east": {"uv": [0.02625, 0.25, 1.1375, 0.25], "texture": "#0"},
-				"south": {"uv": [0.2625, 0.25, 1.385, 0.25], "texture": "#0"},
-				"west": {"uv": [0, 0.25, 1.11125, 0.25], "texture": "#0"},
-				"up": {"uv": [0, 6, 1.1225, 7.11125], "texture": "#0"},
-				"down": {"uv": [0.2625, 0.02625, 1.385, 1.1375], "texture": "#0"}
-			}
-		},
-		{
-			"name": "copper",
-			"from": [8.7007, 4, 4.997],
-			"to": [15.6153, 4, 11.8423],
-			"rotation": {"angle": 0, "axis": "y", "origin": [13.236, 4, 10.233]},
-			"faces": {
-				"north": {"uv": [0.015, 0.25, 1.1375, 0.25], "texture": "#0"},
-				"east": {"uv": [0.02625, 0.25, 1.1375, 0.25], "texture": "#0"},
-				"south": {"uv": [0.2625, 0.25, 1.385, 0.25], "texture": "#0"},
-				"west": {"uv": [0, 0.25, 1.11125, 0.25], "texture": "#0"},
-				"up": {"uv": [0, 7.25, 1.1225, 8.36125], "texture": "#0"},
-				"down": {"uv": [0.2625, 0.02625, 1.385, 1.1375], "texture": "#0"}
-			}
-		},
-		{
-			"name": "dark_steel",
-			"from": [8.7007, 4, 4.997],
-			"to": [15.6153, 4, 11.8423],
-			"rotation": {"angle": 0, "axis": "y", "origin": [13.236, 4, 10.233]},
-			"faces": {
-				"north": {"uv": [0.015, 0.25, 1.1375, 0.25], "texture": "#0"},
-				"east": {"uv": [0.02625, 0.25, 1.1375, 0.25], "texture": "#0"},
-				"south": {"uv": [0.2625, 0.25, 1.385, 0.25], "texture": "#0"},
-				"west": {"uv": [0, 0.25, 1.11125, 0.25], "texture": "#0"},
-				"up": {"uv": [0, 8.5, 1.1225, 9.61125], "texture": "#0"},
-				"down": {"uv": [0.2625, 0.02625, 1.385, 1.1375], "texture": "#0"}
-			}
 		}
-	],
-	"overrides": [
-		{"predicate": {"custom_model_data": 1}, "model": "tharidiathings:item/pinza_crucible_iron"},
-		{"predicate": {"custom_model_data": 2}, "model": "tharidiathings:item/pinza_crucible_gold"},
-		{"predicate": {"custom_model_data": 3}, "model": "tharidiathings:item/pinza_crucible_copper"}
 	],
 	"display": {
 		"thirdperson_righthand": {
@@ -775,49 +686,6 @@
 			"origin": [8, 8, 8],
 			"color": 0,
 			"children": [29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47]
-		},
-		{
-			"name": "fluid",
-			"origin": [8, 8, 8],
-			"color": 0,
-			"children": [
-				{
-					"name": "tin",
-					"origin": [13.236, 4, 10.233],
-					"color": 0,
-					"children": [48]
-				},
-				{
-					"name": "gold",
-					"origin": [13.236, 4, 10.233],
-					"color": 0,
-					"children": [49]
-				},
-				{
-					"name": "iron",
-					"origin": [13.236, 4, 10.233],
-					"color": 0,
-					"children": [50]
-				},
-				{
-					"name": "steel",
-					"origin": [13.236, 4, 10.233],
-					"color": 0,
-					"children": [51]
-				},
-				{
-					"name": "copper",
-					"origin": [13.236, 4, 10.233],
-					"color": 0,
-					"children": [52]
-				},
-				{
-					"name": "dark_steel",
-					"origin": [13.236, 4, 10.233],
-					"color": 0,
-					"children": [53]
-				}
-			]
 		}
 	]
 }

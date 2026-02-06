@@ -39,6 +39,7 @@ public class SmithingFurnaceItemRenderer extends GeoItemRenderer<SmithingFurnace
         setBoneVisible(model, "stage_2", false);
         setBoneVisible(model, "stage_3", false);
         setBoneVisible(model, "stage_4", false);
+        setBoneVisible(model, "stage_5", false);
         // Hide coal bones
         setBoneVisible(model, "coal_1", false);
         setBoneVisible(model, "coal_2", false);
@@ -75,6 +76,11 @@ public class SmithingFurnaceItemRenderer extends GeoItemRenderer<SmithingFurnace
         setBoneVisible(model, "molten_steel_big", false);
         setBoneVisible(model, "molten_copper_big", false);
         setBoneVisible(model, "molten_dark_steel_big", false);
+        // Hide ingot bones
+        setBoneVisible(model, "ing_1", false);
+        setBoneVisible(model, "ing_2", false);
+        setBoneVisible(model, "ing_3", false);
+        setBoneVisible(model, "ing_4", false);
     }
 
     private void setBoneVisible(BakedGeoModel model, String boneName, boolean visible) {

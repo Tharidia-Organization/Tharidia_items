@@ -62,6 +62,7 @@ import com.THproject.tharidia_things.item.BellowsItem;
 import com.THproject.tharidia_things.item.CrucibleItem;
 import com.THproject.tharidia_things.item.HooverItem;
 import com.THproject.tharidia_things.item.ChimneyItem;
+import com.THproject.tharidia_things.item.DoorItem;
 import com.THproject.tharidia_things.item.PinzaCrucibleItem;
 import com.THproject.tharidia_things.item.AnimalFeedItem;
 import com.THproject.tharidia_things.item.AnimalBrushItem;
@@ -234,6 +235,10 @@ public class TharidiaThings {
     public static final DeferredItem<Item> ASH = ITEMS.register("ash",
             () -> new Item(new Item.Properties().stacksTo(64)));
 
+    // Metal Fragment (dropped when cleaning expired molten metal)
+    public static final DeferredItem<Item> METAL_FRAGMENT = ITEMS.register("metal_fragment",
+            () -> new Item(new Item.Properties().stacksTo(64)));
+
     // Smithing Furnace Upgrade Items
     public static final DeferredItem<BellowsItem> BELLOWS = ITEMS.register("bellows",
             () -> new BellowsItem(new Item.Properties().stacksTo(1)));
@@ -243,6 +248,8 @@ public class TharidiaThings {
             () -> new HooverItem(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<ChimneyItem> CHIMNEY = ITEMS.register("chimney",
             () -> new ChimneyItem(new Item.Properties().stacksTo(1)));
+    public static final DeferredItem<DoorItem> DOOR = ITEMS.register("door",
+            () -> new DoorItem(new Item.Properties().stacksTo(1)));
 
     // Pinza Crucible (Crucible Tongs) - picks up molten metal from furnace
     public static final DeferredItem<PinzaCrucibleItem> PINZA_CRUCIBLE = ITEMS.register("pinza_crucible",
@@ -463,7 +470,9 @@ public class TharidiaThings {
                         output.accept(CRUCIBLE.get());
                         output.accept(HOOVER.get());
                         output.accept(CHIMNEY.get());
+                        output.accept(DOOR.get());
                         output.accept(ASH.get());
+                        output.accept(METAL_FRAGMENT.get());
                         output.accept(PINZA_CRUCIBLE.get());
 
                         // Add all dynamically registered baby mob items

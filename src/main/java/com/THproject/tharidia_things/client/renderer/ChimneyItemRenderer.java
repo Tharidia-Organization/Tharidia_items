@@ -41,6 +41,7 @@ public class ChimneyItemRenderer extends GeoItemRenderer<ChimneyItem> {
         setBoneHidden(model, "stage_2", !visibleBone.equals("stage_2"));
         setBoneHidden(model, "stage_3", !visibleBone.equals("stage_3"));
         setBoneHidden(model, "stage_4", !visibleBone.equals("stage_4"));
+        setBoneHidden(model, "stage_5", !visibleBone.equals("stage_5"));
         // Hide coal bones
         setBoneHidden(model, "coal_1", true);
         setBoneHidden(model, "coal_2", true);
@@ -77,6 +78,11 @@ public class ChimneyItemRenderer extends GeoItemRenderer<ChimneyItem> {
         setBoneHidden(model, "molten_steel_big", true);
         setBoneHidden(model, "molten_copper_big", true);
         setBoneHidden(model, "molten_dark_steel_big", true);
+        // Hide ingot bones
+        setBoneHidden(model, "ing_1", true);
+        setBoneHidden(model, "ing_2", true);
+        setBoneHidden(model, "ing_3", true);
+        setBoneHidden(model, "ing_4", true);
     }
 
     private void setBoneHidden(BakedGeoModel model, String boneName, boolean hidden) {

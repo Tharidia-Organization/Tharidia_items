@@ -1,7 +1,7 @@
 package com.THproject.tharidia_things.client.renderer;
 
-import com.THproject.tharidia_things.client.model.HooverItemModel;
-import com.THproject.tharidia_things.item.HooverItem;
+import com.THproject.tharidia_things.client.model.DoorItemModel;
+import com.THproject.tharidia_things.item.DoorItem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
@@ -12,26 +12,26 @@ import software.bernie.geckolib.cache.object.GeoBone;
 import software.bernie.geckolib.renderer.GeoItemRenderer;
 
 /**
- * GeckoLib renderer for HooverItem.
- * Shows only the stage_3 bone in the GUI.
+ * GeckoLib renderer for DoorItem.
+ * Shows only the stage_5 bone in the GUI.
  */
-public class HooverItemRenderer extends GeoItemRenderer<HooverItem> {
+public class DoorItemRenderer extends GeoItemRenderer<DoorItem> {
 
-    private static final float SCALE = 0.375f;  // 1.5x original
+    private static final float SCALE = 0.6f;
 
-    public HooverItemRenderer() {
-        super(new HooverItemModel());
+    public DoorItemRenderer() {
+        super(new DoorItemModel());
     }
 
     @Override
-    public void preRender(PoseStack poseStack, HooverItem animatable, BakedGeoModel model,
+    public void preRender(PoseStack poseStack, DoorItem animatable, BakedGeoModel model,
                           @Nullable MultiBufferSource bufferSource, @Nullable VertexConsumer buffer,
                           boolean isReRender, float partialTick, int packedLight, int packedOverlay,
                           int colour) {
         super.preRender(poseStack, animatable, model, bufferSource, buffer, isReRender, partialTick, packedLight, packedOverlay, colour);
 
-        // Hide all bones except stage_3 (hoover)
-        hideAllExcept(model, "stage_3");
+        // Hide all bones except stage_5 (door)
+        hideAllExcept(model, "stage_5");
     }
 
     private void hideAllExcept(BakedGeoModel model, String visibleBone) {
@@ -94,11 +94,9 @@ public class HooverItemRenderer extends GeoItemRenderer<HooverItem> {
 
     @Override
     public void scaleModelForRender(float widthScale, float heightScale, PoseStack poseStack,
-                                    HooverItem animatable, BakedGeoModel model, boolean isReRender,
+                                    DoorItem animatable, BakedGeoModel model, boolean isReRender,
                                     float partialTick, int packedLight, int packedOverlay) {
-        // Position model
-        poseStack.translate(0.8, 0.3, 0.0);
-        // Isometric rotation (~40 degrees on X and Y axes)
+        poseStack.translate(0.2, -1.0, 0.0);
         poseStack.mulPose(Axis.XP.rotationDegrees(40f));
         poseStack.mulPose(Axis.YP.rotationDegrees(40f));
         super.scaleModelForRender(SCALE, SCALE, poseStack, animatable, model, isReRender,
