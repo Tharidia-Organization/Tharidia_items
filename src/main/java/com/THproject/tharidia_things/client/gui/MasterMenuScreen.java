@@ -1,5 +1,6 @@
 package com.THproject.tharidia_things.client.gui;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
@@ -628,6 +629,8 @@ public class MasterMenuScreen extends Screen {
         private final EquipInputAction action;
         private final String subjectName;
         private EditBox inputEdit;
+        private List<String> suggestions = new ArrayList<>();
+        private List<String> allPlayerNames = new ArrayList<>();
 
         public EquipInputScreen(Screen parent, EquipInputAction action, String subjectName) {
             super(Component.literal(action == EquipInputAction.SAVE ? "Save Equip"
@@ -636,6 +639,39 @@ public class MasterMenuScreen extends Screen {
             this.parent = parent;
             this.action = action;
             this.subjectName = subjectName;
+
+            if (this.action == EquipInputAction.SHARE && Minecraft.getInstance().getConnection() != null) {
+                this.allPlayerNames = Minecraft.getInstance().getConnection().getOnlinePlayers()
+                        .stream()
+                        .map(info -> info.getProfile().getName())
+                        .collect(Collectors.toList());
+            }
+        }
+
+        private void updateSuggestions(String input) {
+            this.suggestions.clear();
+            if (this.action != EquipInputAction.SHARE)
+                return;
+
+            if (input.isEmpty()) {
+                this.suggestions = this.allPlayerNames.stream().limit(7).collect(Collectors.toList());
+                return;
+            }
+
+            String lower = input.toLowerCase();
+            this.suggestions = this.allPlayerNames.stream()
+                    .filter(name -> name.toLowerCase().contains(lower))
+                    .sorted((a, b) -> {
+                        boolean aStart = a.toLowerCase().startsWith(lower);
+                        boolean bStart = b.toLowerCase().startsWith(lower);
+                        if (aStart && !bStart)
+                            return -1;
+                        if (!aStart && bStart)
+                            return 1;
+                        return a.compareToIgnoreCase(b);
+                    })
+                    .limit(7)
+                    .collect(Collectors.toList());
         }
 
         @Override
@@ -651,6 +687,10 @@ public class MasterMenuScreen extends Screen {
             if (action == EquipInputAction.ACCEPT && subjectName != null) {
                 this.inputEdit.setValue(subjectName);
             }
+            if (action == EquipInputAction.SHARE) {
+                this.inputEdit.setResponder(this::updateSuggestions);
+                updateSuggestions(this.inputEdit.getValue());
+            }
             this.addRenderableWidget(this.inputEdit);
 
             String buttonText = action == EquipInputAction.SAVE ? "Save"
@@ -660,13 +700,13 @@ public class MasterMenuScreen extends Screen {
                 String input = this.inputEdit.getValue();
                 if (!input.isEmpty()) {
                     if (action == EquipInputAction.SAVE) {
-                        runCommand("/thmaster equip save " + input);
+                        runCommand("/thmaster equip save \"" + input + "\"");
                     } else if (action == EquipInputAction.RENAME) {
-                        runCommand("/thmaster equip rename " + subjectName + " " + input);
+                        runCommand("/thmaster equip rename \"" + subjectName + "\" \"" + input + "\"");
                     } else if (action == EquipInputAction.SHARE) {
-                        runCommand("/thmaster equip share " + subjectName + " " + input);
+                        runCommand("/thmaster equip share " + input + " \"" + subjectName + "\"");
                     } else if (action == EquipInputAction.ACCEPT) {
-                        runCommand("/thmaster equip accept " + subjectName + " " + input);
+                        runCommand("/thmaster equip accept \"" + subjectName + "\" \"" + input + "\"");
                     }
                     this.minecraft.setScreen(this.parent);
                     if (this.parent instanceof MasterMenuScreen) {
@@ -690,6 +730,54 @@ public class MasterMenuScreen extends Screen {
             guiGraphics.drawString(this.font, label, (this.width - 200) / 2, (this.height - 150) / 2 + 40, 0xA0A0A0);
 
             super.render(guiGraphics, mouseX, mouseY, partialTick);
+
+            if (!this.suggestions.isEmpty() && this.inputEdit.isFocused()) {
+                int leftPos = (this.width - 200) / 2;
+                int topPos = (this.height - 150) / 2;
+                int startY = topPos + 72;
+                int itemHeight = 12;
+                int bgHeight = this.suggestions.size() * itemHeight + 2;
+
+                guiGraphics.pose().translate(0, 0, 200);
+                guiGraphics.fill(leftPos, startY, leftPos + 200, startY + bgHeight, 0xFF101010);
+                guiGraphics.renderOutline(leftPos, startY, 200, bgHeight, 0xFFAAAAAA);
+
+                for (int i = 0; i < this.suggestions.size(); i++) {
+                    String s = this.suggestions.get(i);
+                    int itemY = startY + 1 + i * itemHeight;
+                    boolean hovered = mouseX >= leftPos && mouseX <= leftPos + 200 && mouseY >= itemY
+                            && mouseY < itemY + itemHeight;
+
+                    if (hovered) {
+                        guiGraphics.fill(leftPos + 1, itemY, leftPos + 199, itemY + itemHeight, 0xFF404040);
+                    }
+                    guiGraphics.drawString(this.font, s, leftPos + 4, itemY + 2, 0xDDDDDD);
+                }
+                guiGraphics.pose().translate(0, 0, -200);
+            }
+        }
+
+        @Override
+        public boolean mouseClicked(double mouseX, double mouseY, int button) {
+            if (!this.suggestions.isEmpty() && this.inputEdit.isFocused()) {
+                int leftPos = (this.width - 200) / 2;
+                int topPos = (this.height - 150) / 2;
+                int listTop = topPos + 72;
+                int itemHeight = 12;
+                int totalHeight = this.suggestions.size() * itemHeight + 2;
+
+                if (mouseX >= leftPos && mouseX <= leftPos + 200 && mouseY >= listTop
+                        && mouseY <= listTop + totalHeight) {
+                    int index = (int) ((mouseY - listTop - 1) / itemHeight);
+                    if (index >= 0 && index < this.suggestions.size()) {
+                        this.inputEdit.setValue(this.suggestions.get(index));
+                        this.suggestions.clear();
+                        this.setFocused(this.inputEdit);
+                        return true;
+                    }
+                }
+            }
+            return super.mouseClicked(mouseX, mouseY, button);
         }
     }
 
