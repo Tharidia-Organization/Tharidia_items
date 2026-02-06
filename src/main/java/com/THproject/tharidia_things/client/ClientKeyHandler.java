@@ -5,6 +5,8 @@ import com.THproject.tharidia_things.client.video.VideoToolsManager;
 import com.THproject.tharidia_things.TharidiaThings;
 import com.THproject.tharidia_things.stamina.StaminaAttachments;
 import com.THproject.tharidia_things.stamina.StaminaData;
+import com.THproject.tharidia_things.network.OpenArmorMenuPacket;
+import net.neoforged.neoforge.network.PacketDistributor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.Mth;
 import net.neoforged.api.distmarker.Dist;
@@ -35,9 +37,9 @@ public class ClientKeyHandler {
             RealmBoundaryRenderer.toggleBoundaries();
         }
 
-        // Check if open master menu key was pressed
-        if (KeyBindings.OPEN_MASTER_MENU.consumeClick()) {
-            mc.setScreen(new com.THproject.tharidia_things.client.gui.MasterMenuScreen());
+        // Check if armor menu key was pressed
+        if (KeyBindings.OPEN_ARMOR_MENU.consumeClick()) {
+            PacketDistributor.sendToServer(new OpenArmorMenuPacket());
         }
 
         // Update video players

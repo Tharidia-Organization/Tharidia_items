@@ -7,6 +7,8 @@
     "key.categories.tharidiathings": "Tharidia Things",
     "key.tharidiathings.toggle_claim_boundaries": "Toggle Claim Boundaries",
     "key.tharidiathings.open_master_menu": "Open Master Menu",
+    "key.tharidiathings.open_armor_menu":"Open Armor Menu",
+
     "tharidiathings.configuration.title": "Tharidia Things Configs",
     "tharidiathings.configuration.section.tharidiathings.common.toml": "Tharidia Things Configs",
     "tharidiathings.configuration.section.tharidiathings.common.toml.title": "Tharidia Things Configs",
@@ -152,6 +154,8 @@
     "message.tharidiathings.trade.final_confirmed_wait_other": "Final confirmation set! Wait for the other player.",
     "message.tharidiathings.trade.final_confirm_cancelled": "Final confirmation cancelled.",
     "message.tharidiathings.trade.completed": "TRADE COMPLETED!",
+
+  "message.tharidiathings.equip.no_under_armor": "You need to equip under armor first",
     "gui.tharidiathings.trade_request.title": "Trade Request",
     "gui.tharidiathings.trade_request.panel_title": "⚜ Trade Request ⚜",
     "gui.tharidiathings.trade_request.button.accept": "✓ Accept",

@@ -66,6 +66,7 @@ import com.THproject.tharidia_things.client.ClientPacketHandler;
 import com.THproject.tharidia_things.entity.ModEntities;
 import com.THproject.tharidia_things.compoundTag.BattleGauntleAttachments;
 import com.THproject.tharidia_things.compoundTag.ReviveAttachments;
+import com.THproject.tharidia_things.compoundTag.CustomArmorAttachments;
 import com.THproject.tharidia_things.character.CharacterAttachments;
 import com.THproject.tharidia_things.config.ItemCatalogueConfig;
 import com.THproject.tharidia_things.config.ReviveConfig;
@@ -90,6 +91,9 @@ import com.THproject.tharidia_things.network.revive.ReviveGiveUpPacket;
 import com.THproject.tharidia_things.network.SelectComponentPacket;
 import com.THproject.tharidia_things.network.SubmitNamePacket;
 import com.THproject.tharidia_things.network.SyncGateRestrictionsPacket;
+import com.THproject.tharidia_things.network.EquipActionPacket;
+import com.THproject.tharidia_things.network.EquipListSyncPacket;
+import com.THproject.tharidia_things.command.EquipCommand;
 import com.THproject.tharidia_things.realm.RealmManager;
 import com.THproject.tharidia_things.registry.ModAttributes;
 import com.THproject.tharidia_things.registry.ModStats;
@@ -298,6 +302,11 @@ public class TharidiaThings {
             .register("battle_invite_menu", () -> net.neoforged.neoforge.common.extensions.IMenuTypeExtension
                     .create(BattleInviteMenu::new));
 
+    // Creates a MenuType for the Armor GUI
+    public static final DeferredHolder<net.minecraft.world.inventory.MenuType<?>, net.minecraft.world.inventory.MenuType<ArmorMenu>> ARMOR_MENU = MENU_TYPES
+            .register("armor_menu", () -> net.neoforged.neoforge.common.extensions.IMenuTypeExtension
+                    .create((windowId, inv, data) -> new ArmorMenu(windowId, inv)));
+
     // Smithing items
     public static final DeferredItem<Item> HOT_IRON = ITEMS.register("hot_iron",
             () -> new HotIronItem(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)));
@@ -500,6 +509,7 @@ public class TharidiaThings {
         BattleGauntleAttachments.register(modEventBus);
 
         ReviveAttachments.register(modEventBus);
+        CustomArmorAttachments.register(modEventBus);
 
         modEventBus.addListener(BattlePackets::register);
 
@@ -842,6 +852,10 @@ public class TharidiaThings {
                 ToggleParticlePacket.STREAM_CODEC,
                 ToggleParticlePacket::handle);
         registrar.playToServer(
+                OpenArmorMenuPacket.TYPE,
+                OpenArmorMenuPacket.STREAM_CODEC,
+                OpenArmorMenuPacket::handle);
+        registrar.playToServer(
                 DungeonQueuePacket.TYPE,
                 DungeonQueuePacket.STREAM_CODEC,
                 DungeonQueuePacket::handle);
@@ -874,6 +888,10 @@ public class TharidiaThings {
                 MeleeSwingPacket.TYPE,
                 MeleeSwingPacket.STREAM_CODEC,
                 MeleeSwingPacket::handle);
+        registrar.playToServer(
+                EquipLoadPacket.TYPE,
+                EquipLoadPacket.STREAM_CODEC,
+                EquipLoadPacket::handle);
         // Trade packets (server-bound)
         registrar.playToServer(
                 TradeResponsePacket.TYPE,
@@ -902,6 +920,21 @@ public class TharidiaThings {
                 (packet, context) -> context
                         .enqueueWork(() -> ServerMusicFileHandler
                                 .handleMusicFileRequest(packet, (ServerPlayer) context.player())));
+
+        registrar.playBidirectional(
+                EquipSharePacket.TYPE,
+                EquipSharePacket.STREAM_CODEC,
+                EquipSharePacket::handle);
+
+        registrar.playToClient(
+                EquipActionPacket.TYPE,
+                EquipActionPacket.STREAM_CODEC,
+                EquipActionPacket::handle);
+
+        registrar.playToServer(
+                EquipListSyncPacket.TYPE,
+                EquipListSyncPacket.STREAM_CODEC,
+                EquipListSyncPacket::handle);
     }
 
     private void registerScreens(net.neoforged.neoforge.client.event.RegisterMenuScreensEvent event) {
@@ -926,6 +959,12 @@ public class TharidiaThings {
 
             PacketDistributor.sendToPlayer((ServerPlayer) event.getEntity(),
                     WeightConfigSyncPacket.fromCurrentRegistry());
+
+            // Sync equips for operators
+            if (event.getEntity().hasPermissions(4)) {
+                PacketDistributor.sendToPlayer((ServerPlayer) event.getEntity(),
+                        new EquipActionPacket(EquipActionPacket.ACTION_SYNC_REQUEST, "", ""));
+            }
         }
     }
 
@@ -1184,6 +1223,7 @@ public class TharidiaThings {
         StatsCommand.register(event.getDispatcher());
         ReviveCommands.register(event.getDispatcher());
         StableDebugCommand.register(event.getDispatcher());
+        EquipCommand.register(event.getDispatcher());
     }
 
     /**
