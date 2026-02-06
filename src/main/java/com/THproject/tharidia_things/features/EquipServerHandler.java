@@ -1,9 +1,12 @@
 package com.THproject.tharidia_things.features;
 
+import com.THproject.tharidia_things.compoundTag.CustomArmorAttachments;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mojang.serialization.JsonOps;
+
+import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
@@ -48,6 +51,33 @@ public class EquipServerHandler {
                     }
                     player.setItemSlot(slots[i], stack);
                     System.out.println("Restored Armor " + slots[i] + ": " + stack);
+                }
+            }
+
+            // Restore Under Armor
+            if (json.has("under_armor")) {
+                System.out.println("Clearing under armor");
+                Container under_armor_container = player.getData(CustomArmorAttachments.CUSTOM_ARMOR_DATA.get());
+                for (int i = 0; i < 4; i++) {
+                    under_armor_container.setItem(i, ItemStack.EMPTY);
+                }
+                player.getInventory().setChanged();
+
+                JsonArray under_armor = json.getAsJsonArray("under_armor");
+                System.out.println("Found " + under_armor.size() + "items to restore.");
+
+                for (JsonElement element : under_armor) {
+                    JsonObject itemJson = element.getAsJsonObject();
+                    int slot = itemJson.get("slot").getAsInt();
+                    if (itemJson.has("item") && slot >= 0 && slot < 4) {
+                        ItemStack.CODEC.parse(JsonOps.INSTANCE, itemJson.get("item"))
+                                .resultOrPartial(msg -> System.out.println("Item parse error:" + msg))
+                                .ifPresent(stack -> {
+                                    under_armor_container.setItem(slot, stack);
+                                    System.out.println(
+                                            "Set Under Armor" + slot + " -> " + stack + " (Count: " + stack.getCount() + ")");
+                                });
+                    }
                 }
             }
 

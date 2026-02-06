@@ -15,11 +15,13 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.mojang.serialization.JsonOps;
 
+import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforge.network.PacketDistributor;
 import com.THproject.tharidia_things.network.EquipLoadPacket;
+import com.THproject.tharidia_things.compoundTag.CustomArmorAttachments;
 import com.THproject.tharidia_things.network.EquipActionPacket;
 import com.THproject.tharidia_things.network.EquipSharePacket;
 import com.THproject.tharidia_things.network.EquipListSyncPacket;
@@ -50,6 +52,21 @@ public class Equip {
             }
         }
         json.add("armor", armor);
+
+        JsonArray under_armor = new JsonArray();
+        Container under_armor_container = player.getData(CustomArmorAttachments.CUSTOM_ARMOR_DATA.get());
+        for (int i = 0; i < 4; i++) {
+            ItemStack stack = under_armor_container.getItem(i);
+            if (!stack.isEmpty()) {
+                JsonObject itemJson = new JsonObject();
+                itemJson.addProperty("slot", i);
+                ItemStack.CODEC.encodeStart(JsonOps.INSTANCE, stack)
+                        .resultOrPartial(System.err::println)
+                        .ifPresent(element -> itemJson.add("item", element));
+                under_armor.add(itemJson);
+            }
+        }
+        json.add("under_armor", under_armor);
 
         JsonArray inventory = new JsonArray();
         for (int i = 0; i < player.getInventory().items.size(); i++) {
