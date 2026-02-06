@@ -4,6 +4,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
@@ -16,9 +17,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import com.THproject.tharidia_things.TharidiaThings;
+import com.THproject.tharidia_things.features.Equip;
 import com.google.gson.Gson;
+
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -158,40 +162,71 @@ public class MasterMenuScreen extends Screen {
         int startX = leftPos + (IMAGE_WIDTH - (buttonWidth * 3 + spacing * 2)) / 2;
         int buttonsY = topPos + 20;
 
-        this.addRenderableWidget(Button.builder(Component.literal("Walkers"), (button) -> {
+        Button walkersBtn = Button.builder(Component.literal("Walkers"), (button) -> {
             this.currentPage = Page.WALKERS;
             this.init(this.minecraft, this.width, this.height);
-        }).bounds(startX, buttonsY, buttonWidth, buttonHeight).build());
+        }).bounds(startX, buttonsY, buttonWidth, buttonHeight).build();
+        walkersBtn.active = this.currentPage != Page.WALKERS;
+        this.addRenderableWidget(walkersBtn);
 
-        this.addRenderableWidget(Button.builder(Component.literal("Skin"), (button) -> {
+        Button skinBtn = Button.builder(Component.literal("Skin"), (button) -> {
             this.currentPage = Page.SKIN;
             this.init(this.minecraft, this.width, this.height);
-        }).bounds(startX + buttonWidth + spacing, buttonsY, buttonWidth, buttonHeight).build());
+        }).bounds(startX + buttonWidth + spacing, buttonsY, buttonWidth, buttonHeight).build();
+        skinBtn.active = this.currentPage != Page.SKIN;
+        this.addRenderableWidget(skinBtn);
 
-        this.addRenderableWidget(Button.builder(Component.literal("Equip"), (button) -> {
+        Button equipBtn = Button.builder(Component.literal("Equip"), (button) -> {
             this.currentPage = Page.EQUIP;
+            Equip.syncListToServer();
             this.init(this.minecraft, this.width, this.height);
-        }).bounds(startX + (buttonWidth + spacing) * 2, buttonsY, buttonWidth, buttonHeight).build());
+        }).bounds(startX + (buttonWidth + spacing) * 2, buttonsY, buttonWidth, buttonHeight).build();
+        equipBtn.active = this.currentPage != Page.EQUIP;
+        this.addRenderableWidget(equipBtn);
 
         // 2. Control Buttons (Reset & Add) - Below Tabs
         int controlsY = buttonsY + buttonHeight + 5;
 
         // Add Button (Left)
-        if (this.currentPage != Page.EQUIP) {
-            this.addRenderableWidget(Button.builder(Component.literal("Add"), (btn) -> {
-                this.minecraft.setScreen(new AddCommandScreen(this, this.currentPage));
-            }).bounds(leftPos + 60, controlsY, 100, 20).build());
+        // For EQUIP, the Add button behaves differently (Save Equip)
+        String addTooltip = this.currentPage == Page.WALKERS ? "Add new shape"
+                : this.currentPage == Page.SKIN ? "Add new skin" : "Save current equip";
+        this.addRenderableWidget(
+                Button.builder(Component.literal(this.currentPage == Page.EQUIP ? "Save Equip" : "Add"), (btn) -> {
+                    if (this.currentPage == Page.EQUIP) {
+                        this.minecraft.setScreen(new EquipInputScreen(this, EquipInputAction.SAVE, null));
+                    } else {
+                        this.minecraft.setScreen(new AddCommandScreen(this, this.currentPage));
+                    }
+                }).bounds(leftPos + 60, controlsY, 100, 20)
+                        .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(addTooltip)))
+                        .build());
+
+        // Sharing Button (Equip Only) - Right of Save Equip
+        if (this.currentPage == Page.EQUIP) {
+            this.addRenderableWidget(Button.builder(Component.literal("Pending Shares"), (btn) -> {
+                this.minecraft.setScreen(new SharingListScreen(this));
+            }).bounds(leftPos + 190, controlsY, 100, 20)
+                    .tooltip(net.minecraft.client.gui.components.Tooltip
+                            .create(Component.literal("Open pending share page")))
+                    .build());
         }
 
         // Reset Button (Right)
-        if (this.currentPage == Page.WALKERS) {
-            this.addRenderableWidget(Button.builder(Component.literal("Reset Shape"), (btn) -> {
-                this.runCommand("/walkers switchShape @p normal");
-            }).bounds(leftPos + IMAGE_WIDTH - 160, controlsY, 100, 20).build());
-        } else if (this.currentPage == Page.SKIN) {
-            this.addRenderableWidget(Button.builder(Component.literal("Reset Skin"), (btn) -> {
-                this.runCommand("/skinshifter reset @p");
-            }).bounds(leftPos + IMAGE_WIDTH - 160, controlsY, 100, 20).build());
+        if (this.currentPage != Page.EQUIP) {
+            String resetTooltip = this.currentPage == Page.WALKERS ? "Reset current shape" : "Reset current skin";
+            this.addRenderableWidget(
+                    Button.builder(Component.literal(this.currentPage == Page.WALKERS ? "Reset Shape" : "Reset Skin"),
+                            (btn) -> {
+                                if (this.currentPage == Page.WALKERS) {
+                                    runCommand("/walkers switchShape @p normal");
+                                } else {
+                                    runCommand("/skinshifter reset @p");
+                                }
+                            }).bounds(leftPos + 190, controlsY, 100, 20)
+                            .tooltip(
+                                    net.minecraft.client.gui.components.Tooltip.create(Component.literal(resetTooltip)))
+                            .build());
         }
 
         // 3. List Area
@@ -201,6 +236,28 @@ public class MasterMenuScreen extends Screen {
             for (int i = 0; i < commands.size(); i++) {
                 this.entryRows.add(new EntryRow(commands.get(i), i));
             }
+        } else {
+            // Populate Equip list
+            List<String> equips = Equip.getList();
+            for (int i = 0; i < equips.size(); i++) {
+                String name = equips.get(i);
+                // Use CommandEntry just to hold the name
+                this.entryRows.add(new EntryRow(new CommandEntry(name, name), i));
+            }
+            // Register callback to refresh this screen when list changes
+            Equip.onListUpdate = () -> {
+                if (this.minecraft != null) {
+                    this.init(this.minecraft, this.width, this.height);
+                }
+            };
+        }
+    }
+
+    @Override
+    public void removed() {
+        super.removed();
+        if (this.currentPage == Page.EQUIP) {
+            Equip.onListUpdate = null;
         }
     }
 
@@ -228,7 +285,7 @@ public class MasterMenuScreen extends Screen {
         guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, topPos + 6, 0x404040);
 
         // 4. Render Scrollable List
-        if (this.currentPage != Page.EQUIP) {
+        if (true) {
             int listTop = topPos + 75; // Matches calculation from init (controlsY + 25 + 5 based on padding)
             int listBottom = topPos + IMAGE_HEIGHT - 10;
             int listHeight = listBottom - listTop;
@@ -268,11 +325,12 @@ public class MasterMenuScreen extends Screen {
 
     @Override
     public void renderBackground(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        // This will remove blured texture
     }
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        if (this.currentPage != Page.EQUIP && !this.entryRows.isEmpty()) {
+        if (!this.entryRows.isEmpty()) {
             this.scrollAmount -= (float) (scrollY * LIST_ITEM_HEIGHT / 2);
             return true;
         }
@@ -281,7 +339,7 @@ public class MasterMenuScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (this.currentPage != Page.EQUIP) {
+        if (true) {
             int leftPos = (this.width - IMAGE_WIDTH) / 2;
             int topPos = (this.height - IMAGE_HEIGHT) / 2;
             int listTop = topPos + 75;
@@ -302,6 +360,7 @@ public class MasterMenuScreen extends Screen {
         final int index;
         final Button deleteBtn;
         final Button editBtn;
+        final Button shareBtn;
         final Button actionBtn;
 
         EntryRow(CommandEntry entry, int index) {
@@ -309,28 +368,53 @@ public class MasterMenuScreen extends Screen {
             int cmdButtonHeight = 20;
 
             this.deleteBtn = Button.builder(Component.literal("X"), (btn) -> {
-                SAVED_COMMANDS.get(currentPage).remove(index);
-                saveCommands();
-                init(minecraft, width, height);
+                if (currentPage == Page.EQUIP) {
+                    runCommand("/thmaster equip delete " + entry.name);
+                    init(minecraft, width, height);
+                } else {
+                    SAVED_COMMANDS.get(currentPage).remove(index);
+                    saveCommands();
+                    init(minecraft, width, height);
+                }
             }).bounds(0, 0, 20, cmdButtonHeight)
                     .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal("Delete")))
                     .build();
 
             this.editBtn = Button.builder(Component.literal("E"), (btn) -> {
-                minecraft.setScreen(new AddCommandScreen(MasterMenuScreen.this, currentPage, entry));
+                if (currentPage == Page.EQUIP) {
+                    minecraft.setScreen(
+                            new EquipInputScreen(MasterMenuScreen.this, EquipInputAction.RENAME, entry.name));
+                } else {
+                    minecraft.setScreen(new AddCommandScreen(MasterMenuScreen.this, currentPage, entry));
+                }
             }).bounds(0, 0, 20, cmdButtonHeight)
-                    .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal("Edit")))
+                    .tooltip(net.minecraft.client.gui.components.Tooltip
+                            .create(Component.literal(currentPage == Page.EQUIP ? "Rename" : "Edit")))
                     .build();
 
+            this.shareBtn = Button.builder(Component.literal("S"), (btn) -> {
+                minecraft.setScreen(new EquipInputScreen(MasterMenuScreen.this, EquipInputAction.SHARE, entry.name));
+            }).bounds(0, 0, 20, cmdButtonHeight)
+                    .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal("Share")))
+                    .build();
+            this.shareBtn.visible = (currentPage == Page.EQUIP);
+
             int actionBtnWidth = IMAGE_WIDTH - 170;
+            if (currentPage == Page.EQUIP) {
+                actionBtnWidth -= 25;
+            }
+
             this.actionBtn = Button.builder(Component.literal(entry.name), (btn) -> {
                 if (currentPage == Page.WALKERS) {
                     runCommand("/walkers switchShape @p " + entry.value);
                 } else if (currentPage == Page.SKIN) {
                     runCommand("/skinshifter set @p " + entry.value);
+                } else if (currentPage == Page.EQUIP) {
+                    runCommand("/thmaster equip load " + entry.name);
                 }
             }).bounds(0, 0, actionBtnWidth, cmdButtonHeight)
-                    .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(entry.value)))
+                    .tooltip(net.minecraft.client.gui.components.Tooltip
+                            .create(Component.literal(currentPage == Page.EQUIP ? "Load " + entry.name : entry.value)))
                     .build();
         }
 
@@ -341,13 +425,23 @@ public class MasterMenuScreen extends Screen {
             this.editBtn.setY(y);
             this.editBtn.setX(leftPos + 85);
 
-            this.actionBtn.setY(y);
-            this.actionBtn.setX(leftPos + 110);
+            if (currentPage == Page.EQUIP) {
+                this.shareBtn.setY(y);
+                this.shareBtn.setX(leftPos + 110);
+                this.actionBtn.setY(y);
+                this.actionBtn.setX(leftPos + 135);
+            } else {
+                this.actionBtn.setY(y);
+                this.actionBtn.setX(leftPos + 110);
+            }
         }
 
         void render(GuiGraphics gui, int mouseX, int mouseY, float partialTick) {
             this.deleteBtn.render(gui, mouseX, mouseY, partialTick);
             this.editBtn.render(gui, mouseX, mouseY, partialTick);
+            if (this.shareBtn.visible) {
+                this.shareBtn.render(gui, mouseX, mouseY, partialTick);
+            }
             this.actionBtn.render(gui, mouseX, mouseY, partialTick);
         }
 
@@ -355,6 +449,8 @@ public class MasterMenuScreen extends Screen {
             if (this.deleteBtn.mouseClicked(mouseX, mouseY, button))
                 return true;
             if (this.editBtn.mouseClicked(mouseX, mouseY, button))
+                return true;
+            if (this.shareBtn.visible && this.shareBtn.mouseClicked(mouseX, mouseY, button))
                 return true;
             if (this.actionBtn.mouseClicked(mouseX, mouseY, button))
                 return true;
@@ -373,6 +469,7 @@ public class MasterMenuScreen extends Screen {
         private final CommandEntry entryToEdit;
         private EditBox nameEdit;
         private EditBox valueEdit;
+        private List<String> suggestions = new ArrayList<>();
 
         public AddCommandScreen(Screen parent, Page page) {
             this(parent, page, null);
@@ -402,6 +499,7 @@ public class MasterMenuScreen extends Screen {
             this.valueEdit.setMaxLength(256);
             if (this.targetPage == Page.WALKERS) {
                 this.valueEdit.setHint(Component.literal("Entity ID (e.g. minecraft:zombie)"));
+                this.valueEdit.setResponder(this::updateSuggestions);
             } else if (this.targetPage == Page.SKIN) {
                 this.valueEdit.setHint(Component.literal("Player Name"));
             }
@@ -432,6 +530,28 @@ public class MasterMenuScreen extends Screen {
             }).bounds(leftPos + 105, topPos + 80, 95, 20).build());
         }
 
+        private void updateSuggestions(String input) {
+            this.suggestions.clear();
+            if (this.targetPage != Page.WALKERS || input.isEmpty())
+                return;
+
+            String lower = input.toLowerCase();
+            this.suggestions = BuiltInRegistries.ENTITY_TYPE.keySet().stream()
+                    .map(ResourceLocation::toString)
+                    .filter(id -> id.contains(lower))
+                    .sorted((a, b) -> {
+                        boolean aStart = a.startsWith(lower);
+                        boolean bStart = b.startsWith(lower);
+                        if (aStart && !bStart)
+                            return -1;
+                        if (!aStart && bStart)
+                            return 1;
+                        return a.compareTo(b);
+                    })
+                    .limit(7)
+                    .collect(Collectors.toList());
+        }
+
         @Override
         public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
             this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
@@ -449,6 +569,275 @@ public class MasterMenuScreen extends Screen {
             guiGraphics.drawString(this.font, label, (this.width - 200) / 2, (this.height - 150) / 2 + 40, 0xA0A0A0);
 
             super.render(guiGraphics, mouseX, mouseY, partialTick);
+
+            // Render suggestions dropdown
+            if (!this.suggestions.isEmpty()) {
+                int leftPos = (this.width - 200) / 2;
+                int startY = (this.height - 150) / 2 + 72;
+                int itemHeight = 12;
+                int bgHeight = this.suggestions.size() * itemHeight + 2;
+
+                guiGraphics.pose().translate(0, 0, 200); // Bring to front
+                guiGraphics.fill(leftPos, startY, leftPos + 200, startY + bgHeight, 0xFF101010);
+                guiGraphics.renderOutline(leftPos, startY, 200, bgHeight, 0xFFAAAAAA);
+
+                for (int i = 0; i < this.suggestions.size(); i++) {
+                    String s = this.suggestions.get(i);
+                    int itemY = startY + 1 + i * itemHeight;
+                    boolean hovered = mouseX >= leftPos && mouseX <= leftPos + 200 && mouseY >= itemY
+                            && mouseY < itemY + itemHeight;
+
+                    if (hovered) {
+                        guiGraphics.fill(leftPos + 1, itemY, leftPos + 199, itemY + itemHeight, 0xFF404040);
+                    }
+                    guiGraphics.drawString(this.font, s, leftPos + 4, itemY + 2, 0xDDDDDD);
+                }
+                guiGraphics.pose().translate(0, 0, -200);
+            }
+        }
+
+        @Override
+        public boolean mouseClicked(double mouseX, double mouseY, int button) {
+            if (!this.suggestions.isEmpty()) {
+                int leftPos = (this.width - 200) / 2;
+                int startY = (this.height - 150) / 2 + 72;
+                int itemHeight = 12;
+                int totalHeight = this.suggestions.size() * itemHeight + 2;
+
+                if (mouseX >= leftPos && mouseX <= leftPos + 200 && mouseY >= startY
+                        && mouseY <= startY + totalHeight) {
+                    int index = (int) ((mouseY - startY - 1) / itemHeight);
+                    if (index >= 0 && index < this.suggestions.size()) {
+                        this.valueEdit.setValue(this.suggestions.get(index));
+                        this.suggestions.clear();
+                        this.setFocused(this.valueEdit);
+                        return true;
+                    }
+                }
+            }
+            return super.mouseClicked(mouseX, mouseY, button);
+        }
+    }
+
+    private enum EquipInputAction {
+        SAVE, RENAME, SHARE, ACCEPT
+    }
+
+    class EquipInputScreen extends Screen {
+        private final Screen parent;
+        private final EquipInputAction action;
+        private final String subjectName;
+        private EditBox inputEdit;
+
+        public EquipInputScreen(Screen parent, EquipInputAction action, String subjectName) {
+            super(Component.literal(action == EquipInputAction.SAVE ? "Save Equip"
+                    : action == EquipInputAction.RENAME ? "Rename Equip"
+                            : action == EquipInputAction.ACCEPT ? "Accept Equip" : "Share Equip"));
+            this.parent = parent;
+            this.action = action;
+            this.subjectName = subjectName;
+        }
+
+        @Override
+        protected void init() {
+            super.init();
+            int leftPos = (this.width - 200) / 2;
+            int topPos = (this.height - 150) / 2;
+
+            String labelText = action == EquipInputAction.SHARE ? "Player Name" : "Equip Name";
+            this.inputEdit = new EditBox(this.font, leftPos, topPos + 50, 200, 20, Component.literal(labelText));
+            this.inputEdit.setMaxLength(32);
+            this.inputEdit.setHint(Component.literal("Enter " + labelText.toLowerCase() + "..."));
+            if (action == EquipInputAction.ACCEPT && subjectName != null) {
+                this.inputEdit.setValue(subjectName);
+            }
+            this.addRenderableWidget(this.inputEdit);
+
+            String buttonText = action == EquipInputAction.SAVE ? "Save"
+                    : action == EquipInputAction.RENAME ? "Rename"
+                            : action == EquipInputAction.ACCEPT ? "Accept" : "Share";
+            this.addRenderableWidget(Button.builder(Component.literal(buttonText), (btn) -> {
+                String input = this.inputEdit.getValue();
+                if (!input.isEmpty()) {
+                    if (action == EquipInputAction.SAVE) {
+                        runCommand("/thmaster equip save " + input);
+                    } else if (action == EquipInputAction.RENAME) {
+                        runCommand("/thmaster equip rename " + subjectName + " " + input);
+                    } else if (action == EquipInputAction.SHARE) {
+                        runCommand("/thmaster equip share " + subjectName + " " + input);
+                    } else if (action == EquipInputAction.ACCEPT) {
+                        runCommand("/thmaster equip accept " + subjectName + " " + input);
+                    }
+                    this.minecraft.setScreen(this.parent);
+                    if (this.parent instanceof MasterMenuScreen) {
+                        ((MasterMenuScreen) this.parent).init(this.minecraft, this.width, this.height);
+                    }
+                }
+            }).bounds(leftPos, topPos + 80, 95, 20).build());
+
+            this.addRenderableWidget(Button.builder(Component.literal("Cancel"), (btn) -> {
+                this.minecraft.setScreen(this.parent);
+            }).bounds(leftPos + 105, topPos + 80, 95, 20).build());
+        }
+
+        @Override
+        public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+            this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
+            String title = this.title.getString();
+            guiGraphics.drawCenteredString(this.font, title, this.width / 2, (this.height - 150) / 2, 0xFFFFFF);
+
+            String label = action == EquipInputAction.SHARE ? "Player Name" : "Equip Name";
+            guiGraphics.drawString(this.font, label, (this.width - 200) / 2, (this.height - 150) / 2 + 40, 0xA0A0A0);
+
+            super.render(guiGraphics, mouseX, mouseY, partialTick);
+        }
+    }
+
+    class SharingListScreen extends Screen {
+        private final Screen parent;
+        private float scrollAmount = 0f;
+        private final List<ShareRow> shareRows = new ArrayList<>();
+
+        public SharingListScreen(Screen parent) {
+            super(Component.literal("Pending Shares"));
+            this.parent = parent;
+        }
+
+        @Override
+        protected void init() {
+            super.init();
+            int leftPos = (this.width - IMAGE_WIDTH) / 2;
+            int topPos = (this.height - IMAGE_HEIGHT) / 2;
+
+            this.shareRows.clear();
+            List<String> pending = Equip.getPendingList();
+            for (int i = 0; i < pending.size(); i++) {
+                this.shareRows.add(new ShareRow(pending.get(i), i));
+            }
+
+            this.addRenderableWidget(Button.builder(Component.literal("Back"), (btn) -> {
+                this.minecraft.setScreen(this.parent);
+            }).bounds(leftPos + IMAGE_WIDTH - 60, topPos + 20, 50, 20).build());
+
+            Equip.onListUpdate = () -> {
+                if (this.minecraft != null) {
+                    this.init(this.minecraft, this.width, this.height);
+                }
+            };
+        }
+
+        @Override
+        public void removed() {
+            super.removed();
+            Equip.onListUpdate = null;
+        }
+
+        @Override
+        public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+            this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
+
+            int leftPos = (this.width - IMAGE_WIDTH) / 2;
+            int topPos = (this.height - IMAGE_HEIGHT) / 2;
+
+            guiGraphics.blit(BACKGROUND_TEXTURE, leftPos, topPos, 0.0F, 0.0F, IMAGE_WIDTH, IMAGE_HEIGHT, IMAGE_WIDTH,
+                    IMAGE_HEIGHT);
+
+            super.render(guiGraphics, mouseX, mouseY, partialTick);
+
+            guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, topPos + 6, 0x404040);
+
+            int listTop = topPos + 50;
+            int listBottom = topPos + IMAGE_HEIGHT - 10;
+            int listHeight = listBottom - listTop;
+            int fullContentHeight = this.shareRows.size() * 25;
+
+            this.scrollAmount = Mth.clamp(this.scrollAmount, 0.0f, Math.max(0, fullContentHeight - listHeight));
+
+            guiGraphics.enableScissor(leftPos, listTop, leftPos + IMAGE_WIDTH, listBottom);
+
+            for (ShareRow row : this.shareRows) {
+                int rowY = listTop + (row.index * 25) - (int) this.scrollAmount;
+                if (rowY + 25 > listTop && rowY < listBottom) {
+                    row.updateY(rowY, leftPos);
+                    row.render(guiGraphics, mouseX, mouseY, partialTick);
+                }
+            }
+
+            guiGraphics.disableScissor();
+        }
+
+        @Override
+        public void renderBackground(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        }
+
+        @Override
+        public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+            if (!this.shareRows.isEmpty()) {
+                this.scrollAmount -= (float) (scrollY * 25 / 2);
+                return true;
+            }
+            return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+        }
+
+        @Override
+        public boolean mouseClicked(double mouseX, double mouseY, int button) {
+            int leftPos = (this.width - IMAGE_WIDTH) / 2;
+            int topPos = (this.height - IMAGE_HEIGHT) / 2;
+            int listTop = topPos + 50;
+            int listBottom = topPos + IMAGE_HEIGHT - 10;
+
+            if (mouseY >= listTop && mouseY <= listBottom && mouseX >= leftPos && mouseX <= leftPos + IMAGE_WIDTH) {
+                for (ShareRow row : this.shareRows) {
+                    if (row.mouseClicked(mouseX, mouseY, button)) {
+                        return true;
+                    }
+                }
+            }
+            return super.mouseClicked(mouseX, mouseY, button);
+        }
+
+        private class ShareRow {
+            final String name;
+            final int index;
+            final Button acceptBtn;
+            final Button declineBtn;
+
+            ShareRow(String name, int index) {
+                this.name = name;
+                this.index = index;
+                this.acceptBtn = Button.builder(Component.literal("✔"), (btn) -> {
+                    minecraft.setScreen(new EquipInputScreen(SharingListScreen.this, EquipInputAction.ACCEPT, name));
+                }).bounds(0, 0, 20, 20)
+                        .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal("Accept")))
+                        .build();
+
+                this.declineBtn = Button.builder(Component.literal("X"), (btn) -> {
+                    runCommand("/thmaster equip decline " + name);
+                }).bounds(0, 0, 20, 20)
+                        .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal("Decline")))
+                        .build();
+            }
+
+            void updateY(int y, int leftPos) {
+                this.acceptBtn.setY(y);
+                this.acceptBtn.setX(leftPos + 30);
+                this.declineBtn.setY(y);
+                this.declineBtn.setX(leftPos + 55);
+            }
+
+            void render(GuiGraphics gui, int mouseX, int mouseY, float partialTick) {
+                this.acceptBtn.render(gui, mouseX, mouseY, partialTick);
+                this.declineBtn.render(gui, mouseX, mouseY, partialTick);
+                gui.drawString(font, name, acceptBtn.getX() + 50, acceptBtn.getY() + 6, 0xFFFFFF);
+            }
+
+            boolean mouseClicked(double mouseX, double mouseY, int button) {
+                if (this.acceptBtn.mouseClicked(mouseX, mouseY, button))
+                    return true;
+                if (this.declineBtn.mouseClicked(mouseX, mouseY, button))
+                    return true;
+                return false;
+            }
         }
     }
 }
