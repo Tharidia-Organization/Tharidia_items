@@ -33,6 +33,9 @@ import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 import net.neoforged.neoforge.common.NeoForge;
 
+import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
+// import com.THproject.tharidia_things.command.EquipClientCommand;
+
 // This class will not load on dedicated servers. Accessing client side code from here is safe.
 @Mod(value = TharidiaThings.MODID, dist = Dist.CLIENT)
 // You can use EventBusSubscriber to automatically register all static methods
@@ -178,5 +181,10 @@ public class TharidiaThingsClient {
                 VanillaGuiLayers.HOTBAR,
                 TharidiaThings.modLoc("stamina_overlay"),
                 new StaminaHudOverlay());
+    }
+
+    @SubscribeEvent
+    public static void onRegisterClientCommands(RegisterClientCommandsEvent event) {
+        // Client commands registered here
     }
 }
