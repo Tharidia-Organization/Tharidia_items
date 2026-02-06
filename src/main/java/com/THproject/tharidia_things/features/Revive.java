@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import com.THproject.tharidia_things.TharidiaThings;
 import com.THproject.tharidia_things.compoundTag.ReviveAttachments;
+import com.THproject.tharidia_things.network.revive.ReviveSyncPayload;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Pose;
@@ -29,8 +30,12 @@ public class Revive {
         player.setSwimming(true);
 
         ReviveAttachments reviveAttachments = player.getData(ReviveAttachments.REVIVE_DATA.get());
+        reviveAttachments.resetResTime();
+        reviveAttachments.setTimeFallen(0);
         reviveAttachments.setCanRevive(can_revive);
-        reviveAttachments.setInvulnerabilityTick(player.tickCount);
+        reviveAttachments.setIsFallen(true);
+
+        ReviveSyncPayload.sync(player);
 
         // Apply attributes to prevent movement and jumping
         AttributeInstance movement = player.getAttribute(Attributes.MOVEMENT_SPEED);
@@ -51,6 +56,12 @@ public class Revive {
         player.setForcedPose(null);
         player.setSwimming(false);
 
+        ReviveAttachments reviveAttachments = player.getData(ReviveAttachments.REVIVE_DATA.get());
+        reviveAttachments.setCanRevive(false);
+        reviveAttachments.setIsFallen(false);
+
+        ReviveSyncPayload.sync(player);
+
         // Remove attributes
         AttributeInstance movement = player.getAttribute(Attributes.MOVEMENT_SPEED);
         if (movement != null) {
@@ -65,5 +76,9 @@ public class Revive {
 
     public static boolean isPlayerFallen(Player player) {
         return fallenPlayers.contains(player.getUUID());
+    }
+
+    public static List<UUID> getFallenPlayers() {
+        return fallenPlayers;
     }
 }

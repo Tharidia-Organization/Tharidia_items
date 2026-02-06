@@ -9,7 +9,7 @@
   "client": [
     "ClientSuggestionsMixin",
     "MapwrightRenderingMixin",
-    "MinecraftMixin"
+    "ArmorEquipMixin"
   ],
   "injectors": {
     "defaultRequire": 0
