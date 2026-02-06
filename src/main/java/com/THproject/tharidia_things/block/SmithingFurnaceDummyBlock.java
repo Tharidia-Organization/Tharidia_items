@@ -21,6 +21,7 @@ import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.phys.BlockHitResult;
+import com.THproject.tharidia_things.block.entity.SmithingFurnaceBlockEntity;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -36,10 +37,10 @@ public class SmithingFurnaceDummyBlock extends Block {
 
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
 
-    // Offset from master block position (0-4 for X, 0-1 for Y, 0-2 for Z)
+    // Offset from master block position (0-4 for X, 0-1 for Y, 0-1 for Z)
     public static final IntegerProperty OFFSET_X = IntegerProperty.create("offset_x", 0, 4);
     public static final IntegerProperty OFFSET_Y = IntegerProperty.create("offset_y", 0, 1);
-    public static final IntegerProperty OFFSET_Z = IntegerProperty.create("offset_z", 0, 2);
+    public static final IntegerProperty OFFSET_Z = IntegerProperty.create("offset_z", 0, 1);
 
     // Full block collision shape
     private static final VoxelShape SHAPE = Block.box(0, 0, 0, 16, 16, 16);
@@ -111,15 +112,29 @@ public class SmithingFurnaceDummyBlock extends Block {
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
-        // Forward interaction to master block
+        // Find the master block
         BlockPos masterPos = findMaster(level, pos, state);
         if (masterPos != null) {
-            BlockState masterState = level.getBlockState(masterPos);
-            if (masterState.getBlock() instanceof SmithingFurnaceBlock) {
-                BlockHitResult newHit = new BlockHitResult(
-                        hitResult.getLocation(), hitResult.getDirection(), masterPos, hitResult.isInside());
-                // Use BlockState's public method which delegates to the block
-                return masterState.useWithoutItem(level, player, newHit);
+            if (level.getBlockEntity(masterPos) instanceof SmithingFurnaceBlockEntity furnace) {
+                int offsetX = state.getValue(OFFSET_X);
+                int offsetY = state.getValue(OFFSET_Y);
+                int offsetZ = state.getValue(OFFSET_Z);
+
+                if (!level.isClientSide) {
+                    // Check for door position: center (X=2), bottom (Y=0), front (Z=1)
+                    if (offsetX == 2 && offsetY == 0 && offsetZ == 1) {
+                        // Door block - toggle door animation
+                        furnace.toggleDoor();
+                    } else if (offsetX <= 1) {
+                        // Left side - toggle hoover (mantice) animation
+                        furnace.toggleHoover();
+                    } else if (offsetX >= 3) {
+                        // Right side - toggle cogiuolo animation
+                        furnace.toggleCogiuolo();
+                    }
+                    // Center blocks: no empty hand action - coal and flint&steel handled via useItemOn
+                }
+                return InteractionResult.sidedSuccess(level.isClientSide);
             }
         }
         return InteractionResult.PASS;

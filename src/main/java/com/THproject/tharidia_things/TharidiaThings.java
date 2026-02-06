@@ -58,6 +58,11 @@ import com.THproject.tharidia_things.item.CopperElsaItem;
 import com.THproject.tharidia_things.item.DiceItem;
 import com.THproject.tharidia_things.item.PietroBlockItem;
 import com.THproject.tharidia_things.item.SmithingFurnaceBlockItem;
+import com.THproject.tharidia_things.item.BellowsItem;
+import com.THproject.tharidia_things.item.CrucibleItem;
+import com.THproject.tharidia_things.item.HooverItem;
+import com.THproject.tharidia_things.item.ChimneyItem;
+import com.THproject.tharidia_things.item.PinzaCrucibleItem;
 import com.THproject.tharidia_things.item.AnimalFeedItem;
 import com.THproject.tharidia_things.item.AnimalBrushItem;
 import com.THproject.tharidia_things.item.FreshStrawItem;
@@ -217,6 +222,24 @@ public class TharidiaThings {
     // Smithing Furnace Dummy Block (multiblock slave)
     public static final DeferredBlock<SmithingFurnaceDummyBlock> SMITHING_FURNACE_DUMMY = BLOCKS.register("smithing_furnace_dummy",
             () -> new SmithingFurnaceDummyBlock());
+
+    // Smithing Furnace Ash
+    public static final DeferredItem<Item> ASH = ITEMS.register("ash",
+            () -> new Item(new Item.Properties().stacksTo(64)));
+
+    // Smithing Furnace Upgrade Items
+    public static final DeferredItem<BellowsItem> BELLOWS = ITEMS.register("bellows",
+            () -> new BellowsItem(new Item.Properties().stacksTo(1)));
+    public static final DeferredItem<CrucibleItem> CRUCIBLE = ITEMS.register("crucible",
+            () -> new CrucibleItem(new Item.Properties().stacksTo(1)));
+    public static final DeferredItem<HooverItem> HOOVER = ITEMS.register("hoover",
+            () -> new HooverItem(new Item.Properties().stacksTo(1)));
+    public static final DeferredItem<ChimneyItem> CHIMNEY = ITEMS.register("chimney",
+            () -> new ChimneyItem(new Item.Properties().stacksTo(1)));
+
+    // Pinza Crucible (Crucible Tongs) - picks up molten metal from furnace
+    public static final DeferredItem<PinzaCrucibleItem> PINZA_CRUCIBLE = ITEMS.register("pinza_crucible",
+            () -> new PinzaCrucibleItem(new Item.Properties().stacksTo(1)));
 
     // Chunks Block
     public static final DeferredBlock<IronChunkBlock> IRON_CHUNK = BLOCKS.register("iron_chunk",
@@ -424,6 +447,12 @@ public class TharidiaThings {
 
                         // Smithing
                         output.accept(SMITHING_FURNACE_ITEM.get());
+                        output.accept(BELLOWS.get());
+                        output.accept(CRUCIBLE.get());
+                        output.accept(HOOVER.get());
+                        output.accept(CHIMNEY.get());
+                        output.accept(ASH.get());
+                        output.accept(PINZA_CRUCIBLE.get());
 
                         // Add all dynamically registered baby mob items
                         BabyMobRegistry.addToCreativeTab(output);
@@ -931,6 +960,22 @@ public class TharidiaThings {
             } catch (Exception e) {
                 LOGGER.error("Error cleaning up trade session for player {}: {}", player.getName().getString(), e.getMessage());
             }
+
+            // Safety net for singleplayer: schedule halt(false) on the next server tick.
+            // In the vanilla disconnect chain, halt(false) is called in super.onDisconnect()
+            // AFTER removePlayerFromWorld() completes. If anything in PlayerList.remove()
+            // (after this event fires) throws or blocks, halt(false) is never reached and
+            // the integrated server runs forever, freezing the client at "Saving world".
+            // By scheduling halt(false) here, we guarantee the server will stop.
+            var server = player.getServer();
+            if (server != null && !server.isDedicatedServer()) {
+                server.execute(() -> {
+                    if (server.isRunning()) {
+                        LOGGER.info("Singleplayer safety net: halting integrated server");
+                        server.halt(false);
+                    }
+                });
+            }
         }
     }
 
@@ -1120,6 +1165,12 @@ public class TharidiaThings {
         // Clear server reference
         currentServer = null;
         tickCounter = 0;
+
+        // Skip database/integration cleanup in singleplayer (nothing was initialized)
+        if (!event.getServer().isDedicatedServer()) {
+            LOGGER.info("Singleplayer - skipping database cleanup");
+            return;
+        }
 
         // Shutdown GodEye integration executor first (fast, has timeout)
         try {

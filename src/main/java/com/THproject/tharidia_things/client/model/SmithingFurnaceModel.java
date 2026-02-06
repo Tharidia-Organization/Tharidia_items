@@ -21,6 +21,11 @@ public class SmithingFurnaceModel extends GeoModel<SmithingFurnaceBlockEntity> {
             TharidiaThings.MODID, "textures/block/smithing_furnace.png"
     );
 
+    // Animated texture for when furnace is active
+    private static final ResourceLocation TEXTURE_ON = ResourceLocation.fromNamespaceAndPath(
+            TharidiaThings.MODID, "textures/block/smithing_furnace_on.png"
+    );
+
     // Path format: assets/tharidiathings/animations/smithing_furnace.animation.json
     private static final ResourceLocation ANIMATIONS = ResourceLocation.fromNamespaceAndPath(
             TharidiaThings.MODID, "animations/smithing_furnace.animation.json"
@@ -33,7 +38,7 @@ public class SmithingFurnaceModel extends GeoModel<SmithingFurnaceBlockEntity> {
 
     @Override
     public ResourceLocation getTextureResource(SmithingFurnaceBlockEntity blockEntity) {
-        return TEXTURE;
+        return blockEntity != null && blockEntity.isActive() ? TEXTURE_ON : TEXTURE;
     }
 
     @Override
