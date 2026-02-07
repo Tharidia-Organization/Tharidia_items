@@ -36,6 +36,7 @@ public class MasterMenuScreen extends Screen {
     private static final int IMAGE_HEIGHT = 300;
     private static final File CONFIG_FILE = new File("th_masterMenu/commands.json");
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    
 
     // Static storage to persist across screen open/close
     private static final Map<Page, List<CommandEntry>> SAVED_COMMANDS = new HashMap<>();
