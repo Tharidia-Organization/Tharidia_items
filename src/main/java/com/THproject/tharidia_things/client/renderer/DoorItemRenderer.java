@@ -83,6 +83,12 @@ public class DoorItemRenderer extends GeoItemRenderer<DoorItem> {
         setBoneHidden(model, "ing_2", true);
         setBoneHidden(model, "ing_3", true);
         setBoneHidden(model, "ing_4", true);
+        // Hide crystal bones
+        setBoneHidden(model, "crystal", true);
+        setBoneHidden(model, "cry_1", true);
+        setBoneHidden(model, "cry_2", true);
+        setBoneHidden(model, "cry_3", true);
+        setBoneHidden(model, "cry_4", true);
     }
 
     private void setBoneHidden(BakedGeoModel model, String boneName, boolean hidden) {
@@ -96,7 +102,7 @@ public class DoorItemRenderer extends GeoItemRenderer<DoorItem> {
     public void scaleModelForRender(float widthScale, float heightScale, PoseStack poseStack,
                                     DoorItem animatable, BakedGeoModel model, boolean isReRender,
                                     float partialTick, int packedLight, int packedOverlay) {
-        poseStack.translate(0.2, -1.0, 0.0);
+        poseStack.translate(-0.1, 0.5, 0.0);
         poseStack.mulPose(Axis.XP.rotationDegrees(40f));
         poseStack.mulPose(Axis.YP.rotationDegrees(40f));
         super.scaleModelForRender(SCALE, SCALE, poseStack, animatable, model, isReRender,

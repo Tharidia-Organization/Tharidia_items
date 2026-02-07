@@ -83,6 +83,12 @@ public class HooverItemRenderer extends GeoItemRenderer<HooverItem> {
         setBoneHidden(model, "ing_2", true);
         setBoneHidden(model, "ing_3", true);
         setBoneHidden(model, "ing_4", true);
+        // Hide crystal bones
+        setBoneHidden(model, "crystal", true);
+        setBoneHidden(model, "cry_1", true);
+        setBoneHidden(model, "cry_2", true);
+        setBoneHidden(model, "cry_3", true);
+        setBoneHidden(model, "cry_4", true);
     }
 
     private void setBoneHidden(BakedGeoModel model, String boneName, boolean hidden) {

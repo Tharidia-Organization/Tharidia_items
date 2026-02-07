@@ -59,7 +59,7 @@ public class SmithingFurnaceBlockEntity extends BlockEntity implements GeoBlockE
     private boolean cogiuoloActive = false;
 
     // Door animation state (true = open, false = closed)
-    private boolean doorOpen = false;
+    private boolean doorOpen = true;
 
     // ==================== Installed Components ====================
     // These track which upgrade components have been installed
@@ -136,6 +136,12 @@ public class SmithingFurnaceBlockEntity extends BlockEntity implements GeoBlockE
     // Cast mold: timer counts from when solidification completes
     private int castExpireTicks = 0;
     private boolean castExpired = false;
+
+    // ==================== Crystal System ====================
+    private static final int MAX_CRYSTALS = 4;
+    private static final int TICKS_PER_CRYSTAL = 3600; // 3 minutes per crystal
+    private int crystalCount = 0;
+    private int crystalBurnTicks = 0;
 
     // ==================== Ingots on Embers System ====================
     private static final int INGOT_HEAT_TIME = 1200; // 1 minute to fully heat
@@ -383,6 +389,7 @@ public class SmithingFurnaceBlockEntity extends BlockEntity implements GeoBlockE
     public boolean installDoor() {
         if (hasDoor) return false;
         hasDoor = true;
+        doorOpen = false;
         syncToClient();
         return true;
     }
@@ -440,6 +447,23 @@ public class SmithingFurnaceBlockEntity extends BlockEntity implements GeoBlockE
         moltenMetalType = metalType;
         tinyCrucibleExpired = expired;
         tinyCrucibleExpireTicks = 0;
+        syncToClient();
+        return true;
+    }
+
+    // ==================== Crystal System ====================
+
+    public int getCrystalCount() {
+        return crystalCount;
+    }
+
+    public boolean canAddCrystal() {
+        return crystalCount < MAX_CRYSTALS;
+    }
+
+    public boolean addCrystal() {
+        if (crystalCount >= MAX_CRYSTALS) return false;
+        crystalCount++;
         syncToClient();
         return true;
     }
@@ -787,6 +811,9 @@ public class SmithingFurnaceBlockEntity extends BlockEntity implements GeoBlockE
         tag.putBoolean("BigCrucibleExpired", bigCrucibleExpired);
         tag.putInt("CastExpireTicks", castExpireTicks);
         tag.putBoolean("CastExpired", castExpired);
+        // Crystal system
+        tag.putInt("CrystalCount", crystalCount);
+        tag.putInt("CrystalBurnTicks", crystalBurnTicks);
         // Ingots on embers
         tag.putInt("IngotCount", ingotCount);
         tag.putString("IngotMetalType", ingotMetalType);
@@ -835,6 +862,9 @@ public class SmithingFurnaceBlockEntity extends BlockEntity implements GeoBlockE
         bigCrucibleExpired = tag.getBoolean("BigCrucibleExpired");
         castExpireTicks = tag.getInt("CastExpireTicks");
         castExpired = tag.getBoolean("CastExpired");
+        // Crystal system
+        crystalCount = tag.getInt("CrystalCount");
+        crystalBurnTicks = tag.getInt("CrystalBurnTicks");
         // Ingots on embers
         ingotCount = tag.getInt("IngotCount");
         ingotMetalType = tag.getString("IngotMetalType");
@@ -909,6 +939,13 @@ public class SmithingFurnaceBlockEntity extends BlockEntity implements GeoBlockE
                     blockEntity.syncToClient();
                 }
             }
+            // Cool ingots on embers when furnace is inactive
+            if (blockEntity.ingotCount > 0 && blockEntity.ingotHeatTicks > 0) {
+                blockEntity.ingotHeatTicks--;
+                if (blockEntity.ingotHeatTicks % 20 == 0) {
+                    blockEntity.syncToClient();
+                }
+            }
             return;
         }
 
@@ -931,12 +968,23 @@ public class SmithingFurnaceBlockEntity extends BlockEntity implements GeoBlockE
             blockEntity.syncToClient();
         }
 
+        // ==================== Crystal Consumption ====================
+        // Crystals are consumed alongside coal when furnace is active
+        if (blockEntity.crystalCount > 0) {
+            blockEntity.crystalBurnTicks += (blockEntity.hasHoover && blockEntity.hooverActive) ? 2 : 1;
+            if (blockEntity.crystalBurnTicks >= TICKS_PER_CRYSTAL) {
+                blockEntity.crystalBurnTicks = 0;
+                blockEntity.crystalCount--;
+                blockEntity.syncToClient();
+            }
+        }
+
         // Ash accumulation: every 2 minutes (2400 ticks) while active, add 1 ash (max 6)
         // 2x speed when hoover/mantice is active (same as coal consumption)
         // Half speed when door is open (better ventilation)
         if (blockEntity.ashCount < MAX_ASH) {
             int ashRate = (blockEntity.hasHoover && blockEntity.hooverActive) ? 2 : 1;
-            boolean doorVentilation = blockEntity.hasDoor && blockEntity.doorOpen;
+            boolean doorVentilation = !blockEntity.hasDoor || blockEntity.doorOpen;
             blockEntity.ashAccumulationTicks += ashRate;
             int ashThreshold = doorVentilation ? TICKS_PER_ASH * 2 : TICKS_PER_ASH;
             if (blockEntity.ashAccumulationTicks >= ashThreshold) {
@@ -975,8 +1023,8 @@ public class SmithingFurnaceBlockEntity extends BlockEntity implements GeoBlockE
         }
 
         // ==================== Smelting System ====================
-        // Process raw ore smelting in the tiny crucible
-        if (!blockEntity.smeltingRawType.isEmpty() && !blockEntity.hasMoltenMetal) {
+        // Process raw ore smelting in the tiny crucible (requires at least 1 crystal)
+        if (!blockEntity.smeltingRawType.isEmpty() && !blockEntity.hasMoltenMetal && blockEntity.crystalCount > 0) {
             // Smelting progresses: 2x speed when hoover/mantice is active
             blockEntity.smeltingTicks += (blockEntity.hasHoover && blockEntity.hooverActive) ? 2 : 1;
 

@@ -81,6 +81,12 @@ public class SmithingFurnaceItemRenderer extends GeoItemRenderer<SmithingFurnace
         setBoneVisible(model, "ing_2", false);
         setBoneVisible(model, "ing_3", false);
         setBoneVisible(model, "ing_4", false);
+        // Hide crystal bones
+        setBoneVisible(model, "crystal", false);
+        setBoneVisible(model, "cry_1", false);
+        setBoneVisible(model, "cry_2", false);
+        setBoneVisible(model, "cry_3", false);
+        setBoneVisible(model, "cry_4", false);
     }
 
     private void setBoneVisible(BakedGeoModel model, String boneName, boolean visible) {

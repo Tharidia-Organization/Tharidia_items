@@ -1,6 +1,7 @@
 package com.THproject.tharidia_things.block;
 
 import com.THproject.tharidia_things.TharidiaThings;
+import com.THproject.tharidia_things.block.crystals.CrystalsRegistry;
 import com.THproject.tharidia_things.block.entity.SmithingFurnaceBlockEntity;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
@@ -207,6 +208,23 @@ public class SmithingFurnaceBlock extends BaseEntityBlock {
                 return ItemInteractionResult.FAIL;
             }
 
+            // Crystal placement (5 pure crystal types)
+            if (stack.is(CrystalsRegistry.PURE_CRYSTAL_1.get()) || stack.is(CrystalsRegistry.PURE_CRYSTAL_2.get())
+                    || stack.is(CrystalsRegistry.PURE_CRYSTAL_3.get()) || stack.is(CrystalsRegistry.PURE_CRYSTAL_4.get())
+                    || stack.is(CrystalsRegistry.PURE_CRYSTAL_5.get())) {
+                if (furnace.canAddCrystal()) {
+                    if (!level.isClientSide) {
+                        furnace.addCrystal();
+                        if (!player.getAbilities().instabuild) {
+                            stack.shrink(1);
+                        }
+                        level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_PLACE, SoundSource.BLOCKS, 0.5f, 1.2f);
+                    }
+                    return ItemInteractionResult.sidedSuccess(level.isClientSide);
+                }
+                return ItemInteractionResult.FAIL;
+            }
+
             // Ingot placement on embers (requires no tiny crucible)
             if (stack.is(Items.IRON_INGOT) || stack.is(Items.GOLD_INGOT) || stack.is(Items.COPPER_INGOT)) {
                 if (!furnace.hasTinyCrucible() && furnace.getIngotCount() < 4) {
@@ -311,12 +329,23 @@ public class SmithingFurnaceBlock extends BaseEntityBlock {
                     return ItemInteractionResult.FAIL;
                 }
 
-                // Pinza holding crucible with fluid: return to furnace, or pour into big crucible
+                // Pinza holding crucible with fluid: pour into cast, return to furnace, or pour into big crucible
                 if (holdingType == PinzaItem.HoldingType.CRUCIBLE_IRON
                         || holdingType == PinzaItem.HoldingType.CRUCIBLE_GOLD
                         || holdingType == PinzaItem.HoldingType.CRUCIBLE_COPPER) {
                     String heldFluid = PinzaItem.getMaterialType(stack);
-                    // Priority: return crucible with metal to furnace if no tiny crucible (blocked by ingots)
+                    // Priority 1: Pour into cast mold (click on cast/right side, metal not expired)
+                    if (!PinzaItem.isExpired(stack) && !furnace.hasCastMetal() && !furnace.isCastExpired()
+                            && isClickOnCastSide(hitResult, pos, state.getValue(FACING))) {
+                        if (!level.isClientSide) {
+                            furnace.pourIntoCast(heldFluid);
+                            PinzaItem.setHoldingWithMaterial(stack, PinzaItem.HoldingType.CRUCIBLE_EMPTY, "pinza_crucible", "");
+                            PinzaItem.damagePinza(stack, player);
+                            level.playSound(null, pos, SoundEvents.BUCKET_EMPTY_LAVA, SoundSource.BLOCKS, 0.5f, 1.0f);
+                        }
+                        return ItemInteractionResult.sidedSuccess(level.isClientSide);
+                    }
+                    // Priority 2: return crucible with metal to furnace if no tiny crucible (blocked by ingots)
                     if (!furnace.hasTinyCrucible() && furnace.getIngotCount() == 0) {
                         if (!level.isClientSide) {
                             boolean expired = PinzaItem.isExpired(stack);
@@ -327,7 +356,7 @@ public class SmithingFurnaceBlock extends BaseEntityBlock {
                         }
                         return ItemInteractionResult.sidedSuccess(level.isClientSide);
                     }
-                    // Pour into big crucible (requires big crucible installed)
+                    // Priority 3: Pour into big crucible (requires big crucible installed)
                     if (furnace.hasCrucible()) {
                         if (!level.isClientSide) {
                             if (furnace.pourIntoBigCrucible(heldFluid)) {

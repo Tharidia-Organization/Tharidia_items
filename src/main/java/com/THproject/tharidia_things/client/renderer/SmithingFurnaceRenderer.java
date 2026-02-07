@@ -273,6 +273,14 @@ public class SmithingFurnaceRenderer extends GeoBlockRenderer<SmithingFurnaceBlo
         setBoneVisible(model, "molten_copper_big", hasBigMetal && "copper".equals(bigType));
         setBoneVisible(model, "molten_dark_steel_big", hasBigMetal && "dark_steel".equals(bigType));
 
+        // Crystal bones visibility based on crystal count
+        int crystalCount = animatable.getCrystalCount();
+        setBoneVisible(model, "crystal", crystalCount > 0);
+        setBoneVisible(model, "cry_1", crystalCount >= 1);
+        setBoneVisible(model, "cry_2", crystalCount >= 2);
+        setBoneVisible(model, "cry_3", crystalCount >= 3);
+        setBoneVisible(model, "cry_4", crystalCount >= 4);
+
         // Ingots on embers bones
         int ingotCount = animatable.getIngotCount();
         setBoneVisible(model, "ing_1", ingotCount >= 1);
@@ -306,7 +314,7 @@ public class SmithingFurnaceRenderer extends GeoBlockRenderer<SmithingFurnaceBlo
     @Override
     public RenderType getRenderType(SmithingFurnaceBlockEntity animatable, ResourceLocation texture,
                                     @Nullable MultiBufferSource bufferSource, float partialTick) {
-        return RenderType.entityCutoutNoCull(texture);
+        return RenderType.entityCutout(texture);
     }
 
     @Override

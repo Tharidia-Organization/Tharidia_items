@@ -359,7 +359,27 @@
   "tharidia_features.boss.spawned": "§4Un boss e' apparso nella stanza!",
   "tharidia_features.boss.defeated": "§aIl boss e' stato sconfitto! Hai 30 secondi per raccogliere il bottino!",
   "tharidia_features.boss.loot_time_ending": "§6Tempo scaduto! Uscita tra 5 secondi...",
-  "tharidia_features.boss.late_arrival": "§6Il boss e' gia' stato sconfitto. Uscita tra 5 secondi..."
+  "tharidia_features.boss.late_arrival": "§6Il boss e' gia' stato sconfitto. Uscita tra 5 secondi...",
+
+  "block.tharidiathings.crystal_1": "Cristallo di Ametista",
+  "block.tharidiathings.crystal_2": "Cristallo di Zaffiro",
+  "block.tharidiathings.crystal_3": "Cristallo di Smeraldo",
+  "block.tharidiathings.crystal_4": "Cristallo di Rubino",
+  "block.tharidiathings.crystal_5": "Cristallo di Topazio",
+
+  "item.tharidiathings.pure_crystal_1": "Cristallo Puro di Ametista",
+  "item.tharidiathings.pure_crystal_2": "Cristallo Puro di Zaffiro",
+  "item.tharidiathings.pure_crystal_3": "Cristallo Puro di Smeraldo",
+  "item.tharidiathings.pure_crystal_4": "Cristallo Puro di Rubino",
+  "item.tharidiathings.pure_crystal_5": "Cristallo Puro di Topazio",
+
+  "block.tharidiathings.coal_chunk": "Pezzo di Carbone",
+  "block.tharidiathings.copper_chunk": "Pezzo di Rame",
+  "block.tharidiathings.tin_chunk": "Pezzo di Stagno",
+  "block.tharidiathings.iron_chunk": "Pezzo di Ferro",
+
+  "item.tharidiathings.iron_crusher_hammer": "Martello da Frantumazione",
+  "item.tharidiathings.smithing_hammer": "Martello da Fabbro",
 
   "block.tharidiathings.sieve": "Setaccio"
 }

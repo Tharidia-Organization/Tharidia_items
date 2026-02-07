@@ -124,7 +124,7 @@ public class SmithingHandler {
     private static boolean isSmithingHammer(ItemStack stack) {
         if (stack.isEmpty()) return false;
         String itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
-        return HAMMER_ID.equals(itemId);
+        return HAMMER_ID.equals(itemId) || "tharidiathings:smithing_hammer".equals(itemId);
     }
 
     private static void openComponentSelectionMenu(ServerPlayer player, BlockPos pos) {

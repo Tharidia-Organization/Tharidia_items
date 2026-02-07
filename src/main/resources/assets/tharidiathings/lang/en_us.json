@@ -362,7 +362,27 @@
   "tharidia_features.boss.spawned": "§4A boss has appeared in the room!",
   "tharidia_features.boss.defeated": "§aThe boss has been defeated! You have 30 seconds to collect the loot!",
   "tharidia_features.boss.loot_time_ending": "§6Time's up! Exiting in 5 seconds...",
-  "tharidia_features.boss.late_arrival": "§6The boss has already been defeated. Exiting in 5 seconds..."
+  "tharidia_features.boss.late_arrival": "§6The boss has already been defeated. Exiting in 5 seconds...",
+
+  "block.tharidiathings.crystal_1": "Amethyst Crystal",
+  "block.tharidiathings.crystal_2": "Sapphire Crystal",
+  "block.tharidiathings.crystal_3": "Emerald Crystal",
+  "block.tharidiathings.crystal_4": "Ruby Crystal",
+  "block.tharidiathings.crystal_5": "Topaz Crystal",
+
+  "item.tharidiathings.pure_crystal_1": "Pure Amethyst Crystal",
+  "item.tharidiathings.pure_crystal_2": "Pure Sapphire Crystal",
+  "item.tharidiathings.pure_crystal_3": "Pure Emerald Crystal",
+  "item.tharidiathings.pure_crystal_4": "Pure Ruby Crystal",
+  "item.tharidiathings.pure_crystal_5": "Pure Topaz Crystal",
+
+  "block.tharidiathings.coal_chunk": "Coal Chunk",
+  "block.tharidiathings.copper_chunk": "Copper Chunk",
+  "block.tharidiathings.tin_chunk": "Tin Chunk",
+  "block.tharidiathings.iron_chunk": "Iron Chunk",
+
+  "item.tharidiathings.iron_crusher_hammer": "Iron Crusher Hammer",
+  "item.tharidiathings.smithing_hammer": "Smithing Hammer",
 
   "jei.tharidiathings.washer_recipe": "Washing"
 }

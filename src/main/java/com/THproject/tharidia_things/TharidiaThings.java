@@ -274,16 +274,6 @@ public class TharidiaThings {
     public static final DeferredItem<PinzaCrucibleItem> PINZA_CRUCIBLE = ITEMS.register("pinza_crucible",
             () -> new PinzaCrucibleItem(new Item.Properties().stacksTo(1)));
 
-    // Chunks Block
-    public static final DeferredBlock<IronChunkBlock> IRON_CHUNK = BLOCKS.register("iron_chunk",
-            () -> new IronChunkBlock(
-                    BlockBehaviour.Properties.of()
-                            .mapColor(MapColor.METAL)
-                            .destroyTime(4.0f)
-                            .explosionResistance(6.0f)
-                            .noOcclusion()));
-    public static final DeferredItem<BlockItem> IRON_CHUNK_ITEM = ITEMS.registerSimpleBlockItem("iron_chunk",
-            IRON_CHUNK);
 
     // Dungeon Portal Block (red portal, no teleportation)
     public static final DeferredBlock<DungeonPortalBlock> DUNGEON_PORTAL = BLOCKS.register("dungeon_portal",
@@ -417,10 +407,6 @@ public class TharidiaThings {
             .register("smithing_furnace",
                     () -> BlockEntityType.Builder.of(SmithingFurnaceBlockEntity::new, SMITHING_FURNACE.get()).build(null));
 
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<IronChunkBlockEntity>> IRON_CHUNK_BLOCK_ENTITY = BLOCK_ENTITIES
-            .register("iron_chunk",
-                    () -> BlockEntityType.Builder.of(IronChunkBlockEntity::new, IRON_CHUNK.get()).build(null));
-
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<StationCrystalBlockEntity>> STATION_CRYSTAL_BLOCK_ENTITY = BLOCK_ENTITIES
             .register("station_crystal",
                     () -> BlockEntityType.Builder.of(StationCrystalBlockEntity::new, STATION_CRYSTAL_BLOCK.get())
@@ -500,6 +486,10 @@ public class TharidiaThings {
     public static final DeferredItem<Item> IRON_CRUSHER_HAMMER = ITEMS.register("iron_crusher_hammer",
             () -> new IronCrusherHammer());
 
+    // Smithing Hammer
+    public static final DeferredItem<Item> SMITHING_HAMMER = ITEMS.register("smithing_hammer",
+            () -> new Item(new Item.Properties().stacksTo(1).durability(500)));
+
     // Houseboundry Items
     public static final DeferredItem<Item> ANIMAL_BRUSH = ITEMS.register("animal_brush",
             () -> new AnimalBrushItem(new Item.Properties().durability(64)));
@@ -549,6 +539,7 @@ public class TharidiaThings {
                         output.accept(BATTLE_GAUNTLE.get());
                         output.accept(STABLE_ITEM.get());
                         output.accept(IRON_CRUSHER_HAMMER.get());
+                        output.accept(SMITHING_HAMMER.get());
                         // Houseboundry
                         output.accept(ANIMAL_BRUSH.get());
                         output.accept(FRESH_STRAW.get());
