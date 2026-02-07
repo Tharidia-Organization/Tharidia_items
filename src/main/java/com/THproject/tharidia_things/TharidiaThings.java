@@ -40,8 +40,12 @@ import com.THproject.tharidia_things.block.station_crystal.StationCrystalBlock;
 import com.THproject.tharidia_things.block.station_crystal.StationCrystalBlockEntity;
 import com.THproject.tharidia_things.block.entity.SmithingFurnaceBlockEntity;
 import com.THproject.tharidia_things.block.DungeonPortalBlock;
-import com.THproject.tharidia_things.block.ore_chunks.IronChunkBlock;
-import com.THproject.tharidia_things.block.ore_chunks.IronChunkBlockEntity;
+import com.THproject.tharidia_things.block.ore_chunks.ChunksRegistry;
+import com.THproject.tharidia_things.block.crystals.CrystalsRegistry;
+import com.THproject.tharidia_things.block.veins.VeinBlocks;
+import com.THproject.tharidia_things.block.veins.VeinSediments;
+import com.THproject.tharidia_things.block.washer.sieve.SieveBlock;
+import com.THproject.tharidia_things.block.washer.sieve.SieveBlockEntity;
 import com.THproject.tharidia_things.item.HotIronItem;
 import com.THproject.tharidia_things.item.HotGoldItem;
 import com.THproject.tharidia_things.item.HotCopperItem;
@@ -117,6 +121,9 @@ import com.THproject.tharidia_things.servertransfer.TransferTokenManager;
 import com.THproject.tharidia_things.sounds.ModSounds;
 import com.THproject.tharidia_things.servertransfer.DevWhitelistManager;
 
+import com.THproject.tharidia_things.recipe.WasherRecipe;
+import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.crafting.RecipeType;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -129,6 +136,7 @@ import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Rarity;
+import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
@@ -182,6 +190,17 @@ public class TharidiaThings {
     // under the "tharidiathings" namespace
     public static final DeferredRegister<net.minecraft.world.inventory.MenuType<?>> MENU_TYPES = DeferredRegister
             .create(BuiltInRegistries.MENU, MODID);
+
+    // Sieve Recipes
+    public static final DeferredRegister<RecipeType<?>> RECIPE_TYPES = DeferredRegister.create(Registries.RECIPE_TYPE,
+            MODID);
+    public static final DeferredRegister<RecipeSerializer<?>> RECIPE_SERIALIZERS = DeferredRegister
+            .create(Registries.RECIPE_SERIALIZER, MODID);
+
+    public static final DeferredHolder<RecipeType<?>, RecipeType<WasherRecipe>> WASHER_RECIPE_TYPE = RECIPE_TYPES
+            .register("washing", () -> RecipeType.simple(ResourceLocation.fromNamespaceAndPath(MODID, "washing")));
+    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<WasherRecipe>> WASHER_RECIPE_SERIALIZER = RECIPE_SERIALIZERS
+            .register("washing", WasherRecipe.Serializer::new);
 
     // Database system for cross-server communication
     private DatabaseManager databaseManager;
@@ -288,6 +307,88 @@ public class TharidiaThings {
             "station_crystal",
             STATION_CRYSTAL_BLOCK);
 
+    // Sieve
+    public static final DeferredBlock<SieveBlock> SIEVE_BLOCK = BLOCKS.register(
+            "sieve",
+            () -> new SieveBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.METAL)
+                    .destroyTime(1.0f)
+                    .explosionResistance(1.0F)
+                    .sound(SoundType.METAL)
+                    .noOcclusion()
+                    .requiresCorrectToolForDrops()));
+
+    public static final DeferredItem<BlockItem> SIEVE_ITEM = ITEMS.register(
+            "sieve",
+            () -> new BlockItem(SIEVE_BLOCK.get(), new Item.Properties()));
+
+    public static final DeferredBlock<com.THproject.tharidia_things.block.washer.sieve.SieveDummyBlock> SIEVE_DUMMY = BLOCKS
+            .register("sieve_dummy",
+                    () -> new com.THproject.tharidia_things.block.washer.sieve.SieveDummyBlock());
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<SieveBlockEntity>> SIEVE_BLOCK_ENTITY = BLOCK_ENTITIES
+            .register("sieve",
+                    () -> BlockEntityType.Builder.of(SieveBlockEntity::new,
+                            SIEVE_BLOCK.get()).build(null));
+
+    // Tank
+    public static final DeferredBlock<com.THproject.tharidia_things.block.washer.tank.TankBlock> TANK_BLOCK = BLOCKS
+            .register(
+                    "tank",
+                    () -> new com.THproject.tharidia_things.block.washer.tank.TankBlock(BlockBehaviour.Properties.of()
+                            .mapColor(MapColor.METAL)
+                            .destroyTime(1.0f)
+                            .explosionResistance(1.0F)
+                            .sound(SoundType.METAL)
+                            .noOcclusion()
+                            .requiresCorrectToolForDrops()));
+
+    public static final DeferredItem<BlockItem> TANK_ITEM = ITEMS.register(
+            "tank",
+            () -> new BlockItem(TANK_BLOCK.get(), new Item.Properties()));
+
+    public static final DeferredBlock<com.THproject.tharidia_things.block.washer.tank.TankDummyBlock> TANK_DUMMY = BLOCKS
+            .register("tank_dummy",
+                    () -> new com.THproject.tharidia_things.block.washer.tank.TankDummyBlock());
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.THproject.tharidia_things.block.washer.tank.TankBlockEntity>> TANK_BLOCK_ENTITY = BLOCK_ENTITIES
+            .register("tank",
+                    () -> BlockEntityType.Builder
+                            .of(com.THproject.tharidia_things.block.washer.tank.TankBlockEntity::new,
+                                    TANK_BLOCK.get())
+                            .build(null));
+
+    // Sink
+    public static final DeferredBlock<com.THproject.tharidia_things.block.washer.sink.SinkBlock> SINK_BLOCK = BLOCKS
+            .register(
+                    "sink",
+                    () -> new com.THproject.tharidia_things.block.washer.sink.SinkBlock(BlockBehaviour.Properties.of()
+                            .mapColor(MapColor.METAL)
+                            .destroyTime(1.0f)
+                            .explosionResistance(1.0F)
+                            .sound(SoundType.METAL)
+                            .noOcclusion()
+                            .requiresCorrectToolForDrops()));
+
+    public static final DeferredItem<BlockItem> SINK_ITEM = ITEMS.register(
+            "sink",
+            () -> new BlockItem(SINK_BLOCK.get(), new Item.Properties()));
+
+    public static final DeferredBlock<com.THproject.tharidia_things.block.washer.sink.SinkDummyBlock> SINK_DUMMY_BLOCK = BLOCKS
+            .register("sink_dummy",
+                    () -> new com.THproject.tharidia_things.block.washer.sink.SinkDummyBlock(
+                            BlockBehaviour.Properties.of()
+                                    .mapColor(MapColor.METAL)
+                                    .strength(1.0F)
+                                    .noOcclusion()));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.THproject.tharidia_things.block.washer.sink.SinkBlockEntity>> SINK_BLOCK_ENTITY = BLOCK_ENTITIES
+            .register("sink",
+                    () -> BlockEntityType.Builder
+                            .of(com.THproject.tharidia_things.block.washer.sink.SinkBlockEntity::new,
+                                    SINK_BLOCK.get())
+                            .build(null));
+
     // Creates a new BlockEntityType for the Pietro block
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<PietroBlockEntity>> PIETRO_BLOCK_ENTITY = BLOCK_ENTITIES
             .register("pietro", () -> BlockEntityType.Builder.of(PietroBlockEntity::new, PIETRO.get()).build(null));
@@ -388,6 +489,8 @@ public class TharidiaThings {
             () -> new AnimalFeedItem(new Item.Properties().stacksTo(64)));
     public static final DeferredItem<Item> MANURE = ITEMS.register("manure",
             () -> new Item(new Item.Properties().stacksTo(64)));
+    public static final DeferredItem<Item> MESH = ITEMS.register("mesh",
+            () -> new Item(new Item.Properties().stacksTo(64)));
 
     // Battle Gauntlet
     public static final DeferredItem<Item> BATTLE_GAUNTLE = ITEMS.register("battle_gauntlet",
@@ -454,7 +557,46 @@ public class TharidiaThings {
                         output.accept(PITCHFORK.get());
 
                         // Chunks
-                        output.accept(IRON_CHUNK.get());
+                        output.accept(ChunksRegistry.COAL_CHUNK_ITEM.get());
+                        output.accept(ChunksRegistry.COPPER_CHUNK_ITEM.get());
+                        output.accept(ChunksRegistry.TIN_CHUNK_ITEM.get());
+                        output.accept(ChunksRegistry.IRON_CHUNK_ITEM.get());
+
+                        // Crystals
+                        output.accept(CrystalsRegistry.CRYSTAL_1_ITEM.get());
+                        output.accept(CrystalsRegistry.CRYSTAL_2_ITEM.get());
+                        output.accept(CrystalsRegistry.CRYSTAL_3_ITEM.get());
+                        output.accept(CrystalsRegistry.CRYSTAL_4_ITEM.get());
+                        output.accept(CrystalsRegistry.CRYSTAL_5_ITEM.get());
+                        output.accept(CrystalsRegistry.PURE_CRYSTAL_1.get());
+                        output.accept(CrystalsRegistry.PURE_CRYSTAL_2.get());
+                        output.accept(CrystalsRegistry.PURE_CRYSTAL_3.get());
+                        output.accept(CrystalsRegistry.PURE_CRYSTAL_4.get());
+                        output.accept(CrystalsRegistry.PURE_CRYSTAL_5.get());
+
+                        // Veins
+                        output.accept(VeinBlocks.VEIN_BLOCK_T0_ITEM.get());
+                        output.accept(VeinBlocks.VEIN_BLOCK_T1_ITEM.get());
+                        output.accept(VeinBlocks.VEIN_BLOCK_T2_ITEM.get());
+                        output.accept(VeinBlocks.VEIN_BLOCK_T3_ITEM.get());
+                        output.accept(VeinBlocks.VEIN_BLOCK_T4_ITEM.get());
+                        output.accept(VeinSediments.VEIN_SEDIMENT_T0_ITEM.get());
+                        output.accept(VeinSediments.VEIN_SEDIMENT_T1_ITEM.get());
+                        output.accept(VeinSediments.VEIN_SEDIMENT_T2_ITEM.get());
+                        output.accept(VeinSediments.VEIN_SEDIMENT_T3_ITEM.get());
+                        output.accept(VeinSediments.VEIN_SEDIMENT_T4_ITEM.get());
+
+                        // Tank
+                        output.accept(TANK_BLOCK.get());
+
+                        // Sieve
+                        output.accept(SIEVE_BLOCK.get());
+
+                        // Sink
+                        output.accept(SINK_BLOCK.get());
+
+                        // Mesh
+                        output.accept(MESH.get());
 
                         // Station Crystal
                         output.accept(STATION_CRYSTAL_BLOCK_ITEM.get());
@@ -519,6 +661,8 @@ public class TharidiaThings {
         CREATIVE_MODE_TABS.register(modEventBus);
         // Register the Deferred Register to the mod event bus so menus get registered
         MENU_TYPES.register(modEventBus);
+        RECIPE_TYPES.register(modEventBus);
+        RECIPE_SERIALIZERS.register(modEventBus);
         // Register the Deferred Register to the mod event bus so attachment types get
         // registered
         FatigueAttachments.ATTACHMENT_TYPES.register(modEventBus);
@@ -571,6 +715,16 @@ public class TharidiaThings {
         CustomArmorAttachments.register(modEventBus);
 
         modEventBus.addListener(BattlePackets::register);
+
+        // Register Chunks
+        ChunksRegistry.init();
+
+        // Register Crystals
+        CrystalsRegistry.init();
+
+        // Register Veins
+        VeinBlocks.init();
+        VeinSediments.init();
 
         // Register handshake bypass (CLIENT ONLY)
         if (FMLEnvironment.dist == Dist.CLIENT) {

@@ -2,6 +2,9 @@
   "itemGroup.tharidiathings": "Tharidia Things",
   "block.tharidiathings.pietro": "Realm",
   "block.tharidiathings.claim": "Claim",
+  "block.tharidiathings.tank": "Tank",
+  "block.tharidiathings.sieve": "Sieve",
+  "block.tharidiathings.sink": "Sink",
 
   "container.tharidiathings.claim": "Claim",
   "container.tharidiathings.pietro": "Realm",
@@ -360,4 +363,6 @@
   "tharidia_features.boss.defeated": "§aThe boss has been defeated! You have 30 seconds to collect the loot!",
   "tharidia_features.boss.loot_time_ending": "§6Time's up! Exiting in 5 seconds...",
   "tharidia_features.boss.late_arrival": "§6The boss has already been defeated. Exiting in 5 seconds..."
+
+  "jei.tharidiathings.washer_recipe": "Washing"
 }

@@ -360,4 +360,6 @@
   "tharidia_features.boss.defeated": "§aIl boss e' stato sconfitto! Hai 30 secondi per raccogliere il bottino!",
   "tharidia_features.boss.loot_time_ending": "§6Tempo scaduto! Uscita tra 5 secondi...",
   "tharidia_features.boss.late_arrival": "§6Il boss e' gia' stato sconfitto. Uscita tra 5 secondi..."
+
+  "block.tharidiathings.sieve": "Setaccio"
 }
