@@ -28,6 +28,9 @@ import com.THproject.tharidia_things.block.HotGoldMarkerBlock;
 import com.THproject.tharidia_things.block.HotCopperMarkerBlock;
 import com.THproject.tharidia_things.block.StableBlock;
 import com.THproject.tharidia_things.block.StableDummyBlock;
+import com.THproject.tharidia_things.block.DyeVatsBlock;
+import com.THproject.tharidia_things.block.DyeVatsDummyBlock;
+import com.THproject.tharidia_things.block.entity.DyeVatsBlockEntity;
 import com.THproject.tharidia_things.block.entity.PietroBlockEntity;
 import com.THproject.tharidia_things.block.entity.ClaimBlockEntity;
 import com.THproject.tharidia_things.block.entity.HotIronAnvilEntity;
@@ -212,6 +215,14 @@ public class TharidiaThings {
     public static final DeferredBlock<StableDummyBlock> STABLE_DUMMY = BLOCKS.register("stable_dummy",
             () -> new StableDummyBlock());
 
+    // Dye Vats Block (2-wide multiblock)
+    public static final DeferredBlock<DyeVatsBlock> DYE_VATS = BLOCKS.register("dye_vats",
+            () -> new DyeVatsBlock());
+    public static final DeferredItem<BlockItem> DYE_VATS_ITEM = ITEMS.registerSimpleBlockItem("dye_vats", DYE_VATS);
+    // Dye Vats Dummy Block (multiblock slave)
+    public static final DeferredBlock<DyeVatsDummyBlock> DYE_VATS_DUMMY = BLOCKS.register("dye_vats_dummy",
+            () -> new DyeVatsDummyBlock());
+
     // Chunks Block
     public static final DeferredBlock<IronChunkBlock> IRON_CHUNK = BLOCKS.register("iron_chunk",
             () -> new IronChunkBlock(
@@ -267,6 +278,11 @@ public class TharidiaThings {
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<StableBlockEntity>> STABLE_BLOCK_ENTITY = BLOCK_ENTITIES
             .register("stable",
                     () -> BlockEntityType.Builder.of(StableBlockEntity::new, STABLE.get()).build(null));
+
+    // Creates a new BlockEntityType for the Dye Vats
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<DyeVatsBlockEntity>> DYE_VATS_BLOCK_ENTITY = BLOCK_ENTITIES
+            .register("dye_vats",
+                    () -> BlockEntityType.Builder.of(DyeVatsBlockEntity::new, DYE_VATS.get()).build(null));
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<IronChunkBlockEntity>> IRON_CHUNK_BLOCK_ENTITY = BLOCK_ENTITIES
             .register("iron_chunk",
@@ -404,6 +420,9 @@ public class TharidiaThings {
                         output.accept(DIRTY_STRAW.get());
                         output.accept(SHELTER_UPGRADE_KIT.get());
                         output.accept(PITCHFORK.get());
+
+                        // Dye Vats
+                        output.accept(DYE_VATS_ITEM.get());
 
                         // Chunks
                         output.accept(IRON_CHUNK.get());
