@@ -179,4 +179,23 @@ public class TharidiaThingsClient {
                 TharidiaThings.modLoc("stamina_overlay"),
                 new StaminaHudOverlay());
     }
+
+    @SubscribeEvent
+    static void onAddLayers(EntityRenderersEvent.AddLayers event) {
+        // Register custom armor layer for Default (Steve) and Slim (Alex) player models
+        // Using var to resolve type inference issues with getSkins()
+        for (var skin : event.getSkins()) {
+            net.minecraft.client.renderer.entity.EntityRenderer<?> rawRenderer = event.getSkin(skin);
+            if (rawRenderer instanceof net.minecraft.client.renderer.entity.LivingEntityRenderer<?, ?> livingRenderer) {
+                if (livingRenderer.getModel() instanceof net.minecraft.client.model.PlayerModel) {
+                    @SuppressWarnings("unchecked")
+                    net.minecraft.client.renderer.entity.LivingEntityRenderer<net.minecraft.client.player.AbstractClientPlayer, net.minecraft.client.model.PlayerModel<net.minecraft.client.player.AbstractClientPlayer>> typedRenderer = (net.minecraft.client.renderer.entity.LivingEntityRenderer<net.minecraft.client.player.AbstractClientPlayer, net.minecraft.client.model.PlayerModel<net.minecraft.client.player.AbstractClientPlayer>>) livingRenderer;
+
+                    typedRenderer.addLayer(new com.THproject.tharidia_things.client.renderer.CustomArmorLayer(
+                            typedRenderer,
+                            event.getEntityModels()));
+                }
+            }
+        }
+    }
 }
