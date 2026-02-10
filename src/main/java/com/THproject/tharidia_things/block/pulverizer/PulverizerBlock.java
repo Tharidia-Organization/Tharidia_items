@@ -3,13 +3,9 @@ package com.THproject.tharidia_things.block.pulverizer;
 import javax.annotation.Nullable;
 
 import com.THproject.tharidia_things.TharidiaThings;
-import com.THproject.tharidia_things.sounds.ModSounds;
-import com.THproject.tharidia_things.sounds.PulverizerWorkingSound;
 import com.mojang.serialization.MapCodec;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.ItemInteractionResult;
@@ -47,22 +43,6 @@ public class PulverizerBlock extends BaseEntityBlock {
 
     public PulverizerBlock(Properties properties) {
         super(properties);
-    }
-
-    @Override
-    public void animateTick(BlockState state, Level level, BlockPos pos, RandomSource random) {
-        BlockEntity be = level.getBlockEntity(pos);
-        if (be instanceof PulverizerBlockEntity pulverizer) {
-            if (pulverizer.isActive()) {
-                Minecraft mc = Minecraft.getInstance();
-                if (!mc.getSoundManager().isActive(pulverizer.getWorkingSound())) {
-                    PulverizerWorkingSound sound = new PulverizerWorkingSound(pulverizer,
-                            ModSounds.PULVERIZER_WORKING.get());
-                    pulverizer.setWorkingSound(sound);
-                    mc.getSoundManager().play(sound);
-                }
-            }
-        }
     }
 
     @Override
@@ -129,6 +109,10 @@ public class PulverizerBlock extends BaseEntityBlock {
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state,
             BlockEntityType<T> type) {
+        if (level.isClientSide) {
+            return createTickerHelper(type, TharidiaThings.PULVERIZER_BLOCK_ENTITY.get(),
+                    PulverizerBlockEntity::clientTick);
+        }
         return createTickerHelper(type, TharidiaThings.PULVERIZER_BLOCK_ENTITY.get(), PulverizerBlockEntity::tick);
     }
 

@@ -5,7 +5,10 @@ import java.util.Optional;
 
 import com.THproject.tharidia_things.TharidiaThings;
 import com.THproject.tharidia_things.recipe.PulverizerRecipe;
+import com.THproject.tharidia_things.sounds.ModSounds;
+import com.THproject.tharidia_things.sounds.PulverizerWorkingSound;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
@@ -139,6 +142,19 @@ public class PulverizerBlockEntity extends BlockEntity implements GeoBlockEntity
 
     public boolean isActive() {
         return (((System.currentTimeMillis() - active_timestamp) <= MAX_ACTIVE_PER_CLICK) && getGrindersCount() == 2);
+    }
+
+    public static void clientTick(Level level, BlockPos pos, BlockState state, PulverizerBlockEntity pulverizer) {
+        tick(level, pos, state, pulverizer);
+        if (pulverizer.isActive()) {
+            Minecraft mc = Minecraft.getInstance();
+            if (!mc.getSoundManager().isActive(pulverizer.getWorkingSound())) {
+                PulverizerWorkingSound sound = new PulverizerWorkingSound(pulverizer,
+                        ModSounds.PULVERIZER_WORKING.get());
+                pulverizer.setWorkingSound(sound);
+                mc.getSoundManager().play(sound);
+            }
+        }
     }
 
     public static void tick(Level level, BlockPos pos, BlockState state, PulverizerBlockEntity pulverizer) {
