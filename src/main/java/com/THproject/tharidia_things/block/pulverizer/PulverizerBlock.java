@@ -78,7 +78,7 @@ public class PulverizerBlock extends BaseEntityBlock {
         }
 
         if (stack.getItem() == TharidiaThings.GRINDER.asItem() && !pulverizer.hasGrinder()) {
-            pulverizer.setGrinder(stack);
+            pulverizer.addGrinder(stack);
             stack.shrink(1);
         } else if (stack.isEmpty() && player.isShiftKeyDown()) {
             boolean hasItemInOutput = false;
@@ -96,9 +96,8 @@ public class PulverizerBlock extends BaseEntityBlock {
                     if (player.getInventory().add(extracted))
                         player.drop(extracted, false);
                 } else {
-                    ItemStack grinder = pulverizer.getGrinder();
+                    ItemStack grinder = pulverizer.removeGrinder();
                     if (!grinder.isEmpty()) {
-                        pulverizer.removeGrinder();
                         if (player.getInventory().add(grinder))
                             player.drop(grinder, false);
                     }
@@ -115,7 +114,9 @@ public class PulverizerBlock extends BaseEntityBlock {
         if (!state.is(newState.getBlock())) {
             BlockEntity blockEntity = level.getBlockEntity(pos);
             if (blockEntity instanceof PulverizerBlockEntity pulverizer) {
-                Block.popResource(level, pos, pulverizer.getGrinder());
+                pulverizer.getGrinders().forEach(grinder -> {
+                    Block.popResource(level, pos, grinder);
+                });
                 for (int i = 0; i < pulverizer.inventory.getSlots(); i++) {
                     Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(),
                             pulverizer.inventory.getStackInSlot(i));

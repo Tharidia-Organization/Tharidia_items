@@ -9,6 +9,7 @@ import com.THproject.tharidia_things.recipe.PulverizerRecipe;
 import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.NonNullList;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ItemParticleOption;
 import net.minecraft.core.particles.ParticleOptions;
@@ -44,7 +45,7 @@ public class PulverizerBlockEntity extends BlockEntity implements GeoBlockEntity
 
     private static int MAX_ACTIVE_PER_CLICK = 1000;
 
-    private ItemStack grinder = ItemStack.EMPTY;
+    private NonNullList<ItemStack> grinders = NonNullList.withSize(2, ItemStack.EMPTY);
     private long active_timestamp = -1;
 
     private int progress;
@@ -84,26 +85,51 @@ public class PulverizerBlockEntity extends BlockEntity implements GeoBlockEntity
         return (SoundInstance) workingSoundInstance;
     }
 
-    public void setGrinder(ItemStack stack) {
-        grinder = stack.copy();
+    public void addGrinder(ItemStack stack) {
+        if (grinders.get(0).isEmpty())
+            grinders.set(0, stack.copy());
+        else if (grinders.get(1).isEmpty())
+            grinders.set(1, stack.copy());
         setChanged();
     }
 
-    public void removeGrinder() {
-        grinder = ItemStack.EMPTY;
+    public ItemStack removeGrinder() {
+        ItemStack output = ItemStack.EMPTY;
+        ItemStack grinder_1 = grinders.get(0);
+        ItemStack grinder_2 = grinders.get(1);
+        if (!grinder_2.isEmpty()) {
+            output = grinder_2.copy();
+            grinders.set(1, ItemStack.EMPTY);
+        } else if (!grinder_1.isEmpty()) {
+            output = grinder_1.copy();
+            grinders.set(0, ItemStack.EMPTY);
+        }
         setChanged();
+        return output;
     }
 
-    public ItemStack getGrinder() {
-        return grinder.copy();
+    public List<ItemStack> getGrinders() {
+        return List.copyOf(grinders);
     }
 
-    public void damageGrinder() {
-        grinder.setDamageValue(grinder.getDamageValue() + 1);
+    public int getGrindersCount() {
+        int count = 0;
+        for (ItemStack grinder : grinders) {
+            if (!grinder.isEmpty()) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    public void damageGrinders() {
+        grinders.forEach(grinder -> {
+            grinder.setDamageValue(grinder.getDamageValue() + 1);
+        });
     }
 
     public boolean hasGrinder() {
-        return !grinder.isEmpty();
+        return !grinders.stream().anyMatch(g -> g.isEmpty());
     }
 
     public void setActive() {
@@ -112,7 +138,7 @@ public class PulverizerBlockEntity extends BlockEntity implements GeoBlockEntity
     }
 
     public boolean isActive() {
-        return ((System.currentTimeMillis() - active_timestamp) <= MAX_ACTIVE_PER_CLICK);
+        return (((System.currentTimeMillis() - active_timestamp) <= MAX_ACTIVE_PER_CLICK) && getGrindersCount() == 2);
     }
 
     public static void tick(Level level, BlockPos pos, BlockState state, PulverizerBlockEntity pulverizer) {
@@ -142,7 +168,7 @@ public class PulverizerBlockEntity extends BlockEntity implements GeoBlockEntity
             pulverizer.processParticle(pulverizer.inventory.getStackInSlot(0));
             ItemStack result = recipe.getResultItem(level.registryAccess());
             if ((pulverizer.progress++ >= pulverizer.maxProgress) && pulverizer.canInsertItem(result)) {
-                pulverizer.damageGrinder();
+                pulverizer.damageGrinders();
                 pulverizer.craftItem(recipe);
                 pulverizer.resetProgress();
             }
@@ -211,9 +237,10 @@ public class PulverizerBlockEntity extends BlockEntity implements GeoBlockEntity
         super.saveAdditional(tag, registries);
         tag.put("Inventory", inventory.serializeNBT(registries));
         tag.putLong("ActiveTimestamp", this.active_timestamp);
-        if (!grinder.isEmpty()) {
-            tag.put("Grinder", this.grinder.save(registries));
-        }
+        if (!grinders.get(0).isEmpty())
+            tag.put("Grinder1", this.grinders.get(0).save(registries));
+        if (!grinders.get(1).isEmpty())
+            tag.put("Grinder2", this.grinders.get(1).save(registries));
     }
 
     @Override
@@ -225,10 +252,15 @@ public class PulverizerBlockEntity extends BlockEntity implements GeoBlockEntity
         if (tag.contains("ActiveTimestamp")) {
             this.active_timestamp = tag.getLong("ActiveTimestamp");
         }
-        if (tag.contains("Grinder")) {
-            this.grinder = ItemStack.parse(registries, tag.getCompound("Grinder")).orElse(ItemStack.EMPTY);
-        } else {
-            this.grinder = ItemStack.EMPTY;
+        if (tag.contains("Grinder1"))
+            this.grinders.set(0, ItemStack.parse(registries, tag.getCompound("Grinder1")).orElse(ItemStack.EMPTY));
+        else {
+            this.grinders.set(0, ItemStack.EMPTY);
+        }
+        if (tag.contains("Grinder2"))
+            this.grinders.set(1, ItemStack.parse(registries, tag.getCompound("Grinder2")).orElse(ItemStack.EMPTY));
+        else {
+            this.grinders.set(1, ItemStack.EMPTY);
         }
     }
 

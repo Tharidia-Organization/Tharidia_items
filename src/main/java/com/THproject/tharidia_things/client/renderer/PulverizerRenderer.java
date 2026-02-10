@@ -51,8 +51,8 @@ public class PulverizerRenderer extends GeoBlockRenderer<PulverizerBlockEntity> 
         super.preRender(poseStack, animatable, model, bufferSource, buffer, isReRender, partialTick, packedLight,
                 packedOverlay, colour);
 
-        setBoneVisible(model, "grinder_left", animatable.hasGrinder());
-        setBoneVisible(model, "grinder_right", animatable.hasGrinder());
+        setBoneVisible(model, "grinder_left", (animatable.getGrindersCount() >= 1));
+        setBoneVisible(model, "grinder_right", (animatable.getGrindersCount() >= 2));
     }
 
     private void setBoneVisible(BakedGeoModel model, String boneName, boolean visible) {
