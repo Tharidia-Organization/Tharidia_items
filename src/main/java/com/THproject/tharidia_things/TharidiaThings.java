@@ -1,5 +1,7 @@
 package com.THproject.tharidia_things;
 
+import com.THproject.tharidia_things.block.ore_chunks.iron.IronChunkBlock;
+import com.THproject.tharidia_things.block.ore_chunks.iron.IronChunkBlockEntity;
 import com.THproject.tharidia_things.claim.ClaimRegistry;
 import com.THproject.tharidia_things.client.ClientSeekPacketHandler;
 import com.THproject.tharidia_things.client.HandshakeBypass;
@@ -838,6 +840,11 @@ public class TharidiaThings {
                     RequestNamePacket.TYPE,
                     RequestNamePacket.STREAM_CODEC,
                     ClientPacketHandler::handleRequestName);
+            // Name response packet
+            registrar.playToClient(
+                    NameResponsePacket.TYPE,
+                    NameResponsePacket.STREAM_CODEC,
+                    ClientPacketHandler::handleNameResponse);
             // Race GUI packet
             registrar.playToClient(
                     OpenRaceGuiPacket.TYPE,
@@ -979,6 +986,12 @@ public class TharidiaThings {
             registrar.playToClient(
                     RequestNamePacket.TYPE,
                     RequestNamePacket.STREAM_CODEC,
+                    (packet, context) -> {
+                    });
+            // Name response packet (server-side dummy handler)
+            registrar.playToClient(
+                    NameResponsePacket.TYPE,
+                    NameResponsePacket.STREAM_CODEC,
                     (packet, context) -> {
                     });
             // Race GUI packet (server-side dummy handler for handshake)

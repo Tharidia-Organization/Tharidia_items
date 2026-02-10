@@ -111,11 +111,9 @@ public class RacePointEntity extends Entity {
     @Override
     public InteractionResult interact(Player player, InteractionHand hand) {
         if (!level().isClientSide && hand == InteractionHand.MAIN_HAND) {
-            String raceName = getRaceName();
-
-            // Send packet to open GUI on client
+            // Send packet to open race selection GUI on client
             if (player instanceof ServerPlayer serverPlayer) {
-                PacketDistributor.sendToPlayer(serverPlayer, new OpenRaceGuiPacket(raceName));
+                PacketDistributor.sendToPlayer(serverPlayer, new OpenRaceGuiPacket());
             }
 
             return InteractionResult.SUCCESS;

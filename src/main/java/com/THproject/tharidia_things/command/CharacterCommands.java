@@ -1,11 +1,14 @@
 package com.THproject.tharidia_things.command;
 
 import com.THproject.tharidia_things.character.CharacterAttachments;
+import com.THproject.tharidia_things.character.CharacterData;
 import com.THproject.tharidia_things.character.CharacterEventHandler;
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -25,19 +28,29 @@ public class CharacterCommands {
                                 .executes(context -> {
                                     try {
                                         ServerPlayer player = context.getSource().getPlayerOrException();
-                                        return completeCharacterCreation(context.getSource(), player);
+                                        return completeCharacterCreation(context.getSource(), player, "umano");
                                     } catch (CommandSyntaxException e) {
                                         context.getSource().sendFailure(
                                                 Component.literal("This command can only be run by a player"));
                                         return 0;
                                     }
                                 })
-                                // /tharidia character create <player> - for other player
+                                // /tharidia character create <player> [race]
                                 .then(Commands.argument("player", EntityArgument.player())
                                         .executes(context -> {
                                             ServerPlayer target = EntityArgument.getPlayer(context, "player");
-                                            return completeCharacterCreation(context.getSource(), target);
+                                            return completeCharacterCreation(context.getSource(), target, "umano");
                                         })
+                                        .then(Commands.argument("race", StringArgumentType.word())
+                                                .suggests((context, builder) ->
+                                                        SharedSuggestionProvider.suggest(
+                                                                com.THproject.tharidia_things.character.RaceData.getValidRaceNames(), builder))
+                                                .executes(context -> {
+                                                    ServerPlayer target = EntityArgument.getPlayer(context, "player");
+                                                    String race = StringArgumentType.getString(context, "race");
+                                                    return completeCharacterCreation(context.getSource(), target, race);
+                                                })
+                                        )
                                 )
                         )
                         // /tharidia character reset - for self
@@ -102,16 +115,25 @@ public class CharacterCommands {
         );
     }
 
-    private static int completeCharacterCreation(CommandSourceStack source, ServerPlayer player) {
+    private static int completeCharacterCreation(CommandSourceStack source, ServerPlayer player, String race) {
         if (CharacterEventHandler.hasCompletedCharacterCreation(player)) {
             source.sendFailure(Component.literal("Player " + player.getName().getString() +
                     " has already created their character"));
             return 0;
         }
 
+        if (!com.THproject.tharidia_things.character.RaceData.isValidRace(race)) {
+            source.sendFailure(Component.literal("Invalid race: " + race));
+            return 0;
+        }
+
+        // Save race before completing
+        CharacterData characterData = player.getData(CharacterAttachments.CHARACTER_DATA);
+        characterData.setSelectedRace(race);
+
         CharacterEventHandler.completeCharacterCreation(player);
         source.sendSuccess(() -> Component.literal("Character creation completed for " +
-                player.getName().getString()), true);
+                player.getName().getString() + " (race: " + race + ")"), true);
         return 1;
     }
 
@@ -123,33 +145,30 @@ public class CharacterCommands {
     }
 
     private static int showCharacterStatus(CommandSourceStack source, ServerPlayer player) {
-        boolean hasCreated = CharacterEventHandler.hasCompletedCharacterCreation(player);
-        String status = hasCreated ? "§aCompleted" : "§cNot completed";
+        CharacterData characterData = player.getData(CharacterAttachments.CHARACTER_DATA);
+        CharacterData.CreationStage stage = characterData.getStage();
+        String race = characterData.getSelectedRace();
+
+        String stageColor = switch (stage) {
+            case COMPLETED -> "§a";
+            case AWAITING_RACE -> "§e";
+            case NOT_STARTED -> "§c";
+        };
 
         source.sendSuccess(() -> Component.literal("Character status for " +
-                player.getName().getString() + ": " + status), false);
+                player.getName().getString() + ": " + stageColor + stage.name() +
+                (race != null ? " §7(race: " + race + ")" : "")), false);
         return 1;
     }
 
     private static int teleportToCharacterCreation(CommandSourceStack source, ServerPlayer player) {
-        // Reset character creation status first
-        CharacterEventHandler.resetCharacterCreation(player);
+        // Reset to AWAITING_RACE so the player enters the race selection flow
+        CharacterData characterData = player.getData(CharacterAttachments.CHARACTER_DATA);
+        characterData.setStage(CharacterData.CreationStage.AWAITING_RACE);
+        characterData.setSelectedRace(null);
 
-        // The event handler will automatically teleport the player
-        // We need to trigger a re-check
-        player.server.execute(() -> {
-            player.server.execute(() -> {
-                // Force a dimension change check which will trigger teleport
-                if (!CharacterEventHandler.hasCompletedCharacterCreation(player)) {
-                    var characterLevel = player.server.getLevel(CharacterEventHandler.CHARACTER_DIMENSION);
-                    if (characterLevel != null) {
-                        var spawnPos = CharacterEventHandler.getPlayerSpawnPos(player.getUUID());
-                        player.teleportTo(characterLevel, spawnPos.getX() + 0.5, spawnPos.getY() + 1,
-                                spawnPos.getZ() + 0.5, player.getYRot(), player.getXRot());
-                    }
-                }
-            });
-        });
+        // Use the public teleport method
+        CharacterEventHandler.teleportToCharacterDimension(player);
 
         source.sendSuccess(() -> Component.literal("Teleporting " + player.getName().getString() +
                 " to character creation dimension"), true);

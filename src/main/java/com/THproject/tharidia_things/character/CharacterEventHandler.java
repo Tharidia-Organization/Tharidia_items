@@ -1,7 +1,9 @@
 package com.THproject.tharidia_things.character;
 
+import com.THproject.tharidia_things.Config;
 import com.THproject.tharidia_things.TharidiaThings;
 import com.THproject.tharidia_things.entity.RacePointEntity;
+import com.THproject.tharidia_things.network.RequestNamePacket;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
@@ -17,17 +19,17 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.UUID;
 
 /**
- * Handles character creation events.
- * IMPORTANT: This handler manages the character creation flow:
- * 1. New players are teleported to character_creation dimension
- * 2. Players must select a race before being teleported back
- * 3. Players who already created their character should NEVER be sent back
+ * Handles the character creation flow:
+ * 1. New players (NOT_STARTED) first choose a name (if needed)
+ * 2. After name is set, players are teleported to character_creation dimension (AWAITING_RACE)
+ * 3. Players select a race, then teleport back to overworld (COMPLETED)
  */
 @EventBusSubscriber(modid = "tharidiathings")
 public class CharacterEventHandler {
@@ -38,7 +40,8 @@ public class CharacterEventHandler {
 
     private static final int CHUNK_SPACING = 100;
     private static final int PLATFORM_RADIUS = 10;
-    private static final int CLEANUP_RADIUS = 2;
+    // Must cover barrier walls at ±(PLATFORM_RADIUS+1) = ±11 blocks from center
+    private static final int CLEANUP_RADIUS = 3;
 
     private static Constructor<?> customBorderConstructor;
     private static Method worldBorderGetMethod;
@@ -49,12 +52,15 @@ public class CharacterEventHandler {
 
     /**
      * Calculate player's unique chunk coordinates based on their UUID.
-     * Uses Math.abs() to ensure positive coordinates and avoid collisions.
+     * Uses separate halves of the UUID for X and Z to minimize collisions.
      */
     public static ChunkPos getPlayerAreaChunk(UUID playerUUID) {
-        int playerHash = Math.abs(playerUUID.hashCode());
-        int playerChunkX = (playerHash % 1000) * CHUNK_SPACING;
-        int playerChunkZ = ((playerHash / 1000) % 1000) * CHUNK_SPACING;
+        // Use separate UUID halves for X and Z — avoids Math.abs(MIN_VALUE) bug
+        // and expands the space from 1M to 100M unique positions
+        long msb = playerUUID.getMostSignificantBits();
+        long lsb = playerUUID.getLeastSignificantBits();
+        int playerChunkX = (int) ((msb & 0x7FFFFFFFL) % 10000) * CHUNK_SPACING;
+        int playerChunkZ = (int) ((lsb & 0x7FFFFFFFL) % 10000) * CHUNK_SPACING;
         return new ChunkPos(playerChunkX, playerChunkZ);
     }
 
@@ -69,9 +75,7 @@ public class CharacterEventHandler {
     @SubscribeEvent
     public static void onPlayerLogout(PlayerLoggedOutEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
-            // Check if player was in character creation dimension
             if (player.level().dimension().equals(CHARACTER_DIMENSION)) {
-                // Clean up the player's area
                 cleanupPlayerArea(player.server.getLevel(CHARACTER_DIMENSION), player.getUUID());
             }
         }
@@ -79,7 +83,6 @@ public class CharacterEventHandler {
 
     /**
      * Cleans up the character creation area for a specific player.
-     * This is a centralized method that can be called from multiple places.
      */
     public static void cleanupPlayerArea(ServerLevel characterLevel, UUID playerUUID) {
         if (characterLevel == null) {
@@ -93,7 +96,7 @@ public class CharacterEventHandler {
         TharidiaThings.LOGGER.info("Cleaning up character creation area for player at chunk ({}, {})",
                 playerChunk.x, playerChunk.z);
 
-        // Remove entities in the player's area using proper AABB around the actual center
+        // Remove entities in the player's area
         AABB cleanupArea = new AABB(
                 center.getX() - 50, center.getY() - 50, center.getZ() - 50,
                 center.getX() + 50, center.getY() + 50, center.getZ() + 50
@@ -110,7 +113,6 @@ public class CharacterEventHandler {
             for (int z = -CLEANUP_RADIUS; z <= CLEANUP_RADIUS; z++) {
                 ChunkPos chunkPos = new ChunkPos(playerChunk.x + x, playerChunk.z + z);
                 if (characterLevel.hasChunk(chunkPos.x, chunkPos.z)) {
-                    // Reset all blocks to air (limited Y range for performance)
                     for (int bx = 0; bx < 16; bx++) {
                         for (int bz = 0; bz < 16; bz++) {
                             for (int by = 80; by < 120; by++) {
@@ -127,37 +129,63 @@ public class CharacterEventHandler {
         }
     }
 
+    /**
+     * Main login handler — orchestrates the character creation flow based on stage.
+     */
     @SubscribeEvent
     public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player) {
-            if (player.server == null) {
-                TharidiaThings.LOGGER.warn("Server is null during login event for player {}",
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        if (player.server == null) return;
+
+        // Skip character creation on lobby servers
+        if (Config.IS_LOBBY_SERVER.get()) {
+            TharidiaThings.LOGGER.debug("Lobby server - skipping character creation for {}",
+                    player.getName().getString());
+            return;
+        }
+
+        CharacterData characterData = player.getData(CharacterAttachments.CHARACTER_DATA);
+        if (characterData == null) return;
+
+        CharacterData.CreationStage stage = characterData.getStage();
+
+        switch (stage) {
+            case NOT_STARTED -> {
+                TharidiaThings.LOGGER.info("Player {} stage NOT_STARTED - checking if name needed",
                         player.getName().getString());
-                return;
-            }
 
-            CharacterData characterData = player.getData(CharacterAttachments.CHARACTER_DATA);
-
-            // CRITICAL CHECK: Only teleport if character has NOT been created
-            if (characterData != null && !characterData.hasCreatedCharacter()) {
-                TharidiaThings.LOGGER.info("Player {} needs to create character - scheduling teleport",
-                        player.getName().getString());
-
-                // Delay teleportation to ensure dimension and player are fully initialized
-                player.server.execute(() -> {
+                // Check if player needs to choose a name first
+                boolean needsName = RequestNamePacket.checkIfPlayerNeedsName(player);
+                if (needsName) {
+                    // Send name request — do NOT teleport yet.
+                    // Teleport will happen after name is confirmed (in SubmitNamePacket handler).
+                    PacketDistributor.sendToPlayer(player, new RequestNamePacket(true));
+                } else {
+                    // Name not needed → advance to AWAITING_RACE and teleport
+                    characterData.setStage(CharacterData.CreationStage.AWAITING_RACE);
+                    // Delay teleport to let the player fully initialize
                     player.server.execute(() -> {
-                        // Double check player is still valid and connected
                         if (!player.isRemoved() && player.connection != null) {
-                            // Re-check character status in case it changed
-                            CharacterData currentData = player.getData(CharacterAttachments.CHARACTER_DATA);
-                            if (currentData != null && !currentData.hasCreatedCharacter()) {
+                            CharacterData cd = player.getData(CharacterAttachments.CHARACTER_DATA);
+                            if (cd != null && cd.getStage() == CharacterData.CreationStage.AWAITING_RACE) {
                                 teleportToCharacterDimension(player);
                             }
                         }
                     });
+                }
+            }
+            case AWAITING_RACE -> {
+                // Player was mid-creation and re-logged — re-teleport
+                TharidiaThings.LOGGER.info("Player {} stage AWAITING_RACE - re-teleporting to chargen",
+                        player.getName().getString());
+                player.server.execute(() -> {
+                    if (!player.isRemoved() && player.connection != null) {
+                        teleportToCharacterDimension(player);
+                    }
                 });
-            } else {
-                TharidiaThings.LOGGER.debug("Player {} already has character - skipping teleport",
+            }
+            case COMPLETED -> {
+                TharidiaThings.LOGGER.debug("Player {} already has character - skipping",
                         player.getName().getString());
             }
         }
@@ -165,74 +193,63 @@ public class CharacterEventHandler {
 
     @SubscribeEvent
     public static void onPlayerChangedDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player) {
-            CharacterData characterData = player.getData(CharacterAttachments.CHARACTER_DATA);
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
 
-            if (characterData == null) {
-                TharidiaThings.LOGGER.warn("Character data is null for player {}",
-                        player.getName().getString());
-                return;
-            }
+        CharacterData characterData = player.getData(CharacterAttachments.CHARACTER_DATA);
+        if (characterData == null) return;
 
-            // If player hasn't created character and is not in character dimension, teleport them back
-            if (!characterData.hasCreatedCharacter() && !event.getTo().equals(CHARACTER_DIMENSION)) {
-                TharidiaThings.LOGGER.info("Player {} tried to leave character dimension without creating character",
-                        player.getName().getString());
-                teleportToCharacterDimension(player);
-            }
+        // Only enforce dimension lock for players actively in race selection (AWAITING_RACE)
+        // NOT_STARTED players stay in overworld waiting for name prompt
+        if (characterData.getStage() == CharacterData.CreationStage.AWAITING_RACE
+                && !event.getTo().equals(CHARACTER_DIMENSION)) {
+            TharidiaThings.LOGGER.info("Player {} tried to leave character dimension during race selection",
+                    player.getName().getString());
+            teleportToCharacterDimension(player);
+        }
 
-            // If player is exiting character dimension and has created character, set to survival
-            if (characterData.hasCreatedCharacter() &&
-                    event.getFrom().equals(CHARACTER_DIMENSION) &&
-                    !event.getTo().equals(CHARACTER_DIMENSION)) {
-                player.server.execute(() -> {
-                    player.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
-                    player.setInvulnerable(false);
-                });
-            }
+        // If player is exiting character dimension after completing, set to survival
+        if (characterData.hasCreatedCharacter()
+                && event.getFrom().equals(CHARACTER_DIMENSION)
+                && !event.getTo().equals(CHARACTER_DIMENSION)) {
+            player.server.execute(() -> {
+                player.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+                player.setInvulnerable(false);
+            });
         }
     }
 
     @SubscribeEvent
     public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player) {
-            CharacterData characterData = player.getData(CharacterAttachments.CHARACTER_DATA);
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
 
-            if (characterData == null) {
-                TharidiaThings.LOGGER.warn("Character data is null for respawning player {}",
-                        player.getName().getString());
-                return;
-            }
+        CharacterData characterData = player.getData(CharacterAttachments.CHARACTER_DATA);
+        if (characterData == null) return;
 
-            // CRITICAL FIX: Only teleport to character creation if character has NOT been created
-            // This was the main bug - players who already created characters were being sent back
-            if (!characterData.hasCreatedCharacter()) {
-                TharidiaThings.LOGGER.info("Player {} respawned but hasn't created character - teleporting to creation",
-                        player.getName().getString());
+        // Only re-teleport players who are in AWAITING_RACE stage
+        if (characterData.getStage() == CharacterData.CreationStage.AWAITING_RACE) {
+            TharidiaThings.LOGGER.info("Player {} respawned during race selection - re-teleporting",
+                    player.getName().getString());
 
-                // Delay teleport to ensure player is fully respawned
-                player.server.execute(() -> {
-                    player.server.execute(() -> {
-                        // Re-check status - might have changed
-                        CharacterData currentData = player.getData(CharacterAttachments.CHARACTER_DATA);
-                        if (currentData != null && !currentData.hasCreatedCharacter()) {
-                            // Restore health before teleporting
-                            player.setHealth(player.getMaxHealth());
-                            player.getFoodData().setFoodLevel(20);
-                            player.getFoodData().setSaturation(20.0f);
-
-                            teleportToCharacterDimension(player);
-                        }
-                    });
-                });
-            } else {
-                TharidiaThings.LOGGER.debug("Player {} respawned with existing character - normal respawn",
-                        player.getName().getString());
-            }
+            player.server.execute(() -> {
+                if (!player.isRemoved() && player.connection != null) {
+                    CharacterData cd = player.getData(CharacterAttachments.CHARACTER_DATA);
+                    if (cd != null && cd.getStage() == CharacterData.CreationStage.AWAITING_RACE) {
+                        player.setHealth(player.getMaxHealth());
+                        player.getFoodData().setFoodLevel(20);
+                        player.getFoodData().setSaturation(20.0f);
+                        teleportToCharacterDimension(player);
+                    }
+                }
+            });
         }
     }
 
-    private static void teleportToCharacterDimension(ServerPlayer player) {
+    /**
+     * Teleports a player to their unique area in the character creation dimension.
+     * Sets up the platform, barrier walls, race point entity, and game mode.
+     * Public so it can be called from SubmitNamePacket and CharacterCommands.
+     */
+    public static void teleportToCharacterDimension(ServerPlayer player) {
         TharidiaThings.LOGGER.info("Teleporting player {} to character dimension", player.getName().getString());
 
         ServerLevel characterLevel = player.server.getLevel(CHARACTER_DIMENSION);
@@ -241,67 +258,38 @@ public class CharacterEventHandler {
             TharidiaThings.LOGGER.error("Character creation dimension not found! Cannot teleport player {}",
                     player.getName().getString());
             player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
-                    "§cCharacter creation dimension not found! Please contact an administrator."));
-
-            // Set character as created to prevent infinite loop
-            CharacterData characterData = player.getData(CharacterAttachments.CHARACTER_DATA);
-            if (characterData != null) {
-                characterData.setCharacterCreated(true);
-            }
-
-            // Teleport to overworld spawn as fallback
-            ServerLevel overworld = player.server.overworld();
-            if (overworld != null) {
-                BlockPos spawnPos = overworld.getSharedSpawnPos();
-                player.teleportTo(overworld, spawnPos.getX() + 0.5, spawnPos.getY() + 1,
-                        spawnPos.getZ() + 0.5, 0, 0);
-                player.setHealth(player.getMaxHealth());
-                player.getFoodData().setFoodLevel(20);
-                player.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
-            }
+                    "\u00a7cDimensione di creazione personaggio non trovata! Contatta un amministratore."));
+            // Do NOT mark as created — leave state as-is so it can retry next login
             return;
         }
 
-        // Get player's unique area
         BlockPos spawnPos = getPlayerSpawnPos(player.getUUID());
         ChunkPos playerChunk = getPlayerAreaChunk(player.getUUID());
 
         TharidiaThings.LOGGER.info("Player {} area: chunk ({}, {}), spawn pos: {}",
                 player.getName().getString(), playerChunk.x, playerChunk.z, spawnPos);
 
-        // Pre-load chunks in the area to ensure they're ready
+        // Pre-load chunks
         for (int x = -2; x <= 2; x++) {
             for (int z = -2; z <= 2; z++) {
                 characterLevel.getChunk(playerChunk.x + x, playerChunk.z + z);
             }
         }
 
-        // Find a safe Y position
         spawnPos = findSafeYPosition(characterLevel, spawnPos);
-
-        TharidiaThings.LOGGER.info("Final spawn position after findSafeYPosition: {}", spawnPos);
-
-        // Create the stone platform if it doesn't exist
         createStonePlatform(characterLevel, spawnPos);
 
-        TharidiaThings.LOGGER.info("Teleporting player {} to position: {}",
-                player.getName().getString(), spawnPos);
-
-        // Create final copies for lambda
         final BlockPos finalSpawnPos = spawnPos;
         final ServerLevel finalCharacterLevel = characterLevel;
 
-        // Teleport the player to the exact center of the platform
         player.teleportTo(characterLevel, spawnPos.getX() + 0.5, spawnPos.getY() + 1,
                 spawnPos.getZ() + 0.5, player.getYRot(), player.getXRot());
 
-        // Set game mode to adventure (delayed to ensure it applies after teleport)
+        // Set up game mode and spawn entities after teleport
         player.server.execute(() -> {
             player.setGameMode(net.minecraft.world.level.GameType.ADVENTURE);
             player.setInvulnerable(true);
             player.removeAllEffects();
-
-            // Restore full health and food
             player.setHealth(player.getMaxHealth());
             player.getFoodData().setFoodLevel(20);
             player.getFoodData().setSaturation(20.0f);
@@ -316,42 +304,32 @@ public class CharacterEventHandler {
         });
 
         player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
-                "§eWelcome! Please create your character before proceeding."));
+                "\u00a7eBenvenuto! Crea il tuo personaggio prima di procedere."));
     }
 
     private static BlockPos findSafeYPosition(ServerLevel level, BlockPos pos) {
-        // Ensure chunk is loaded
         level.getChunk(pos);
 
-        // Start from y=100 and go down until we find air
         for (int y = 100; y > 50; y--) {
             BlockPos checkPos = new BlockPos(pos.getX(), y, pos.getZ());
             if (level.isEmptyBlock(checkPos) && level.isEmptyBlock(checkPos.above())) {
                 return checkPos;
             }
         }
-        // If no safe position found, return Y=100 (platform will be created)
         return new BlockPos(pos.getX(), 100, pos.getZ());
     }
 
     private static void createStonePlatform(ServerLevel level, BlockPos center) {
-        // Ensure chunk is loaded before placing blocks
         level.getChunk(center);
 
-        TharidiaThings.LOGGER.info("Creating stone platform centered at: {}", center);
-
         int platformY = center.getY() - 1;
-        int blocksPlaced = 0;
 
         for (int x = -PLATFORM_RADIUS; x <= PLATFORM_RADIUS; x++) {
             for (int z = -PLATFORM_RADIUS; z <= PLATFORM_RADIUS; z++) {
                 BlockPos pos = new BlockPos(center.getX() + x, platformY, center.getZ() + z);
-
                 level.getChunk(pos);
-
                 if (level.isEmptyBlock(pos) || level.getBlockState(pos).canBeReplaced()) {
                     level.setBlock(pos, Blocks.STONE.defaultBlockState(), 3);
-                    blocksPlaced++;
                 }
             }
         }
@@ -370,29 +348,20 @@ public class CharacterEventHandler {
                 }
             }
         }
-
-        TharidiaThings.LOGGER.info("Platform creation complete. Centered at {}, Placed {} blocks",
-                center, blocksPlaced);
     }
 
-    /**
-     * Spawns a single selection point at the center for the given player
-     */
     private static void spawnRacePoints(ServerLevel level, BlockPos center, UUID playerUUID) {
-        // FIXED: Use the correct center based on player's area, not a fixed position
         AABB searchArea = new AABB(
                 center.getX() - 50, center.getY() - 50, center.getZ() - 50,
                 center.getX() + 50, center.getY() + 50, center.getZ() + 50
         );
 
-        // Remove existing race point entities in this player's area
         level.getEntitiesOfClass(RacePointEntity.class, searchArea)
                 .forEach(entity -> {
                     TharidiaThings.LOGGER.debug("Removing existing RacePointEntity at {}", entity.position());
                     entity.discard();
                 });
 
-        // Spawn a single selection point at the center
         RacePointEntity selectionPoint = new RacePointEntity(
                 level, center.getX(), center.getY(), center.getZ(),
                 "scegli il tuo percorso", 0xFFFFFF);
@@ -402,8 +371,7 @@ public class CharacterEventHandler {
     }
 
     /**
-     * Call this when player successfully creates their character.
-     * This is the central method that should be called to complete character creation.
+     * Completes character creation. Called after race selection.
      */
     public static void completeCharacterCreation(ServerPlayer player) {
         CharacterData characterData = player.getData(CharacterAttachments.CHARACTER_DATA);
@@ -414,18 +382,15 @@ public class CharacterEventHandler {
             return;
         }
 
-        // Mark character as created FIRST
-        characterData.setCharacterCreated(true);
+        // Mark character as created
+        characterData.setStage(CharacterData.CreationStage.COMPLETED);
 
-        TharidiaThings.LOGGER.info("Character creation completed for player {}", player.getName().getString());
+        TharidiaThings.LOGGER.info("Character creation completed for player {} (race: {})",
+                player.getName().getString(), characterData.getSelectedRace());
 
-        // Remove invulnerability
         player.setInvulnerable(false);
-
-        // Remove character creation border
         removeCharacterCreationBorder(player);
 
-        // Clean up the player's area in the character dimension
         ServerLevel characterLevel = player.server.getLevel(CHARACTER_DIMENSION);
         if (characterLevel != null) {
             cleanupPlayerArea(characterLevel, player.getUUID());
@@ -437,7 +402,6 @@ public class CharacterEventHandler {
         player.teleportTo(overworld, spawnPos.getX() + 0.5, spawnPos.getY() + 1,
                 spawnPos.getZ() + 0.5, player.getYRot(), player.getXRot());
 
-        // Set survival mode
         player.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
     }
 
@@ -455,15 +419,16 @@ public class CharacterEventHandler {
     public static void resetCharacterCreation(ServerPlayer player) {
         CharacterData characterData = player.getData(CharacterAttachments.CHARACTER_DATA);
         if (characterData != null) {
-            characterData.setCharacterCreated(false);
+            characterData.setStage(CharacterData.CreationStage.NOT_STARTED);
+            characterData.setSelectedRace(null);
             TharidiaThings.LOGGER.info("Character creation reset for player {}", player.getName().getString());
         }
     }
 
+    // --- World Border reflection (unchanged pattern, cached) ---
+
     private static boolean createCharacterCreationBorder(ServerPlayer player, BlockPos platformCenter) {
-        if (!ensureWorldBorderReflection()) {
-            return false;
-        }
+        if (!ensureWorldBorderReflection()) return false;
 
         double borderMinX = platformCenter.getX() - 11;
         double borderMinZ = platformCenter.getZ() - 11;
@@ -477,8 +442,8 @@ public class CharacterEventHandler {
             Object data = worldBorderGetMethod.invoke(null);
             Object border = customBorderConstructor.newInstance(borderMinX, borderMinZ, borderMaxX, borderMaxZ);
             worldBorderAddBorderMethod.invoke(data, dimension, borderName, border);
-            TharidiaThings.LOGGER.info("Created character creation border '{}' at ({}, {}) to ({}, {}) for player {}",
-                    borderName, borderMinX, borderMinZ, borderMaxX, borderMaxZ, player.getName().getString());
+            TharidiaThings.LOGGER.info("Created character creation border '{}' for player {}",
+                    borderName, player.getName().getString());
             return true;
         } catch (Exception ex) {
             TharidiaThings.LOGGER.warn("Failed to create character creation border for {}",
@@ -488,9 +453,7 @@ public class CharacterEventHandler {
     }
 
     private static void removeCharacterCreationBorder(ServerPlayer player) {
-        if (!ensureWorldBorderReflection()) {
-            return;
-        }
+        if (!ensureWorldBorderReflection()) return;
 
         String borderName = "character_creation_" + player.getUUID().toString().substring(0, 8);
         ResourceLocation dimension = CHARACTER_DIMENSION.location();
