@@ -150,23 +150,24 @@ public class ArmorMenu extends AbstractContainerMenu {
                     return ItemStack.EMPTY;
                 }
             } else { // From Player Inventory
-                // Try to equip armor first
-                if (itemstack1.canEquip(EquipmentSlot.HEAD, player) && !this.slots.get(0).hasItem()) {
-                    if (!this.moveItemStackTo(itemstack1, 0, 1, false))
+                // First try custom buffer (4-7) - Check under armor slots first
+                if (!this.moveItemStackTo(itemstack1, 4, 8, false)) {
+                    // Then try to equip armor
+                    if (itemstack1.canEquip(EquipmentSlot.HEAD, player) && !this.slots.get(0).hasItem()) {
+                        if (!this.moveItemStackTo(itemstack1, 0, 1, false))
+                            return ItemStack.EMPTY;
+                    } else if (itemstack1.canEquip(EquipmentSlot.CHEST, player) && !this.slots.get(1).hasItem()) {
+                        if (!this.moveItemStackTo(itemstack1, 1, 2, false))
+                            return ItemStack.EMPTY;
+                    } else if (itemstack1.canEquip(EquipmentSlot.LEGS, player) && !this.slots.get(2).hasItem()) {
+                        if (!this.moveItemStackTo(itemstack1, 2, 3, false))
+                            return ItemStack.EMPTY;
+                    } else if (itemstack1.canEquip(EquipmentSlot.FEET, player) && !this.slots.get(3).hasItem()) {
+                        if (!this.moveItemStackTo(itemstack1, 3, 4, false))
+                            return ItemStack.EMPTY;
+                    } else {
                         return ItemStack.EMPTY;
-                } else if (itemstack1.canEquip(EquipmentSlot.CHEST, player) && !this.slots.get(1).hasItem()) {
-                    if (!this.moveItemStackTo(itemstack1, 1, 2, false))
-                        return ItemStack.EMPTY;
-                } else if (itemstack1.canEquip(EquipmentSlot.LEGS, player) && !this.slots.get(2).hasItem()) {
-                    if (!this.moveItemStackTo(itemstack1, 2, 3, false))
-                        return ItemStack.EMPTY;
-                } else if (itemstack1.canEquip(EquipmentSlot.FEET, player) && !this.slots.get(3).hasItem()) {
-                    if (!this.moveItemStackTo(itemstack1, 3, 4, false))
-                        return ItemStack.EMPTY;
-                }
-                // Then try custom buffer (4-7)
-                else if (!this.moveItemStackTo(itemstack1, 4, 8, false)) {
-                    return ItemStack.EMPTY;
+                    }
                 }
             }
 
