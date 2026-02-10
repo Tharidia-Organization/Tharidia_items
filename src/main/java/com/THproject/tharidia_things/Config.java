@@ -58,6 +58,10 @@ public class Config {
     public static final ModConfigSpec.IntValue SMITHING_MAX_FAILURES = BUILDER
             .comment("Maximum number of failures before losing the piece (if enabled)")
             .defineInRange("smithingMaxFailures", 3, 1, 10);
+
+    public static final ModConfigSpec.IntValue SMITHING_COOLING_TIME = BUILDER
+            .comment("Time in seconds before hot metal cools down on the anvil or component cools in the pinza (default: 300 = 5 minutes)")
+            .defineInRange("smithingCoolingTime", 300, 30, 3600);
     
     // Pinza (Tongs) settings
     public static final ModConfigSpec.IntValue PINZA_DURABILITY = BUILDER

@@ -1,38 +1,13 @@
 package com.THproject.tharidia_things.event;
 
-import com.THproject.tharidia_things.TharidiaThings;
-import com.THproject.tharidia_things.network.RequestNamePacket;
-import com.THproject.tharidia_things.Config;
-import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
-
 /**
- * Handles pre-login name selection check (SERVER SIDE ONLY)
- * Sends a packet to client to show name selection dialog before world loads
+ * Previously handled pre-login name selection check.
+ * This logic has been moved to CharacterEventHandler.onPlayerLoggedIn() to unify
+ * the character creation flow (name → race → complete) in a single handler.
+ *
+ * This class is kept empty to avoid breaking the event bus registration in TharidiaThings.
+ * It can be safely removed once the registration line is also removed.
  */
 public class PreLoginNameHandler {
-    
-    @SubscribeEvent
-    public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
-        // Only run on server side
-        if (event.getEntity() instanceof ServerPlayer serverPlayer) {
-            // If this server is the lobby (config), skip the name prompt here
-            // The player will be asked on the main server instead.
-            if (Config.IS_LOBBY_SERVER.get()) {
-                TharidiaThings.LOGGER.info("[NAME SELECTION] Lobby detected - skipping name prompt for {}",
-                    serverPlayer.getName().getString());
-                return;
-            }
-            // Check if player needs to choose a name
-            boolean needsName = RequestNamePacket.checkIfPlayerNeedsName(serverPlayer);
-            
-            TharidiaThings.LOGGER.info("Player {} login - needs name: {}", 
-                serverPlayer.getName().getString(), needsName);
-            
-            // Send packet to client to trigger name selection screen if needed
-            PacketDistributor.sendToPlayer(serverPlayer, new RequestNamePacket(needsName));
-        }
-    }
+    // Intentionally empty — all logic moved to CharacterEventHandler
 }

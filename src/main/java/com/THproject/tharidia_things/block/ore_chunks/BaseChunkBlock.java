@@ -12,39 +12,59 @@ import net.minecraft.tags.ItemTags;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.state.properties.IntegerProperty;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
-public class Chunks {
-    public static final IntegerProperty STAGE = IntegerProperty.create("stage", 0, 4);
+public abstract class BaseChunkBlock extends BaseEntityBlock {
+    private static final VoxelShape SHAPE = Block.box(4, 0, 4, 12, 8, 12);
 
-    public static final VoxelShape SHAPE_STAGE0 = Block.box(4, 0, 4, 12, 8, 12);
-    public static final VoxelShape SHAPE_STAGE1 = Block.box(4, 0, 4, 12, 8, 12);
-    public static final VoxelShape SHAPE_STAGE2 = Block.box(4, 0, 4, 12, 8, 12);
-    public static final VoxelShape SHAPE_STAGE3 = Block.box(4, 0, 4, 12, 8, 12);
-    public static final VoxelShape SHAPE_STAGE4 = Block.box(4, 0, 4, 12, 8, 12);
+    public BaseChunkBlock(Properties properties) {
+        super(properties);
+        this.registerDefaultState(this.stateDefinition.any().setValue(ChunksRegistry.STAGE, 0));
+    }
 
-    public static void attackChunk(Level level, BlockPos pos, Player player) {
+    @Override
+    public void attack(BlockState state, Level level, BlockPos pos, Player player) {
         if (!level.isClientSide) {
             if (isCorrectTool(player.getMainHandItem())) {
                 BlockEntity blockEntity = level.getBlockEntity(pos);
-                if (blockEntity instanceof IronChunkBlockEntity ironChunkBlockEntity) {
-                    ironChunkBlockEntity.hit();
+                if (blockEntity instanceof BaseChunkBlockEntity chunkBlockEntity) {
+                    chunkBlockEntity.hit();
                     playHammerSound(level, pos);
                     spawnParticle(level, pos);
                     destroyHandItem(player, 1);
-                    if (ironChunkBlockEntity.getHit() >= ironChunkBlockEntity.getMaxHit()) {
+                    if (chunkBlockEntity.getHit() >= chunkBlockEntity.getMaxHit()) {
                         playChunkBreakSound(level, pos);
-                        destroyAndPop(level, pos, ironChunkBlockEntity.getDrop());
+                        destroyAndPop(level, pos, chunkBlockEntity.getDrop());
                     }
                 }
             }
         }
+        super.attack(state, level, pos, player);
+    }
+
+    @Override
+    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return SHAPE;
+    }
+
+    @Override
+    public RenderShape getRenderShape(BlockState state) {
+        return RenderShape.MODEL;
+    }
+
+    @Override
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(ChunksRegistry.STAGE);
     }
 
     public static void playHammerSound(Level level, BlockPos pos) {
