@@ -1438,11 +1438,12 @@ public class TharidiaThings {
         }
 
         // Shutdown GodEye integration executor first (fast, has timeout)
+        // Catch Throwable (not Exception) because NoClassDefFoundError is an Error
         try {
             LOGGER.info("Shutting down GodEye integration...");
             com.THproject.tharidia_things.integration.GodEyeIntegration.shutdown();
-        } catch (Exception e) {
-            LOGGER.error("Error shutting down GodEye integration: {}", e.getMessage(), e);
+        } catch (Throwable t) {
+            LOGGER.error("Error shutting down GodEye integration: {}", t.getMessage(), t);
         }
 
         // Then shutdown database
