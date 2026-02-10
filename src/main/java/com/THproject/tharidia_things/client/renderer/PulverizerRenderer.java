@@ -26,17 +26,20 @@ public class PulverizerRenderer extends GeoBlockRenderer<PulverizerBlockEntity> 
         super(new GeoModel<PulverizerBlockEntity>() {
             @Override
             public ResourceLocation getModelResource(PulverizerBlockEntity animatable) {
-                return ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, "geo/pulverizer.geo.json");
+                return ResourceLocation.fromNamespaceAndPath(
+                        TharidiaThings.MODID, "geo/pulverizer.geo.json");
             }
 
             @Override
             public ResourceLocation getTextureResource(PulverizerBlockEntity animatable) {
-                return ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, "textures/block/pulverizer.png");
+                return ResourceLocation.fromNamespaceAndPath(
+                        TharidiaThings.MODID, "textures/block/pulverizer.png");
             }
 
             @Override
             public ResourceLocation getAnimationResource(PulverizerBlockEntity animatable) {
-                return ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, "animations/pulverizer.animation.json");
+                return ResourceLocation.fromNamespaceAndPath(
+                        TharidiaThings.MODID, "animations/pulverizer.animation.json");
             }
         });
     }

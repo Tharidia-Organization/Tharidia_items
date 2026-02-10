@@ -57,10 +57,12 @@ import com.THproject.tharidia_things.item.HotIronItem;
 import com.THproject.tharidia_things.item.HotGoldItem;
 import com.THproject.tharidia_things.item.HotCopperItem;
 import com.THproject.tharidia_things.item.PinzaItem;
+import com.THproject.tharidia_things.item.PulverizerBlockItem;
 import com.THproject.tharidia_things.item.LamaLungaItem;
 import com.THproject.tharidia_things.item.LamaCortaItem;
 import com.THproject.tharidia_things.item.ElsaItem;
 import com.THproject.tharidia_things.item.GoldLamaLungaItem;
+import com.THproject.tharidia_things.item.Grinder;
 import com.THproject.tharidia_things.item.GoldLamaCortaItem;
 import com.THproject.tharidia_things.item.CopperLamaLungaItem;
 import com.THproject.tharidia_things.item.CopperLamaCortaItem;
@@ -109,7 +111,7 @@ import com.THproject.tharidia_things.servertransfer.ServerTransferCommands;
 import com.THproject.tharidia_things.servertransfer.TransferTokenManager;
 import com.THproject.tharidia_things.sounds.ModSounds;
 import com.THproject.tharidia_things.servertransfer.DevWhitelistManager;
-
+import com.THproject.tharidia_things.recipe.PulverizerRecipe;
 import com.THproject.tharidia_things.recipe.WasherRecipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
@@ -180,16 +182,24 @@ public class TharidiaThings {
     public static final DeferredRegister<net.minecraft.world.inventory.MenuType<?>> MENU_TYPES = DeferredRegister
             .create(BuiltInRegistries.MENU, MODID);
 
-    // Sieve Recipes
+    // Recipes
     public static final DeferredRegister<RecipeType<?>> RECIPE_TYPES = DeferredRegister.create(Registries.RECIPE_TYPE,
             MODID);
     public static final DeferredRegister<RecipeSerializer<?>> RECIPE_SERIALIZERS = DeferredRegister
             .create(Registries.RECIPE_SERIALIZER, MODID);
 
+    // Washer Recipes
     public static final DeferredHolder<RecipeType<?>, RecipeType<WasherRecipe>> WASHER_RECIPE_TYPE = RECIPE_TYPES
             .register("washing", () -> RecipeType.simple(ResourceLocation.fromNamespaceAndPath(MODID, "washing")));
     public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<WasherRecipe>> WASHER_RECIPE_SERIALIZER = RECIPE_SERIALIZERS
             .register("washing", WasherRecipe.Serializer::new);
+
+    // Pulverizer Recipe
+    public static final DeferredHolder<RecipeType<?>, RecipeType<PulverizerRecipe>> PULVERIZER_RECIPE_TYPE = RECIPE_TYPES
+            .register("pulverizer",
+                    () -> RecipeType.simple(ResourceLocation.fromNamespaceAndPath(MODID, "pulverizer")));
+    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<PulverizerRecipe>> PULVERIZER_RECIPE_SERIALIZER = RECIPE_SERIALIZERS
+            .register("pulverizer", PulverizerRecipe.Serializer::new);
 
     // Database system for cross-server communication
     private DatabaseManager databaseManager;
@@ -241,10 +251,12 @@ public class TharidiaThings {
     // Smithing Furnace Block (5x2x3 multiblock, GeckoLib animated)
     public static final DeferredBlock<SmithingFurnaceBlock> SMITHING_FURNACE = BLOCKS.register("smithing_furnace",
             () -> new SmithingFurnaceBlock());
-    public static final DeferredItem<SmithingFurnaceBlockItem> SMITHING_FURNACE_ITEM = ITEMS.register("smithing_furnace",
+    public static final DeferredItem<SmithingFurnaceBlockItem> SMITHING_FURNACE_ITEM = ITEMS.register(
+            "smithing_furnace",
             () -> new SmithingFurnaceBlockItem(SMITHING_FURNACE.get(), new Item.Properties()));
     // Smithing Furnace Dummy Block (multiblock slave)
-    public static final DeferredBlock<SmithingFurnaceDummyBlock> SMITHING_FURNACE_DUMMY = BLOCKS.register("smithing_furnace_dummy",
+    public static final DeferredBlock<SmithingFurnaceDummyBlock> SMITHING_FURNACE_DUMMY = BLOCKS.register(
+            "smithing_furnace_dummy",
             () -> new SmithingFurnaceDummyBlock());
 
     // Smithing Furnace Ash
@@ -270,7 +282,6 @@ public class TharidiaThings {
     // Pinza Crucible (Crucible Tongs) - picks up molten metal from furnace
     public static final DeferredItem<PinzaCrucibleItem> PINZA_CRUCIBLE = ITEMS.register("pinza_crucible",
             () -> new PinzaCrucibleItem(new Item.Properties().stacksTo(1)));
-
 
     // Dungeon Portal Block (red portal, no teleportation)
     public static final DeferredBlock<DungeonPortalBlock> DUNGEON_PORTAL = BLOCKS.register("dungeon_portal",
@@ -379,17 +390,17 @@ public class TharidiaThings {
     // Pulverizer Block
     public static final DeferredBlock<PulverizerBlock> PULVERIZER_BLOCK = BLOCKS.register("pulverizer",
             () -> new PulverizerBlock());
-                    
-    public static final DeferredItem<BlockItem> PULVERIZER_BLOCK_ITEM = ITEMS.registerSimpleBlockItem(
+
+    public static final DeferredItem<PulverizerBlockItem> PULVERIZER_BLOCK_ITEM = ITEMS.register(
             "pulverizer",
-            PULVERIZER_BLOCK);
+            () -> new PulverizerBlockItem(PULVERIZER_BLOCK.get(),
+                    new Item.Properties()));
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<PulverizerBlockEntity>> PULVERIZER_BLOCK_ENTITY = BLOCK_ENTITIES
             .register("pulverizer",
                     () -> BlockEntityType.Builder.of(PulverizerBlockEntity::new, PULVERIZER_BLOCK.get()).build(null));
 
-    public static final DeferredItem<Item> GRINDER = ITEMS.register("grinder",
-            () -> new IronCrusherHammer());
+    public static final DeferredItem<Item> GRINDER = ITEMS.register("grinder", () -> new Grinder());
 
     // Creates a new BlockEntityType for the Pietro block
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<PietroBlockEntity>> PIETRO_BLOCK_ENTITY = BLOCK_ENTITIES
@@ -422,7 +433,8 @@ public class TharidiaThings {
     // Creates a new BlockEntityType for the Smithing Furnace
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<SmithingFurnaceBlockEntity>> SMITHING_FURNACE_BLOCK_ENTITY = BLOCK_ENTITIES
             .register("smithing_furnace",
-                    () -> BlockEntityType.Builder.of(SmithingFurnaceBlockEntity::new, SMITHING_FURNACE.get()).build(null));
+                    () -> BlockEntityType.Builder.of(SmithingFurnaceBlockEntity::new, SMITHING_FURNACE.get())
+                            .build(null));
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<StationCrystalBlockEntity>> STATION_CRYSTAL_BLOCK_ENTITY = BLOCK_ENTITIES
             .register("station_crystal",
@@ -1230,7 +1242,8 @@ public class TharidiaThings {
             }
 
             // Safety net for singleplayer: schedule halt(false) on the next server tick.
-            // In the vanilla disconnect chain, halt(false) is called in super.onDisconnect()
+            // In the vanilla disconnect chain, halt(false) is called in
+            // super.onDisconnect()
             // AFTER removePlayerFromWorld() completes. If anything in PlayerList.remove()
             // (after this event fires) throws or blocks, halt(false) is never reached and
             // the integrated server runs forever, freezing the client at "Saving world".
@@ -1327,7 +1340,8 @@ public class TharidiaThings {
         // Register weight data loader
         event.getServer().getResourceManager();
 
-        // Initialize database and transfer system only on dedicated servers (not singleplayer)
+        // Initialize database and transfer system only on dedicated servers (not
+        // singleplayer)
         if (event.getServer().isDedicatedServer()) {
             initializeDatabaseSystem(event.getServer());
             initializeServerTransferSystem(event.getServer());

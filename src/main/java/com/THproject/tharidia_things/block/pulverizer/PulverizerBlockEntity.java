@@ -1,18 +1,35 @@
 package com.THproject.tharidia_things.block.pulverizer;
 
+import java.util.List;
+import java.util.Optional;
+
 import com.THproject.tharidia_things.TharidiaThings;
+import com.THproject.tharidia_things.recipe.PulverizerRecipe;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.particles.BlockParticleOption;
+import net.minecraft.core.particles.ItemParticleOption;
+import net.minecraft.core.particles.ParticleOptions;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.Entity.RemovalReason;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
+import net.neoforged.neoforge.items.ItemStackHandler;
+import net.neoforged.neoforge.items.wrapper.RecipeWrapper;
 import software.bernie.geckolib.animatable.GeoBlockEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.animation.AnimatableManager.ControllerRegistrar;
@@ -22,9 +39,32 @@ import software.bernie.geckolib.animation.RawAnimation;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 public class PulverizerBlockEntity extends BlockEntity implements GeoBlockEntity {
-    private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
+    private static int MAX_ACTIVE_PER_CLICK = 1000;
+
     private ItemStack grinder = ItemStack.EMPTY;
-    private boolean active = false;
+    private long active_timestamp = -1;
+
+    private int progress;
+    private int maxProgress;
+
+    public final ItemStackHandler inventory = new ItemStackHandler(2) {
+        @Override
+        protected void onContentsChanged(int slot) {
+            setChanged();
+        }
+
+        public boolean isItemValid(int slot, ItemStack stack) {
+            // Slot 0 -> input
+            if (slot == 0) {
+                if (level == null)
+                    return true;
+                return level.getRecipeManager().getAllRecipesFor(TharidiaThings.PULVERIZER_RECIPE_TYPE.get())
+                        .stream()
+                        .anyMatch(recipe -> recipe.value().getInput().test(stack));
+            }
+            return false;
+        }
+    };
 
     // Animations
     private static final RawAnimation ACTIVE_ANIM = RawAnimation.begin().thenLoop("active");
@@ -47,27 +87,117 @@ public class PulverizerBlockEntity extends BlockEntity implements GeoBlockEntity
         return grinder.copy();
     }
 
+    public void damageGrinder() {
+        grinder.setDamageValue(grinder.getDamageValue() + 1);
+    }
+
     public boolean hasGrinder() {
         return !grinder.isEmpty();
     }
 
-    public void toogleActive() {
-        active = !active;
-        setChanged();
+    public void setActive() {
+        if (hasGrinder())
+            active_timestamp = System.currentTimeMillis();
     }
 
     public boolean isActive() {
-        return active;
+        return ((System.currentTimeMillis() - active_timestamp) <= MAX_ACTIVE_PER_CLICK);
     }
 
     public static void tick(Level level, BlockPos pos, BlockState state, PulverizerBlockEntity pulverizer) {
+        RecipeWrapper recipeWrapper = new RecipeWrapper(pulverizer.inventory);
+        Optional<RecipeHolder<PulverizerRecipe>> recipeHolder = level.getRecipeManager()
+                .getRecipeFor(TharidiaThings.PULVERIZER_RECIPE_TYPE.get(), recipeWrapper, level);
 
+        List<Entity> above_entities = level.getEntities(null, new AABB(pos.above(1)));
+        above_entities.forEach(entity -> {
+            if (entity instanceof ItemEntity item) {
+                ItemStack item_return = pulverizer.inventory.insertItem(0, item.getItem().copy(), false);
+                if (!item_return.isEmpty())
+                    item.setItem(item_return);
+                else
+                    item.remove(RemovalReason.DISCARDED);
+            }
+        });
+
+        if (!recipeHolder.isPresent()) {
+            pulverizer.resetProgress();
+            return;
+        }
+
+        PulverizerRecipe recipe = recipeHolder.get().value();
+        if (pulverizer.isActive() && pulverizer.hasGrinder()) {
+            pulverizer.maxProgress = recipe.getProcessingTime();
+            pulverizer.processParticle(level, pos, pulverizer.inventory.getStackInSlot(0));
+            ItemStack result = recipe.getResultItem(level.registryAccess());
+            if ((pulverizer.progress++ >= pulverizer.maxProgress) && pulverizer.canInsertItem(result)) {
+                pulverizer.damageGrinder();
+                pulverizer.craftItem(recipe);
+                pulverizer.resetProgress();
+            }
+        }
+    }
+
+    private void processParticle(Level level, BlockPos pos, ItemStack input) {
+        if (level instanceof ServerLevel serverLevel) {
+            if (!input.isEmpty()) {
+                ParticleOptions particleOptions;
+                if (input.getItem() instanceof BlockItem blockItem) {
+                    BlockState blockState = blockItem.getBlock().defaultBlockState();
+                    particleOptions = new BlockParticleOption(ParticleTypes.BLOCK, blockState);
+                } else {
+                    particleOptions = new ItemParticleOption(ParticleTypes.ITEM, input);
+                }
+                serverLevel.sendParticles(
+                        particleOptions,
+                        pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
+                        2,
+                        0.0, 0.0, 0.0,
+                        0.05);
+            }
+        }
+    }
+
+    private boolean canInsertItem(ItemStack item) {
+        for (int i = 1; i < inventory.getSlots(); i++) {
+            ItemStack outputStack = inventory.getStackInSlot(i);
+            if (outputStack.isEmpty()) {
+                return true;
+            } else if (!outputStack.isEmpty() && outputStack.getItem() == item.getItem()
+                    && outputStack.getCount() + item.getCount() <= outputStack.getMaxStackSize()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void craftItem(PulverizerRecipe recipe) {
+        ItemStack result = recipe.getResultItem(this.level.registryAccess());
+        inventory.extractItem(0, 1, false);
+
+        for (int i = 1; i < inventory.getSlots(); i++) {
+            ItemStack outputStack = inventory.getStackInSlot(i);
+            if (outputStack.isEmpty()) {
+                inventory.setStackInSlot(i, result.copy());
+                return;
+            } else if (!outputStack.isEmpty() && outputStack.getItem() == result.getItem()
+                    && outputStack.getCount() + result.getCount() <= outputStack.getMaxStackSize()) {
+                outputStack.grow(result.getCount());
+                return;
+            }
+        }
+    }
+
+    private void resetProgress() {
+        this.progress = 0;
+        this.setChanged();
     }
 
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
-        tag.putBoolean("Active", this.active);
+        tag.put("Inventory", inventory.serializeNBT(registries));
+        tag.putLong("ActiveTimestamp", this.active_timestamp);
         if (!grinder.isEmpty()) {
             tag.put("Grinder", this.grinder.save(registries));
         }
@@ -76,13 +206,16 @@ public class PulverizerBlockEntity extends BlockEntity implements GeoBlockEntity
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
+        if (tag.contains("Inventory")) {
+            inventory.deserializeNBT(registries, tag.getCompound("Inventory"));
+        }
+        if (tag.contains("ActiveTimestamp")) {
+            this.active_timestamp = tag.getLong("ActiveTimestamp");
+        }
         if (tag.contains("Grinder")) {
             this.grinder = ItemStack.parse(registries, tag.getCompound("Grinder")).orElse(ItemStack.EMPTY);
         } else {
             this.grinder = ItemStack.EMPTY;
-        }
-        if (tag.contains("Active")) {
-            this.active = tag.getBoolean("Active");
         }
     }
 
@@ -131,6 +264,8 @@ public class PulverizerBlockEntity extends BlockEntity implements GeoBlockEntity
             return PlayState.STOP;
         }));
     }
+
+    private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
     @Override
     public AnimatableInstanceCache getAnimatableInstanceCache() {

@@ -6,6 +6,7 @@ import com.THproject.tharidia_things.TharidiaThings;
 import com.mojang.serialization.MapCodec;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -25,6 +26,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.phys.BlockHitResult;
 
 public class PulverizerBlock extends BaseEntityBlock {
@@ -32,7 +34,11 @@ public class PulverizerBlock extends BaseEntityBlock {
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
 
     public PulverizerBlock() {
-        this(BlockBehaviour.Properties.of().noOcclusion());
+        this(BlockBehaviour.Properties.of()
+                .mapColor(MapColor.METAL)
+                .strength(3.0F)
+                .requiresCorrectToolForDrops()
+                .noOcclusion());
     }
 
     public PulverizerBlock(Properties properties) {
@@ -51,22 +57,35 @@ public class PulverizerBlock extends BaseEntityBlock {
             return ItemInteractionResult.CONSUME;
         }
 
-        if (stack.getItem() == TharidiaThings.GRINDER.asItem()) {
+        if (stack.getItem() == TharidiaThings.GRINDER.asItem() && !pulverizer.hasGrinder()) {
             pulverizer.setGrinder(stack);
             stack.shrink(1);
-            return ItemInteractionResult.SUCCESS;
         } else if (stack.isEmpty() && player.isShiftKeyDown()) {
-            ItemStack grinder = pulverizer.getGrinder();
-            if (!grinder.isEmpty()) {
-                pulverizer.removeGrinder();
-                if (player.getInventory().add(grinder)) {
-                    player.drop(grinder, false);
+            boolean hasItemInOutput = false;
+            for (int i = 1; i < pulverizer.inventory.getSlots(); i++) {
+                ItemStack extracted = pulverizer.inventory.extractItem(i, 64, false);
+                if (!extracted.isEmpty()) {
+                    hasItemInOutput = true;
+                    if (player.getInventory().add(extracted))
+                        player.drop(extracted, false);
                 }
             }
-            return ItemInteractionResult.SUCCESS;
+            if (!hasItemInOutput) {
+                ItemStack extracted = pulverizer.inventory.extractItem(0, 64, false);
+                if (!extracted.isEmpty()) {
+                    if (player.getInventory().add(extracted))
+                        player.drop(extracted, false);
+                } else {
+                    ItemStack grinder = pulverizer.getGrinder();
+                    if (!grinder.isEmpty()) {
+                        pulverizer.removeGrinder();
+                        if (player.getInventory().add(grinder))
+                            player.drop(grinder, false);
+                    }
+                }
+            }
         } else if (stack.isEmpty()) {
-            pulverizer.toogleActive();
-            return ItemInteractionResult.SUCCESS;
+            pulverizer.setActive();
         }
         return ItemInteractionResult.SUCCESS;
     }
@@ -77,6 +96,10 @@ public class PulverizerBlock extends BaseEntityBlock {
             BlockEntity blockEntity = level.getBlockEntity(pos);
             if (blockEntity instanceof PulverizerBlockEntity pulverizer) {
                 Block.popResource(level, pos, pulverizer.getGrinder());
+                for (int i = 0; i < pulverizer.inventory.getSlots(); i++) {
+                    Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(),
+                            pulverizer.inventory.getStackInSlot(i));
+                }
             }
         }
         super.onRemove(state, level, pos, newState, movedByPiston);
@@ -123,5 +146,4 @@ public class PulverizerBlock extends BaseEntityBlock {
     protected MapCodec<? extends BaseEntityBlock> codec() {
         return CODEC;
     }
-
 }
