@@ -16,7 +16,7 @@ import software.bernie.geckolib.model.GeoModel;
 import software.bernie.geckolib.renderer.GeoItemRenderer;
 
 public class PulverizerItemRenderer extends GeoItemRenderer<PulverizerBlockItem> {
-    private static final float SCALE = 0.5f;
+    private static final float SCALE = 0.35f;
 
     public PulverizerItemRenderer() {
         super(new GeoModel<PulverizerBlockItem>() {
@@ -59,7 +59,7 @@ public class PulverizerItemRenderer extends GeoItemRenderer<PulverizerBlockItem>
             PulverizerBlockItem animatable, BakedGeoModel model, boolean isReRender,
             float partialTick, int packedLight, int packedOverlay) {
         // Center the model
-        poseStack.translate(0.15, 0.1, 0.0);
+        poseStack.translate(0.25, 0.1, 0.0);
         // Isometric rotation (~40 degrees on X and Y axes)
         poseStack.mulPose(Axis.XP.rotationDegrees(40f));
         poseStack.mulPose(Axis.YP.rotationDegrees(40f));

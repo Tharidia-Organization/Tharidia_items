@@ -162,7 +162,7 @@ public class PulverizerBlockEntity extends BlockEntity implements GeoBlockEntity
         Optional<RecipeHolder<PulverizerRecipe>> recipeHolder = level.getRecipeManager()
                 .getRecipeFor(TharidiaThings.PULVERIZER_RECIPE_TYPE.get(), recipeWrapper, level);
 
-        List<Entity> above_entities = level.getEntities(null, new AABB(pos.above(1)));
+        List<Entity> above_entities = level.getEntities(null, new AABB(pos.above(2)));
         above_entities.forEach(entity -> {
             if (entity instanceof ItemEntity item) {
                 ItemStack item_return = pulverizer.inventory.insertItem(0, item.getItem().copy(), false);
@@ -205,8 +205,8 @@ public class PulverizerBlockEntity extends BlockEntity implements GeoBlockEntity
                 }
                 serverLevel.sendParticles(
                         particleOptions,
-                        worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5,
-                        2,
+                        worldPosition.getX() + 0.5, worldPosition.getY() + 1, worldPosition.getZ() + 0.5,
+                        5,
                         0.0, 0.0, 0.0,
                         0.05);
             }

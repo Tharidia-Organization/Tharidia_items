@@ -9,6 +9,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -92,6 +93,12 @@ public class PulverizerBlock extends BaseEntityBlock {
     @Override
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
         if (!state.is(newState.getBlock())) {
+            // Remove dummy blocks
+            BlockPos up1 = pos.above();
+            if (level.getBlockState(up1).is(TharidiaThings.PULVERIZER_DUMMY_BLOCK.get())) {
+                level.destroyBlock(up1, false);
+            }
+
             BlockEntity blockEntity = level.getBlockEntity(pos);
             if (blockEntity instanceof PulverizerBlockEntity pulverizer) {
                 pulverizer.getGrinders().forEach(grinder -> {
@@ -124,7 +131,22 @@ public class PulverizerBlock extends BaseEntityBlock {
     @Nullable
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
-        return this.defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
+        BlockPos pos = context.getClickedPos();
+        Level level = context.getLevel();
+        if (pos.getY() < level.getMaxBuildHeight() - 1 && level.getBlockState(pos.above()).canBeReplaced(context)) {
+            return this.defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
+        }
+        return null;
+    }
+
+    @Override
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable LivingEntity placer,
+            ItemStack stack) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+        if (!level.isClientSide) {
+            level.setBlock(pos.above(), TharidiaThings.PULVERIZER_DUMMY_BLOCK.get().defaultBlockState()
+                    .setValue(PulverizerDummyBlock.FACING, state.getValue(FACING)), 3);
+        }
     }
 
     @Override

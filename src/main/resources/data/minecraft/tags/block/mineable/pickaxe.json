@@ -10,6 +10,7 @@
         "tharidiathings:tank",
         "tharidiathings:sieve",
         "tharidiathings:sink",
-        "tharidiathings:pulverizer"
+        "tharidiathings:pulverizer",
+        "tharidiathings:pulverizer_dummy"
     ]
 }

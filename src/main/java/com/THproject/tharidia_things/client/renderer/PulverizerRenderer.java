@@ -10,6 +10,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.phys.AABB;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
 import software.bernie.geckolib.cache.object.GeoBone;
 import software.bernie.geckolib.model.GeoModel;
@@ -60,5 +61,12 @@ public class PulverizerRenderer extends GeoBlockRenderer<PulverizerBlockEntity> 
         if (bone != null) {
             bone.setHidden(!visible);
         }
+    }
+
+    @Override
+    public AABB getRenderBoundingBox(PulverizerBlockEntity blockEntity) {
+        var pos = blockEntity.getBlockPos();
+        return new AABB(pos.getX(), pos.getY(), pos.getZ(),
+                pos.getX(), pos.getY() + 2, pos.getZ());
     }
 }

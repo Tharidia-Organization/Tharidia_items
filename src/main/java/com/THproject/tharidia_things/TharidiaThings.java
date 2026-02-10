@@ -3,6 +3,7 @@ package com.THproject.tharidia_things;
 import com.THproject.tharidia_things.block.ore_chunks.iron.IronChunkBlock;
 import com.THproject.tharidia_things.block.ore_chunks.iron.IronChunkBlockEntity;
 import com.THproject.tharidia_things.block.pulverizer.PulverizerBlock;
+import com.THproject.tharidia_things.block.pulverizer.PulverizerDummyBlock;
 import com.THproject.tharidia_things.block.pulverizer.PulverizerBlockEntity;
 import com.THproject.tharidia_things.claim.ClaimRegistry;
 import com.THproject.tharidia_things.client.ClientSeekPacketHandler;
@@ -390,6 +391,9 @@ public class TharidiaThings {
     // Pulverizer Block
     public static final DeferredBlock<PulverizerBlock> PULVERIZER_BLOCK = BLOCKS.register("pulverizer",
             () -> new PulverizerBlock());
+
+    public static final DeferredBlock<PulverizerDummyBlock> PULVERIZER_DUMMY_BLOCK = BLOCKS.register("pulverizer_dummy",
+            () -> new PulverizerDummyBlock());
 
     public static final DeferredItem<PulverizerBlockItem> PULVERIZER_BLOCK_ITEM = ITEMS.register(
             "pulverizer",

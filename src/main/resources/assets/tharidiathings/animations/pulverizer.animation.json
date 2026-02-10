@@ -5,6 +5,12 @@
 			"loop": true,
 			"animation_length": 0.5,
 			"bones": {
+				"grinder": {
+					"rotation": {
+						"0.0": [0, 0, 0],
+						"0.5": [0, 0, 0]
+					}
+				},
 				"grinder_right": {
 					"rotation": {
 						"0.0": [0, 0, 0],
