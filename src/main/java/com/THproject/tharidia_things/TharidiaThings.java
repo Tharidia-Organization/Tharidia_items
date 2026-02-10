@@ -672,6 +672,11 @@ public class TharidiaThings {
                     } // Dummy handler - we don't process bungeecord messages
             );
 
+            registrar.playToClient(
+                    SyncCustomArmorPacket.TYPE,
+                    SyncCustomArmorPacket.STREAM_CODEC,
+                    SyncCustomArmorPacket::handle);
+
             // Video screen packets
             registrar.playToClient(
                     VideoScreenSyncPacket.TYPE,
@@ -814,6 +819,12 @@ public class TharidiaThings {
                     (packet, context) -> {
                     } // Dummy handler
             );
+
+            registrar.playToClient(
+                    SyncCustomArmorPacket.TYPE,
+                    SyncCustomArmorPacket.STREAM_CODEC,
+                    (packet, context) -> {
+                    });
 
             // Video screen packets (dummy handlers for server)
             registrar.playToClient(
