@@ -2,6 +2,8 @@ package com.THproject.tharidia_things;
 
 import com.THproject.tharidia_things.block.ore_chunks.iron.IronChunkBlock;
 import com.THproject.tharidia_things.block.ore_chunks.iron.IronChunkBlockEntity;
+import com.THproject.tharidia_things.block.pulverizer.PulverizerBlock;
+import com.THproject.tharidia_things.block.pulverizer.PulverizerBlockEntity;
 import com.THproject.tharidia_things.claim.ClaimRegistry;
 import com.THproject.tharidia_things.client.ClientSeekPacketHandler;
 import com.THproject.tharidia_things.client.HandshakeBypass;
@@ -34,9 +36,7 @@ import com.THproject.tharidia_things.block.SmithingFurnaceBlock;
 import com.THproject.tharidia_things.block.SmithingFurnaceDummyBlock;
 import com.THproject.tharidia_things.block.DyeVatsBlock;
 import com.THproject.tharidia_things.block.DyeVatsDummyBlock;
-import com.THproject.tharidia_things.block.PulverizerBlock;
 import com.THproject.tharidia_things.block.entity.DyeVatsBlockEntity;
-import com.THproject.tharidia_things.block.entity.PulverizerBlockEntity;
 import com.THproject.tharidia_things.block.entity.PietroBlockEntity;
 import com.THproject.tharidia_things.block.entity.ClaimBlockEntity;
 import com.THproject.tharidia_things.block.entity.HotIronAnvilEntity;
