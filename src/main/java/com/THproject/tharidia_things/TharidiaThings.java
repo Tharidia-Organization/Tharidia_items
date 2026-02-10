@@ -378,10 +378,8 @@ public class TharidiaThings {
 
     // Pulverizer Block
     public static final DeferredBlock<PulverizerBlock> PULVERIZER_BLOCK = BLOCKS.register("pulverizer",
-            () -> new PulverizerBlock(BlockBehaviour.Properties.of()
-                    .mapColor(MapColor.DIAMOND)
-                    .strength(3.0F, 6.0F)
-                    .noOcclusion()));
+            () -> new PulverizerBlock());
+                    
     public static final DeferredItem<BlockItem> PULVERIZER_BLOCK_ITEM = ITEMS.registerSimpleBlockItem(
             "pulverizer",
             PULVERIZER_BLOCK);

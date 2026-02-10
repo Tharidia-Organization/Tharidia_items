@@ -20,6 +20,7 @@ import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -29,6 +30,10 @@ import net.minecraft.world.phys.BlockHitResult;
 public class PulverizerBlock extends BaseEntityBlock {
     public static final MapCodec<PulverizerBlock> CODEC = simpleCodec(PulverizerBlock::new);
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
+
+    public PulverizerBlock() {
+        this(BlockBehaviour.Properties.of().noOcclusion());
+    }
 
     public PulverizerBlock(Properties properties) {
         super(properties);

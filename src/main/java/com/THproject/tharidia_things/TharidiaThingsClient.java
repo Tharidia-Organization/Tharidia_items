@@ -120,7 +120,7 @@ public class TharidiaThingsClient {
         event.registerBlockEntityRenderer(TharidiaThings.TANK_BLOCK_ENTITY.get(), context -> new TankRenderer());
         event.registerBlockEntityRenderer(TharidiaThings.SINK_BLOCK_ENTITY.get(), context -> new SinkRenderer());
         event.registerBlockEntityRenderer(TharidiaThings.SMITHING_FURNACE_BLOCK_ENTITY.get(), SmithingFurnaceRenderer::new);
-        event.registerBlockEntityRenderer(TharidiaThings.PULVERIZER_BLOCK_ENTITY.get(), context -> new PulverizerRenderer());
+        event.registerBlockEntityRenderer(TharidiaThings.PULVERIZER_BLOCK_ENTITY.get(), PulverizerRenderer::new);
     }
 
     @SubscribeEvent

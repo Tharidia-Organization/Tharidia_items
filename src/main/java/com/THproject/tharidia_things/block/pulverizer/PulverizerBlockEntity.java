@@ -123,7 +123,7 @@ public class PulverizerBlockEntity extends BlockEntity implements GeoBlockEntity
 
     @Override
     public void registerControllers(ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>(this, "active", 0, state -> {
+        controllers.add(new AnimationController<>(this, "active", 5, state -> {
             if (this.isActive()) {
                 state.getController().setAnimation(ACTIVE_ANIM);
                 return PlayState.CONTINUE;
