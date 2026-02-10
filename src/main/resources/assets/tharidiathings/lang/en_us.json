@@ -12,6 +12,7 @@
   "key.categories.tharidiathings": "Tharidia Things",
   "key.tharidiathings.toggle_claim_boundaries": "Toggle Claim Boundaries",
   "key.tharidiathings.open_armor_menu":"Open Armor Menu",
+  "key.tharidiathings.open_master_menu": "Open Master Menu",
 
   "tharidiathings.configuration.title": "Tharidia Things Configs",
   "tharidiathings.configuration.section.tharidiathings.common.toml": "Tharidia Things Configs",
@@ -225,7 +226,7 @@
   "gui.tharidiathings.battle_invitation.invitator_label": "Invite from: %s",
   "gui.tharidiathings.battle_invitation.button.accept": "Accept",
   "gui.tharidiathings.battle_invitation.button.decline": "Decline",
-  
+
   "message.tharidiathings.must_rest": "You must rest to recover your energy!",
   "message.tharidiathings.resting_for_fatigue": "Resting to recover energy...",
   "message.tharidiathings.fully_rested": "Fully rested! Energy restored.",

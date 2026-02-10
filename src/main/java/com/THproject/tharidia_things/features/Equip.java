@@ -29,6 +29,7 @@ import java.nio.file.Files;
 
 public class Equip {
     private static Path equipPath = FMLPaths.GAMEDIR.get().resolve("th_equips/");
+    public static Runnable onListUpdate; // Callback for GUI refresh
 
     public static void save(Player player, String name) {
         File file = equipPath.resolve(name + ".json").toFile();
@@ -148,8 +149,8 @@ public class Equip {
         pendingShares.put(equipName, jsonContent);
         if (Minecraft.getInstance().player != null) {
             Minecraft.getInstance().player
-                    .sendSystemMessage(Component.literal("Player " + sender + " wants to share equip '" + equipName
-                            + "' with you. Type '/thmaster equip accept " + equipName + "' to accept."));
+                    .sendSystemMessage(Component
+                            .literal("Player " + sender + " wants to share equip '" + equipName + "' with you"));
             syncListToServer();
         }
     }
@@ -275,6 +276,9 @@ public class Equip {
     }
 
     public static void syncListToServer() {
+        if (onListUpdate != null) {
+            onListUpdate.run();
+        }
         PacketDistributor.sendToServer(new EquipListSyncPacket(getList(), false));
         PacketDistributor.sendToServer(new EquipListSyncPacket(getPendingList(), true));
     }

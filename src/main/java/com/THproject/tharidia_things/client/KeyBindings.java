@@ -21,6 +21,14 @@ public class KeyBindings {
             GLFW.GLFW_KEY_B, // Default to 'B' key
             KEY_CATEGORY);
 
+    public static final KeyMapping OPEN_MASTER_MENU = new KeyMapping(
+            "key.tharidiathings.open_master_menu",
+            KeyConflictContext.IN_GAME,
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_M, // Default to 'M' key
+            KEY_CATEGORY
+    );
+    
     public static final KeyMapping OPEN_ARMOR_MENU = new KeyMapping(
             "key.tharidiathings.open_armor_menu",
             KeyConflictContext.IN_GAME,
@@ -31,6 +39,7 @@ public class KeyBindings {
     @SubscribeEvent
     public static void registerKeyMappings(RegisterKeyMappingsEvent event) {
         event.register(TOGGLE_CLAIM_BOUNDARIES);
+        event.register(OPEN_MASTER_MENU);
         event.register(OPEN_ARMOR_MENU);
     }
 }
