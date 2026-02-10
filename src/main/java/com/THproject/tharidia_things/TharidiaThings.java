@@ -30,7 +30,9 @@ import com.THproject.tharidia_things.block.StableBlock;
 import com.THproject.tharidia_things.block.StableDummyBlock;
 import com.THproject.tharidia_things.block.DyeVatsBlock;
 import com.THproject.tharidia_things.block.DyeVatsDummyBlock;
+import com.THproject.tharidia_things.block.PulverizerBlock;
 import com.THproject.tharidia_things.block.entity.DyeVatsBlockEntity;
+import com.THproject.tharidia_things.block.entity.PulverizerBlockEntity;
 import com.THproject.tharidia_things.block.entity.PietroBlockEntity;
 import com.THproject.tharidia_things.block.entity.ClaimBlockEntity;
 import com.THproject.tharidia_things.block.entity.HotIronAnvilEntity;
@@ -77,26 +79,8 @@ import com.THproject.tharidia_things.fatigue.FatigueAttachments;
 import com.THproject.tharidia_things.houseboundry.AnimalWellnessAttachments;
 import com.THproject.tharidia_things.houseboundry.config.AnimalConfigLoader;
 import com.THproject.tharidia_things.stable.StableConfigLoader;
-import com.THproject.tharidia_things.network.BattlePackets;
-import com.THproject.tharidia_things.network.ClaimOwnerSyncPacket;
-import com.THproject.tharidia_things.network.FatigueSyncPacket;
-import com.THproject.tharidia_things.network.DungeonQueuePacket;
-import com.THproject.tharidia_things.network.JoinGroupQueuePacket;
-import com.THproject.tharidia_things.network.LeaveGroupQueuePacket;
-import com.THproject.tharidia_things.network.StartGroupDungeonPacket;
-import com.THproject.tharidia_things.network.SyncGroupQueuePacket;
-import com.THproject.tharidia_things.network.HierarchySyncPacket;
-import com.THproject.tharidia_things.network.RealmSyncPacket;
-import com.THproject.tharidia_things.network.UpdateHierarchyPacket;
-import com.THproject.tharidia_things.network.ToggleParticlePacket;
 import com.THproject.tharidia_things.network.revive.ReviveSyncPayload;
 import com.THproject.tharidia_things.network.revive.ReviveGiveUpPacket;
-import com.THproject.tharidia_things.network.SelectComponentPacket;
-import com.THproject.tharidia_things.network.SubmitNamePacket;
-import com.THproject.tharidia_things.network.SyncGateRestrictionsPacket;
-import com.THproject.tharidia_things.network.EquipActionPacket;
-import com.THproject.tharidia_things.network.EquipListSyncPacket;
-import com.THproject.tharidia_things.command.EquipCommand;
 import com.THproject.tharidia_things.realm.RealmManager;
 import com.THproject.tharidia_things.registry.ModAttributes;
 import com.THproject.tharidia_things.registry.ModStats;
@@ -255,6 +239,23 @@ public class TharidiaThings {
     public static final DeferredItem<BlockItem> STATION_CRYSTAL_BLOCK_ITEM = ITEMS.registerSimpleBlockItem(
             "station_crystal",
             STATION_CRYSTAL_BLOCK);
+
+    // Pulverizer Block
+    public static final DeferredBlock<PulverizerBlock> PULVERIZER_BLOCK = BLOCKS.register("pulverizer",
+            () -> new PulverizerBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.DIAMOND)
+                    .strength(3.0F, 6.0F)
+                    .noOcclusion()));
+    public static final DeferredItem<BlockItem> PULVERIZER_BLOCK_ITEM = ITEMS.registerSimpleBlockItem(
+            "pulverizer",
+            PULVERIZER_BLOCK);
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<PulverizerBlockEntity>> PULVERIZER_BLOCK_ENTITY = BLOCK_ENTITIES
+            .register("pulverizer",
+                    () -> BlockEntityType.Builder.of(PulverizerBlockEntity::new, PULVERIZER_BLOCK.get()).build(null));
+
+    public static final DeferredItem<Item> GRINDER = ITEMS.register("grinder",
+            () -> new IronCrusherHammer());
 
     // Creates a new BlockEntityType for the Pietro block
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<PietroBlockEntity>> PIETRO_BLOCK_ENTITY = BLOCK_ENTITIES
@@ -431,6 +432,10 @@ public class TharidiaThings {
                         output.accept(STATION_CRYSTAL_BLOCK_ITEM.get());
                         output.accept(STATION_CRYSTAL_TOOL.get());
                         output.accept(STATION_CRYSTAL_REPAIRER.get());
+
+                        // Pulverizer
+                        output.accept(PULVERIZER_BLOCK_ITEM.get());
+                        output.accept(GRINDER.get());
 
                         // Claim utilities
                         output.accept(TRUST_CONTRACT.get());
