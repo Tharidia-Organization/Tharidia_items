@@ -238,16 +238,6 @@ public class TharidiaThings {
     public static final DeferredBlock<DyeVatsDummyBlock> DYE_VATS_DUMMY = BLOCKS.register("dye_vats_dummy",
             () -> new DyeVatsDummyBlock());
 
-    // Chunks Block
-    public static final DeferredBlock<IronChunkBlock> IRON_CHUNK = BLOCKS.register("iron_chunk",
-            () -> new IronChunkBlock(
-                    BlockBehaviour.Properties.of()
-                            .mapColor(MapColor.METAL)
-                            .destroyTime(4.0f)
-                            .explosionResistance(6.0f)
-                            .noOcclusion()));
-    public static final DeferredItem<BlockItem> IRON_CHUNK_ITEM = ITEMS.registerSimpleBlockItem("iron_chunk",
-            IRON_CHUNK);
     // Smithing Furnace Block (5x2x3 multiblock, GeckoLib animated)
     public static final DeferredBlock<SmithingFurnaceBlock> SMITHING_FURNACE = BLOCKS.register("smithing_furnace",
             () -> new SmithingFurnaceBlock());
@@ -431,9 +421,6 @@ public class TharidiaThings {
             .register("dye_vats",
                     () -> BlockEntityType.Builder.of(DyeVatsBlockEntity::new, DYE_VATS.get()).build(null));
 
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<IronChunkBlockEntity>> IRON_CHUNK_BLOCK_ENTITY = BLOCK_ENTITIES
-            .register("iron_chunk",
-                    () -> BlockEntityType.Builder.of(IronChunkBlockEntity::new, IRON_CHUNK.get()).build(null));
     // Creates a new BlockEntityType for the Smithing Furnace
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<SmithingFurnaceBlockEntity>> SMITHING_FURNACE_BLOCK_ENTITY = BLOCK_ENTITIES
             .register("smithing_furnace",
@@ -726,8 +713,7 @@ public class TharidiaThings {
         NeoForge.EVENT_BUS.register(WeightDebuffHandler.class);
         // Register the smithing handler
         NeoForge.EVENT_BUS.register(SmithingHandler.class);
-        // Register the pre-login name handler
-        NeoForge.EVENT_BUS.register(PreLoginNameHandler.class);
+        // PreLoginNameHandler removed — logic moved to CharacterEventHandler
         // Register the fatigue handler
         NeoForge.EVENT_BUS.register(FatigueHandler.class);
         NeoForge.EVENT_BUS.register(StaminaHandler.class);
