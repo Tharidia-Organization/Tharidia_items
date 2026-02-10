@@ -6,6 +6,7 @@ import java.util.Optional;
 import com.THproject.tharidia_things.TharidiaThings;
 import com.THproject.tharidia_things.recipe.PulverizerRecipe;
 
+import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.particles.BlockParticleOption;
@@ -39,6 +40,8 @@ import software.bernie.geckolib.animation.RawAnimation;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 public class PulverizerBlockEntity extends BlockEntity implements GeoBlockEntity {
+    private Object workingSoundInstance;
+
     private static int MAX_ACTIVE_PER_CLICK = 1000;
 
     private ItemStack grinder = ItemStack.EMPTY;
@@ -71,6 +74,14 @@ public class PulverizerBlockEntity extends BlockEntity implements GeoBlockEntity
 
     public PulverizerBlockEntity(BlockPos pos, BlockState blockState) {
         super(TharidiaThings.PULVERIZER_BLOCK_ENTITY.get(), pos, blockState);
+    }
+
+    public void setWorkingSound(Object sound) {
+        this.workingSoundInstance = sound;
+    }
+
+    public SoundInstance getWorkingSound() {
+        return (SoundInstance) workingSoundInstance;
     }
 
     public void setGrinder(ItemStack stack) {
@@ -128,17 +139,19 @@ public class PulverizerBlockEntity extends BlockEntity implements GeoBlockEntity
         PulverizerRecipe recipe = recipeHolder.get().value();
         if (pulverizer.isActive() && pulverizer.hasGrinder()) {
             pulverizer.maxProgress = recipe.getProcessingTime();
-            pulverizer.processParticle(level, pos, pulverizer.inventory.getStackInSlot(0));
+            pulverizer.processParticle(pulverizer.inventory.getStackInSlot(0));
             ItemStack result = recipe.getResultItem(level.registryAccess());
             if ((pulverizer.progress++ >= pulverizer.maxProgress) && pulverizer.canInsertItem(result)) {
                 pulverizer.damageGrinder();
                 pulverizer.craftItem(recipe);
                 pulverizer.resetProgress();
             }
+        } else {
+            pulverizer.resetProgress();
         }
     }
 
-    private void processParticle(Level level, BlockPos pos, ItemStack input) {
+    private void processParticle(ItemStack input) {
         if (level instanceof ServerLevel serverLevel) {
             if (!input.isEmpty()) {
                 ParticleOptions particleOptions;
@@ -150,7 +163,7 @@ public class PulverizerBlockEntity extends BlockEntity implements GeoBlockEntity
                 }
                 serverLevel.sendParticles(
                         particleOptions,
-                        pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
+                        worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5,
                         2,
                         0.0, 0.0, 0.0,
                         0.05);
