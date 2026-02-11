@@ -3,6 +3,10 @@
   "block.tharidiathings.pietro": "Reame",
   "block.tharidiathings.claim": "Rivendicazione",
 
+  "block.tharidiathings.tank": "Cisterna",
+  "block.tharidiathings.sieve": "Setaccio",
+  "block.tharidiathings.sink": "Lavello",
+
   "container.tharidiathings.claim": "Rivendicazione",
   "container.tharidiathings.pietro": "Reame",
 
@@ -258,6 +262,5 @@
   "gui.tharidiathings.stable.production.resting": "Animali a riposo (notte)",
   "gui.tharidiathings.stable.production.active": "Attiva",
   "gui.tharidiathings.stable.production.milk_available": "Latte disponibile!",
-  "gui.tharidiathings.stable.production.eggs_available": "Uova disponibili: %d",
-  "block.tharidiathings.sieve": "Setaccio"
+  "gui.tharidiathings.stable.production.eggs_available": "Uova disponibili: %d"
 }
