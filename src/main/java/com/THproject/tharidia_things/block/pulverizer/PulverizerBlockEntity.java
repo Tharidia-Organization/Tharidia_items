@@ -144,6 +144,10 @@ public class PulverizerBlockEntity extends BlockEntity implements GeoBlockEntity
         return (((System.currentTimeMillis() - active_timestamp) <= MAX_ACTIVE_PER_CLICK) && getGrindersCount() == 2);
     }
 
+    public float getProcessPercentage() {
+        return ((float) this.progress / this.maxProgress);
+    }
+
     public static void clientTick(Level level, BlockPos pos, BlockState state, PulverizerBlockEntity pulverizer) {
         tick(level, pos, state, pulverizer);
         if (pulverizer.isActive()) {
@@ -179,8 +183,8 @@ public class PulverizerBlockEntity extends BlockEntity implements GeoBlockEntity
         }
 
         PulverizerRecipe recipe = recipeHolder.get().value();
+        pulverizer.maxProgress = recipe.getProcessingTime();
         if (pulverizer.isActive() && pulverizer.hasGrinder()) {
-            pulverizer.maxProgress = recipe.getProcessingTime();
             pulverizer.processParticle(pulverizer.inventory.getStackInSlot(0));
             ItemStack result = recipe.getResultItem(level.registryAccess());
             if ((pulverizer.progress++ >= pulverizer.maxProgress) && pulverizer.canInsertItem(result)) {
