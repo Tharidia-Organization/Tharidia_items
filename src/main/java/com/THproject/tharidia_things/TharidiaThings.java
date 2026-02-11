@@ -43,6 +43,7 @@ import com.THproject.tharidia_things.block.entity.HotCopperAnvilEntity;
 import com.THproject.tharidia_things.block.entity.StableBlockEntity;
 import com.THproject.tharidia_things.block.station_crystal.StationCrystalBlock;
 import com.THproject.tharidia_things.block.station_crystal.StationCrystalBlockEntity;
+import com.THproject.tharidia_things.block.station_crystal.StationCrystalBlockItem;
 import com.THproject.tharidia_things.block.entity.SmithingFurnaceBlockEntity;
 import com.THproject.tharidia_things.block.DungeonPortalBlock;
 import com.THproject.tharidia_things.block.ore_chunks.ChunksRegistry;
@@ -257,10 +258,12 @@ public class TharidiaThings {
     // Smithing Furnace Block (5x2x3 multiblock, GeckoLib animated)
     public static final DeferredBlock<SmithingFurnaceBlock> SMITHING_FURNACE = BLOCKS.register("smithing_furnace",
             () -> new SmithingFurnaceBlock());
-    public static final DeferredItem<SmithingFurnaceBlockItem> SMITHING_FURNACE_ITEM = ITEMS.register("smithing_furnace",
+    public static final DeferredItem<SmithingFurnaceBlockItem> SMITHING_FURNACE_ITEM = ITEMS.register(
+            "smithing_furnace",
             () -> new SmithingFurnaceBlockItem(SMITHING_FURNACE.get(), new Item.Properties()));
     // Smithing Furnace Dummy Block (multiblock slave)
-    public static final DeferredBlock<SmithingFurnaceDummyBlock> SMITHING_FURNACE_DUMMY = BLOCKS.register("smithing_furnace_dummy",
+    public static final DeferredBlock<SmithingFurnaceDummyBlock> SMITHING_FURNACE_DUMMY = BLOCKS.register(
+            "smithing_furnace_dummy",
             () -> new SmithingFurnaceDummyBlock());
 
     // Smithing Furnace Ash
@@ -287,7 +290,6 @@ public class TharidiaThings {
     public static final DeferredItem<PinzaCrucibleItem> PINZA_CRUCIBLE = ITEMS.register("pinza_crucible",
             () -> new PinzaCrucibleItem(new Item.Properties().stacksTo(1)));
 
-
     // Dungeon Portal Block (red portal, no teleportation)
     public static final DeferredBlock<DungeonPortalBlock> DUNGEON_PORTAL = BLOCKS.register("dungeon_portal",
             () -> new DungeonPortalBlock(
@@ -306,9 +308,9 @@ public class TharidiaThings {
                     .mapColor(MapColor.DIAMOND)
                     .strength(3.0F, 6.0F)
                     .noOcclusion()));
-    public static final DeferredItem<BlockItem> STATION_CRYSTAL_BLOCK_ITEM = ITEMS.registerSimpleBlockItem(
+    public static final DeferredItem<StationCrystalBlockItem> STATION_CRYSTAL_BLOCK_ITEM = ITEMS.register(
             "station_crystal",
-            STATION_CRYSTAL_BLOCK);
+            () -> new StationCrystalBlockItem(STATION_CRYSTAL_BLOCK.get(), new Item.Properties()));
 
     // Sieve
     public static final DeferredBlock<SieveBlock> SIEVE_BLOCK = BLOCKS.register(
@@ -423,7 +425,8 @@ public class TharidiaThings {
     // Creates a new BlockEntityType for the Smithing Furnace
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<SmithingFurnaceBlockEntity>> SMITHING_FURNACE_BLOCK_ENTITY = BLOCK_ENTITIES
             .register("smithing_furnace",
-                    () -> BlockEntityType.Builder.of(SmithingFurnaceBlockEntity::new, SMITHING_FURNACE.get()).build(null));
+                    () -> BlockEntityType.Builder.of(SmithingFurnaceBlockEntity::new, SMITHING_FURNACE.get())
+                            .build(null));
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<StationCrystalBlockEntity>> STATION_CRYSTAL_BLOCK_ENTITY = BLOCK_ENTITIES
             .register("station_crystal",
@@ -1227,7 +1230,8 @@ public class TharidiaThings {
             }
 
             // Safety net for singleplayer: schedule halt(false) on the next server tick.
-            // In the vanilla disconnect chain, halt(false) is called in super.onDisconnect()
+            // In the vanilla disconnect chain, halt(false) is called in
+            // super.onDisconnect()
             // AFTER removePlayerFromWorld() completes. If anything in PlayerList.remove()
             // (after this event fires) throws or blocks, halt(false) is never reached and
             // the integrated server runs forever, freezing the client at "Saving world".
@@ -1324,7 +1328,8 @@ public class TharidiaThings {
         // Register weight data loader
         event.getServer().getResourceManager();
 
-        // Initialize database and transfer system only on dedicated servers (not singleplayer)
+        // Initialize database and transfer system only on dedicated servers (not
+        // singleplayer)
         if (event.getServer().isDedicatedServer()) {
             initializeDatabaseSystem(event.getServer());
             initializeServerTransferSystem(event.getServer());
