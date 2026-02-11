@@ -528,6 +528,10 @@ public class StableBlockEntity extends BlockEntity {
         return feedUses < cfg().feedUsesRequired();
     }
 
+    public int getFeedUses() {
+        return feedUses;
+    }
+
     public void addAnimalFeed() {
         if (feedUses < cfg().feedUsesRequired()) {
             feedUses++;

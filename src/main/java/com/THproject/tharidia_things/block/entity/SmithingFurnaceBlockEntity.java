@@ -86,7 +86,7 @@ public class SmithingFurnaceBlockEntity extends BlockEntity implements GeoBlockE
     private static final int TICKS_PER_ASH = 2400; // 2 minutes = 2400 ticks
     private int ashAccumulationTicks = 0;
 
-    // Overpressure: when ash is full, pressure builds up → smoke then explosion
+    // Overpressure: when ash is full, pressure builds up → smoker pthen explosion
     private int ashFullTicks = 0;
     private static final int ASH_SMOKE_START_TICKS = 1200;  // 1 min → smoke particles start
     private static final int ASH_EXPLODE_TICKS = 4800;      // 4 min total (1 wait + 3 smoke) → boom

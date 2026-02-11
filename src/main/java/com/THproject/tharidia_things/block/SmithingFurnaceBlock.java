@@ -329,12 +329,24 @@ public class SmithingFurnaceBlock extends BaseEntityBlock {
                     return ItemInteractionResult.FAIL;
                 }
 
-                // Pinza holding crucible with fluid: pour into cast, return to furnace, or pour into big crucible
+                // Pinza holding crucible with fluid: pour into big crucible, cast, or return to furnace
                 if (holdingType == PinzaItem.HoldingType.CRUCIBLE_IRON
                         || holdingType == PinzaItem.HoldingType.CRUCIBLE_GOLD
                         || holdingType == PinzaItem.HoldingType.CRUCIBLE_COPPER) {
                     String heldFluid = PinzaItem.getMaterialType(stack);
-                    // Priority 1: Pour into cast mold (click on cast/right side, metal not expired)
+                    // Priority 1: Pour into big crucible (when installed, metal not expired)
+                    if (furnace.hasCrucible() && !PinzaItem.isExpired(stack)) {
+                        if (!level.isClientSide) {
+                            if (furnace.pourIntoBigCrucible(heldFluid)) {
+                                PinzaItem.setHoldingWithMaterial(stack, PinzaItem.HoldingType.CRUCIBLE_EMPTY, "pinza_crucible", "");
+                                level.playSound(null, pos, SoundEvents.BUCKET_EMPTY_LAVA, SoundSource.BLOCKS, 0.5f, 1.0f);
+                            } else {
+                                return ItemInteractionResult.FAIL;
+                            }
+                        }
+                        return ItemInteractionResult.sidedSuccess(level.isClientSide);
+                    }
+                    // Priority 2: Pour into cast mold (click on cast/right side, metal not expired, no big crucible)
                     if (!PinzaItem.isExpired(stack) && !furnace.hasCastMetal() && !furnace.isCastExpired()
                             && isClickOnCastSide(hitResult, pos, state.getValue(FACING))) {
                         if (!level.isClientSide) {
@@ -345,7 +357,7 @@ public class SmithingFurnaceBlock extends BaseEntityBlock {
                         }
                         return ItemInteractionResult.sidedSuccess(level.isClientSide);
                     }
-                    // Priority 2: return crucible with metal to furnace if no tiny crucible (blocked by ingots)
+                    // Priority 3: return crucible with metal to furnace if no tiny crucible (blocked by ingots)
                     if (!furnace.hasTinyCrucible() && furnace.getIngotCount() == 0) {
                         if (!level.isClientSide) {
                             boolean expired = PinzaItem.isExpired(stack);
@@ -353,18 +365,6 @@ public class SmithingFurnaceBlock extends BaseEntityBlock {
                             PinzaItem.clearHolding(stack);
                             PinzaItem.damagePinza(stack, player);
                             level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.5f, 1.0f);
-                        }
-                        return ItemInteractionResult.sidedSuccess(level.isClientSide);
-                    }
-                    // Priority 3: Pour into big crucible (requires big crucible installed)
-                    if (furnace.hasCrucible()) {
-                        if (!level.isClientSide) {
-                            if (furnace.pourIntoBigCrucible(heldFluid)) {
-                                PinzaItem.setHoldingWithMaterial(stack, PinzaItem.HoldingType.CRUCIBLE_EMPTY, "pinza_crucible", "");
-                                level.playSound(null, pos, SoundEvents.BUCKET_EMPTY_LAVA, SoundSource.BLOCKS, 0.5f, 1.0f);
-                            } else {
-                                return ItemInteractionResult.FAIL;
-                            }
                         }
                         return ItemInteractionResult.sidedSuccess(level.isClientSide);
                     }

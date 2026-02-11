@@ -1,24 +1,32 @@
 package com.THproject.tharidia_things.client.renderer;
 
 import com.THproject.tharidia_things.TharidiaThings;
+import com.THproject.tharidia_things.block.SmithingFurnaceBlock;
+import com.THproject.tharidia_things.block.SmithingFurnaceDummyBlock;
 import com.THproject.tharidia_things.block.entity.SmithingFurnaceBlockEntity;
 import com.THproject.tharidia_things.client.model.SmithingFurnaceModel;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Matrix4f;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
 import software.bernie.geckolib.cache.object.GeoBone;
 import software.bernie.geckolib.renderer.GeoBlockRenderer;
@@ -94,6 +102,84 @@ public class SmithingFurnaceRenderer extends GeoBlockRenderer<SmithingFurnaceBlo
         poseStack.translate(-0.5, 0, -0.5);
 
         super.render(animatable, partialTick, poseStack, bufferSource, packedLight, packedOverlay);
+
+        poseStack.popPose();
+
+        // Billboard label: show big crucible liquid amount when player looks at it
+        if (animatable.hasCrucible() && animatable.getBigCrucibleCount() > 0) {
+            HitResult hitResult = Minecraft.getInstance().hitResult;
+            if (hitResult instanceof BlockHitResult blockHit && blockHit.getType() == HitResult.Type.BLOCK) {
+                if (isLookingAtBigCrucible(animatable, blockHit)) {
+                    renderBigCrucibleLabel(animatable, facing, poseStack, bufferSource, packedLight);
+                }
+            }
+        }
+    }
+
+    /**
+     * Checks if the player's crosshair is targeting the big crucible area of this furnace.
+     * The big crucible occupies dummy blocks at offsetX 0-1 (the side opposite the cast/hoover).
+     */
+    private boolean isLookingAtBigCrucible(SmithingFurnaceBlockEntity animatable, BlockHitResult blockHit) {
+        if (animatable.getLevel() == null) return false;
+        BlockPos hitPos = blockHit.getBlockPos();
+        BlockState hitState = animatable.getLevel().getBlockState(hitPos);
+
+        if (hitState.getBlock() instanceof SmithingFurnaceDummyBlock) {
+            int offsetX = hitState.getValue(SmithingFurnaceDummyBlock.OFFSET_X);
+            if (offsetX >= 3) {
+                BlockPos masterPos = SmithingFurnaceDummyBlock.getMasterPos(animatable.getLevel(), hitPos);
+                return masterPos != null && masterPos.equals(animatable.getBlockPos());
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Renders a floating billboard label above the big crucible showing the liquid count.
+     * The label always faces the camera (billboard effect).
+     */
+    private void renderBigCrucibleLabel(SmithingFurnaceBlockEntity animatable, Direction facing,
+                                         PoseStack poseStack, MultiBufferSource bufferSource, int packedLight) {
+        // Position above the big crucible (relative to master block entity pos)
+        // Big crucible occupies offsetX 0-1. Using getOffsetPos mapping:
+        // centeredX for offsetX 0-1 center = -1.5 (with X_OFFSET = -2)
+        double bx, bz;
+        double by = 2.5;
+        switch (facing) {
+            case SOUTH -> { bx = 2.0;  bz = 1.0; }
+            case NORTH -> { bx = -1.0; bz = 0.0; }
+            case EAST  -> { bx = 1.0;  bz = -1.0; }
+            case WEST  -> { bx = 0.0;  bz = 2.0; }
+            default    -> { bx = 0.5;  bz = 0.5; }
+        }
+
+        poseStack.pushPose();
+        poseStack.translate(bx, by, bz);
+
+        // Billboard rotation: always face the camera
+        poseStack.mulPose(Minecraft.getInstance().gameRenderer.getMainCamera().rotation());
+
+        // Scale (same as vanilla entity nametags: positive X, negative Y, positive Z)
+        float scale = 0.025f;
+        poseStack.scale(scale, -scale, scale);
+
+        Font font = Minecraft.getInstance().font;
+        String text = animatable.getBigCrucibleCount() + "/8";
+        float textWidth = font.width(text);
+        float x = -textWidth / 2f;
+        float y = -font.lineHeight / 2f;
+
+        Matrix4f matrix = poseStack.last().pose();
+
+        // Text color: white normally, gray when expired
+        int textColor = animatable.isBigCrucibleExpired() ? 0xFF808080 : 0xFFFFFFFF;
+        int bgColor = 0x80000000; // semi-transparent black background
+        int fullBright = 15728880; // LightTexture.FULL_BRIGHT - always readable
+
+        // Background + text pass (SEE_THROUGH so it renders on top of world geometry)
+        font.drawInBatch(text, x, y, textColor, false, matrix, bufferSource,
+                Font.DisplayMode.SEE_THROUGH, bgColor, fullBright);
 
         poseStack.popPose();
     }
