@@ -3,7 +3,7 @@ package com.THproject.tharidia_things.client.renderer;
 import org.jetbrains.annotations.Nullable;
 
 import com.THproject.tharidia_things.TharidiaThings;
-import com.THproject.tharidia_things.item.PulverizerBlockItem;
+import com.THproject.tharidia_things.block.pulverizer.PulverizerBlockItem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;

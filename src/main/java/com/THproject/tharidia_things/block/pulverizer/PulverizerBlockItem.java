@@ -1,4 +1,4 @@
-package com.THproject.tharidia_things.item;
+package com.THproject.tharidia_things.block.pulverizer;
 
 import java.util.function.Consumer;
 
