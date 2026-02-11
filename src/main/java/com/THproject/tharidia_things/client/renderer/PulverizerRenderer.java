@@ -66,7 +66,7 @@ public class PulverizerRenderer extends GeoBlockRenderer<PulverizerBlockEntity> 
     @Override
     public AABB getRenderBoundingBox(PulverizerBlockEntity blockEntity) {
         var pos = blockEntity.getBlockPos();
-        return new AABB(pos.getX(), pos.getY(), pos.getZ(),
-                pos.getX(), pos.getY() + 2, pos.getZ());
+        return new AABB(pos.getX() - 1, pos.getY() - 1, pos.getZ() - 1,
+                pos.getX() + 1, pos.getY() + 2, pos.getZ() + 1);
     }
 }
