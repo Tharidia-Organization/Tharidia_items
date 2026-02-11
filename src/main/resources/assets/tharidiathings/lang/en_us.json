@@ -6,6 +6,9 @@
   "block.tharidiathings.sieve": "Sieve",
   "block.tharidiathings.sink": "Sink",
 
+  "block.tharidiathings.pulverizer": "Pulverizer",
+  "item.tharidiathings.grinder": "Grinder",
+
   "container.tharidiathings.claim": "Claim",
   "container.tharidiathings.pietro": "Realm",
 
@@ -385,5 +388,6 @@
   "item.tharidiathings.iron_crusher_hammer": "Iron Crusher Hammer",
   "item.tharidiathings.smithing_hammer": "Smithing Hammer",
 
-  "jei.tharidiathings.washer_recipe": "Washing"
+  "jei.tharidiathings.washer_recipe": "Washing",
+  "jei.tharidiathings.pulverizer_recipe": "Pulverizer"
 }

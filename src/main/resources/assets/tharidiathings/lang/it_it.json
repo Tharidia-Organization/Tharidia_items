@@ -3,6 +3,9 @@
   "block.tharidiathings.pietro": "Reame",
   "block.tharidiathings.claim": "Rivendicazione",
 
+  "block.tharidiathings.pulverizer": "Polverizzatore",
+  "item.tharidiathings.grinder": "Macina",
+
   "container.tharidiathings.claim": "Rivendicazione",
   "container.tharidiathings.pietro": "Reame",
 
@@ -381,5 +384,7 @@
   "item.tharidiathings.iron_crusher_hammer": "Martello da Frantumazione",
   "item.tharidiathings.smithing_hammer": "Martello da Fabbro",
 
-  "block.tharidiathings.sieve": "Setaccio"
+  "block.tharidiathings.sieve": "Setaccio",
+
+  "jei.tharidiathings.pulverizer_recipe": "Polverizzatore"
 }
