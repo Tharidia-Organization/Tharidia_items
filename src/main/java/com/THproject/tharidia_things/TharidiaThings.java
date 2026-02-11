@@ -41,6 +41,9 @@ import com.THproject.tharidia_things.block.veins.VeinBlocks;
 import com.THproject.tharidia_things.block.veins.VeinSediments;
 import com.THproject.tharidia_things.block.washer.sieve.SieveBlock;
 import com.THproject.tharidia_things.block.washer.sieve.SieveBlockEntity;
+import com.THproject.tharidia_things.block.washer.sieve.SieveBlockItem;
+import com.THproject.tharidia_things.block.washer.sink.SinkBlockItem;
+import com.THproject.tharidia_things.block.washer.tank.TankBlockItem;
 import com.THproject.tharidia_things.item.HotIronItem;
 import com.THproject.tharidia_things.item.HotGoldItem;
 import com.THproject.tharidia_things.item.HotCopperItem;
@@ -246,7 +249,7 @@ public class TharidiaThings {
 
     public static final DeferredItem<BlockItem> SIEVE_ITEM = ITEMS.register(
             "sieve",
-            () -> new BlockItem(SIEVE_BLOCK.get(), new Item.Properties()));
+            () -> new SieveBlockItem(SIEVE_BLOCK.get(), new Item.Properties()));
 
     public static final DeferredBlock<com.THproject.tharidia_things.block.washer.sieve.SieveDummyBlock> SIEVE_DUMMY = BLOCKS
             .register("sieve_dummy",
@@ -271,7 +274,7 @@ public class TharidiaThings {
 
     public static final DeferredItem<BlockItem> TANK_ITEM = ITEMS.register(
             "tank",
-            () -> new BlockItem(TANK_BLOCK.get(), new Item.Properties()));
+            () -> new TankBlockItem(TANK_BLOCK.get(), new Item.Properties()));
 
     public static final DeferredBlock<com.THproject.tharidia_things.block.washer.tank.TankDummyBlock> TANK_DUMMY = BLOCKS
             .register("tank_dummy",
@@ -298,7 +301,7 @@ public class TharidiaThings {
 
     public static final DeferredItem<BlockItem> SINK_ITEM = ITEMS.register(
             "sink",
-            () -> new BlockItem(SINK_BLOCK.get(), new Item.Properties()));
+            () -> new SinkBlockItem(SINK_BLOCK.get(), new Item.Properties()));
 
     public static final DeferredBlock<com.THproject.tharidia_things.block.washer.sink.SinkDummyBlock> SINK_DUMMY_BLOCK = BLOCKS
             .register("sink_dummy",
@@ -393,7 +396,7 @@ public class TharidiaThings {
     public static final DeferredItem<Item> MANURE = ITEMS.register("manure",
             () -> new Item(new Item.Properties().stacksTo(64)));
     public static final DeferredItem<Item> MESH = ITEMS.register("mesh",
-            () -> new Item(new Item.Properties().stacksTo(64)));
+            () -> new Item(new Item.Properties().stacksTo(1)));
 
     // Battle Gauntlet
     public static final DeferredItem<Item> BATTLE_GAUNTLE = ITEMS.register("battle_gauntlet",
