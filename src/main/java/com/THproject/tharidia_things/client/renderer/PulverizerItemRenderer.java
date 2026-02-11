@@ -10,6 +10,7 @@ import com.THproject.tharidia_things.TharidiaThings;
 import com.THproject.tharidia_things.block.pulverizer.PulverizerBlockItem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.math.Axis;
 
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.resources.ResourceLocation;
@@ -25,7 +26,7 @@ public class PulverizerItemRenderer extends GeoItemRenderer<PulverizerBlockItem>
     private static final float TARGET_SIZE = 0.85f;
     private static final float FILL_FACTOR = 0.95f;
     private static final float MIN_SCALE = 0.2f;
-    private static final float MAX_SCALE = 1.4f;
+    private static final float MAX_SCALE = 1.0f;
 
     private boolean boundsComputed;
     private float centerX, centerY, centerZ;
@@ -73,6 +74,8 @@ public class PulverizerItemRenderer extends GeoItemRenderer<PulverizerBlockItem>
             poseStack.translate(0.5f, 0.5f, 0.5f);
             poseStack.scale(autoScale, autoScale, autoScale);
             poseStack.translate(-centerX, -centerY, -centerZ);
+            poseStack.mulPose(Axis.XP.rotationDegrees(40f));
+            poseStack.mulPose(Axis.YP.rotationDegrees(220f));
             setBoneVisible(model, "grinder_left", false);
             setBoneVisible(model, "grinder_right", false);
         }
