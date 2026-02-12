@@ -109,4 +109,173 @@ La generazione procedurale costruisce stanze, corridoi e ponti in modo diverso a
 
 ---
 
-||@Colono||
+# Changelog 0.5.8
+
+---
+
+## ⚔️ Dungeon — Potenziato
+
+>**Il dungeon diventa un'esperienza completa.** Mob, bottino e boss sono ora gestiti con un sistema avanzato pensato per giocare un gruppo.
+
+- **Mob Manager** — Spawn dei mob per giocatore, non per tile. (I mob spawneranno in funzione della posizione, numero e ad ingresso dei giocatori nelle varie sezioni)
+- **Loot nelle casse** — Sistema data-driven con tabelle di loot per piano e boss
+- **Boss reworkato** — Countdown di spawn, boss bar gialla, cassa reward, exit countdown e pulizia stanza automatica
+- **Attivazione tile** — Trigger sulle porte per attivare mob e loot della stanza
+- **Scaling difficoltà** — Configurazione della difficoltà in base al numero di giocatori
+- **Drop blocker** — Impedisce ai giocatori di droppare oggetti all'interno del dungeon
+- **Fix multiplayer** — Gestione corretta del loot al rejoin nella stessa sessione
+- **Localizzazione completa** — Tutti i messaggi dungeon tradotti in italiano e inglese
+
+## 🕳️ Grotte — Potenziate
+
+- **Generazione spawn** — Nuovo sistema di spawn point nelle grotte con supporto a punti multipli basati su tag
+- **Vegetazione procedurale** — Generazione automatica di piante e vegetazione nelle grotte
+- **Nuovi materiali** — Blocchi di layout e materiali aggiuntivi per le caverne
+- **Protezione blocchi** — Handler dedicato per impedire la distruzione di blocchi strutturali
+- **Mob encounter manager** — Sistema di incontri con mob nelle grotte
+
+|| A breve un leak di entrambi, sono già completamente funzionanti @Colono ||
+# Changelog 0.5.9
+
+## 🔨 Fornace da Fabbro
+
+> **Dal minerale grezzo all'oggetto forgiato.** La fornace da fabbro è ora un sistema completo con componenti modulari, fusione nel crogiolo grande e battitura sull'incudine.
+
+- **Modulo Crogiolo grande** — Fondere i metalli e colarli negli stampi. Il renderer mostra la quantità di metallo fuso in tempo reale
+- **Minigame di battitura** — Un nuovo minigame sull'incudine per forgiare oggetti colpo dopo colpo
+- **Componenti modulari** — Mantice, camino, aspiratore, pinza e porta, ognuno con modello 3D e renderer dedicato
+- **Martello da fabbro** — Nuovo strumento con texture dedicata per la lavorazione sull'incudine
+- **Frammenti metallici e cenere** — Nuovi materiali di scarto e lavorazione
+- **Modello GeckoLib animato** — La fornace prende vita con animazioni di fusione e fiamme
+- **Dettagli della forgiatura** — L'accensione della fornace, il consumo di carburante e di cristalli è animato e creato tutto in modelli 3D
+- **GUI** — La fornace non avrà gui, è tutta basata su interazioni in gioco, modelli ed effetti visivi, come render liquidi dinamici, oggetti e particelle
+- **Casting** — Vi sono 2 modi per castare, o farlo direttamente prendendo il crogiolo piccolo pieno di liquido incandescente e versarlo nel cast oppure accumularlo nel crogiolo più grande per poter caster più lingotti in un colpo solo
+- **Deprecazione** — Ogni fase in cui è presente liquido incandescente, a meno che non sia su una fonte di calore, potrebbe solidificarsi costringendovi a riciclare lo scarto creato
+
+|| Attenti alla cenere 😈, e all'implementazione manca solo il cast multiplo simultaneo (il modello 3d), spiegazioni e leak arriveranno @Colono ||
+# Changelog 0.6.0
+
+---
+## 🧪 Tini da Tintura
+
+>**Create i vostri colori.** Un nuovo blocco per mescolare pigmenti e tingere abiti e materiali con tonalità uniche.
+
+- **Blocco Tini da Tintura** — Modello 3D multicomponente con blocco dummy per la struttura
+- **Miscelazione colori** — Il renderer mostra dinamicamente il colore del liquido all'interno
+- **Integrazione vestiario** — I colori creati possono essere applicati a vestiti e materiali
+
+# Changelog 0.6.1
+
+---
+## 🚿 Lavatore — Setaccio, Cisterna e Lavello
+
+>**Tre blocchi, un sistema.** Il lavatore si evolve in una catena di lavorazione completa per processare i minerali frantumati.
+
+- **Setaccio (Sieve)** — Blocco con toggle attivo/inattivo, rendering dell'acqua e del blocco in lavorazione
+- **Cisterna (Tank)** — Sistema a cascata con rendering dell'acqua e modello con texture dedicata
+- **Lavello (Sink)** — Rendering inventario, bounding box personalizzata e gestione blocchi dummy
+- **Rendering acqua** su tutti e tre i blocchi con effetti visivi dedicati
+
+# Changelog 0.6.2
+
+---
+## ⚙️ Polverizzatore
+>**Macinate tutto.** Un nuovo blocco da lavorazione che riduce materiali grezzi in risorse più fini, con animazioni e feedback sonoro.
+
+- **Blocco Polverizzatore** — Struttura a due blocchi di altezza con blocco dummy superiore e modello GeckoLib animato
+- **Grinder** — Nuovo oggetto strumento con modello 3D dedicato per alimentare il polverizzatore
+- **Animazione di lavorazione** — Il polverizzatore si attiva visivamente durante la macinazione
+- **Suono di lavorazione** — Audio dedicato che accompagna il processo di polverizzazione
+- **Ricette data-driven** — Sistema di ricette configurabili (ghiaia da ciottoli, sabbia da ghiaia)
+- **Integrazione JEI** — Categoria ricette dedicata consultabile nel browser ricette
+
+# Changelog 0.6.3
+
+---
+## 💎 Cristalli
+
+- **5 tipologie di cristalli** con modelli 3D dedicati e stadi di crescita progressivi
+- **Texture reworkate** — Nuove texture ad alta risoluzione per tutti i cristalli puri
+- **Blocchi piazzabili** con block entity e registrazione dedicata
+
+## ⛏️ Ore Chunks — Espansione
+
+- **Chunk di Carbone e Stagno** — Due nuovi minerali frantumabili con modelli a 5 stadi
+- **Refactor a classe base** — Codice condiviso tra tutti i tipi di chunk per manutenibilità
+- **Vene e Sedimenti** — Nuovi blocchi naturali aggiunti al mondo
+
+
+# Changelog 0.6.4
+
+---
+## 🛡️ Sotto-Armatura & Sistema Equip
+
+**Un nuovo livello sotto l'armatura.** Indossate strati aggiuntivi sotto la corazza, con attributi e rendering dedicati.
+
+- **Slot sotto-armatura** — Elmo, corazza, gambali e stivali con tag dedicati
+- **Attributi custom** — Ogni pezzo sotto-armatura applica bonus specifici al personaggio
+- **Renderer custom** — Layer di rendering aggiuntivo per visualizzare la sotto-armatura sul modello
+- **GUI armatura rinnovata** — Nuova schermata con slot vanilla e sotto-armatura unificati
+
+# Changelog 0.6.5
+
+---
+## 🔮 Station Crystal
+
+- **Nuovo blocco di supporto dungeon** — Cristallo con meccanica di riparazione e timer
+- **Particelle d'allarme** quando il tempo rimanente scende sotto il 25%
+- **Distruzione a catena** — Il cristallo distrugge i blocchi sopra di sé quando viene rotto
+
+# Changelog 0.6.6
+
+---
+## 💀 Fallen/Revive — Potenziato
+
+- **Barra di progresso** — Overlay HUD sul giocatore che sta rianimando un compagno
+- **Rinuncia (Give Up)** — I giocatori caduti possono arrendersi con UI e gestione network dedicata
+- **Sincronizzazione stato** — Lo stato di revive è sincronizzato a tutti i giocatori in tempo reale
+- **Tracciamento tempo caduto** — Il sistema tiene traccia di quanto tempo un giocatore è rimasto a terra
+- **Titolo caduto** — Visualizzazione a schermo del titolo quando si cade
+
+## 💰 Mercato — Potenziato
+
+- **Sistema di tassazione** — Ogni transazione è tassata in funzione del valore della merce
+- **Bronzino minimo garantito** — Ogni transazione garantisce almeno 1 bronzino al venditore
+- **Tracciamento completo** — Tipo di blocco, NBT e dettagli registrati per ogni scambio
+- **Statistiche giocatore** — Sconti progressivi basati sul volume di vendita
+- **Tesoreria** — Contenitore centralizzato per tutte le tasse raccolte
+- Fix bug di duplicazione, sparizione e gestione logout
+
+# Changelog 0.6.7
+
+---
+## 🎭 Creazione Personaggio — Fix Maggiore
+
+- **Validazione nome server-side** — Nuovo pacchetto server-client per verificare l'accettazione del nome scelto
+- **Flusso di creazione reworkato** — Fix al flusso completo di creazione personaggio con gestione corretta delle risposte
+
+## 🐄 Stalla — GUI Reworkata
+
+- **HUD rinnovato** — La GUI della stalla è stata completamente riscritta con rendering delle quantità migliorato
+
+## 🌍 Claim & Realm
+
+- **Nuovi flag di protezione** — Logica aggiornata per i permessi all'interno di claim e realm
+- **Marker status giocatore** — Nuovo indicatore visivo dello stato del giocatore all'interno del realm
+
+## 🎨 Assets & Texture
+
+- Nuove texture: **pinza**, **frammenti metallici**, **cenere**, **martello da fabbro**, **cristalli puri** (5 varianti)
+- Nuovi modelli: **tini da tintura**, **setaccio**, **vasca**, **lavandino**, **porta fornace**, **componenti fornace**, **polverizzatore**, **grinder**
+- Nuovi suoni: **polverizzatore** in lavorazione
+- Texture temporanee per chunk e cristalli in lavorazione
+
+## 🔧 Fix
+
+- Fix singleplayer che non salvava il mondo correttamente
+- Fix eccezione crash allo stop del server
+- Fix rottura sink che distruggeva tutti i lavandini vicini
+- Fix posizione e rendering del lavandino
+- Fix interazione con blocco dummy del sink
+- Fix inizializzazione fornace da fabbro in singleplayer
+

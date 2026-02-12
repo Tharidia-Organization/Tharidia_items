@@ -81,7 +81,7 @@ public class StableHudOverlay {
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer player = mc.player;
 
-        if (player == null || mc.level == null) {
+        if (player == null || mc.level == null || mc.options.hideGui) {
             return;
         }
 
