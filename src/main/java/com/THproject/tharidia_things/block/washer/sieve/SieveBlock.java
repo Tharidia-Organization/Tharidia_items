@@ -4,7 +4,6 @@ import com.mojang.serialization.MapCodec;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Containers;
@@ -16,12 +15,12 @@ import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.LeverBlock;
 import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.Rotation;
-import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityTicker;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -151,8 +150,10 @@ public class SieveBlock extends BaseEntityBlock {
     private void destroyMultiblock(Level level, BlockPos masterPos, Direction facing) {
         BlockEntity blockEntity = level.getBlockEntity(masterPos);
         if (blockEntity instanceof SieveBlockEntity sieve) {
-            Containers.dropItemStack(level, masterPos.getX(), masterPos.getY(), masterPos.getZ(),
-                    sieve.inventory.getStackInSlot(0));
+            for (int i = 0; i < sieve.inventory.getSlots(); i++) {
+                Containers.dropItemStack(level, masterPos.getX(), masterPos.getY(), masterPos.getZ(),
+                        sieve.inventory.getStackInSlot(i));
+            }
             if (sieve.hasMesh()) {
                 Containers.dropItemStack(level, masterPos.getX(), masterPos.getY(), masterPos.getZ(),
                         new ItemStack(TharidiaThings.MESH.get()));
@@ -217,29 +218,39 @@ public class SieveBlock extends BaseEntityBlock {
                 }
                 return ItemInteractionResult.SUCCESS;
             } else {
-                // Remove input or mesh
                 if (stack.isEmpty() && player.isShiftKeyDown()) {
-                    ItemStack extracted = sieve.inventory.extractItem(0, 64, false);
-                    if (!extracted.isEmpty()) {
-                        if (!player.getInventory().add(extracted.copy()))
-                            player.drop(extracted.copy(), false);
-                        return ItemInteractionResult.SUCCESS;
-                    } else {
-                        if (sieve.hasMesh()) {
-                            sieve.removeMesh();
-                            if (!player.getInventory().add(new ItemStack(TharidiaThings.MESH.get())))
-                                player.drop(new ItemStack(TharidiaThings.MESH.get()), false);
-                            return ItemInteractionResult.SUCCESS;
+                    // Try to remove residue
+                    ItemStack residue_stack = sieve.inventory.extractItem(1, 64, false);
+                    if (!residue_stack.isEmpty()) {
+                        if (!player.getInventory().add(residue_stack.copy())) {
+                            player.drop(residue_stack.copy(), false);
                         }
                         return ItemInteractionResult.SUCCESS;
                     }
+
+                    // Try to remove input
+                    ItemStack input_stack = sieve.inventory.extractItem(0, 64, false);
+                    if (!input_stack.isEmpty()) {
+                        if (!player.getInventory().add(input_stack.copy()))
+                            player.drop(input_stack.copy(), false);
+                        return ItemInteractionResult.SUCCESS;
+                    }
+
+                    // Try to remove mesh
+                    if (sieve.hasMesh()) {
+                        sieve.removeMesh();
+                        if (!player.getInventory().add(new ItemStack(TharidiaThings.MESH.get())))
+                            player.drop(new ItemStack(TharidiaThings.MESH.get()), false);
+                        return ItemInteractionResult.SUCCESS;
+                    }
                 } else if (stack.isEmpty()) {
+                    // Toggle lever
                     if (sieve.toogleActive()) {
                         level.playSound(null, pos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 1.0F, 0.8F);
                     } else {
                         level.playSound(null, pos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 1.0F, 0.5F);
                     }
-                } else {
+                } else if (sieve.hasMesh()) {
                     // Insert input
                     ItemStack remainder = sieve.inventory.insertItem(0, stack.copy(), false);
                     if (remainder.getCount() != stack.getCount()) {
@@ -264,6 +275,13 @@ public class SieveBlock extends BaseEntityBlock {
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new SieveBlockEntity(pos, state);
+    }
+
+    @Nullable
+    @Override
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state,
+            BlockEntityType<T> type) {
+        return createTickerHelper(type, TharidiaThings.SIEVE_BLOCK_ENTITY.get(), SieveBlockEntity::tick);
     }
 
     @Override

@@ -5,12 +5,12 @@ import java.util.List;
 import java.util.Optional;
 
 import com.THproject.tharidia_things.TharidiaThings;
+import com.THproject.tharidia_things.block.washer.MultiblockGetter;
 import com.THproject.tharidia_things.block.washer.sieve.SieveBlockEntity;
 import com.THproject.tharidia_things.block.washer.tank.TankBlockEntity;
 import com.THproject.tharidia_things.recipe.WasherRecipe;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.Connection;
@@ -18,12 +18,12 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import net.neoforged.neoforge.items.wrapper.RecipeWrapper;
 import software.bernie.geckolib.animatable.GeoBlockEntity;
@@ -37,8 +37,15 @@ public class SinkBlockEntity extends BlockEntity implements GeoBlockEntity {
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
     private final double PERCENTAGE_PER_TANK = 0.3;
 
-    private int maxProgress;
+    private int maxProgress = 1;
     private int progress;
+
+    private ItemStack result = ItemStack.EMPTY;
+
+    public SieveBlockEntity sieve;
+    public TankBlockEntity tank1;
+    public TankBlockEntity tank2;
+    public TankBlockEntity tank3;
 
     public SinkBlockEntity(BlockPos pos, BlockState blockState) {
         super(TharidiaThings.SINK_BLOCK_ENTITY.get(), pos, blockState);
@@ -58,123 +65,59 @@ public class SinkBlockEntity extends BlockEntity implements GeoBlockEntity {
         if (level.isClientSide)
             return;
 
-        Direction sieveDirection = null;
-        Direction tank1Direction = null;
-        Direction tank2Direction = null;
-        Direction tank3Direction = null;
-        BlockEntity sieveBlockEntity = null;
-        BlockEntity tank1BlockEntity = null;
-        BlockEntity tank2BlockEntity = null;
-        BlockEntity tank3BlockEntity = null;
-        Direction facing = state.getValue(BlockStateProperties.HORIZONTAL_FACING);
-        if (facing == Direction.NORTH) {
-            sieveBlockEntity = level.getBlockEntity(pos.offset(0, 0, 2));
-            tank1BlockEntity = level.getBlockEntity(pos.offset(1, 0, 3));
-            tank2BlockEntity = level.getBlockEntity(pos.offset(0, 0, 4));
-            tank3BlockEntity = level.getBlockEntity(pos.offset(-1, 0, 3));
-            sieveDirection = Direction.NORTH;
-            tank1Direction = Direction.NORTH;
-            tank2Direction = Direction.EAST;
-            tank3Direction = Direction.SOUTH;
-        } else if (facing == Direction.EAST) {
-            sieveBlockEntity = level.getBlockEntity(pos.offset(-2, 0, 0));
-            tank1BlockEntity = level.getBlockEntity(pos.offset(-3, 0, 1));
-            tank2BlockEntity = level.getBlockEntity(pos.offset(-4, 0, 0));
-            tank3BlockEntity = level.getBlockEntity(pos.offset(-3, 0, -1));
-            sieveDirection = Direction.EAST;
-            tank1Direction = Direction.EAST;
-            tank2Direction = Direction.SOUTH;
-            tank3Direction = Direction.WEST;
-        } else if (facing == Direction.SOUTH) {
-            sieveBlockEntity = level.getBlockEntity(pos.offset(0, 0, -2));
-            tank1BlockEntity = level.getBlockEntity(pos.offset(-1, 0, -3));
-            tank2BlockEntity = level.getBlockEntity(pos.offset(0, 0, -4));
-            tank3BlockEntity = level.getBlockEntity(pos.offset(+1, 0, -3));
-            sieveDirection = Direction.SOUTH;
-            tank1Direction = Direction.SOUTH;
-            tank2Direction = Direction.WEST;
-            tank3Direction = Direction.NORTH;
-        } else if (facing == Direction.WEST) {
-            sieveBlockEntity = level.getBlockEntity(pos.offset(+2, 0, 0));
-            tank1BlockEntity = level.getBlockEntity(pos.offset(+3, 0, -1));
-            tank2BlockEntity = level.getBlockEntity(pos.offset(+4, 0, 0));
-            tank3BlockEntity = level.getBlockEntity(pos.offset(+3, 0, +1));
-            sieveDirection = Direction.WEST;
-            tank1Direction = Direction.WEST;
-            tank2Direction = Direction.NORTH;
-            tank3Direction = Direction.EAST;
-        }
+        MultiblockGetter.fromSink(level, sink, pos);
 
         List<TankBlockEntity> tanks = new ArrayList<>();
-        List<Direction> tanksDirections = new ArrayList<>();
 
-        if (tank1BlockEntity instanceof TankBlockEntity tank) {
-            tanks.add(tank);
-            tanksDirections.add(tank1Direction);
-        }
-        if (tank2BlockEntity instanceof TankBlockEntity tank) {
-            tanks.add(tank);
-            tanksDirections.add(tank2Direction);
-        }
-        if (tank3BlockEntity instanceof TankBlockEntity tank) {
-            tanks.add(tank);
-            tanksDirections.add(tank3Direction);
-        }
-
-        int workingTanks = getWorkingTanks(tanks, tanksDirections);
-
-        SieveBlockEntity sieve = sieveBlockEntity instanceof SieveBlockEntity ? (SieveBlockEntity) sieveBlockEntity
-                : null;
-        if (sieve == null || sieve.getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING) != sieveDirection)
+        if (sink.tank1 != null)
+            tanks.add(sink.tank1);
+        if (sink.tank2 != null)
+            tanks.add(sink.tank2);
+        if (sink.tank3 != null)
+            tanks.add(sink.tank3);
+        if (sink.sieve == null || tanks.size() == 0)
             return;
 
-        sieve.setCanRenderwater(workingTanks > 0);
+        int workingTanks = MultiblockGetter.getWorkingTanks(tanks);
 
-        RecipeWrapper recipeWrapper = new RecipeWrapper(sieve.inventory);
+        RecipeWrapper recipeWrapper = new RecipeWrapper(sink.sieve.inventory);
         Optional<RecipeHolder<WasherRecipe>> recipe = level.getRecipeManager()
                 .getRecipeFor(TharidiaThings.WASHER_RECIPE_TYPE.get(), recipeWrapper, level);
 
         if (!recipe.isPresent()) {
             sink.resetProgress();
-            sieve.setProcessPercentage(0.0F);
             return;
         }
 
-        WasherRecipe sieveRecipe = recipe.get().value();
-        if (sieve.isActive() && workingTanks > 0) {
-            calcPercentage(sink, sieve, sieveRecipe, workingTanks);
+        if (!sink.sieve.isActive() || !sink.sieve.hasMesh() || workingTanks == 0 || sink.hasInventoryFull(sink)
+                || sink.sieve.inventory.getStackInSlot(1).getCount() == 64) {
+            sink.resetProgress();
+            return;
+        }
 
-            ItemStack result = sieveRecipe.getResultItem(level.registryAccess());
-            if (workingTanks > 0 && sieve.hasMesh() && sink.canInsertItem(result)
-                    && (sink.progress++ >= sink.maxProgress)) {
-                sink.craftItem(sieveRecipe, sieve.inventory);
+        WasherRecipe washerRecipe = recipe.get().value();
+
+        calcPercentage(sink, washerRecipe, workingTanks);
+
+        if (sink.progress++ >= sink.maxProgress && sink.result.isEmpty()) {
+            sink.result = washerRecipe.getResultItem(level.registryAccess());
+        }
+
+        if (!sink.result.isEmpty()) {
+            if (sink.canInsertItem(sink.result)) {
+                sink.craftItem(washerRecipe, sink.sieve.inventory);
+                sink.resetProgress();
+                sink.result = ItemStack.EMPTY;
+            } else {
                 sink.resetProgress();
             }
         }
     }
 
-    private static void calcPercentage(SinkBlockEntity sink, SieveBlockEntity sieve,
-            WasherRecipe recipe, int workingTanks) {
+    private static void calcPercentage(SinkBlockEntity sink, WasherRecipe recipe, int workingTanks) {
         sink.maxProgress = recipe.getProcessingTime();
-        sink.maxProgress -= (int) (recipe.getProcessingTime() * (sink.PERCENTAGE_PER_TANK * (workingTanks - 1)));
-        sieve.setProcessPercentage((float) sink.progress / sink.maxProgress);
-    }
-
-    private static int getWorkingTanks(List<TankBlockEntity> tanks, List<Direction> tanksDirections) {
-        int result = 0;
-
-        for (int i = 0; i < tanks.size(); i++) {
-            TankBlockEntity tank = tanks.get(i);
-            Direction direction = tanksDirections.get(i);
-
-            if (tank.tank.getFluidAmount() > 0
-                    && tank.isOpen()
-                    && tank.getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING) == direction) {
-                result++;
-            }
-        }
-
-        return result;
+        sink.maxProgress -= (int) (recipe.getProcessingTime() *
+                (sink.PERCENTAGE_PER_TANK * (workingTanks - 1)));
     }
 
     private void craftItem(WasherRecipe recipe, ItemStackHandler sieveInventory) {
@@ -185,12 +128,20 @@ public class SinkBlockEntity extends BlockEntity implements GeoBlockEntity {
             ItemStack outputStack = sinkInventory.getStackInSlot(i);
             if (outputStack.isEmpty()) {
                 sinkInventory.setStackInSlot(i, result.copy());
-                return;
+                break;
             } else if (!outputStack.isEmpty() && outputStack.getItem() == result.getItem()
                     && outputStack.getCount() + result.getCount() <= outputStack.getMaxStackSize()) {
                 outputStack.grow(result.getCount());
-                return;
+                break;
             }
+        }
+
+        // Insert residue block
+        ItemStack stack = sieveInventory.getStackInSlot(1);
+        if (stack.isEmpty()) {
+            sieveInventory.setStackInSlot(1, new ItemStack(Items.GRAVEL));
+        } else {
+            stack.grow(1);
         }
     }
 
@@ -207,9 +158,22 @@ public class SinkBlockEntity extends BlockEntity implements GeoBlockEntity {
         return false;
     }
 
+    private boolean hasInventoryFull(SinkBlockEntity sink) {
+        for (int i = 0; i < sink.sinkInventory.getSlots(); i++) {
+            if (sink.sinkInventory.getStackInSlot(i).getCount() < 64) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private void resetProgress() {
         this.progress = 0;
         this.setChanged();
+    }
+
+    public float getProcessPercentage() {
+        return (float) progress / (float) maxProgress;
     }
 
     @Override

@@ -1,6 +1,12 @@
 package com.THproject.tharidia_things.block.washer.sieve;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.THproject.tharidia_things.TharidiaThings;
+import com.THproject.tharidia_things.block.washer.MultiblockGetter;
+import com.THproject.tharidia_things.block.washer.sink.SinkBlockEntity;
+import com.THproject.tharidia_things.block.washer.tank.TankBlockEntity;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
@@ -9,8 +15,11 @@ import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.items.ItemStackHandler;
@@ -29,6 +38,11 @@ public class SieveBlockEntity extends BlockEntity implements GeoBlockEntity {
     private boolean Mesh = false;
     private boolean CanRenderWater = false;
 
+    public SinkBlockEntity sink;
+    public TankBlockEntity tank1;
+    public TankBlockEntity tank2;
+    public TankBlockEntity tank3;
+
     public SieveBlockEntity(BlockPos pos, BlockState blockState) {
         super(TharidiaThings.SIEVE_BLOCK_ENTITY.get(), pos, blockState);
     }
@@ -46,7 +60,7 @@ public class SieveBlockEntity extends BlockEntity implements GeoBlockEntity {
         return this.cache;
     }
 
-    public final ItemStackHandler inventory = new ItemStackHandler(1) {
+    public final ItemStackHandler inventory = new ItemStackHandler(2) {
         @Override
         protected void onContentsChanged(int slot) {
             setChanged();
@@ -57,6 +71,7 @@ public class SieveBlockEntity extends BlockEntity implements GeoBlockEntity {
 
         @Override
         public boolean isItemValid(int slot, ItemStack stack) {
+            // Input slot (0)
             if (slot == 0) {
                 if (level == null)
                     return true;
@@ -64,6 +79,16 @@ public class SieveBlockEntity extends BlockEntity implements GeoBlockEntity {
                         .stream()
                         .anyMatch(recipe -> recipe.value().getInput().test(stack));
             }
+
+            // Residue Slot (1)
+            if (slot == 1) {
+                if (level == null)
+                    return true;
+                if (stack.getItem() instanceof BlockItem blockItem)
+                    return blockItem.getBlock().equals(Blocks.GRAVEL);
+                return false;
+            }
+
             return false;
         }
     };
@@ -119,6 +144,32 @@ public class SieveBlockEntity extends BlockEntity implements GeoBlockEntity {
         return this.processPercentage;
     }
 
+    public static void tick(Level level, BlockPos pos, BlockState state, SieveBlockEntity sieve) {
+        if (level.isClientSide)
+            return;
+
+        MultiblockGetter.fromSieve(level, sieve, pos);
+
+        List<TankBlockEntity> tanks = new ArrayList<>();
+        if (sieve.tank1 != null)
+            tanks.add(sieve.tank1);
+        if (sieve.tank2 != null)
+            tanks.add(sieve.tank2);
+        if (sieve.tank3 != null)
+            tanks.add(sieve.tank3);
+
+        int workingTanks = MultiblockGetter.getWorkingTanks(tanks);
+
+        // Render water
+        sieve.setCanRenderwater(workingTanks > 0);
+
+        // Render Input
+        if (sieve.sink != null)
+            sieve.setProcessPercentage(sieve.sink.getProcessPercentage());
+        else
+            sieve.setProcessPercentage(0.0f);
+    }
+
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
@@ -143,9 +194,9 @@ public class SieveBlockEntity extends BlockEntity implements GeoBlockEntity {
         }
         if (tag.contains("Active")) {
             Active = tag.getBoolean("Active");
-            if (tag.contains("ProcessPercentage")) {
-                processPercentage = tag.getFloat("ProcessPercentage");
-            }
+        }
+        if (tag.contains("ProcessPercentage")) {
+            processPercentage = tag.getFloat("ProcessPercentage");
         }
     }
 
