@@ -420,5 +420,10 @@
   "block.tharidiathings.compressed_leaves": "Foglie Compresse",
   "block.tharidiathings.wet_compressed_leaves": "Foglie Compresse Bagnate",
   "block.tharidiathings.dried_compressed_leaves": "Foglie Compresse Essiccate",
-  "item.tharidiathings.zoccoletta": "Zoccoletta"
+  "block.tharidiathings.compressed_grass": "Erba Compressa",
+  "block.tharidiathings.wet_compressed_grass": "Erba Compressa Bagnata",
+  "block.tharidiathings.dried_compressed_grass": "Erba Compressa Essiccata",
+  "item.tharidiathings.zoccoletta": "Zoccoletta",
+  "block.tharidiathings.fertilized_dirt": "Terra Fertilizzata",
+  "block.tharidiathings.abnormal_grass": "Erba Alta Anomala"
 }

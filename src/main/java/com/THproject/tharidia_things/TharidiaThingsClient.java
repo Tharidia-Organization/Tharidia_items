@@ -144,6 +144,12 @@ public class TharidiaThingsClient {
             TharidiaThings.SMITHING_FURNACE.get(),
             RenderType.cutout()
         );
+
+        // Set render type for Abnormal Grass (cross plant) to support transparency
+        net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(
+            com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.ABNORMAL_GRASS.get(),
+            RenderType.cutout()
+        );
     }
 
     @SubscribeEvent

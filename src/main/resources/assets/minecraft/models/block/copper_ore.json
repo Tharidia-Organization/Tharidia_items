@@ -1,0 +1,9 @@
+{
+  "credit": "Made by AlleCraft",
+  "parent": "minecraft:block/ore_random",
+  "textures": {
+    
+    "base": "minecraft:block/stone"
+
+  }
+}

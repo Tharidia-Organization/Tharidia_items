@@ -1,7 +1,10 @@
 {
-    "variants": {
-        "": {
-            "model": "tharidiathings:block/vein_block_t4"
-        }
-    }
+  "variants": {
+    "": [
+      { "model": "tharidiathings:block/vein_block_t4" },
+      { "model": "tharidiathings:block/vein_block_t4", "x": 180 },
+      { "model": "tharidiathings:block/vein_block_t4", "y": 180 },
+      { "model": "tharidiathings:block/vein_block_t4", "y": 180, "x": 180 }
+    ]
+  }
 }

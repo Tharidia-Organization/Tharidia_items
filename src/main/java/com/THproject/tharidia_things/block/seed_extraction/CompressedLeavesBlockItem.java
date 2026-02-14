@@ -1,5 +1,7 @@
 package com.THproject.tharidia_things.block.seed_extraction;
 
+import java.util.function.Supplier;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.sounds.SoundEvents;
@@ -12,6 +14,7 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.material.FluidState;
@@ -21,8 +24,11 @@ import net.minecraft.world.phys.HitResult;
 
 public class CompressedLeavesBlockItem extends BlockItem {
 
-    public CompressedLeavesBlockItem(Block block, Properties properties) {
+    private final Supplier<? extends ItemLike> wetItemSupplier;
+
+    public CompressedLeavesBlockItem(Block block, Properties properties, Supplier<? extends ItemLike> wetItemSupplier) {
         super(block, properties);
+        this.wetItemSupplier = wetItemSupplier;
     }
 
     @Override
@@ -68,7 +74,7 @@ public class CompressedLeavesBlockItem extends BlockItem {
         if (!level.isClientSide()) {
             stack.shrink(1);
 
-            ItemStack wetLeaves = new ItemStack(SeedExtractionRegistry.WET_COMPRESSED_LEAVES_ITEM.get());
+            ItemStack wetLeaves = new ItemStack(wetItemSupplier.get());
             if (!player.getInventory().add(wetLeaves)) {
                 player.drop(wetLeaves, false);
             }

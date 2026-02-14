@@ -629,11 +629,18 @@ public class TharidiaThings {
                         output.accept(METAL_FRAGMENT.get());
                         output.accept(PINZA_CRUCIBLE.get());
 
-                        // Seed Extraction
+                        // Seed Extraction — Leaves
                         output.accept(com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.COMPRESSED_LEAVES_ITEM.get());
                         output.accept(com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.WET_COMPRESSED_LEAVES_ITEM.get());
                         output.accept(com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.DRIED_COMPRESSED_LEAVES_ITEM.get());
+                        // Seed Extraction — Grass
+                        output.accept(com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.COMPRESSED_GRASS_ITEM.get());
+                        output.accept(com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.WET_COMPRESSED_GRASS_ITEM.get());
+                        output.accept(com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.DRIED_COMPRESSED_GRASS_ITEM.get());
                         output.accept(com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.ZOCCOLETTA.get());
+                        // Seed Extraction — Fertilized Dirt & Abnormal Grass
+                        output.accept(com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.FERTILIZED_DIRT_ITEM.get());
+                        output.accept(com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.ABNORMAL_GRASS_ITEM.get());
 
                         // Add all dynamically registered baby mob items
                         BabyMobRegistry.addToCreativeTab(output);

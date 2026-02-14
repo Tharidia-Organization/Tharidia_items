@@ -1,5 +1,6 @@
 package com.THproject.tharidia_things.item;
 
+import com.THproject.tharidia_things.block.seed_extraction.DriedCompressedGrassBlock;
 import com.THproject.tharidia_things.block.seed_extraction.DriedCompressedLeavesBlock;
 import com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry;
 
@@ -17,6 +18,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.IntegerProperty;
 
 public class ZoccolettaItem extends Item {
 
@@ -30,15 +32,21 @@ public class ZoccolettaItem extends Item {
         BlockPos pos = context.getClickedPos();
         BlockState state = level.getBlockState(pos);
 
-        if (!state.is(SeedExtractionRegistry.DRIED_COMPRESSED_LEAVES.get())) {
+        boolean isLeaves = state.is(SeedExtractionRegistry.DRIED_COMPRESSED_LEAVES.get());
+        boolean isGrass = state.is(SeedExtractionRegistry.DRIED_COMPRESSED_GRASS.get());
+
+        if (!isLeaves && !isGrass) {
             return InteractionResult.PASS;
         }
 
         if (!level.isClientSide()) {
             ServerLevel serverLevel = (ServerLevel) level;
 
-            int stompCount = state.getValue(DriedCompressedLeavesBlock.STOMP_COUNT);
-            int hitsNeeded = state.getValue(DriedCompressedLeavesBlock.HITS_NEEDED);
+            IntegerProperty stompProp = isLeaves ? DriedCompressedLeavesBlock.STOMP_COUNT : DriedCompressedGrassBlock.STOMP_COUNT;
+            IntegerProperty hitsProp = isLeaves ? DriedCompressedLeavesBlock.HITS_NEEDED : DriedCompressedGrassBlock.HITS_NEEDED;
+
+            int stompCount = state.getValue(stompProp);
+            int hitsNeeded = state.getValue(hitsProp);
             int newCount = stompCount + 1;
 
             // Sound
@@ -53,10 +61,14 @@ public class ZoccolettaItem extends Item {
             if (newCount >= hitsNeeded) {
                 // Destroy block and drop seeds
                 level.destroyBlock(pos, false);
-                dropSeeds(serverLevel, pos);
+                if (isLeaves) {
+                    dropLeafSeeds(serverLevel, pos);
+                } else {
+                    dropGrassSeeds(serverLevel, pos);
+                }
             } else {
                 // Increment stomp count
-                level.setBlock(pos, state.setValue(DriedCompressedLeavesBlock.STOMP_COUNT, newCount),
+                level.setBlock(pos, state.setValue(stompProp, newCount),
                         net.minecraft.world.level.block.Block.UPDATE_ALL);
             }
 
@@ -70,7 +82,7 @@ public class ZoccolettaItem extends Item {
         return InteractionResult.SUCCESS;
     }
 
-    private void dropSeeds(ServerLevel level, BlockPos pos) {
+    private void dropLeafSeeds(ServerLevel level, BlockPos pos) {
         double x = pos.getX() + 0.5;
         double y = pos.getY() + 0.5;
         double z = pos.getZ() + 0.5;
@@ -92,6 +104,41 @@ public class ZoccolettaItem extends Item {
         // 20% chance red mushroom
         if (level.random.nextFloat() < 0.2F) {
             spawnItem(level, x, y, z, new ItemStack(Items.RED_MUSHROOM));
+        }
+    }
+
+    private void dropGrassSeeds(ServerLevel level, BlockPos pos) {
+        double x = pos.getX() + 0.5;
+        double y = pos.getY() + 0.5;
+        double z = pos.getZ() + 0.5;
+
+        // 1-2 wheat seeds (always)
+        int wheatCount = 1 + level.random.nextInt(2);
+        spawnItem(level, x, y, z, new ItemStack(Items.WHEAT_SEEDS, wheatCount));
+
+        // 30% chance pumpkin seeds
+        if (level.random.nextFloat() < 0.3F) {
+            spawnItem(level, x, y, z, new ItemStack(Items.PUMPKIN_SEEDS));
+        }
+
+        // 30% chance melon seeds
+        if (level.random.nextFloat() < 0.3F) {
+            spawnItem(level, x, y, z, new ItemStack(Items.MELON_SEEDS));
+        }
+
+        // 25% chance beetroot seeds
+        if (level.random.nextFloat() < 0.25F) {
+            spawnItem(level, x, y, z, new ItemStack(Items.BEETROOT_SEEDS));
+        }
+
+        // 15% chance torchflower seeds
+        if (level.random.nextFloat() < 0.15F) {
+            spawnItem(level, x, y, z, new ItemStack(Items.TORCHFLOWER_SEEDS));
+        }
+
+        // 10% chance pitcher pod
+        if (level.random.nextFloat() < 0.1F) {
+            spawnItem(level, x, y, z, new ItemStack(Items.PITCHER_POD));
         }
     }
 

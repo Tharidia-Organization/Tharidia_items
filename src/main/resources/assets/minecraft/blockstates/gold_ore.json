@@ -1,0 +1,13 @@
+{
+  "credit": "Made by AlleCraft",
+  "variants": {
+      "": 
+      [
+        { "model": "minecraft:block/gold_ore" },
+        { "model": "minecraft:block/gold_ore", "x": 180 },
+        { "model": "minecraft:block/gold_ore", "y": 180 },
+        { "model": "minecraft:block/gold_ore", "y": 180, "x": 180 }
+      ]
+    }
+  }
+  

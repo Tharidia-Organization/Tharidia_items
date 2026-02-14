@@ -424,5 +424,10 @@
   "block.tharidiathings.compressed_leaves": "Compressed Leaves",
   "block.tharidiathings.wet_compressed_leaves": "Wet Compressed Leaves",
   "block.tharidiathings.dried_compressed_leaves": "Dried Compressed Leaves",
-  "item.tharidiathings.zoccoletta": "Zoccoletta"
+  "block.tharidiathings.compressed_grass": "Compressed Grass",
+  "block.tharidiathings.wet_compressed_grass": "Wet Compressed Grass",
+  "block.tharidiathings.dried_compressed_grass": "Dried Compressed Grass",
+  "item.tharidiathings.zoccoletta": "Zoccoletta",
+  "block.tharidiathings.fertilized_dirt": "Fertilized Dirt",
+  "block.tharidiathings.abnormal_grass": "Abnormal Tall Grass"
 }
