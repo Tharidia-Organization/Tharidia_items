@@ -7,6 +7,17 @@
   "block.tharidiathings.sieve": "Sieve",
   "block.tharidiathings.sink": "Sink",
 
+  "block.tharidiathings.vein_block_t0": "Inferior Vein Cluster",
+  "block.tharidiathings.vein_block_t1": "Common Vein Cluster",
+  "block.tharidiathings.vein_block_t2": "Uncommon Vein Cluster",
+  "block.tharidiathings.vein_block_t3": "Greater Vein Cluster",
+  "block.tharidiathings.vein_block_t4": "Superior Vein Cluster",
+  "block.tharidiathings.vein_sediment_t0": "Inferior Mantle Cluster",
+  "block.tharidiathings.vein_sediment_t1": "Common Mantle Cluster",
+  "block.tharidiathings.vein_sediment_t2": "Uncommon Mantle Cluster",
+  "block.tharidiathings.vein_sediment_t3": "Greater Mantle Cluster",
+  "block.tharidiathings.vein_sediment_t4": "Superior Mantle Cluster",
+
   "container.tharidiathings.claim": "Claim",
   "container.tharidiathings.pietro": "Realm",
 
