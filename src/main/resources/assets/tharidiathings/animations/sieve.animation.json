@@ -1,0 +1,29 @@
+{
+	"format_version": "1.8.0",
+	"animations": {
+		"active_lever": {
+			"loop": "hold_on_last_frame",
+			"animation_length": 0.5,
+			"bones": {
+				"lever": {
+					"rotation": {
+						"0.0": [0, 0, 0],
+						"0.5": [50, 0, 0]
+					}
+				}
+			}
+		},
+		"deactive_lever": {
+			"loop": "hold_on_last_frame",
+			"animation_length": 0.5,
+			"bones": {
+				"lever": {
+					"rotation": {
+						"0.0": [50, 0, 0],
+						"0.5": [0, 0, 0]
+					}
+				}
+			}
+		}
+	}
+}

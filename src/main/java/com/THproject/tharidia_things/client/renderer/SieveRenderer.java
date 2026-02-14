@@ -35,7 +35,7 @@ public class SieveRenderer extends GeoBlockRenderer<SieveBlockEntity> {
 
             @Override
             public ResourceLocation getAnimationResource(SieveBlockEntity animatable) {
-                return null;
+                return ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, "animations/sieve.animation.json");
             }
         });
         addRenderLayer(new SieveWaterRenderer(this));
@@ -47,10 +47,6 @@ public class SieveRenderer extends GeoBlockRenderer<SieveBlockEntity> {
             float partialTick, int packedLight, int packedOverlay, int colour) {
         super.preRender(poseStack, animatable, model, bufferSource, buffer, isReRender, partialTick, packedLight,
                 packedOverlay, colour);
-
-        // Render lever
-        setBoneVisible(model, "lever_deactive", !animatable.isActive());
-        setBoneVisible(model, "lever_active", animatable.isActive());
 
         // Render mesh
         setBoneVisible(model, "grigliamateriali", animatable.hasMesh());

@@ -29,12 +29,14 @@ import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.animation.AnimatableManager;
 import software.bernie.geckolib.animation.AnimationController;
 import software.bernie.geckolib.animation.PlayState;
+import software.bernie.geckolib.animation.RawAnimation;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 public class SieveBlockEntity extends BlockEntity implements GeoBlockEntity {
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
     private float processPercentage = 0.0F;
     private boolean Active = false;
+    private boolean wasActive = false;
     private boolean Mesh = false;
     private boolean CanRenderWater = false;
 
@@ -50,9 +52,19 @@ public class SieveBlockEntity extends BlockEntity implements GeoBlockEntity {
     // GeckoLib Methods
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>(this, "controller", 0, state -> {
-            return PlayState.STOP;
-        }));
+        AnimationController<SieveBlockEntity> controller = new AnimationController<>(this, "controller", 0, state -> {
+            if (this.isActive()) {
+                this.wasActive = true;
+                return state.setAndContinue(RawAnimation.begin().thenPlayAndHold("active_lever"));
+            } else {
+                if (this.wasActive) {
+                    return state.setAndContinue(RawAnimation.begin().thenPlayAndHold("deactive_lever"));
+                }
+                return PlayState.STOP;
+            }
+        });
+        controller.setAnimationSpeed(5.0d);
+        controllers.add(controller);
     }
 
     @Override
