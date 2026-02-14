@@ -89,7 +89,7 @@ public class SinkBlockEntity extends BlockEntity implements GeoBlockEntity {
             return;
         }
 
-        if (!sink.sieve.isActive() || !sink.sieve.hasMesh() || workingTanks == 0 || sink.hasInventoryFull(sink)
+        if (!sink.sieve.isActive() || !sink.sieve.hasMesh() || workingTanks == 0
                 || sink.sieve.inventory.getStackInSlot(1).getCount() == 64) {
             sink.resetProgress();
             return;
@@ -156,15 +156,6 @@ public class SinkBlockEntity extends BlockEntity implements GeoBlockEntity {
             }
         }
         return false;
-    }
-
-    private boolean hasInventoryFull(SinkBlockEntity sink) {
-        for (int i = 0; i < sink.sinkInventory.getSlots(); i++) {
-            if (sink.sinkInventory.getStackInSlot(i).getCount() < 64) {
-                return false;
-            }
-        }
-        return true;
     }
 
     private void resetProgress() {
