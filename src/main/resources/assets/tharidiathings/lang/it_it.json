@@ -415,5 +415,10 @@
   "item.tharidiathings.iron_crusher_hammer": "Martello da Frantumazione",
   "item.tharidiathings.smithing_hammer": "Martello da Fabbro",
 
-  "block.tharidiathings.sieve": "Setaccio"
+  "block.tharidiathings.sieve": "Setaccio",
+
+  "block.tharidiathings.compressed_leaves": "Foglie Compresse",
+  "block.tharidiathings.wet_compressed_leaves": "Foglie Compresse Bagnate",
+  "block.tharidiathings.dried_compressed_leaves": "Foglie Compresse Essiccate",
+  "item.tharidiathings.zoccoletta": "Zoccoletta"
 }

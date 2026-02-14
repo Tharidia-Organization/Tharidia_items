@@ -629,6 +629,12 @@ public class TharidiaThings {
                         output.accept(METAL_FRAGMENT.get());
                         output.accept(PINZA_CRUCIBLE.get());
 
+                        // Seed Extraction
+                        output.accept(com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.COMPRESSED_LEAVES_ITEM.get());
+                        output.accept(com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.WET_COMPRESSED_LEAVES_ITEM.get());
+                        output.accept(com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.DRIED_COMPRESSED_LEAVES_ITEM.get());
+                        output.accept(com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.ZOCCOLETTA.get());
+
                         // Add all dynamically registered baby mob items
                         BabyMobRegistry.addToCreativeTab(output);
                     }).build());
@@ -736,6 +742,9 @@ public class TharidiaThings {
         // Register Veins
         VeinBlocks.init();
         VeinSediments.init();
+
+        // Register Seed Extraction
+        com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.init();
 
         // Register handshake bypass (CLIENT ONLY)
         if (FMLEnvironment.dist == Dist.CLIENT) {

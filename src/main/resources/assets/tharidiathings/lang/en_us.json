@@ -419,5 +419,10 @@
   "item.tharidiathings.iron_crusher_hammer": "Iron Crusher Hammer",
   "item.tharidiathings.smithing_hammer": "Smithing Hammer",
 
-  "jei.tharidiathings.washer_recipe": "Washing"
+  "jei.tharidiathings.washer_recipe": "Washing",
+
+  "block.tharidiathings.compressed_leaves": "Compressed Leaves",
+  "block.tharidiathings.wet_compressed_leaves": "Wet Compressed Leaves",
+  "block.tharidiathings.dried_compressed_leaves": "Dried Compressed Leaves",
+  "item.tharidiathings.zoccoletta": "Zoccoletta"
 }

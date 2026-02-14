@@ -1,0 +1,18 @@
+{
+    "variants": {
+        "dry_progress=0": { "model": "tharidiathings:block/wet_compressed_leaves" },
+        "dry_progress=1": { "model": "tharidiathings:block/wet_compressed_leaves" },
+        "dry_progress=2": { "model": "tharidiathings:block/wet_compressed_leaves" },
+        "dry_progress=3": { "model": "tharidiathings:block/wet_compressed_leaves" },
+        "dry_progress=4": { "model": "tharidiathings:block/wet_compressed_leaves" },
+        "dry_progress=5": { "model": "tharidiathings:block/wet_compressed_leaves" },
+        "dry_progress=6": { "model": "tharidiathings:block/wet_compressed_leaves" },
+        "dry_progress=7": { "model": "tharidiathings:block/wet_compressed_leaves" },
+        "dry_progress=8": { "model": "tharidiathings:block/wet_compressed_leaves" },
+        "dry_progress=9": { "model": "tharidiathings:block/wet_compressed_leaves" },
+        "dry_progress=10": { "model": "tharidiathings:block/wet_compressed_leaves" },
+        "dry_progress=11": { "model": "tharidiathings:block/wet_compressed_leaves" },
+        "dry_progress=12": { "model": "tharidiathings:block/wet_compressed_leaves" },
+        "dry_progress=13": { "model": "tharidiathings:block/wet_compressed_leaves" }
+    }
+}

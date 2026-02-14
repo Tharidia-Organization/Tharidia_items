@@ -1,0 +1,22 @@
+{
+    "variants": {
+        "hits_needed=4,stomp_count=0": { "model": "tharidiathings:block/dried_compressed_leaves" },
+        "hits_needed=4,stomp_count=1": { "model": "tharidiathings:block/dried_compressed_leaves" },
+        "hits_needed=4,stomp_count=2": { "model": "tharidiathings:block/dried_compressed_leaves" },
+        "hits_needed=4,stomp_count=3": { "model": "tharidiathings:block/dried_compressed_leaves" },
+        "hits_needed=4,stomp_count=4": { "model": "tharidiathings:block/dried_compressed_leaves" },
+        "hits_needed=4,stomp_count=5": { "model": "tharidiathings:block/dried_compressed_leaves" },
+        "hits_needed=5,stomp_count=0": { "model": "tharidiathings:block/dried_compressed_leaves" },
+        "hits_needed=5,stomp_count=1": { "model": "tharidiathings:block/dried_compressed_leaves" },
+        "hits_needed=5,stomp_count=2": { "model": "tharidiathings:block/dried_compressed_leaves" },
+        "hits_needed=5,stomp_count=3": { "model": "tharidiathings:block/dried_compressed_leaves" },
+        "hits_needed=5,stomp_count=4": { "model": "tharidiathings:block/dried_compressed_leaves" },
+        "hits_needed=5,stomp_count=5": { "model": "tharidiathings:block/dried_compressed_leaves" },
+        "hits_needed=6,stomp_count=0": { "model": "tharidiathings:block/dried_compressed_leaves" },
+        "hits_needed=6,stomp_count=1": { "model": "tharidiathings:block/dried_compressed_leaves" },
+        "hits_needed=6,stomp_count=2": { "model": "tharidiathings:block/dried_compressed_leaves" },
+        "hits_needed=6,stomp_count=3": { "model": "tharidiathings:block/dried_compressed_leaves" },
+        "hits_needed=6,stomp_count=4": { "model": "tharidiathings:block/dried_compressed_leaves" },
+        "hits_needed=6,stomp_count=5": { "model": "tharidiathings:block/dried_compressed_leaves" }
+    }
+}
