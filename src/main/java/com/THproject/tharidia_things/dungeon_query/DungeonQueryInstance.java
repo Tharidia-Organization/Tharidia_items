@@ -27,8 +27,8 @@ import org.slf4j.Logger;
 public class DungeonQueryInstance {
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    private final int START_TIME = 100; // 5 seconds
-    private final int CALL_TIME = 200; // 5 minutes
+    private final int START_TIME = 100; // 5 seconds (100 ticks)
+    private final int CALL_TIME = 200; // 10 seconds (200 ticks) - used for waiting queue groups
     private final int RANGE = 5;
 
     private ServerLevel level;
@@ -92,7 +92,20 @@ public class DungeonQueryInstance {
         call_countdown = -1;
         show_particle = true;
 
+        // Null safety checks
+        if (level == null || level.getServer() == null || level.getServer().getPlayerList() == null) {
+            LOGGER.error("[GROUP DUNGEON] Cannot start dungeon: level or server is null");
+            status = DungeonStatus.IDLE;
+            return;
+        }
+
         DungeonManager manager = DungeonManager.getInstance();
+        if (manager == null) {
+            LOGGER.error("[GROUP DUNGEON] Cannot start dungeon: DungeonManager is null");
+            status = DungeonStatus.IDLE;
+            return;
+        }
+
         playersToTeleport = new ArrayList<>();
         for (UUID playerUUID : players_list) {
             ServerPlayer player = level.getServer().getPlayerList().getPlayer(playerUUID);
@@ -118,9 +131,18 @@ public class DungeonQueryInstance {
             if (success) {
                 LOGGER.info("[GROUP DUNGEON] Teleported {} players to dungeon", playersToTeleport.size());
             } else {
-                LOGGER.warn(
-                        "[GROUP DUNGEON] Failed to teleport group - no instance available or players already in dungeon");
+                LOGGER.warn("[GROUP DUNGEON] Failed to teleport group - no instance available or players already in dungeon");
+                // Reset status on failure
+                status = DungeonStatus.IDLE;
+                show_particle = false;
+                start_countdown = -1;
             }
+        } else {
+            // No players to teleport
+            LOGGER.warn("[GROUP DUNGEON] No players available to teleport");
+            status = DungeonStatus.IDLE;
+            show_particle = false;
+            start_countdown = -1;
         }
     }
 
@@ -129,11 +151,25 @@ public class DungeonQueryInstance {
 
         show_particle = false;
 
+        // Null safety checks
+        if (level == null || level.getServer() == null) {
+            LOGGER.error("[GROUP DUNGEON] Cannot teleport players: level or server is null");
+            endDungeon();
+            cleanup();
+            return;
+        }
+
         DungeonManager manager = DungeonManager.getInstance();
+        if (manager == null) {
+            LOGGER.error("[GROUP DUNGEON] Cannot teleport players: DungeonManager is null");
+            endDungeon();
+            cleanup();
+            return;
+        }
 
         // Get instance ID from first player if available - all players in queue share
         // same instance
-        if (!playersToTeleport.isEmpty()) {
+        if (playersToTeleport != null && !playersToTeleport.isEmpty()) {
             int pInstance = manager.getPlayerInstance(playersToTeleport.get(0).getUUID());
             if (pInstance != -1) {
                 this.instanceId = pInstance;
@@ -141,7 +177,7 @@ public class DungeonQueryInstance {
         }
 
         // Remove players if are not in range (RANGE)
-        if (realmPos != null) {
+        if (realmPos != null && level.getServer().getPlayerList() != null) {
             List<UUID> toRemove = new ArrayList<>();
             for (UUID uuid : players_list) {
                 ServerPlayer p = level.getServer().getPlayerList().getPlayer(uuid);
@@ -172,7 +208,7 @@ public class DungeonQueryInstance {
             }
         }
 
-        if (playersToTeleport.isEmpty()) {
+        if (playersToTeleport == null || playersToTeleport.isEmpty()) {
             endDungeon();
             cleanup();
             return;
@@ -201,16 +237,23 @@ public class DungeonQueryInstance {
      */
     public void cleanup() {
         // Remove boss bar from all players
-        for (UUID playerUUID : players_list) {
-            ServerPlayer player = level.getServer().getPlayerList().getPlayer(playerUUID);
-            if (player != null) {
-                progression_bar.removePlayer(player);
+        if (level != null && level.getServer() != null && level.getServer().getPlayerList() != null) {
+            for (UUID playerUUID : players_list) {
+                ServerPlayer player = level.getServer().getPlayerList().getPlayer(playerUUID);
+                if (player != null) {
+                    progression_bar.removePlayer(player);
+                }
             }
         }
         LOGGER.debug("[GROUP DUNGEON] Instance cleaned up");
     }
 
     public void callPlayers() {
+        if (level == null || level.getServer() == null || level.getServer().getPlayerList() == null) {
+            LOGGER.warn("[GROUP DUNGEON] Cannot call players: level or server is null");
+            return;
+        }
+
         players_list.forEach(playerUUID -> {
             ServerPlayer player = level.getServer().getPlayerList().getPlayer(playerUUID);
             // Show title to players instead of chat message
@@ -247,33 +290,32 @@ public class DungeonQueryInstance {
             start_countdown--;
         }
 
-        if (show_particle) {
-            if (realmPos != null) {
-                for (int i = 0; i < 360; i += 10) {
-                    double angle = Math.toRadians(i);
-                    double x = realmPos.getX() + 0.5 + Math.cos(angle) * RANGE;
-                    double z = realmPos.getZ() + 0.5 + Math.sin(angle) * RANGE;
-                    level.sendParticles(ParticleTypes.WITCH, x, realmPos.getY() + 0.2, z, 1, 0, 0, 0, 0);
-                }
+        if (show_particle && level != null && realmPos != null) {
+            for (int i = 0; i < 360; i += 10) {
+                double angle = Math.toRadians(i);
+                double x = realmPos.getX() + 0.5 + Math.cos(angle) * RANGE;
+                double z = realmPos.getZ() + 0.5 + Math.sin(angle) * RANGE;
+                level.sendParticles(ParticleTypes.WITCH, x, realmPos.getY() + 0.2, z, 1, 0, 0, 0, 0);
             }
         }
 
         if (status == DungeonStatus.RUNNING) {
-            // 1. Ottieni il Manager direttamente
             DungeonManager manager = DungeonManager.getInstance();
+            if (manager == null) {
+                endDungeon();
+                return;
+            }
 
-            // 2. Prendi la mappa delle istanze
             Map<Integer, DungeonInstance> activeInstances = manager.getActiveInstances();
+            if (activeInstances == null) {
+                endDungeon();
+                return;
+            }
 
-            // 3. Recupera LA TUA specifica istanza usando l'ID salvato
             DungeonInstance myInstance = activeInstances.get(this.instanceId);
 
-            // 4. Controlla se l'istanza esiste ancora ed è vuota
-            if (myInstance != null && myInstance.getPlayerCount() == 0) {
-                endDungeon();
-            }
-            // Opzionale: se myInstance è null, significa che il manager l'ha già cancellata
-            else if (myInstance == null) {
+            // Check if instance is empty or removed
+            if (myInstance == null || myInstance.getPlayerCount() == 0) {
                 endDungeon();
             }
         }

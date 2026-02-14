@@ -44,6 +44,14 @@ public class ReviveConfig {
         }
     };
 
+    @Expose
+    public Map<String, Object> TIME_FALLEN = new HashMap<String, Object>() {
+        {
+            put("//", "Time a player remains fallen before dying");
+            put("Value", 1200);
+        }
+    };
+
     public static ReviveConfig load(File configFile) {
         ReviveConfig config = new ReviveConfig();
         if (configFile.exists()) {

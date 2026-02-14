@@ -48,6 +48,13 @@ public class ClaimBlockEntity extends BlockEntity implements MenuProvider {
     private boolean allowPvP = false;
     private boolean allowMobSpawning = false;
     private boolean allowFireSpread = false;
+
+    // Granular claim flags (default: only trusted can interact)
+    private boolean allowContainerAccess = false;   // Chests, furnaces, barrels, hoppers
+    private boolean allowDoorUse = false;           // Doors, trapdoors, fence gates
+    private boolean allowSwitchUse = false;         // Levers, buttons, pressure plates
+    private boolean allowVehiclePlace = false;      // Boats, minecarts
+    private boolean allowAnimalInteract = false;    // Saddle, leash, feed animals
     
     // Single slot inventory
     private final ItemStackHandler inventory = new ItemStackHandler(1) {
@@ -211,6 +218,61 @@ public class ClaimBlockEntity extends BlockEntity implements MenuProvider {
         return expirationTime > 0 && System.currentTimeMillis() > expirationTime;
     }
 
+    /**
+     * Grace period: 3 days after expiration before decay starts
+     * During grace period, protection is disabled but claim still exists
+     */
+    public static final long GRACE_PERIOD_MS = 3L * 24L * 60L * 60L * 1000L; // 3 days
+
+    /**
+     * Decay period: 14 days after grace period ends
+     */
+    public static final long DECAY_PERIOD_MS = 14L * 24L * 60L * 60L * 1000L; // 14 days
+
+    /**
+     * Checks if claim is in grace period (expired but not yet decayed)
+     */
+    public boolean isInGracePeriod() {
+        if (!isExpired()) return false;
+        long timeSinceExpiration = System.currentTimeMillis() - expirationTime;
+        return timeSinceExpiration <= GRACE_PERIOD_MS;
+    }
+
+    /**
+     * Checks if claim should be decayed (grace period + decay period exceeded)
+     */
+    public boolean shouldDecay() {
+        if (!isExpired()) return false;
+        long timeSinceExpiration = System.currentTimeMillis() - expirationTime;
+        return timeSinceExpiration > (GRACE_PERIOD_MS + DECAY_PERIOD_MS);
+    }
+
+    /**
+     * Gets the time when decay will occur
+     */
+    public long getDecayTime() {
+        if (expirationTime <= 0) return -1;
+        return expirationTime + GRACE_PERIOD_MS + DECAY_PERIOD_MS;
+    }
+
+    /**
+     * Gets days remaining before decay (returns negative if should already decay)
+     */
+    public long getDaysUntilDecay() {
+        if (expirationTime <= 0) return -1;
+        long decayTime = getDecayTime();
+        long remaining = decayTime - System.currentTimeMillis();
+        return remaining / (24L * 60L * 60L * 1000L);
+    }
+
+    /**
+     * Check if protection should be active
+     * Protection is disabled when claim is expired (regardless of grace period)
+     */
+    public boolean isProtectionActive() {
+        return !isExpired();
+    }
+
     public boolean isRented() {
         return isRented;
     }
@@ -284,6 +346,52 @@ public class ClaimBlockEntity extends BlockEntity implements MenuProvider {
 
     public void setAllowFireSpread(boolean allow) {
         this.allowFireSpread = allow;
+        setChanged();
+    }
+
+    // Granular flag getters/setters
+    public boolean getAllowContainerAccess() {
+        return allowContainerAccess;
+    }
+
+    public void setAllowContainerAccess(boolean allow) {
+        this.allowContainerAccess = allow;
+        setChanged();
+    }
+
+    public boolean getAllowDoorUse() {
+        return allowDoorUse;
+    }
+
+    public void setAllowDoorUse(boolean allow) {
+        this.allowDoorUse = allow;
+        setChanged();
+    }
+
+    public boolean getAllowSwitchUse() {
+        return allowSwitchUse;
+    }
+
+    public void setAllowSwitchUse(boolean allow) {
+        this.allowSwitchUse = allow;
+        setChanged();
+    }
+
+    public boolean getAllowVehiclePlace() {
+        return allowVehiclePlace;
+    }
+
+    public void setAllowVehiclePlace(boolean allow) {
+        this.allowVehiclePlace = allow;
+        setChanged();
+    }
+
+    public boolean getAllowAnimalInteract() {
+        return allowAnimalInteract;
+    }
+
+    public void setAllowAnimalInteract(boolean allow) {
+        this.allowAnimalInteract = allow;
         setChanged();
     }
 
@@ -528,7 +636,14 @@ public class ClaimBlockEntity extends BlockEntity implements MenuProvider {
         tag.putBoolean("AllowPvP", allowPvP);
         tag.putBoolean("AllowMobSpawning", allowMobSpawning);
         tag.putBoolean("AllowFireSpread", allowFireSpread);
-        
+
+        // Save granular flags
+        tag.putBoolean("AllowContainerAccess", allowContainerAccess);
+        tag.putBoolean("AllowDoorUse", allowDoorUse);
+        tag.putBoolean("AllowSwitchUse", allowSwitchUse);
+        tag.putBoolean("AllowVehiclePlace", allowVehiclePlace);
+        tag.putBoolean("AllowAnimalInteract", allowAnimalInteract);
+
         // Save merged claims
         CompoundTag mergedTag = new CompoundTag();
         for (int j = 0; j < mergedClaims.size(); j++) {
@@ -585,7 +700,14 @@ public class ClaimBlockEntity extends BlockEntity implements MenuProvider {
         allowPvP = tag.getBoolean("AllowPvP");
         allowMobSpawning = tag.getBoolean("AllowMobSpawning");
         allowFireSpread = tag.getBoolean("AllowFireSpread");
-        
+
+        // Load granular flags
+        allowContainerAccess = tag.getBoolean("AllowContainerAccess");
+        allowDoorUse = tag.getBoolean("AllowDoorUse");
+        allowSwitchUse = tag.getBoolean("AllowSwitchUse");
+        allowVehiclePlace = tag.getBoolean("AllowVehiclePlace");
+        allowAnimalInteract = tag.getBoolean("AllowAnimalInteract");
+
         // Load merged claims
         if (tag.contains("MergedClaims")) {
             CompoundTag mergedTag = tag.getCompound("MergedClaims");

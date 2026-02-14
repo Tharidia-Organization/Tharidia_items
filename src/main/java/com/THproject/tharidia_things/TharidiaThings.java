@@ -1,5 +1,7 @@
 package com.THproject.tharidia_things;
 
+import com.THproject.tharidia_things.block.ore_chunks.iron.IronChunkBlock;
+import com.THproject.tharidia_things.block.ore_chunks.iron.IronChunkBlockEntity;
 import com.THproject.tharidia_things.claim.ClaimRegistry;
 import com.THproject.tharidia_things.client.ClientSeekPacketHandler;
 import com.THproject.tharidia_things.client.HandshakeBypass;
@@ -28,12 +30,20 @@ import com.THproject.tharidia_things.block.HotGoldMarkerBlock;
 import com.THproject.tharidia_things.block.HotCopperMarkerBlock;
 import com.THproject.tharidia_things.block.StableBlock;
 import com.THproject.tharidia_things.block.StableDummyBlock;
+import com.THproject.tharidia_things.block.SmithingFurnaceBlock;
+import com.THproject.tharidia_things.block.SmithingFurnaceDummyBlock;
+import com.THproject.tharidia_things.block.DyeVatsBlock;
+import com.THproject.tharidia_things.block.DyeVatsDummyBlock;
+import com.THproject.tharidia_things.block.entity.DyeVatsBlockEntity;
 import com.THproject.tharidia_things.block.entity.PietroBlockEntity;
 import com.THproject.tharidia_things.block.entity.ClaimBlockEntity;
 import com.THproject.tharidia_things.block.entity.HotIronAnvilEntity;
 import com.THproject.tharidia_things.block.entity.HotGoldAnvilEntity;
 import com.THproject.tharidia_things.block.entity.HotCopperAnvilEntity;
 import com.THproject.tharidia_things.block.entity.StableBlockEntity;
+import com.THproject.tharidia_things.block.station_crystal.StationCrystalBlock;
+import com.THproject.tharidia_things.block.station_crystal.StationCrystalBlockEntity;
+import com.THproject.tharidia_things.block.entity.SmithingFurnaceBlockEntity;
 import com.THproject.tharidia_things.block.DungeonPortalBlock;
 import com.THproject.tharidia_things.block.ore_chunks.ChunksRegistry;
 import com.THproject.tharidia_things.block.crystals.CrystalsRegistry;
@@ -59,17 +69,26 @@ import com.THproject.tharidia_things.item.BattleGauntlet;
 import com.THproject.tharidia_things.item.CopperElsaItem;
 import com.THproject.tharidia_things.item.DiceItem;
 import com.THproject.tharidia_things.item.PietroBlockItem;
+import com.THproject.tharidia_things.item.SmithingFurnaceBlockItem;
+import com.THproject.tharidia_things.item.BellowsItem;
+import com.THproject.tharidia_things.item.CrucibleItem;
+import com.THproject.tharidia_things.item.HooverItem;
+import com.THproject.tharidia_things.item.ChimneyItem;
+import com.THproject.tharidia_things.item.DoorItem;
+import com.THproject.tharidia_things.item.PinzaCrucibleItem;
 import com.THproject.tharidia_things.item.AnimalFeedItem;
 import com.THproject.tharidia_things.item.AnimalBrushItem;
 import com.THproject.tharidia_things.item.FreshStrawItem;
 import com.THproject.tharidia_things.item.DirtyStrawItem;
 import com.THproject.tharidia_things.item.ShelterUpgradeKitItem;
+import com.THproject.tharidia_things.item.StationCrystalRepairerItem;
 import com.THproject.tharidia_things.item.crusher_hammers.IronCrusherHammer;
 import com.THproject.tharidia_things.registry.BabyMobRegistry;
 import com.THproject.tharidia_things.client.ClientPacketHandler;
 import com.THproject.tharidia_things.entity.ModEntities;
 import com.THproject.tharidia_things.compoundTag.BattleGauntleAttachments;
 import com.THproject.tharidia_things.compoundTag.ReviveAttachments;
+import com.THproject.tharidia_things.compoundTag.CustomArmorAttachments;
 import com.THproject.tharidia_things.character.CharacterAttachments;
 import com.THproject.tharidia_things.config.ItemCatalogueConfig;
 import com.THproject.tharidia_things.config.ReviveConfig;
@@ -88,9 +107,15 @@ import com.THproject.tharidia_things.network.SyncGroupQueuePacket;
 import com.THproject.tharidia_things.network.HierarchySyncPacket;
 import com.THproject.tharidia_things.network.RealmSyncPacket;
 import com.THproject.tharidia_things.network.UpdateHierarchyPacket;
+import com.THproject.tharidia_things.network.ToggleParticlePacket;
+import com.THproject.tharidia_things.network.revive.ReviveSyncPayload;
+import com.THproject.tharidia_things.network.revive.ReviveGiveUpPacket;
 import com.THproject.tharidia_things.network.SelectComponentPacket;
 import com.THproject.tharidia_things.network.SubmitNamePacket;
 import com.THproject.tharidia_things.network.SyncGateRestrictionsPacket;
+import com.THproject.tharidia_things.network.EquipActionPacket;
+import com.THproject.tharidia_things.network.EquipListSyncPacket;
+import com.THproject.tharidia_things.command.EquipCommand;
 import com.THproject.tharidia_things.realm.RealmManager;
 import com.THproject.tharidia_things.registry.ModAttributes;
 import com.THproject.tharidia_things.registry.ModStats;
@@ -224,6 +249,48 @@ public class TharidiaThings {
     public static final DeferredBlock<StableDummyBlock> STABLE_DUMMY = BLOCKS.register("stable_dummy",
             () -> new StableDummyBlock());
 
+    // Dye Vats Block (2-wide multiblock)
+    public static final DeferredBlock<DyeVatsBlock> DYE_VATS = BLOCKS.register("dye_vats",
+            () -> new DyeVatsBlock());
+    public static final DeferredItem<BlockItem> DYE_VATS_ITEM = ITEMS.registerSimpleBlockItem("dye_vats", DYE_VATS);
+    // Dye Vats Dummy Block (multiblock slave)
+    public static final DeferredBlock<DyeVatsDummyBlock> DYE_VATS_DUMMY = BLOCKS.register("dye_vats_dummy",
+            () -> new DyeVatsDummyBlock());
+
+    // Smithing Furnace Block (5x2x3 multiblock, GeckoLib animated)
+    public static final DeferredBlock<SmithingFurnaceBlock> SMITHING_FURNACE = BLOCKS.register("smithing_furnace",
+            () -> new SmithingFurnaceBlock());
+    public static final DeferredItem<SmithingFurnaceBlockItem> SMITHING_FURNACE_ITEM = ITEMS.register("smithing_furnace",
+            () -> new SmithingFurnaceBlockItem(SMITHING_FURNACE.get(), new Item.Properties()));
+    // Smithing Furnace Dummy Block (multiblock slave)
+    public static final DeferredBlock<SmithingFurnaceDummyBlock> SMITHING_FURNACE_DUMMY = BLOCKS.register("smithing_furnace_dummy",
+            () -> new SmithingFurnaceDummyBlock());
+
+    // Smithing Furnace Ash
+    public static final DeferredItem<Item> ASH = ITEMS.register("ash",
+            () -> new Item(new Item.Properties().stacksTo(64)));
+
+    // Metal Fragment (dropped when cleaning expired molten metal)
+    public static final DeferredItem<Item> METAL_FRAGMENT = ITEMS.register("metal_fragment",
+            () -> new Item(new Item.Properties().stacksTo(64)));
+
+    // Smithing Furnace Upgrade Items
+    public static final DeferredItem<BellowsItem> BELLOWS = ITEMS.register("bellows",
+            () -> new BellowsItem(new Item.Properties().stacksTo(1)));
+    public static final DeferredItem<CrucibleItem> CRUCIBLE = ITEMS.register("crucible",
+            () -> new CrucibleItem(new Item.Properties().stacksTo(1)));
+    public static final DeferredItem<HooverItem> HOOVER = ITEMS.register("hoover",
+            () -> new HooverItem(new Item.Properties().stacksTo(1)));
+    public static final DeferredItem<ChimneyItem> CHIMNEY = ITEMS.register("chimney",
+            () -> new ChimneyItem(new Item.Properties().stacksTo(1)));
+    public static final DeferredItem<DoorItem> DOOR = ITEMS.register("door",
+            () -> new DoorItem(new Item.Properties().stacksTo(1)));
+
+    // Pinza Crucible (Crucible Tongs) - picks up molten metal from furnace
+    public static final DeferredItem<PinzaCrucibleItem> PINZA_CRUCIBLE = ITEMS.register("pinza_crucible",
+            () -> new PinzaCrucibleItem(new Item.Properties().stacksTo(1)));
+
+
     // Dungeon Portal Block (red portal, no teleportation)
     public static final DeferredBlock<DungeonPortalBlock> DUNGEON_PORTAL = BLOCKS.register("dungeon_portal",
             () -> new DungeonPortalBlock(
@@ -235,6 +302,16 @@ public class TharidiaThings {
                             .sound(net.minecraft.world.level.block.SoundType.GLASS)
                             .lightLevel(state -> 11)
                             .pushReaction(PushReaction.BLOCK)));
+
+    // Station Crystal Block
+    public static final DeferredBlock<StationCrystalBlock> STATION_CRYSTAL_BLOCK = BLOCKS.register("station_crystal",
+            () -> new StationCrystalBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.DIAMOND)
+                    .strength(3.0F, 6.0F)
+                    .noOcclusion()));
+    public static final DeferredItem<BlockItem> STATION_CRYSTAL_BLOCK_ITEM = ITEMS.registerSimpleBlockItem(
+            "station_crystal",
+            STATION_CRYSTAL_BLOCK);
 
     // Sieve
     public static final DeferredBlock<SieveBlock> SIEVE_BLOCK = BLOCKS.register(
@@ -341,6 +418,21 @@ public class TharidiaThings {
             .register("stable",
                     () -> BlockEntityType.Builder.of(StableBlockEntity::new, STABLE.get()).build(null));
 
+    // Creates a new BlockEntityType for the Dye Vats
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<DyeVatsBlockEntity>> DYE_VATS_BLOCK_ENTITY = BLOCK_ENTITIES
+            .register("dye_vats",
+                    () -> BlockEntityType.Builder.of(DyeVatsBlockEntity::new, DYE_VATS.get()).build(null));
+
+    // Creates a new BlockEntityType for the Smithing Furnace
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<SmithingFurnaceBlockEntity>> SMITHING_FURNACE_BLOCK_ENTITY = BLOCK_ENTITIES
+            .register("smithing_furnace",
+                    () -> BlockEntityType.Builder.of(SmithingFurnaceBlockEntity::new, SMITHING_FURNACE.get()).build(null));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<StationCrystalBlockEntity>> STATION_CRYSTAL_BLOCK_ENTITY = BLOCK_ENTITIES
+            .register("station_crystal",
+                    () -> BlockEntityType.Builder.of(StationCrystalBlockEntity::new, STATION_CRYSTAL_BLOCK.get())
+                            .build(null));
+
     // Creates a MenuType for the Claim GUI
     public static final DeferredHolder<net.minecraft.world.inventory.MenuType<?>, net.minecraft.world.inventory.MenuType<ClaimMenu>> CLAIM_MENU = MENU_TYPES
             .register("claim_menu", () -> net.neoforged.neoforge.common.extensions.IMenuTypeExtension
@@ -366,6 +458,11 @@ public class TharidiaThings {
             .register("battle_invite_menu", () -> net.neoforged.neoforge.common.extensions.IMenuTypeExtension
                     .create(BattleInviteMenu::new));
 
+    // Creates a MenuType for the Armor GUI
+    public static final DeferredHolder<net.minecraft.world.inventory.MenuType<?>, net.minecraft.world.inventory.MenuType<ArmorMenu>> ARMOR_MENU = MENU_TYPES
+            .register("armor_menu", () -> net.neoforged.neoforge.common.extensions.IMenuTypeExtension
+                    .create((windowId, inv, data) -> new ArmorMenu(windowId, inv)));
+
     // Smithing items
     public static final DeferredItem<Item> HOT_IRON = ITEMS.register("hot_iron",
             () -> new HotIronItem(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)));
@@ -389,6 +486,10 @@ public class TharidiaThings {
             () -> new CopperLamaCortaItem(new Item.Properties()));
     public static final DeferredItem<Item> COPPER_ELSA = ITEMS.register("copper_elsa",
             () -> new CopperElsaItem(new Item.Properties()));
+
+    public static final DeferredItem<Item> STATION_CRYSTAL_REPAIRER = ITEMS.register("station_crystal_repairer",
+            () -> new StationCrystalRepairerItem(new Item.Properties()));
+
     public static final DeferredItem<Item> DICE = ITEMS.register("dice",
             () -> new DiceItem(new Item.Properties().stacksTo(16)));
     public static final DeferredItem<Item> ANIMAL_FEED = ITEMS.register("animal_feed",
@@ -406,6 +507,10 @@ public class TharidiaThings {
     public static final DeferredItem<Item> IRON_CRUSHER_HAMMER = ITEMS.register("iron_crusher_hammer",
             () -> new IronCrusherHammer());
 
+    // Smithing Hammer
+    public static final DeferredItem<Item> SMITHING_HAMMER = ITEMS.register("smithing_hammer",
+            () -> new Item(new Item.Properties().stacksTo(1).durability(500)));
+
     // Houseboundry Items
     public static final DeferredItem<Item> ANIMAL_BRUSH = ITEMS.register("animal_brush",
             () -> new AnimalBrushItem(new Item.Properties().durability(64)));
@@ -417,6 +522,14 @@ public class TharidiaThings {
             () -> new ShelterUpgradeKitItem(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<Item> PITCHFORK = ITEMS.register("pitchfork",
             () -> new com.THproject.tharidia_things.item.PitchforkItem(new Item.Properties()));
+
+    // Station Crystal Tool
+    public static final DeferredItem<Item> STATION_CRYSTAL_TOOL = ITEMS.register("station_crystal_tool",
+            () -> new com.THproject.tharidia_things.item.StationCrystalTool(new Item.Properties()));
+
+    // Trust Contract (for granting trust to other players)
+    public static final DeferredItem<Item> TRUST_CONTRACT = ITEMS.register("trust_contract",
+            () -> new com.THproject.tharidia_things.item.TrustContractItem(new Item.Properties().stacksTo(16)));
 
     // Creates a creative tab with the id "tharidiathings:tharidia_tab" for the mod
     // items, that is placed after the combat tab
@@ -447,12 +560,16 @@ public class TharidiaThings {
                         output.accept(BATTLE_GAUNTLE.get());
                         output.accept(STABLE_ITEM.get());
                         output.accept(IRON_CRUSHER_HAMMER.get());
+                        output.accept(SMITHING_HAMMER.get());
                         // Houseboundry
                         output.accept(ANIMAL_BRUSH.get());
                         output.accept(FRESH_STRAW.get());
                         output.accept(DIRTY_STRAW.get());
                         output.accept(SHELTER_UPGRADE_KIT.get());
                         output.accept(PITCHFORK.get());
+
+                        // Dye Vats
+                        output.accept(DYE_VATS_ITEM.get());
 
                         // Chunks
                         output.accept(ChunksRegistry.COAL_CHUNK_ITEM.get());
@@ -495,6 +612,25 @@ public class TharidiaThings {
 
                         // Mesh
                         output.accept(MESH.get());
+
+                        // Station Crystal
+                        output.accept(STATION_CRYSTAL_BLOCK_ITEM.get());
+                        output.accept(STATION_CRYSTAL_TOOL.get());
+                        output.accept(STATION_CRYSTAL_REPAIRER.get());
+
+                        // Claim utilities
+                        output.accept(TRUST_CONTRACT.get());
+
+                        // Smithing
+                        output.accept(SMITHING_FURNACE_ITEM.get());
+                        output.accept(BELLOWS.get());
+                        output.accept(CRUCIBLE.get());
+                        output.accept(HOOVER.get());
+                        output.accept(CHIMNEY.get());
+                        output.accept(DOOR.get());
+                        output.accept(ASH.get());
+                        output.accept(METAL_FRAGMENT.get());
+                        output.accept(PINZA_CRUCIBLE.get());
 
                         // Add all dynamically registered baby mob items
                         BabyMobRegistry.addToCreativeTab(output);
@@ -559,22 +695,23 @@ public class TharidiaThings {
         // Do not add this line if there are no @SubscribeEvent-annotated functions in
         // this class, like onServerStarting() below.
         NeoForge.EVENT_BUS.register(this);
-        // Register server stopping event
-        NeoForge.EVENT_BUS.addListener(this::onServerStopping);
         // Register the claim protection handler
         NeoForge.EVENT_BUS.register(ClaimProtectionHandler.class);
         // Register the player kill handler
         NeoForge.EVENT_BUS.register(PlayerStatsIncrementHandler.class);
         // Register the claim expiration handler
         NeoForge.EVENT_BUS.register(ClaimExpirationHandler.class);
+        // Register the claim decay manager
+        NeoForge.EVENT_BUS.register(com.THproject.tharidia_things.claim.ClaimDecayManager.class);
+        // Register the realm rank indicator (particle badge for rank)
+        NeoForge.EVENT_BUS.register(com.THproject.tharidia_things.realm.RealmRankIndicator.class);
         // Register the realm placement handler
         NeoForge.EVENT_BUS.register(RealmPlacementHandler.class);
         // Register the weight debuff handler
         NeoForge.EVENT_BUS.register(WeightDebuffHandler.class);
         // Register the smithing handler
         NeoForge.EVENT_BUS.register(SmithingHandler.class);
-        // Register the pre-login name handler
-        NeoForge.EVENT_BUS.register(PreLoginNameHandler.class);
+        // PreLoginNameHandler removed — logic moved to CharacterEventHandler
         // Register the fatigue handler
         NeoForge.EVENT_BUS.register(FatigueHandler.class);
         NeoForge.EVENT_BUS.register(StaminaHandler.class);
@@ -589,6 +726,7 @@ public class TharidiaThings {
         BattleGauntleAttachments.register(modEventBus);
 
         ReviveAttachments.register(modEventBus);
+        CustomArmorAttachments.register(modEventBus);
 
         modEventBus.addListener(BattlePackets::register);
 
@@ -691,6 +829,11 @@ public class TharidiaThings {
                     RequestNamePacket.TYPE,
                     RequestNamePacket.STREAM_CODEC,
                     ClientPacketHandler::handleRequestName);
+            // Name response packet
+            registrar.playToClient(
+                    NameResponsePacket.TYPE,
+                    NameResponsePacket.STREAM_CODEC,
+                    ClientPacketHandler::handleNameResponse);
             // Race GUI packet
             registrar.playToClient(
                     OpenRaceGuiPacket.TYPE,
@@ -727,6 +870,11 @@ public class TharidiaThings {
                     TradeSyncPacket.STREAM_CODEC,
                     (packet, context) -> TradeClientHandler
                             .handleTradeSync(packet));
+            // Revive sync packet (client-bound)
+            registrar.playToClient(
+                    ReviveSyncPayload.TYPE,
+                    ReviveSyncPayload.STREAM_CODEC,
+                    ClientPacketHandler::handleReviveSync);
 
             // Register bungeecord:main channel to satisfy server requirement (dummy
             // handler)
@@ -736,6 +884,11 @@ public class TharidiaThings {
                     (packet, context) -> {
                     } // Dummy handler - we don't process bungeecord messages
             );
+
+            registrar.playToClient(
+                    SyncCustomArmorPacket.TYPE,
+                    SyncCustomArmorPacket.STREAM_CODEC,
+                    SyncCustomArmorPacket::handle);
 
             // Video screen packets
             registrar.playToClient(
@@ -824,6 +977,12 @@ public class TharidiaThings {
                     RequestNamePacket.STREAM_CODEC,
                     (packet, context) -> {
                     });
+            // Name response packet (server-side dummy handler)
+            registrar.playToClient(
+                    NameResponsePacket.TYPE,
+                    NameResponsePacket.STREAM_CODEC,
+                    (packet, context) -> {
+                    });
             // Race GUI packet (server-side dummy handler for handshake)
             registrar.playToClient(
                     OpenRaceGuiPacket.TYPE,
@@ -864,6 +1023,13 @@ public class TharidiaThings {
                     (packet, context) -> {
                     });
 
+            // Revive sync packet (client-bound, dummy handler)
+            registrar.playToClient(
+                    ReviveSyncPayload.TYPE,
+                    ReviveSyncPayload.STREAM_CODEC,
+                    (packet, context) -> {
+                    });
+
             // Register bungeecord:main channel on server side (dummy handler for
             // consistency)
             registrar.playToClient(
@@ -872,6 +1038,12 @@ public class TharidiaThings {
                     (packet, context) -> {
                     } // Dummy handler
             );
+
+            registrar.playToClient(
+                    SyncCustomArmorPacket.TYPE,
+                    SyncCustomArmorPacket.STREAM_CODEC,
+                    (packet, context) -> {
+                    });
 
             // Video screen packets (dummy handlers for server)
             registrar.playToClient(
@@ -911,9 +1083,27 @@ public class TharidiaThings {
 
         // Register server-bound packets (works on both sides)
         registrar.playToServer(
+                ReviveGiveUpPacket.TYPE,
+                ReviveGiveUpPacket.STREAM_CODEC,
+                ReviveGiveUpPacket::handle);
+
+        registrar.playToServer(
+                RightClickReleasePayload.TYPE,
+                RightClickReleasePayload.CODEC,
+                ReviveLogic::onStopReviving);
+
+        registrar.playToServer(
                 UpdateHierarchyPacket.TYPE,
                 UpdateHierarchyPacket.STREAM_CODEC,
                 UpdateHierarchyPacket::handle);
+        registrar.playToServer(
+                ToggleParticlePacket.TYPE,
+                ToggleParticlePacket.STREAM_CODEC,
+                ToggleParticlePacket::handle);
+        registrar.playToServer(
+                OpenArmorMenuPacket.TYPE,
+                OpenArmorMenuPacket.STREAM_CODEC,
+                OpenArmorMenuPacket::handle);
         registrar.playToServer(
                 DungeonQueuePacket.TYPE,
                 DungeonQueuePacket.STREAM_CODEC,
@@ -947,6 +1137,10 @@ public class TharidiaThings {
                 MeleeSwingPacket.TYPE,
                 MeleeSwingPacket.STREAM_CODEC,
                 MeleeSwingPacket::handle);
+        registrar.playToServer(
+                EquipLoadPacket.TYPE,
+                EquipLoadPacket.STREAM_CODEC,
+                EquipLoadPacket::handle);
         // Trade packets (server-bound)
         registrar.playToServer(
                 TradeResponsePacket.TYPE,
@@ -975,6 +1169,21 @@ public class TharidiaThings {
                 (packet, context) -> context
                         .enqueueWork(() -> ServerMusicFileHandler
                                 .handleMusicFileRequest(packet, (ServerPlayer) context.player())));
+
+        registrar.playBidirectional(
+                EquipSharePacket.TYPE,
+                EquipSharePacket.STREAM_CODEC,
+                EquipSharePacket::handle);
+
+        registrar.playToClient(
+                EquipActionPacket.TYPE,
+                EquipActionPacket.STREAM_CODEC,
+                EquipActionPacket::handle);
+
+        registrar.playToServer(
+                EquipListSyncPacket.TYPE,
+                EquipListSyncPacket.STREAM_CODEC,
+                EquipListSyncPacket::handle);
     }
 
     private void registerScreens(net.neoforged.neoforge.client.event.RegisterMenuScreensEvent event) {
@@ -999,6 +1208,12 @@ public class TharidiaThings {
 
             PacketDistributor.sendToPlayer((ServerPlayer) event.getEntity(),
                     WeightConfigSyncPacket.fromCurrentRegistry());
+
+            // Sync equips for operators
+            if (event.getEntity().hasPermissions(4)) {
+                PacketDistributor.sendToPlayer((ServerPlayer) event.getEntity(),
+                        new EquipActionPacket(EquipActionPacket.ACTION_SYNC_REQUEST, "", ""));
+            }
         }
     }
 
@@ -1012,6 +1227,22 @@ public class TharidiaThings {
             } catch (Exception e) {
                 LOGGER.error("Error cleaning up trade session for player {}: {}", player.getName().getString(),
                         e.getMessage());
+            }
+
+            // Safety net for singleplayer: schedule halt(false) on the next server tick.
+            // In the vanilla disconnect chain, halt(false) is called in super.onDisconnect()
+            // AFTER removePlayerFromWorld() completes. If anything in PlayerList.remove()
+            // (after this event fires) throws or blocks, halt(false) is never reached and
+            // the integrated server runs forever, freezing the client at "Saving world".
+            // By scheduling halt(false) here, we guarantee the server will stop.
+            var server = player.getServer();
+            if (server != null && !server.isDedicatedServer()) {
+                server.execute(() -> {
+                    if (server.isRunning()) {
+                        LOGGER.info("Singleplayer safety net: halting integrated server");
+                        server.halt(false);
+                    }
+                });
             }
         }
     }
@@ -1096,11 +1327,13 @@ public class TharidiaThings {
         // Register weight data loader
         event.getServer().getResourceManager();
 
-        // Initialize database system
-        initializeDatabaseSystem(event.getServer());
-
-        // Initialize server transfer system
-        initializeServerTransferSystem(event.getServer());
+        // Initialize database and transfer system only on dedicated servers (not singleplayer)
+        if (event.getServer().isDedicatedServer()) {
+            initializeDatabaseSystem(event.getServer());
+            initializeServerTransferSystem(event.getServer());
+        } else {
+            LOGGER.info("Singleplayer detected - skipping database and server transfer initialization");
+        }
     }
 
     /**
@@ -1193,12 +1426,28 @@ public class TharidiaThings {
     /**
      * Called when the server is stopping
      */
+    @SubscribeEvent
     public void onServerStopping(net.neoforged.neoforge.event.server.ServerStoppingEvent event) {
         LOGGER.info("Server stopping, cleaning up resources...");
 
         // Clear server reference
         currentServer = null;
         tickCounter = 0;
+
+        // Skip database/integration cleanup in singleplayer (nothing was initialized)
+        if (!event.getServer().isDedicatedServer()) {
+            LOGGER.info("Singleplayer - skipping database cleanup");
+            return;
+        }
+
+        // Shutdown GodEye integration executor first (fast, has timeout)
+        // Catch Throwable (not Exception) because NoClassDefFoundError is an Error
+        try {
+            LOGGER.info("Shutting down GodEye integration...");
+            com.THproject.tharidia_things.integration.GodEyeIntegration.shutdown();
+        } catch (Throwable t) {
+            LOGGER.error("Error shutting down GodEye integration: {}", t.getMessage(), t);
+        }
 
         // Then shutdown database
         if (databaseManager != null) {
@@ -1248,6 +1497,7 @@ public class TharidiaThings {
         StatsCommand.register(event.getDispatcher());
         ReviveCommands.register(event.getDispatcher());
         StableDebugCommand.register(event.getDispatcher());
+        EquipCommand.register(event.getDispatcher());
     }
 
     /**

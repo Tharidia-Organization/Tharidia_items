@@ -5,6 +5,9 @@ import com.THproject.tharidia_things.client.video.VideoToolsManager;
 import com.THproject.tharidia_things.TharidiaThings;
 import com.THproject.tharidia_things.stamina.StaminaAttachments;
 import com.THproject.tharidia_things.stamina.StaminaData;
+import com.THproject.tharidia_things.network.OpenArmorMenuPacket;
+import com.THproject.tharidia_things.client.gui.MasterMenuScreen;
+import net.neoforged.neoforge.network.PacketDistributor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.Mth;
 import net.neoforged.api.distmarker.Dist;
@@ -16,58 +19,57 @@ import org.lwjgl.glfw.GLFW;
 @EventBusSubscriber(modid = "tharidiathings", value = Dist.CLIENT)
 public class ClientKeyHandler {
     private static long lastPress = 0;
-    
+
     static {
         TharidiaThings.LOGGER.info("[VIDEO TOOLS] ClientKeyHandler loaded - F10 will show installer GUI");
     }
-    
+
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
-        
+
         if (mc.player == null) {
             return;
         }
-        
+
         // Check if toggle claim boundaries key was pressed
         if (KeyBindings.TOGGLE_CLAIM_BOUNDARIES.consumeClick()) {
             ClaimBoundaryRenderer.toggleBoundaries();
             RealmBoundaryRenderer.toggleBoundaries();
         }
-        
-        // Debug: Press F10 to force-show video tools installation GUI
-        if (org.lwjgl.glfw.GLFW.glfwGetKey(mc.getWindow().getWindow(), GLFW.GLFW_KEY_F10) == GLFW.GLFW_PRESS) {
-            long currentTime = System.currentTimeMillis();
-            if (currentTime - lastPress > 500) { // 500ms debounce
-                lastPress = currentTime;
-                TharidiaThings.LOGGER.info("[VIDEO TOOLS] F10 key pressed - triggering GUI");
-                mc.player.sendSystemMessage(net.minecraft.network.chat.Component.literal("§e[DEBUG] Showing video tools installation GUI"));
-                VideoToolsManager.getInstance().forceShowInstallationGUI();
-            }
+
+        // Check if armor menu key was pressed
+        if (KeyBindings.OPEN_ARMOR_MENU.consumeClick()) {
+            PacketDistributor.sendToServer(new OpenArmorMenuPacket());
         }
-        
+
+        if (KeyBindings.OPEN_MASTER_MENU.consumeClick()) {
+            if (mc.player.hasPermissions(2))
+                mc.setScreen(new MasterMenuScreen());
+        }
+
         // Update video players
         VideoScreenRenderHandler.onClientTick();
-        
+
         applyStaminaToExperienceBar(mc);
     }
-    
+
     private static void applyStaminaToExperienceBar(Minecraft mc) {
         if (mc.options.hideGui) {
             return;
         }
-        
+
         var player = mc.player;
         if (player == null || player.isCreative() || player.isSpectator()) {
             return;
         }
-        
+
         StaminaData data = player.getData(StaminaAttachments.STAMINA_DATA);
         float max = data.getMaxStamina();
         if (max <= 0.0f) {
             return;
         }
-        
+
         float ratio = Mth.clamp(data.getCurrentStamina() / max, 0.0f, 1.0f);
         player.experienceProgress = ratio;
     }

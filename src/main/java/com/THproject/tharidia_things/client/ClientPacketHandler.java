@@ -4,10 +4,14 @@ import com.THproject.tharidia_things.Config;
 import com.THproject.tharidia_things.TharidiaThings;
 import com.THproject.tharidia_things.client.screen.RaceSelectionScreen;
 import com.THproject.tharidia_things.client.video.ClientVideoScreenManager;
+import com.THproject.tharidia_things.compoundTag.ReviveAttachments;
+import com.THproject.tharidia_things.client.gui.PreLoginNameScreen;
 import com.THproject.tharidia_things.network.*;
+import com.THproject.tharidia_things.network.revive.ReviveSyncPayload;
 import com.mojang.logging.LogUtils;
 import com.THproject.tharidia_things.block.entity.PietroBlockEntity;
 import net.minecraft.client.Minecraft;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -38,7 +42,8 @@ public class ClientPacketHandler {
                 BlockEntity blockEntity = level.getBlockEntity(packet.pos());
                 if (blockEntity instanceof PietroBlockEntity claimEntity) {
                     // Note: ClaimOwnerSyncPacket is for ClaimBlock, but seems misused here?
-                    // Assuming it's for setting owner, but PietroBlockEntity doesn't have setOwnerUUID
+                    // Assuming it's for setting owner, but PietroBlockEntity doesn't have
+                    // setOwnerUUID
                 }
             }
         });
@@ -46,12 +51,12 @@ public class ClientPacketHandler {
 
     public static void handleRealmSync(RealmSyncPacket packet, IPayloadContext context) {
         context.enqueueWork(() -> {
-            LOGGER.info("[REALM SYNC] Received RealmSyncPacket with {} realms (fullSync: {})", 
-                packet.realms().size(), packet.fullSync());
+            LOGGER.info("[REALM SYNC] Received RealmSyncPacket with {} realms (fullSync: {})",
+                    packet.realms().size(), packet.fullSync());
             if (Config.DEBUG_REALM_SYNC.get()) {
                 LOGGER.info("[DEBUG] Current syncedRealms size before processing: {}", syncedRealms.size());
             }
-            
+
             // If this is a full sync, clear the list first
             if (packet.fullSync()) {
                 if (Config.DEBUG_REALM_SYNC.get()) {
@@ -59,35 +64,36 @@ public class ClientPacketHandler {
                 }
                 syncedRealms.clear();
             }
-            
+
             // Process each realm in the packet
             for (RealmSyncPacket.RealmData data : packet.realms()) {
                 if (Config.DEBUG_REALM_SYNC.get()) {
-                    LOGGER.info("[DEBUG] Syncing realm at {} with size {} and center chunk ({}, {})", 
-                        data.pos(), data.realmSize(), data.centerChunkX(), data.centerChunkZ());
+                    LOGGER.info("[DEBUG] Syncing realm at {} with size {} and center chunk ({}, {})",
+                            data.pos(), data.realmSize(), data.centerChunkX(), data.centerChunkZ());
                 }
-                
+
                 try {
-                    // Get the actual block state from the world (if available) or create a default one
+                    // Get the actual block state from the world (if available) or create a default
+                    // one
                     Level level = Minecraft.getInstance().level;
                     net.minecraft.world.level.block.state.BlockState blockState = null;
                     if (level != null && level.isLoaded(data.pos())) {
                         blockState = level.getBlockState(data.pos());
                     }
-                    
+
                     // If we can't get the actual state, use the default Pietro block state
                     if (blockState == null || !blockState.is(TharidiaThings.PIETRO.get())) {
                         blockState = TharidiaThings.PIETRO.get().defaultBlockState();
                     }
-                    
+
                     final net.minecraft.world.level.block.state.BlockState finalBlockState = blockState;
-                    
+
                     // Create a dummy PietroBlockEntity for rendering
                     PietroBlockEntity dummy = new PietroBlockEntity(data.pos(), finalBlockState) {
                         private final int syncedRealmSize = data.realmSize();
-                        private final net.minecraft.world.level.ChunkPos syncedCenterChunk = 
-                            new net.minecraft.world.level.ChunkPos(data.centerChunkX(), data.centerChunkZ());
-                        
+                        private final net.minecraft.world.level.ChunkPos syncedCenterChunk = new net.minecraft.world.level.ChunkPos(
+                                data.centerChunkX(), data.centerChunkZ());
+
                         @Override
                         public int getRealmSize() {
                             return syncedRealmSize;
@@ -97,51 +103,48 @@ public class ClientPacketHandler {
                         public String getOwnerName() {
                             return data.ownerName();
                         }
-                        
+
                         @Override
                         public net.minecraft.world.level.ChunkPos getCenterChunk() {
                             return syncedCenterChunk;
                         }
-                        
+
                         @Override
                         public net.minecraft.world.level.ChunkPos getMinChunk() {
                             int radius = syncedRealmSize / 2;
                             return new net.minecraft.world.level.ChunkPos(
-                                syncedCenterChunk.x - radius, 
-                                syncedCenterChunk.z - radius
-                            );
+                                    syncedCenterChunk.x - radius,
+                                    syncedCenterChunk.z - radius);
                         }
-                        
+
                         @Override
                         public net.minecraft.world.level.ChunkPos getMaxChunk() {
                             int radius = syncedRealmSize / 2;
                             return new net.minecraft.world.level.ChunkPos(
-                                syncedCenterChunk.x + radius, 
-                                syncedCenterChunk.z + radius
-                            );
+                                    syncedCenterChunk.x + radius,
+                                    syncedCenterChunk.z + radius);
                         }
-                        
+
                         @Override
                         public net.minecraft.world.level.ChunkPos getOuterLayerMinChunk() {
                             int outerRadius = (syncedRealmSize / 2) + 6; // OUTER_LAYER_OFFSET = 6
                             return new net.minecraft.world.level.ChunkPos(
-                                syncedCenterChunk.x - outerRadius,
-                                syncedCenterChunk.z - outerRadius
-                            );
+                                    syncedCenterChunk.x - outerRadius,
+                                    syncedCenterChunk.z - outerRadius);
                         }
-                        
+
                         @Override
                         public net.minecraft.world.level.ChunkPos getOuterLayerMaxChunk() {
                             int outerRadius = (syncedRealmSize / 2) + 6; // OUTER_LAYER_OFFSET = 6
                             return new net.minecraft.world.level.ChunkPos(
-                                syncedCenterChunk.x + outerRadius,
-                                syncedCenterChunk.z + outerRadius
-                            );
+                                    syncedCenterChunk.x + outerRadius,
+                                    syncedCenterChunk.z + outerRadius);
                         }
                     };
                     // Set the center chunk on the parent class as well
-                    dummy.centerChunk = new net.minecraft.world.level.ChunkPos(data.centerChunkX(), data.centerChunkZ());
-                    
+                    dummy.centerChunk = new net.minecraft.world.level.ChunkPos(data.centerChunkX(),
+                            data.centerChunkZ());
+
                     if (packet.fullSync()) {
                         // For full sync, just add all realms (list was already cleared)
                         syncedRealms.add(dummy);
@@ -161,12 +164,13 @@ public class ClientPacketHandler {
                                 break;
                             }
                         }
-                        
+
                         if (!updated) {
                             // Add new realm
                             syncedRealms.add(dummy);
                             if (Config.DEBUG_REALM_SYNC.get()) {
-                                LOGGER.info("[DEBUG] Added new synced realm at {} with size {}", data.pos(), data.realmSize());
+                                LOGGER.info("[DEBUG] Added new synced realm at {} with size {}", data.pos(),
+                                        data.realmSize());
                             }
                         }
                     }
@@ -176,23 +180,26 @@ public class ClientPacketHandler {
             }
             LOGGER.info("[REALM SYNC] Sync completed. Total synced realms: {}", syncedRealms.size());
             if (Config.DEBUG_REALM_SYNC.get()) {
-                LOGGER.info("[DEBUG] Checking visibility restoration: fullSync={}, boundariesWereVisible={}, syncedRealms.isEmpty()={}", 
-                    packet.fullSync(), ClientConnectionHandler.boundariesWereVisible, syncedRealms.isEmpty());
+                LOGGER.info(
+                        "[DEBUG] Checking visibility restoration: fullSync={}, boundariesWereVisible={}, syncedRealms.isEmpty()={}",
+                        packet.fullSync(), ClientConnectionHandler.boundariesWereVisible, syncedRealms.isEmpty());
             }
-            
+
             // Restore boundary visibility after full sync (e.g., after login)
             if (packet.fullSync() && ClientConnectionHandler.boundariesWereVisible && !syncedRealms.isEmpty()) {
                 RealmBoundaryRenderer.setBoundariesVisible(true);
-                LOGGER.info("[REALM SYNC] ✅ Restored boundary visibility after full sync - {} realms loaded", syncedRealms.size());
+                LOGGER.info("[REALM SYNC] ✅ Restored boundary visibility after full sync - {} realms loaded",
+                        syncedRealms.size());
                 // Reset the flag so we don't keep re-enabling on subsequent syncs
                 ClientConnectionHandler.boundariesWereVisible = false;
             } else if (packet.fullSync()) {
-                LOGGER.info("[REALM SYNC] ❌ NOT restoring visibility: boundariesWereVisible={}, syncedRealms.isEmpty()={}", 
-                    ClientConnectionHandler.boundariesWereVisible, syncedRealms.isEmpty());
+                LOGGER.info(
+                        "[REALM SYNC] ❌ NOT restoring visibility: boundariesWereVisible={}, syncedRealms.isEmpty()={}",
+                        ClientConnectionHandler.boundariesWereVisible, syncedRealms.isEmpty());
             }
         });
     }
-    
+
     public static void handleHierarchySync(HierarchySyncPacket packet, IPayloadContext context) {
         context.enqueueWork(() -> {
             LOGGER.info("Received HierarchySyncPacket with {} players", packet.hierarchyData().size());
@@ -232,7 +239,7 @@ public class ClientPacketHandler {
         cachedOwnerUUID = null;
         cachedOwnerName = "";
     }
-    
+
     public static void handleFatigueSync(FatigueSyncPacket packet, IPayloadContext context) {
         context.enqueueWork(() -> {
             Player player = Minecraft.getInstance().player;
@@ -259,7 +266,7 @@ public class ClientPacketHandler {
             }
         });
     }
-    
+
     public static void handleDietProfileSync(DietProfileSyncPacket packet, IPayloadContext context) {
         context.enqueueWork(() -> {
             Player player = Minecraft.getInstance().player;
@@ -277,14 +284,14 @@ public class ClientPacketHandler {
             }
         });
     }
-    
+
     public static void handleFatigueWarning(FatigueWarningPacket packet, IPayloadContext context) {
         context.enqueueWork(() -> {
             // Show the warning overlay on screen
             FatigueHudOverlay.showWarning(packet.minutesLeft());
         });
     }
-    
+
     /**
      * Handles RPG Gates restrictions sync from tharidiatweaks mod
      */
@@ -294,7 +301,7 @@ public class ClientPacketHandler {
             LOGGER.debug("Updated RPG Gates restrictions: {} items blocked", packet.blockedItems().size());
         });
     }
-    
+
     /**
      * Handles name request packet from server
      */
@@ -304,14 +311,29 @@ public class ClientPacketHandler {
             ClientConnectionHandler.handleNameRequest(packet.needsName());
         });
     }
-    
+
+    /**
+     * Handles name response from server (accepted or rejected)
+     */
+    public static void handleNameResponse(NameResponsePacket packet, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            LOGGER.info("[NAME RESPONSE] accepted={}, message={}", packet.accepted(), packet.message());
+            if (packet.accepted()) {
+                ClientConnectionHandler.onNameAccepted();
+            }
+            // Pass response to the active PreLoginNameScreen if open
+            if (Minecraft.getInstance().screen instanceof PreLoginNameScreen screen) {
+                screen.handleServerResponse(packet.accepted(), packet.message());
+            }
+        });
+    }
+
     /**
      * Handles opening the race selection GUI
      */
     public static void handleOpenRaceGui(OpenRaceGuiPacket packet, IPayloadContext context) {
         context.enqueueWork(() -> {
-            // Open the race GUI on client
-            Minecraft.getInstance().setScreen(new RaceSelectionScreen(packet.raceName()));
+            Minecraft.getInstance().setScreen(new RaceSelectionScreen());
         });
     }
 
@@ -329,39 +351,38 @@ public class ClientPacketHandler {
             }
         });
     }
-    
+
     /**
      * Handles music file data packet from server
      */
     public static void handleMusicFileData(MusicFileDataPacket packet, IPayloadContext context) {
         context.enqueueWork(() -> {
-            LOGGER.info("[MUSIC DOWNLOAD] Received chunk {}/{} of {} ({} bytes)", 
-                packet.chunkIndex() + 1, packet.totalChunks(), packet.musicFile(), packet.data().length);
+            LOGGER.info("[MUSIC DOWNLOAD] Received chunk {}/{} of {} ({} bytes)",
+                    packet.chunkIndex() + 1, packet.totalChunks(), packet.musicFile(), packet.data().length);
             ZoneMusicPlayer.receiveMusicChunk(packet);
         });
     }
-    
+
     /**
      * Handles video screen sync packet from server
      */
     public static void handleVideoScreenSync(VideoScreenSyncPacket packet, IPayloadContext context) {
         context.enqueueWork(() -> {
-            LOGGER.info("[VIDEO SCREEN] Syncing screen {} in dimension {} with volume {}", 
-                packet.screenId(), packet.dimension(), (int)(packet.volume() * 100));
+            LOGGER.info("[VIDEO SCREEN] Syncing screen {} in dimension {} with volume {}",
+                    packet.screenId(), packet.dimension(), (int) (packet.volume() * 100));
             ClientVideoScreenManager.getInstance()
-                .addOrUpdateScreen(
-                    packet.screenId(),
-                    packet.dimension(),
-                    packet.corner1(),
-                    packet.corner2(),
-                    packet.facing(),
-                    packet.videoUrl(),
-                    packet.playbackState(),
-                    packet.volume()
-                );
+                    .addOrUpdateScreen(
+                            packet.screenId(),
+                            packet.dimension(),
+                            packet.corner1(),
+                            packet.corner2(),
+                            packet.facing(),
+                            packet.videoUrl(),
+                            packet.playbackState(),
+                            packet.volume());
         });
     }
-    
+
     /**
      * Handles video screen delete packet from server
      */
@@ -369,7 +390,22 @@ public class ClientPacketHandler {
         context.enqueueWork(() -> {
             LOGGER.info("[VIDEO SCREEN] Deleting screen {} from dimension {}", packet.screenId(), packet.dimension());
             ClientVideoScreenManager.getInstance()
-                .removeScreen(packet.screenId());
+                    .removeScreen(packet.screenId());
+        });
+    }
+
+    /**
+     * Handles revive sync payload from server
+     */
+    public static void handleReviveSync(final ReviveSyncPayload packet, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            Entity entity = Minecraft.getInstance().level.getEntity(packet.entityId());
+            if (entity != null) {
+                // Aggiorna i dati sul client
+                entity.setData(ReviveAttachments.REVIVE_DATA, new ReviveAttachments()); // Opzionale: pulizia
+                entity.getData(ReviveAttachments.REVIVE_DATA).deserializeNBT(entity.level().registryAccess(),
+                        packet.data());
+            }
         });
     }
 }

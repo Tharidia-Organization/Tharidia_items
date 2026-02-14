@@ -5,8 +5,8 @@
 		128
 	],
 	"textures": {
-		"0": "tharidiathings:block/crystal_5",
-		"particle": "tharidiathings:block/crystal_5"
+		"0": "tharidiathings:item/pure_crystal_5",
+		"particle": "tharidiathings:item/pure_crystal_5"
 	},
 	"elements": [
 		{

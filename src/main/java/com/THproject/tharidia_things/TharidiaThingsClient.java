@@ -18,6 +18,7 @@ import com.THproject.tharidia_things.client.renderer.HotIronAnvilRenderer;
 import com.THproject.tharidia_things.client.renderer.HotGoldAnvilRenderer;
 import com.THproject.tharidia_things.client.renderer.HotCopperAnvilRenderer;
 import com.THproject.tharidia_things.client.renderer.StableBlockRenderer;
+import com.THproject.tharidia_things.client.renderer.SmithingFurnaceRenderer;
 import com.THproject.tharidia_things.diet.ClientDietProfileCache;
 import com.THproject.tharidia_things.diet.DietRegistry;
 import net.minecraft.client.renderer.RenderType;
@@ -36,6 +37,9 @@ import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 import net.neoforged.neoforge.common.NeoForge;
+
+import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
+// import com.THproject.tharidia_things.command.EquipClientCommand;
 
 // This class will not load on dedicated servers. Accessing client side code from here is safe.
 @Mod(value = TharidiaThings.MODID, dist = Dist.CLIENT)
@@ -114,6 +118,7 @@ public class TharidiaThingsClient {
         event.registerBlockEntityRenderer(TharidiaThings.SIEVE_BLOCK_ENTITY.get(), context -> new SieveRenderer());
         event.registerBlockEntityRenderer(TharidiaThings.TANK_BLOCK_ENTITY.get(), context -> new TankRenderer());
         event.registerBlockEntityRenderer(TharidiaThings.SINK_BLOCK_ENTITY.get(), context -> new SinkRenderer());
+        event.registerBlockEntityRenderer(TharidiaThings.SMITHING_FURNACE_BLOCK_ENTITY.get(), SmithingFurnaceRenderer::new);
     }
 
     @SubscribeEvent
@@ -121,13 +126,11 @@ public class TharidiaThingsClient {
         // Set render type for Pietro block to support transparency
         net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(
                 TharidiaThings.PIETRO.get(),
-                RenderType.cutout()
-        );
-
+                RenderType.cutout());
         // Set render type for Stable block to support transparency
         net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(
-                TharidiaThings.STABLE.get(),
-                RenderType.cutout()
+            TharidiaThings.STABLE.get(),
+            RenderType.cutout()
         );
 
         // Set render type for Dungeon Portal block to support translucency
@@ -135,8 +138,13 @@ public class TharidiaThingsClient {
                 TharidiaThings.DUNGEON_PORTAL.get(),
                 RenderType.translucent()
         );
-    }
 
+        // Set render type for Smithing Furnace block (GeckoLib) to support transparency
+        net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(
+            TharidiaThings.SMITHING_FURNACE.get(),
+            RenderType.cutout()
+        );
+    }
 
     @SubscribeEvent
     static void onRegisterAdditionalModels(ModelEvent.RegisterAdditional event) {
@@ -192,5 +200,24 @@ public class TharidiaThingsClient {
                 VanillaGuiLayers.HOTBAR,
                 TharidiaThings.modLoc("stamina_overlay"),
                 new StaminaHudOverlay());
+    }
+
+    @SubscribeEvent
+    static void onAddLayers(EntityRenderersEvent.AddLayers event) {
+        // Register custom armor layer for Default (Steve) and Slim (Alex) player models
+        // Using var to resolve type inference issues with getSkins()
+        for (var skin : event.getSkins()) {
+            net.minecraft.client.renderer.entity.EntityRenderer<?> rawRenderer = event.getSkin(skin);
+            if (rawRenderer instanceof net.minecraft.client.renderer.entity.LivingEntityRenderer<?, ?> livingRenderer) {
+                if (livingRenderer.getModel() instanceof net.minecraft.client.model.PlayerModel) {
+                    @SuppressWarnings("unchecked")
+                    net.minecraft.client.renderer.entity.LivingEntityRenderer<net.minecraft.client.player.AbstractClientPlayer, net.minecraft.client.model.PlayerModel<net.minecraft.client.player.AbstractClientPlayer>> typedRenderer = (net.minecraft.client.renderer.entity.LivingEntityRenderer<net.minecraft.client.player.AbstractClientPlayer, net.minecraft.client.model.PlayerModel<net.minecraft.client.player.AbstractClientPlayer>>) livingRenderer;
+
+                    typedRenderer.addLayer(new com.THproject.tharidia_things.client.renderer.CustomArmorLayer(
+                            typedRenderer,
+                            event.getEntityModels()));
+                }
+            }
+        }
     }
 }
