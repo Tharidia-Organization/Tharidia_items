@@ -17,28 +17,28 @@ public class MultiblockGetter {
         Direction sieveDirection = getDirection(sieve);
         switch (sieveDirection) {
             case NORTH:
-                sieve.sink = getSink(level, pos.south(-2), sieveDirection);
-                sieve.tank1 = getTank(level, pos.south(1).east(1), sieveDirection);
-                sieve.tank2 = getTank(level, pos.south(2), sieveDirection.getClockWise());
-                sieve.tank3 = getTank(level, pos.south(1).west(1), sieveDirection.getClockWise().getClockWise());
+                sieve.sink = getSink(level, pos.north(-2), sieveDirection);
+                sieve.tank1 = getTank(level, pos.north(1).west(1), sieveDirection.getCounterClockWise());
+                sieve.tank2 = getTank(level, pos.north(2), sieveDirection);
+                sieve.tank3 = getTank(level, pos.north(1).east(1), sieveDirection.getClockWise());
                 break;
             case EAST:
-                sieve.sink = getSink(level, pos.west(-2), sieveDirection);
-                sieve.tank1 = getTank(level, pos.west(1).south(1), sieveDirection);
-                sieve.tank2 = getTank(level, pos.west(2), sieveDirection.getClockWise());
-                sieve.tank3 = getTank(level, pos.west(1).north(1), sieveDirection.getClockWise().getClockWise());
+                sieve.sink = getSink(level, pos.east(-2), sieveDirection);
+                sieve.tank1 = getTank(level, pos.east(1).north(1), sieveDirection.getCounterClockWise());
+                sieve.tank2 = getTank(level, pos.east(2), sieveDirection);
+                sieve.tank3 = getTank(level, pos.east(1).south(1), sieveDirection.getClockWise());
                 break;
             case SOUTH:
-                sieve.sink = getSink(level, pos.north(-2), sieveDirection);
-                sieve.tank1 = getTank(level, pos.north(1).west(1), sieveDirection);
-                sieve.tank2 = getTank(level, pos.north(2), sieveDirection.getClockWise());
-                sieve.tank3 = getTank(level, pos.north(1).east(1), sieveDirection.getClockWise().getClockWise());
+                sieve.sink = getSink(level, pos.south(-2), sieveDirection);
+                sieve.tank1 = getTank(level, pos.south(1).east(1), sieveDirection.getCounterClockWise());
+                sieve.tank2 = getTank(level, pos.south(2), sieveDirection);
+                sieve.tank3 = getTank(level, pos.south(1).west(1), sieveDirection.getClockWise());
                 break;
             case WEST:
-                sieve.sink = getSink(level, pos.east(-2), sieveDirection);
-                sieve.tank1 = getTank(level, pos.east(1).north(1), sieveDirection);
-                sieve.tank2 = getTank(level, pos.east(2), sieveDirection.getClockWise());
-                sieve.tank3 = getTank(level, pos.east(1).south(1), sieveDirection.getClockWise().getClockWise());
+                sieve.sink = getSink(level, pos.west(-2), sieveDirection);
+                sieve.tank1 = getTank(level, pos.west(1).south(1), sieveDirection.getCounterClockWise());
+                sieve.tank2 = getTank(level, pos.west(2), sieveDirection);
+                sieve.tank3 = getTank(level, pos.west(1).north(1), sieveDirection.getClockWise());
                 break;
 
             default:
@@ -50,28 +50,28 @@ public class MultiblockGetter {
         Direction sinkDirection = getDirection(sink);
         switch (sinkDirection) {
             case NORTH:
-                sink.sieve = getSieve(level, pos.south(2), sinkDirection);
-                sink.tank1 = getTank(level, pos.south(3).east(1), sinkDirection);
-                sink.tank2 = getTank(level, pos.south(4), sinkDirection.getClockWise());
-                sink.tank3 = getTank(level, pos.south(3).west(1), sinkDirection.getClockWise().getClockWise());
+                sink.sieve = getSieve(level, pos.north(2), sinkDirection);
+                sink.tank1 = getTank(level, pos.north(3).west(1), sinkDirection.getCounterClockWise());
+                sink.tank2 = getTank(level, pos.north(4), sinkDirection);
+                sink.tank3 = getTank(level, pos.north(3).east(1), sinkDirection.getClockWise());
                 break;
             case EAST:
-                sink.sieve = getSieve(level, pos.west(2), sinkDirection);
-                sink.tank1 = getTank(level, pos.west(3).south(1), sinkDirection);
-                sink.tank2 = getTank(level, pos.west(4), sinkDirection.getClockWise());
-                sink.tank3 = getTank(level, pos.west(3).north(1), sinkDirection.getClockWise().getClockWise());
+                sink.sieve = getSieve(level, pos.east(2), sinkDirection);
+                sink.tank1 = getTank(level, pos.east(3).north(1), sinkDirection.getCounterClockWise());
+                sink.tank2 = getTank(level, pos.east(4), sinkDirection);
+                sink.tank3 = getTank(level, pos.east(3).south(1), sinkDirection.getClockWise());
                 break;
             case SOUTH:
-                sink.sieve = getSieve(level, pos.north(2), sinkDirection);
-                sink.tank1 = getTank(level, pos.north(3).west(1), sinkDirection);
-                sink.tank2 = getTank(level, pos.north(4), sinkDirection.getClockWise());
-                sink.tank3 = getTank(level, pos.north(3).east(1), sinkDirection.getClockWise().getClockWise());
+                sink.sieve = getSieve(level, pos.south(2), sinkDirection);
+                sink.tank1 = getTank(level, pos.south(3).east(1), sinkDirection.getCounterClockWise());
+                sink.tank2 = getTank(level, pos.south(4), sinkDirection);
+                sink.tank3 = getTank(level, pos.south(3).west(1), sinkDirection.getClockWise());
                 break;
             case WEST:
-                sink.sieve = getSieve(level, pos.east(2), sinkDirection);
-                sink.tank1 = getTank(level, pos.east(3).north(1), sinkDirection);
-                sink.tank2 = getTank(level, pos.east(4), sinkDirection.getClockWise());
-                sink.tank3 = getTank(level, pos.east(3).south(1), sinkDirection.getClockWise().getClockWise());
+                sink.sieve = getSieve(level, pos.west(2), sinkDirection);
+                sink.tank1 = getTank(level, pos.west(3).south(1), sinkDirection.getCounterClockWise());
+                sink.tank2 = getTank(level, pos.west(4), sinkDirection);
+                sink.tank3 = getTank(level, pos.west(3).north(1), sinkDirection.getClockWise());
                 break;
 
             default:

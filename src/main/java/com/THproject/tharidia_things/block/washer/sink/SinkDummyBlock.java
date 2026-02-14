@@ -80,7 +80,7 @@ public class SinkDummyBlock extends Block {
 
     private BlockPos findMaster(BlockState state, Level level, BlockPos dummyPos) {
         Direction facing = state.getValue(FACING);
-        Direction left = facing.getCounterClockWise();
+        Direction left = facing.getClockWise();
 
         BlockPos partPos = dummyPos.relative(left, 1);
         if (level.getBlockState(partPos).is(TharidiaThings.SINK_BLOCK.get())) {

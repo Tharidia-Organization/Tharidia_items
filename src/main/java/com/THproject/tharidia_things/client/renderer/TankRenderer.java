@@ -46,6 +46,9 @@ public class TankRenderer extends GeoBlockRenderer<TankBlockEntity> {
     @Override
     public void render(TankBlockEntity animatable, float partialTick, PoseStack poseStack,
             MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
+
+        getGeoModel().getBone("cascata").ifPresent(bone -> bone.setHidden(true));
+
         super.render(animatable, partialTick, poseStack, bufferSource, packedLight, packedOverlay);
         if (animatable.tank.getFluidAmount() > 0) {
             renderFluid(animatable, partialTick, poseStack, bufferSource, packedLight, packedOverlay);

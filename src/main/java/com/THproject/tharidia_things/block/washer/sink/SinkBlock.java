@@ -52,7 +52,7 @@ public class SinkBlock extends BaseEntityBlock {
     @Nullable
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
-        return this.defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
+        return this.defaultBlockState().setValue(FACING, context.getHorizontalDirection());
     }
 
     @Override
@@ -107,13 +107,13 @@ public class SinkBlock extends BaseEntityBlock {
     }
 
     private boolean canFormMultiblock(Level level, BlockPos masterPos, Direction facing) {
-        Direction right = facing.getClockWise();
+        Direction left = facing.getCounterClockWise();
         for (int w = 0; w < 2; w++) {
             for (int h = 0; h < 1; h++) {
                 if (w == 0 && h == 0)
                     continue; // Skip master (d is 0)
 
-                BlockPos checkPos = masterPos.relative(right, w).above(h);
+                BlockPos checkPos = masterPos.relative(left, w).above(h);
                 BlockState state = level.getBlockState(checkPos);
                 if (!state.canBeReplaced()) {
                     return false;
@@ -124,7 +124,7 @@ public class SinkBlock extends BaseEntityBlock {
     }
 
     private void formMultiblock(Level level, BlockPos masterPos, Direction facing) {
-        Direction right = facing.getClockWise();
+        Direction left = facing.getCounterClockWise();
 
         BlockState dummyState = TharidiaThings.SINK_DUMMY_BLOCK.get().defaultBlockState().setValue(FACING, facing);
 
@@ -133,7 +133,7 @@ public class SinkBlock extends BaseEntityBlock {
                 if (w == 0 && h == 0)
                     continue; // Skip master
 
-                BlockPos pos = masterPos.relative(right, w).above(h);
+                BlockPos pos = masterPos.relative(left, w).above(h);
                 level.setBlock(pos, dummyState, Block.UPDATE_ALL);
             }
         }
@@ -150,9 +150,9 @@ public class SinkBlock extends BaseEntityBlock {
                 }
             }
             Direction facing = state.getValue(FACING);
-            Direction right = facing.getClockWise();
+            Direction left = facing.getCounterClockWise();
 
-            BlockPos partPos = pos.relative(right, 1);
+            BlockPos partPos = pos.relative(left, 1);
             if (level.getBlockState(partPos).is(TharidiaThings.SINK_DUMMY_BLOCK.get())) {
                 level.destroyBlock(partPos, false);
             }

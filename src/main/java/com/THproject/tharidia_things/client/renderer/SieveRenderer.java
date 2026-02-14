@@ -78,16 +78,16 @@ public class SieveRenderer extends GeoBlockRenderer<SieveBlockEntity> {
             poseStack.translate(0.5, 1.5, 0.5);
             switch (blockEntity.getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING)) {
                 case Direction.NORTH:
-                    poseStack.translate(0, 0, 1);
-                    break;
-                case Direction.EAST:
-                    poseStack.translate(-1, 0, 0);
-                    break;
-                case Direction.SOUTH:
                     poseStack.translate(0, 0, -1);
                     break;
-                case Direction.WEST:
+                case Direction.EAST:
                     poseStack.translate(1, 0, 0);
+                    break;
+                case Direction.SOUTH:
+                    poseStack.translate(0, 0, 1);
+                    break;
+                case Direction.WEST:
+                    poseStack.translate(-1, 0, 0);
                     break;
                 default:
                     break;
