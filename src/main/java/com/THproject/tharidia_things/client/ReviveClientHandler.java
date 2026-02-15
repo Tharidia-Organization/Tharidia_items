@@ -3,6 +3,7 @@ package com.THproject.tharidia_things.client;
 import com.THproject.tharidia_things.client.screen.FallenScreen;
 import com.THproject.tharidia_things.compoundTag.ReviveAttachments;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.api.distmarker.Dist;
@@ -30,7 +31,7 @@ public class ReviveClientHandler {
         Screen currentScreen = mc.screen;
 
         if (reviveData.isFallen() && reviveData.canRevive()) {
-            if (!(currentScreen instanceof FallenScreen)) {
+            if (!(currentScreen instanceof FallenScreen) && !(currentScreen instanceof ChatScreen)) {
                 mc.setScreen(new FallenScreen());
             }
         } else {
