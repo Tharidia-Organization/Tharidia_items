@@ -154,29 +154,27 @@ La generazione procedurale costruisce stanze, corridoi e ponti in modo diverso a
 
 || Attenti alla cenere 😈, e all'implementazione manca solo il cast multiplo simultaneo (il modello 3d), spiegazioni e leak arriveranno @Colono ||
 # Changelog 0.6.0
-
----
+> ## **Giornata magica, perchè oggi vi presentiamo 4 nuovi blocchi**
 ## 🧪 Tini da Tintura
 
->**Create i vostri colori.** Un nuovo blocco per mescolare pigmenti e tingere abiti e materiali con tonalità uniche.
+> **Create i vostri colori.** Un nuovo blocco per mescolare pigmenti e tingere abiti e materiali con tonalità uniche.
 
-- **Blocco Tini da Tintura** — Modello 3D multicomponente con blocco dummy per la struttura
+- **Blocco Tini da Tintura** — Modello 3D di una vasca (WIP)
 - **Miscelazione colori** — Il renderer mostra dinamicamente il colore del liquido all'interno
 - **Integrazione vestiario** — I colori creati possono essere applicati a vestiti e materiali
+- **Creazione colore** — Permette di miscelare con precisione i colori lanciandoli dentro ottenendo colorazioni uniche
 
-# Changelog 0.6.1
-
----
 ## 🚿 Lavatore — Setaccio, Cisterna e Lavello
 
->**Tre blocchi, un sistema.** Il lavatore si evolve in una catena di lavorazione completa per processare i minerali frantumati.
+> **Tre blocchi, un sistema.** Il lavatore si evolve in una catena di lavorazione completa per processare i minerali scavati in cava.
 
 - **Setaccio (Sieve)** — Blocco con toggle attivo/inattivo, rendering dell'acqua e del blocco in lavorazione
 - **Cisterna (Tank)** — Sistema a cascata con rendering dell'acqua e modello con texture dedicata
-- **Lavello (Sink)** — Rendering inventario, bounding box personalizzata e gestione blocchi dummy
+- **Lavello (Sink)** — Rendering inventario, bounding box personalizzata, otterrete qui gli **ore chunk** che verranno poi lavorati smartellando ||o polverizzando|| (Meccanica che vi verrà mostrata) 
 - **Rendering acqua** su tutti e tre i blocchi con effetti visivi dedicati
-
-# Changelog 0.6.2
+- **Residui** — Sotto il setaccio è presente un contenitore per raccogliere tutti i residui di materiale, che in gioco si traduce nella produzione collaterale di SABBIA, GHIAIA, COSE e cose più utili, fatto per salvaguardare il mondo **[WIP]**
+||@Colono||
+# Changelog 0.6.1
 
 ---
 ## ⚙️ Polverizzatore
@@ -189,7 +187,7 @@ La generazione procedurale costruisce stanze, corridoi e ponti in modo diverso a
 - **Ricette data-driven** — Sistema di ricette configurabili (ghiaia da ciottoli, sabbia da ghiaia)
 - **Integrazione JEI** — Categoria ricette dedicata consultabile nel browser ricette
 
-# Changelog 0.6.3
+# Changelog 0.6.2
 
 ---
 ## 💎 Cristalli
@@ -205,7 +203,7 @@ La generazione procedurale costruisce stanze, corridoi e ponti in modo diverso a
 - **Vene e Sedimenti** — Nuovi blocchi naturali aggiunti al mondo
 
 
-# Changelog 0.6.4
+# Changelog 0.6.3
 
 ---
 ## 🛡️ Sotto-Armatura & Sistema Equip
@@ -217,7 +215,7 @@ La generazione procedurale costruisce stanze, corridoi e ponti in modo diverso a
 - **Renderer custom** — Layer di rendering aggiuntivo per visualizzare la sotto-armatura sul modello
 - **GUI armatura rinnovata** — Nuova schermata con slot vanilla e sotto-armatura unificati
 
-# Changelog 0.6.5
+# Changelog 0.6.4
 
 ---
 ## 🔮 Station Crystal
@@ -226,7 +224,7 @@ La generazione procedurale costruisce stanze, corridoi e ponti in modo diverso a
 - **Particelle d'allarme** quando il tempo rimanente scende sotto il 25%
 - **Distruzione a catena** — Il cristallo distrugge i blocchi sopra di sé quando viene rotto
 
-# Changelog 0.6.6
+# Changelog 0.6.5
 
 ---
 ## 💀 Fallen/Revive — Potenziato
@@ -246,7 +244,7 @@ La generazione procedurale costruisce stanze, corridoi e ponti in modo diverso a
 - **Tesoreria** — Contenitore centralizzato per tutte le tasse raccolte
 - Fix bug di duplicazione, sparizione e gestione logout
 
-# Changelog 0.6.7
+# Changelog 0.6.6
 
 ---
 ## 🎭 Creazione Personaggio — Fix Maggiore
