@@ -171,17 +171,6 @@ public class PinzaItem extends Item {
             return InteractionResult.sidedSuccess(level.isClientSide);
         }
 
-        // Check if clicking on a slag casting table with hot iron
-        if (holdingType == HoldingType.NONE) {
-            String blockId = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString();
-            if (blockId.equals("slag:table")) {
-                if (tryGrabHotIron(level, pos, player, stack)) {
-                    return InteractionResult.sidedSuccess(level.isClientSide);
-                }
-                return InteractionResult.PASS;
-            }
-        }
-
         // Check if clicking on top of any anvil variant with hot metal
         if ((holdingType == HoldingType.HOT_IRON || holdingType == HoldingType.HOT_GOLD || holdingType == HoldingType.HOT_COPPER)
                 && state.getBlock() instanceof AnvilBlock && context.getClickedFace() == Direction.UP) {
@@ -226,47 +215,6 @@ public class PinzaItem extends Item {
         }
 
         return InteractionResult.PASS;
-    }
-
-    private boolean tryGrabHotIron(Level level, BlockPos pos, Player player, ItemStack pinzaStack) {
-        var blockEntity = level.getBlockEntity(pos);
-        if (blockEntity == null) return false;
-
-        try {
-            if (blockEntity instanceof net.minecraft.world.Container container) {
-                boolean foundHotIron = false;
-                int hotIronSlot = -1;
-
-                for (int i = 0; i < container.getContainerSize(); i++) {
-                    ItemStack slotStack = container.getItem(i);
-                    if (slotStack.is(TharidiaThings.HOT_IRON.get())) {
-                        foundHotIron = true;
-                        hotIronSlot = i;
-                        break;
-                    }
-                }
-
-                if (!foundHotIron) {
-                    return false;
-                }
-
-                container.setItem(hotIronSlot, ItemStack.EMPTY);
-                container.setChanged();
-
-                if (!level.isClientSide) {
-                    setHolding(pinzaStack, HoldingType.HOT_IRON, "hot_iron");
-                    damagePinza(pinzaStack, player);
-                    level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 1.0F, 1.0F);
-                    blockEntity.setChanged();
-                }
-
-                return true;
-            }
-        } catch (Exception e) {
-            return false;
-        }
-
-        return false;
     }
 
     private boolean placeHotMetalOnAnvil(Level level, BlockPos pos, Player player, ItemStack pinzaStack, HoldingType holdingType) {
