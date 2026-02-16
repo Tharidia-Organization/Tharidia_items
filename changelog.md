@@ -4,7 +4,7 @@
 
 > **I dungeon prendono vita.** Ogni istanza viene ora generata proceduralmente: stanze, corridoi e ponti non saranno mai gli stessi. Scendete al secondo piano, affrontate il boss, e preparatevi — il terzo piano è in costruzione. Nel frattempo, in superficie, un nuovo sistema minerario vi mette in mano un martello per frantumare i minerali colpo dopo colpo, e la stalla vi aspetta con animali da accudire e un intero ciclo di gestione da padroneggiare.
 
----
+
 
 ## ⚔️ Dungeon Procedurale
 
@@ -36,7 +36,7 @@ La generazione procedurale costruisce stanze, corridoi e ponti in modo diverso a
 - Fix errore database nel salvataggio eventi di combattimento
 - Fix bioma della dimensione Dungeon
 
----
+
 
 # Changelog 0.5.6
 
@@ -56,7 +56,7 @@ La generazione procedurale costruisce stanze, corridoi e ponti in modo diverso a
 - **Retina Filtrante** (Mesh) — Componente per il Lavatore
 - **Integrazione JEI** — Tutte le ricette del Lavatore consultabili nel browser ricette
 
----
+
 
 # Changelog 0.5.5
 
@@ -73,7 +73,7 @@ La generazione procedurale costruisce stanze, corridoi e ponti in modo diverso a
   - Forcone, Spazzola Animali, Paglia Fresca, Paglia Sporca
   - Letame (raccoglibile), Mangime, Kit Potenziamento Riparo
 
----
+
 
 # Changelog 0.5.4
 
@@ -82,7 +82,7 @@ La generazione procedurale costruisce stanze, corridoi e ponti in modo diverso a
 - **Il vostro nome scelto in creazione personaggio ora è ovunque** — In chat, nella tab list, in tutto il gioco. Nessun nickname Minecraft visibile
 - I nomi dei giocatori **non appaiono più nei suggerimenti chat** — Solo gli admin possono vederli
 
----
+
 
 ## 💀 Sistema Fallen/Revive — Potenziato
 
@@ -91,14 +91,14 @@ La generazione procedurale costruisce stanze, corridoi e ponti in modo diverso a
 - L'oggetto revive **si consuma** all'uso
 - Al posto di usare una mod per la revive abbiano scritto noi la funzionalità
 
----
+
 
 ## 🕳️ Grotte Procedurali [WIP]
 
 - **Nuova dimensione grotta** con generazione basata su rumore OpenSimplex2
 - Preset configurabili: **caverne ampie, tunnel densi, compatte, ricche di minerali**
 
----
+
 
 
 ## 🌍 Mondo
@@ -107,11 +107,11 @@ La generazione procedurale costruisce stanze, corridoi e ponti in modo diverso a
 - Miglioramenti al **blocco spawn mob** nelle zone protette
 
 
----
+
 
 # Changelog 0.5.8
 
----
+
 
 ## ⚔️ Dungeon — Potenziato
 
@@ -174,22 +174,20 @@ La generazione procedurale costruisce stanze, corridoi e ponti in modo diverso a
 - **Rendering acqua** su tutti e tre i blocchi con effetti visivi dedicati
 - **Residui** — Sotto il setaccio è presente un contenitore per raccogliere tutti i residui di materiale, che in gioco si traduce nella produzione collaterale di SABBIA, GHIAIA, COSE e cose più utili, fatto per salvaguardare il mondo **[WIP]**
 ||@Colono||
-# Changelog 0.6.1
+# Un buongiorno a tutti con il Changelog 0.6.1
 
----
 ## ⚙️ Polverizzatore
->**Macinate tutto.** Un nuovo blocco da lavorazione che riduce materiali grezzi in risorse più fini, con animazioni e feedback sonoro.
+>**Macinate tutto.** Un nuovo blocco da lavorazione che riduce materiali grezzi in risorse più fini, con animazioni e feedback sonoro. Che entra al seguito del minatore
 
-- **Blocco Polverizzatore** — Struttura a due blocchi di altezza con blocco dummy superiore e modello GeckoLib animato
-- **Grinder** — Nuovo oggetto strumento con modello 3D dedicato per alimentare il polverizzatore
+- **Blocco Polverizzatore** — Macchinario con modello animato studiato per avere un comodo input superiore e l'output renderizzato sul blocco (No Gui)
+- **Grinder** — Componente con modello 3D dedicato da inserire nel polverizzatore che funge da macina
 - **Animazione di lavorazione** — Il polverizzatore si attiva visivamente durante la macinazione
+- **Utilizzo** — Il polverizzatore è azionato manualmente tramite una manovella [WIP] animata anch'essa
 - **Suono di lavorazione** — Audio dedicato che accompagna il processo di polverizzazione
-- **Ricette data-driven** — Sistema di ricette configurabili (ghiaia da ciottoli, sabbia da ghiaia)
 - **Integrazione JEI** — Categoria ricette dedicata consultabile nel browser ricette
 
 # Changelog 0.6.2
 
----
 ## 💎 Cristalli
 
 - **5 tipologie di cristalli** con modelli 3D dedicati e stadi di crescita progressivi
@@ -205,7 +203,7 @@ La generazione procedurale costruisce stanze, corridoi e ponti in modo diverso a
 
 # Changelog 0.6.3
 
----
+
 ## 🛡️ Sotto-Armatura & Sistema Equip
 
 **Un nuovo livello sotto l'armatura.** Indossate strati aggiuntivi sotto la corazza, con attributi e rendering dedicati.
@@ -217,7 +215,7 @@ La generazione procedurale costruisce stanze, corridoi e ponti in modo diverso a
 
 # Changelog 0.6.4
 
----
+
 ## 🔮 Station Crystal
 
 - **Nuovo blocco di supporto dungeon** — Cristallo con meccanica di riparazione e timer
@@ -226,7 +224,7 @@ La generazione procedurale costruisce stanze, corridoi e ponti in modo diverso a
 
 # Changelog 0.6.5
 
----
+
 ## 💀 Fallen/Revive — Potenziato
 
 - **Barra di progresso** — Overlay HUD sul giocatore che sta rianimando un compagno
@@ -246,7 +244,7 @@ La generazione procedurale costruisce stanze, corridoi e ponti in modo diverso a
 
 # Changelog 0.6.6
 
----
+
 ## 🎭 Creazione Personaggio — Fix Maggiore
 
 - **Validazione nome server-side** — Nuovo pacchetto server-client per verificare l'accettazione del nome scelto
