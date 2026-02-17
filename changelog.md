@@ -188,21 +188,36 @@ La generazione procedurale costruisce stanze, corridoi e ponti in modo diverso a
 
 # Changelog 0.6.2
 
-## 💎 Cristalli
+## 💎 Cristalli?
 
 - **5 tipologie di cristalli** con modelli 3D dedicati e stadi di crescita progressivi
-- **Texture reworkate** — Nuove texture ad alta risoluzione per tutti i cristalli puri
-- **Blocchi piazzabili** con block entity e registrazione dedicata
+- **Texture** — Nuove texture ad alta risoluzione per tutti i cristalli puri [IN REWORK]
+- **Blocchi piazzabili** —  tutti i cristalli grezzi sono posizionabili nel mondo per poter esser lavorati
+- **Uso** — I cristalli non avranno solo una parte fondamentale nell'estetica per i giocatori, ma altrettanto importante nel mondo
+  - I cristalli sono essenziali per alcune lavorazioni, come il corretto funzionamento delle fucine del fabbro, come se catalizzassero l'energia
+  - Sono essenziali soprattutto a chiunque voglia usare una station, che sia una semplice crafting, fino al più complesso dei tavoli da lavoro [FUTURO CHANGELOG]
 
 ## ⛏️ Ore Chunks — Espansione
 
 - **Chunk di Carbone e Stagno** — Due nuovi minerali frantumabili con modelli a 5 stadi
-- **Refactor a classe base** — Codice condiviso tra tutti i tipi di chunk per manutenibilità
-- **Vene e Sedimenti** — Nuovi blocchi naturali aggiunti al mondo
-
+- **Vene e Sedimenti** — Ora ci sono vene di molti materiali nella cava, come argilla e materiali utili a costruire
+- **Tool** — Il martello per lavorare i chunk è stato ricreato, modello e texture
 
 # Changelog 0.6.3
 
+> Non ci è possibile dare una durabilità a tutte le station crafting moddate e non, quindi ci siamo ingegnati, per dar un pizzico di dinamica in più al Manovale (Tra le tante cose che può fare), ora avrà l'onere e l'ONORE di portare in ogni villaggio un po' della sua manovalanza. Così da potersi assicurare che tutte le station continuino a funzionare a dovere e non si logorino.
+
+## 🔮 Station Crystal
+
+- **Nuovo blocco di supporto** — Questo è un blocco creato da un insieme di cristalli e una materia instable
+- **Scopo** — Implementata meccanica core, è possibile piazzare le station solo sopra di esso
+- **Riparazione o Distruzione** — Il cristallo allo scadere di un timer interno distrugge i blocchi sopra di sé, se non viene riparato prima
+- **Riparazione** — Il blocco è riparabile tramite speciali attrezzi soltanto tramite una classe giocante specifica, bisogna fare la manutenzione alle proprie attrezzature
+- **Particelle d'allarme** quando il tempo rimanente scende sotto il 25%, il giocatore viene notificato
+- **Sostituzione** — è possibile rompere la station posizionata sopra per spostarla, ma non rompere il cristallo quando una station è sopra di lui, pena il rischio di perdere la propria amata attrezzatura
+- **Style** — Texture ancora in fase di sviluppo
+
+# Changelog 0.6.4
 
 ## 🛡️ Sotto-Armatura & Sistema Equip
 
@@ -213,17 +228,7 @@ La generazione procedurale costruisce stanze, corridoi e ponti in modo diverso a
 - **Renderer custom** — Layer di rendering aggiuntivo per visualizzare la sotto-armatura sul modello
 - **GUI armatura rinnovata** — Nuova schermata con slot vanilla e sotto-armatura unificati
 
-# Changelog 0.6.4
-
-
-## 🔮 Station Crystal
-
-- **Nuovo blocco di supporto dungeon** — Cristallo con meccanica di riparazione e timer
-- **Particelle d'allarme** quando il tempo rimanente scende sotto il 25%
-- **Distruzione a catena** — Il cristallo distrugge i blocchi sopra di sé quando viene rotto
-
 # Changelog 0.6.5
-
 
 ## 💀 Fallen/Revive — Potenziato
 
