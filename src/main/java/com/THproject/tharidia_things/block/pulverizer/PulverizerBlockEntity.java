@@ -46,7 +46,7 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 public class PulverizerBlockEntity extends BlockEntity implements GeoBlockEntity {
     private Object workingSoundInstance;
 
-    private static int MAX_ACTIVE_PER_CLICK = 1000;
+    private static int MAX_ACTIVE_PER_CLICK = 500;
 
     private NonNullList<ItemStack> grinders = NonNullList.withSize(2, ItemStack.EMPTY);
     private long active_timestamp = -1;
@@ -321,12 +321,13 @@ public class PulverizerBlockEntity extends BlockEntity implements GeoBlockEntity
 
     @Override
     public void registerControllers(ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>(this, "active", 5, state -> {
+        controllers.add(new AnimationController<>(this, "active", 0, state -> {
             if (this.isActive()) {
-                state.getController().setAnimation(ACTIVE_ANIM);
-                return PlayState.CONTINUE;
+                state.getController().setAnimationSpeed(1);
+                return state.setAndContinue(ACTIVE_ANIM);
             }
-            return PlayState.STOP;
+            state.getController().setAnimationSpeed(0);
+            return PlayState.CONTINUE;
         }));
     }
 
