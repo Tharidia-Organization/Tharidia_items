@@ -18,6 +18,7 @@ import com.THproject.tharidia_things.client.renderer.HotIronAnvilRenderer;
 import com.THproject.tharidia_things.client.renderer.HotGoldAnvilRenderer;
 import com.THproject.tharidia_things.client.renderer.HotCopperAnvilRenderer;
 import com.THproject.tharidia_things.client.renderer.StableBlockRenderer;
+import com.THproject.tharidia_things.client.renderer.AlchemistTableRenderer;
 import com.THproject.tharidia_things.client.renderer.SmithingFurnaceRenderer;
 import com.THproject.tharidia_things.diet.ClientDietProfileCache;
 import com.THproject.tharidia_things.diet.DietRegistry;
@@ -119,6 +120,7 @@ public class TharidiaThingsClient {
         event.registerBlockEntityRenderer(TharidiaThings.TANK_BLOCK_ENTITY.get(), context -> new TankRenderer());
         event.registerBlockEntityRenderer(TharidiaThings.SINK_BLOCK_ENTITY.get(), context -> new SinkRenderer());
         event.registerBlockEntityRenderer(TharidiaThings.SMITHING_FURNACE_BLOCK_ENTITY.get(), SmithingFurnaceRenderer::new);
+        event.registerBlockEntityRenderer(TharidiaThings.ALCHEMIST_TABLE_BLOCK_ENTITY.get(), AlchemistTableRenderer::new);
     }
 
     @SubscribeEvent
@@ -142,6 +144,12 @@ public class TharidiaThingsClient {
         // Set render type for Smithing Furnace block (GeckoLib) to support transparency
         net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(
             TharidiaThings.SMITHING_FURNACE.get(),
+            RenderType.cutout()
+        );
+
+        // Set render type for Alchemist Table block (GeckoLib) to support transparency
+        net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(
+            TharidiaThings.ALCHEMIST_TABLE.get(),
             RenderType.cutout()
         );
 

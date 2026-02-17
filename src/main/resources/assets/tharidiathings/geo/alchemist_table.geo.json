@@ -1,0 +1,111 @@
+{
+	"format_version": "1.12.0",
+	"minecraft:geometry": [
+		{
+			"description": {
+				"identifier": "geometry.unknown",
+				"texture_width": 176,
+				"texture_height": 176,
+				"visible_bounds_width": 7,
+				"visible_bounds_height": 3.5,
+				"visible_bounds_offset": [0, 1.25, 0]
+			},
+			"bones": [
+				{
+					"name": "table",
+					"pivot": [39, 0, 23],
+					"cubes": [
+						{"origin": [24, 0, -24], "size": [16, 12, 57], "uv": [0, 0]},
+						{"origin": [-6, 0, -24], "size": [30, 12, 16], "uv": [0, 70]},
+						{"origin": [3, 12, -16], "size": [5, 7, 5], "uv": [110, 143]},
+						{"origin": [35, 12, 19], "size": [4, 7, 11], "uv": [29, 143]}
+					]
+				},
+				{
+					"name": "mortal",
+					"parent": "table",
+					"pivot": [14, 12, -15],
+					"cubes": [
+						{"origin": [13, 12, -17], "size": [6, 2, 6], "uv": [61, 99]}
+					]
+				},
+				{
+					"name": "pestel",
+					"parent": "mortal",
+					"pivot": [16.025, 12.225, -13.9],
+					"rotation": [37.5, 0, 0],
+					"cubes": [
+						{"origin": [15.525, 13, -14.4], "size": [1, 4, 1], "uv": [86, 99]}
+					]
+				},
+				{
+					"name": "cauldron",
+					"pivot": [-9, 0, -23],
+					"cubes": [
+						{"origin": [-25, 3, -23], "size": [3, 14, 17], "uv": [61, 111]},
+						{"origin": [-13, 3, -23], "size": [3, 14, 17], "uv": [102, 111]},
+						{"origin": [-22, 3, -23], "size": [9, 14, 3], "uv": [60, 143]},
+						{"origin": [-22, 3, -9], "size": [9, 14, 3], "uv": [85, 143]}
+					]
+				},
+				{
+					"name": "bracer",
+					"parent": "cauldron",
+					"pivot": [-9, -2, -23],
+					"cubes": [
+						{"origin": [-27, -2, -24], "size": [19, 5, 19], "uv": [93, 70]}
+					]
+				},
+				{
+					"name": "t2",
+					"pivot": [39, 0, 23],
+					"cubes": [
+						{"origin": [-6, 12, -24], "size": [6, 14, 8], "uv": [0, 143]}
+					]
+				},
+				{
+					"name": "t3",
+					"pivot": [39, 0, 23],
+					"cubes": [
+						{"origin": [28, 12, -17], "size": [7, 2, 2], "pivot": [34, 12, -16], "rotation": [0, -23.25, 0], "uv": [143, 111]}
+					]
+				},
+				{
+					"name": "t4",
+					"pivot": [39, 0, 23]
+				},
+				{
+					"name": "mantice",
+					"parent": "t4",
+					"pivot": [-28, 0, -17],
+					"cubes": [
+						{"origin": [-48, 0, -21], "size": [21, 2, 13], "uv": [93, 95]}
+					]
+				},
+				{
+					"name": "p1",
+					"parent": "mantice",
+					"pivot": [-32, 2, -18],
+					"cubes": [
+						{"origin": [-46, 2, -19], "size": [15, 2, 10], "uv": [0, 120]}
+					]
+				},
+				{
+					"name": "t5",
+					"pivot": [23, 0, -23],
+					"cubes": [
+						{"origin": [25, 12, -3], "size": [12, 2, 18], "uv": [0, 99]}
+					]
+				},
+				{
+					"name": "page",
+					"parent": "t5",
+					"pivot": [31, 14.05, 6.025],
+					"cubes": [
+						{"origin": [25, 14.05, -3], "size": [12, 0, 9], "uv": [0, 133]}
+					]
+				}
+			]
+		}
+	]
+}

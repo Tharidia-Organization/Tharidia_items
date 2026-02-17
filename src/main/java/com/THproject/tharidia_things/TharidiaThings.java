@@ -30,6 +30,8 @@ import com.THproject.tharidia_things.block.HotGoldMarkerBlock;
 import com.THproject.tharidia_things.block.HotCopperMarkerBlock;
 import com.THproject.tharidia_things.block.StableBlock;
 import com.THproject.tharidia_things.block.StableDummyBlock;
+import com.THproject.tharidia_things.block.AlchemistTableBlock;
+import com.THproject.tharidia_things.block.AlchemistTableDummyBlock;
 import com.THproject.tharidia_things.block.SmithingFurnaceBlock;
 import com.THproject.tharidia_things.block.SmithingFurnaceDummyBlock;
 import com.THproject.tharidia_things.block.DyeVatsBlock;
@@ -44,6 +46,7 @@ import com.THproject.tharidia_things.block.entity.StableBlockEntity;
 import com.THproject.tharidia_things.block.station_crystal.StationCrystalBlock;
 import com.THproject.tharidia_things.block.station_crystal.StationCrystalBlockEntity;
 import com.THproject.tharidia_things.block.station_crystal.StationCrystalBlockItem;
+import com.THproject.tharidia_things.block.entity.AlchemistTableBlockEntity;
 import com.THproject.tharidia_things.block.entity.SmithingFurnaceBlockEntity;
 import com.THproject.tharidia_things.block.DungeonPortalBlock;
 import com.THproject.tharidia_things.block.ore_chunks.ChunksRegistry;
@@ -266,6 +269,16 @@ public class TharidiaThings {
             "smithing_furnace_dummy",
             () -> new SmithingFurnaceDummyBlock());
 
+    // Alchemist Table (L-shaped 8-block multiblock, GeckoLib animated)
+    public static final DeferredBlock<AlchemistTableBlock> ALCHEMIST_TABLE = BLOCKS.register("alchemist_table",
+            () -> new AlchemistTableBlock());
+    public static final DeferredItem<BlockItem> ALCHEMIST_TABLE_ITEM = ITEMS.registerSimpleBlockItem(
+            "alchemist_table", ALCHEMIST_TABLE);
+    // Alchemist Table Dummy Block (multiblock slave)
+    public static final DeferredBlock<AlchemistTableDummyBlock> ALCHEMIST_TABLE_DUMMY = BLOCKS.register(
+            "alchemist_table_dummy",
+            () -> new AlchemistTableDummyBlock());
+
     // Smithing Furnace Ash
     public static final DeferredItem<Item> ASH = ITEMS.register("ash",
             () -> new Item(new Item.Properties().stacksTo(64)));
@@ -426,6 +439,12 @@ public class TharidiaThings {
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<SmithingFurnaceBlockEntity>> SMITHING_FURNACE_BLOCK_ENTITY = BLOCK_ENTITIES
             .register("smithing_furnace",
                     () -> BlockEntityType.Builder.of(SmithingFurnaceBlockEntity::new, SMITHING_FURNACE.get())
+                            .build(null));
+
+    // Creates a new BlockEntityType for the Alchemist Table
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<AlchemistTableBlockEntity>> ALCHEMIST_TABLE_BLOCK_ENTITY = BLOCK_ENTITIES
+            .register("alchemist_table",
+                    () -> BlockEntityType.Builder.of(AlchemistTableBlockEntity::new, ALCHEMIST_TABLE.get())
                             .build(null));
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<StationCrystalBlockEntity>> STATION_CRYSTAL_BLOCK_ENTITY = BLOCK_ENTITIES
@@ -620,6 +639,9 @@ public class TharidiaThings {
 
                         // Claim utilities
                         output.accept(TRUST_CONTRACT.get());
+
+                        // Alchemy
+                        output.accept(ALCHEMIST_TABLE_ITEM.get());
 
                         // Smithing
                         output.accept(SMITHING_FURNACE_ITEM.get());
