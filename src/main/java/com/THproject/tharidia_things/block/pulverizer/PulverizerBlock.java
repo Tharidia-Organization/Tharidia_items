@@ -85,7 +85,8 @@ public class PulverizerBlock extends BaseEntityBlock {
                 }
             }
         } else if (stack.isEmpty()) {
-            pulverizer.setActive();
+            if (!level.isClientSide)
+                pulverizer.tickActive();
         }
         return ItemInteractionResult.SUCCESS;
     }

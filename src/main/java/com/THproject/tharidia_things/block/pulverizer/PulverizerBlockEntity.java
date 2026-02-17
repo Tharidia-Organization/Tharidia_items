@@ -46,10 +46,8 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 public class PulverizerBlockEntity extends BlockEntity implements GeoBlockEntity {
     private Object workingSoundInstance;
 
-    private static int MAX_ACTIVE_PER_CLICK = 500;
-
     private NonNullList<ItemStack> grinders = NonNullList.withSize(2, ItemStack.EMPTY);
-    private long active_timestamp = -1;
+    private int activeTicks = 0;
 
     private int progress;
     private int maxProgress;
@@ -86,6 +84,11 @@ public class PulverizerBlockEntity extends BlockEntity implements GeoBlockEntity
 
     public SoundInstance getWorkingSound() {
         return (SoundInstance) workingSoundInstance;
+    }
+
+    public void tickActive() {
+        this.activeTicks = 6;
+        setChanged();
     }
 
     public void addGrinder(ItemStack stack) {
@@ -135,13 +138,8 @@ public class PulverizerBlockEntity extends BlockEntity implements GeoBlockEntity
         return !grinders.stream().anyMatch(g -> g.isEmpty());
     }
 
-    public void setActive() {
-        if (hasGrinder())
-            active_timestamp = System.currentTimeMillis();
-    }
-
     public boolean isActive() {
-        return (((System.currentTimeMillis() - active_timestamp) <= MAX_ACTIVE_PER_CLICK) && getGrindersCount() == 2);
+        return this.activeTicks > 0 && getGrindersCount() == 2;
     }
 
     public float getProcessPercentage() {
@@ -162,6 +160,14 @@ public class PulverizerBlockEntity extends BlockEntity implements GeoBlockEntity
     }
 
     public static void tick(Level level, BlockPos pos, BlockState state, PulverizerBlockEntity pulverizer) {
+
+        if (pulverizer.activeTicks > 0) {
+            pulverizer.activeTicks--;
+            if (pulverizer.activeTicks == 0) {
+                level.sendBlockUpdated(pos, state, state, 3);
+            }
+        }
+
         RecipeWrapper recipeWrapper = new RecipeWrapper(pulverizer.inventory);
         Optional<RecipeHolder<PulverizerRecipe>> recipeHolder = level.getRecipeManager()
                 .getRecipeFor(TharidiaThings.PULVERIZER_RECIPE_TYPE.get(), recipeWrapper, level);
@@ -256,7 +262,7 @@ public class PulverizerBlockEntity extends BlockEntity implements GeoBlockEntity
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
         tag.put("Inventory", inventory.serializeNBT(registries));
-        tag.putLong("ActiveTimestamp", this.active_timestamp);
+        tag.putInt("ActiveTicks", this.activeTicks);
         if (!grinders.get(0).isEmpty())
             tag.put("Grinder1", this.grinders.get(0).save(registries));
         if (!grinders.get(1).isEmpty())
@@ -269,8 +275,8 @@ public class PulverizerBlockEntity extends BlockEntity implements GeoBlockEntity
         if (tag.contains("Inventory")) {
             inventory.deserializeNBT(registries, tag.getCompound("Inventory"));
         }
-        if (tag.contains("ActiveTimestamp")) {
-            this.active_timestamp = tag.getLong("ActiveTimestamp");
+        if (tag.contains("ActiveTicks")) {
+            this.activeTicks = tag.getInt("ActiveTicks");
         }
         if (tag.contains("Grinder1"))
             this.grinders.set(0, ItemStack.parse(registries, tag.getCompound("Grinder1")).orElse(ItemStack.EMPTY));
