@@ -1,6 +1,7 @@
 package com.THproject.tharidia_things.spice;
 
 import com.THproject.tharidia_things.TharidiaThings;
+import com.THproject.tharidia_things.network.SpiceSyncPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -12,7 +13,7 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 
 /**
  * Handles spice level changes: +10 per spice when eating spiced food,
- * and initializes default values (50) on first login.
+ * initializes default values (50) on first login, and syncs to all clients.
  */
 @EventBusSubscriber(modid = TharidiaThings.MODID)
 public class SpiceHandler {
@@ -38,6 +39,9 @@ public class SpiceHandler {
         PlayerSpiceData data = serverPlayer.getData(SpiceAttachments.PLAYER_SPICE_DATA);
         data.ensureInitialized();
         data.onFoodConsumed(spiceData);
+
+        // Sync to all players so renderers update
+        SpiceSyncPacket.syncToAll(serverPlayer);
     }
 
     @SubscribeEvent
@@ -48,5 +52,15 @@ public class SpiceHandler {
 
         PlayerSpiceData data = serverPlayer.getData(SpiceAttachments.PLAYER_SPICE_DATA);
         data.ensureInitialized();
+
+        // Send this player's spice data to all clients
+        SpiceSyncPacket.syncToAll(serverPlayer);
+
+        // Send all other online players' spice data to this player
+        for (ServerPlayer other : serverPlayer.server.getPlayerList().getPlayers()) {
+            if (other != serverPlayer) {
+                SpiceSyncPacket.syncTo(other, serverPlayer);
+            }
+        }
     }
 }

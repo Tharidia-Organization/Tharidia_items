@@ -135,6 +135,7 @@ import com.THproject.tharidia_things.spice.SpiceAttachments;
 import com.THproject.tharidia_things.spice.SpiceDataComponents;
 import com.THproject.tharidia_things.spice.SpiceHandler;
 import com.THproject.tharidia_things.spice.SpicedFoodRecipe;
+import com.THproject.tharidia_things.network.SpiceSyncPacket;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.item.crafting.SimpleCraftingRecipeSerializer;
@@ -954,6 +955,12 @@ public class TharidiaThings {
                     DietProfileSyncPacket.STREAM_CODEC,
                     ClientPacketHandler::handleDietProfileSync);
 
+            // Spice sync packet
+            registrar.playToClient(
+                    SpiceSyncPacket.TYPE,
+                    SpiceSyncPacket.STREAM_CODEC,
+                    ClientPacketHandler::handleSpiceSync);
+
             registrar.playToClient(
                     WeightConfigSyncPacket.TYPE,
                     WeightConfigSyncPacket.STREAM_CODEC,
@@ -1111,6 +1118,12 @@ public class TharidiaThings {
             registrar.playToClient(
                     DietProfileSyncPacket.TYPE,
                     DietProfileSyncPacket.STREAM_CODEC,
+                    (packet, context) -> {
+                    });
+            // Spice sync packet (dummy handler)
+            registrar.playToClient(
+                    SpiceSyncPacket.TYPE,
+                    SpiceSyncPacket.STREAM_CODEC,
                     (packet, context) -> {
                     });
             registrar.playToClient(

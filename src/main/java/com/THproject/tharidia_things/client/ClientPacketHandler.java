@@ -7,6 +7,7 @@ import com.THproject.tharidia_things.client.video.ClientVideoScreenManager;
 import com.THproject.tharidia_things.compoundTag.ReviveAttachments;
 import com.THproject.tharidia_things.client.gui.PreLoginNameScreen;
 import com.THproject.tharidia_things.network.*;
+import com.THproject.tharidia_things.network.SpiceSyncPacket;
 import com.THproject.tharidia_things.network.revive.ReviveSyncPayload;
 import com.mojang.logging.LogUtils;
 import com.THproject.tharidia_things.block.entity.PietroBlockEntity;
@@ -397,6 +398,15 @@ public class ClientPacketHandler {
     /**
      * Handles revive sync payload from server
      */
+    public static void handleSpiceSync(SpiceSyncPacket packet, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            Player player = Minecraft.getInstance().player;
+            if (player != null) {
+                SpiceSyncPacket.handle(packet, player);
+            }
+        });
+    }
+
     public static void handleReviveSync(final ReviveSyncPayload packet, IPayloadContext context) {
         context.enqueueWork(() -> {
             Entity entity = Minecraft.getInstance().level.getEntity(packet.entityId());
