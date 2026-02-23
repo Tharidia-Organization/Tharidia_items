@@ -1,11 +1,12 @@
 package com.THproject.tharidia_things.client;
 
-import java.text.DecimalFormat;
-
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 
 import com.THproject.tharidia_things.TharidiaThings;
+import com.THproject.tharidia_things.spice.PlayerSpiceData;
+import com.THproject.tharidia_things.spice.SpiceAttachments;
+import com.THproject.tharidia_things.spice.SpiceType;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.BufferUploader;
@@ -19,7 +20,6 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.util.Mth;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
@@ -29,7 +29,6 @@ import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 
 @EventBusSubscriber(modid = TharidiaThings.MODID, value = Dist.CLIENT)
 public class CookHudOverlay {
-    private static final DecimalFormat df = new DecimalFormat("#.##");
     private static final float PANEL_WIDTH = 1.2f; // Increased width
     private static final float PANEL_HEIGHT = 1.2f; // Increased height
     private static final float OFFSET_Y = 1.0f; // Height above mob
@@ -128,7 +127,7 @@ public class CookHudOverlay {
         return closest;
     }
 
-    private static void renderPanel(PoseStack poseStack, LivingEntity entity, float alpha, float scale) {
+    private static void renderPanel(PoseStack poseStack, Player player, float alpha, float scale) {
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         RenderSystem.disableCull();
@@ -163,7 +162,7 @@ public class CookHudOverlay {
         RenderSystem.depthMask(true);
 
         // Render player text info
-        renderPlayerInfo(poseStack, entity, alpha);
+        renderPlayerInfo(poseStack, player, alpha);
     }
 
     private static void renderPanelBackground(BufferBuilder builder, Matrix4f matrix,
@@ -236,8 +235,9 @@ public class CookHudOverlay {
         builder.addVertex(matrix, x, y + size, 0.03f).setColor(r, g, b, a);
     }
 
-    private static void renderPlayerInfo(PoseStack poseStack, LivingEntity entity, float alpha) {
+    private static void renderPlayerInfo(PoseStack poseStack, Player player, float alpha) {
         Minecraft mc = Minecraft.getInstance();
+        PlayerSpiceData playerSpiceData = player.getData(SpiceAttachments.PLAYER_SPICE_DATA.get());
 
         // Calculate text position - centered in panel with proper margins
         float textStartX = -PANEL_WIDTH / 2f + 0.15f; // More margin from left
@@ -256,12 +256,33 @@ public class CookHudOverlay {
         int currentLine = 0;
 
         // Render player name at top
-        String name = entity.getName().getString();
+        String name = player.getName().getString();
         int nameColor = ((int) (alpha * 255) << 24) | 0xFFFF00;
         mc.font.drawInBatch(name, (int) (textStartX * 100), (int) ((textStartY + lineHeight * currentLine) * 100),
                 nameColor, false, poseStack.last().pose(),
                 mc.renderBuffers().bufferSource(), Font.DisplayMode.NORMAL, 0, 15728880);
         currentLine++;
+
+        // Render spice values
+        // int spice_color = ((int) (alpha * 255) << 24) | 0xA5A5A5;
+        // for (float spice_value : playerSpiceData.getAllValue()) {
+        // mc.font.drawInBatch(String.valueOf(spice_value), (int) (textStartX * 100),
+        // (int) ((textStartY + lineHeight * currentLine) * 100),
+        // spice_color, false, poseStack.last().pose(),
+        // mc.renderBuffers().bufferSource(), Font.DisplayMode.NORMAL, 0, 15728880);
+        // currentLine++;
+        // }
+
+        // Render spice values
+        int spice_color = ((int) (alpha * 255) << 24) | 0xA5A5A5;
+        for (SpiceType spice_type : SpiceType.VALUES) {
+            float spice_value = playerSpiceData.get(spice_type);
+            mc.font.drawInBatch(String.format(" - %s: %.2f", spice_type, spice_value),
+                    (int) (textStartX * 100), (int) ((textStartY + lineHeight * currentLine) * 100),
+                    spice_color, false, poseStack.last().pose(),
+                    mc.renderBuffers().bufferSource(), Font.DisplayMode.NORMAL, 0, 15728880);
+            currentLine++;
+        }
 
         poseStack.popPose();
 

@@ -6,7 +6,8 @@ import net.neoforged.neoforge.common.util.INBTSerializable;
 
 /**
  * Per-player attachment storing spice levels on a 0–100 scale.
- * Default value for each spice is 50. Eating spiced food adds +10 per spice present.
+ * Default value for each spice is 50. Eating spiced food adds +10 per spice
+ * present.
  * Persisted via NBT across login/logout.
  */
 public class PlayerSpiceData implements INBTSerializable<CompoundTag> {
@@ -22,6 +23,10 @@ public class PlayerSpiceData implements INBTSerializable<CompoundTag> {
         for (int i = 0; i < values.length; i++) {
             values[i] = DEFAULT_VALUE;
         }
+    }
+
+    public float[] getAllValue() {
+        return values;
     }
 
     public float get(SpiceType type) {
