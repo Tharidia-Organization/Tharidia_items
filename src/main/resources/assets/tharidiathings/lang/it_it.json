@@ -438,7 +438,13 @@
   "block.tharidiathings.dried_compressed_grass": "Erba Compressa Essiccata",
   "item.tharidiathings.zoccoletta": "Zoccoletta",
   "block.tharidiathings.fertilized_dirt": "Terra Fertilizzata",
-  "block.tharidiathings.abnormal_grass": "Erba Alta Anomala"
+  "block.tharidiathings.abnormal_grass": "Erba Alta Anomala",
 
-  "jei.tharidiathings.washer_recipe": "Lavaggio"
+  "jei.tharidiathings.washer_recipe": "Lavaggio",
+
+  "item.tharidiathings.coca": "Coca",
+  "item.tharidiathings.spiru": "Spiru",
+  "spice.tharidiathings.header": "Spezie:",
+  "spice.tharidiathings.coca": "Coca",
+  "spice.tharidiathings.spiru": "Spiru"
 }
