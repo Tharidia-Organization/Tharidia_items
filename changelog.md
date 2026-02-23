@@ -201,29 +201,35 @@ La generazione procedurale costruisce stanze, corridoi e ponti in modo diverso a
 - **Vene e Sedimenti** — Nuovi blocchi naturali aggiunti al mondo
 
 
+
 # Changelog 0.6.3
 
+> Non ci è possibile dare una durabilità a tutte le station crafting moddate e non, quindi ci siamo ingegnati, per dar un pizzico di dinamica in più al Manovale (Tra le tante cose che può fare), ora avrà l'onere e l'ONORE di portare in ogni villaggio un po' della sua manovalanza. Così da potersi assicurare che tutte le station continuino a funzionare a dovere e non si logorino.
+
+## 🔮 Station Crystal
+
+- **Nuovo blocco di supporto** — Questo è un blocco creato da un insieme di cristalli e una materia instabile
+- **Scopo** — Implementata meccanica core, è possibile piazzare le station solo sopra di esso
+- **Riparazione o Distruzione** — Il cristallo allo scadere di un timer interno distrugge i blocchi sopra di sé, se non viene riparato prima
+- **Riparazione** — Il blocco è riparabile tramite speciali attrezzi soltanto tramite una classe giocante specifica, bisogna fare la manutenzione alle proprie attrezzature
+- **Particelle d'allarme** quando il tempo rimanente scende sotto il 25%, il giocatore viene notificato
+- **Sostituzione** — è possibile rompere la station posizionata sopra per spostarla, ma non rompere il cristallo quando una station è sopra di lui, pena il rischio di perdere la propria amata attrezzatura
+- **Style** — Texture ancora in fase di sviluppo
+
+# Changelog 0.6.4
+
+> **Un nuovo livello sotto l'armatura.** Indossate strati aggiuntivi sotto la corazza, con attributi e rendering dedicati.
 
 ## 🛡️ Sotto-Armatura & Sistema Equip
-
-**Un nuovo livello sotto l'armatura.** Indossate strati aggiuntivi sotto la corazza, con attributi e rendering dedicati.
 
 - **Slot sotto-armatura** — Elmo, corazza, gambali e stivali con tag dedicati
 - **Attributi custom** — Ogni pezzo sotto-armatura applica bonus specifici al personaggio
 - **Renderer custom** — Layer di rendering aggiuntivo per visualizzare la sotto-armatura sul modello
 - **GUI armatura rinnovata** — Nuova schermata con slot vanilla e sotto-armatura unificati
-
-# Changelog 0.6.4
-
-
-## 🔮 Station Crystal
-
-- **Nuovo blocco di supporto dungeon** — Cristallo con meccanica di riparazione e timer
-- **Particelle d'allarme** quando il tempo rimanente scende sotto il 25%
-- **Distruzione a catena** — Il cristallo distrugge i blocchi sopra di sé quando viene rotto
-
+- **Scopo** — Creare una meccanica che permette di suddividere le armature in diverse tipologie dandogli scopi specifici ispirandoci il più possibile al reale utilizzo delle armature medievali
 # Changelog 0.6.5
 
+> Dato il fatto che qualunque mod di revive in minecraft attualmente non ci piaceva, l'abbiamo fatta noi a mano.
 
 ## 💀 Fallen/Revive — Potenziato
 
@@ -233,6 +239,8 @@ La generazione procedurale costruisce stanze, corridoi e ponti in modo diverso a
 - **Tracciamento tempo caduto** — Il sistema tiene traccia di quanto tempo un giocatore è rimasto a terra
 - **Titolo caduto** — Visualizzazione a schermo del titolo quando si cade
 
+# Changelog 0.6.6
+> Era già presente un sistema che permette ai giocatori di commerciare in gioco, evitando semplicemente di lanciarsi soldi o materiali in faccia. (Al di fuori dei negozi ovviamente), ho migliorato il sistema a livello tecnico, e il teoria quello che è la Tesoreria verrà sfruttata durante la guerra, ma non è ancora stato definito.
 ## 💰 Mercato — Potenziato
 
 - **Sistema di tassazione** — Ogni transazione è tassata in funzione del valore della merce
@@ -240,11 +248,11 @@ La generazione procedurale costruisce stanze, corridoi e ponti in modo diverso a
 - **Tracciamento completo** — Tipo di blocco, NBT e dettagli registrati per ogni scambio
 - **Statistiche giocatore** — Sconti progressivi basati sul volume di vendita
 - **Tesoreria** — Contenitore centralizzato per tutte le tasse raccolte
-- Fix bug di duplicazione, sparizione e gestione logout
+- **Fix** — Fix bug di duplicazione, sparizione e gestione logout
 
-# Changelog 0.6.6
+# Changelog 0.6.7
 
-
+> Changelog dedicato ai BUG FIX
 ## 🎭 Creazione Personaggio — Fix Maggiore
 
 - **Validazione nome server-side** — Nuovo pacchetto server-client per verificare l'accettazione del nome scelto
