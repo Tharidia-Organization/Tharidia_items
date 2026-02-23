@@ -3,6 +3,21 @@
   "block.tharidiathings.pietro": "Reame",
   "block.tharidiathings.claim": "Rivendicazione",
 
+  "block.tharidiathings.tank": "Cisterna",
+  "block.tharidiathings.sieve": "Setaccio",
+  "block.tharidiathings.sink": "Lavello",
+
+  "block.tharidiathings.vein_block_t0": "Vena Inferiore",
+  "block.tharidiathings.vein_block_t1": "Vena Comune",
+  "block.tharidiathings.vein_block_t2": "Vena Non Comune",
+  "block.tharidiathings.vein_block_t3": "Vena Maggiore",
+  "block.tharidiathings.vein_block_t4": "Vena Superiore",
+  "block.tharidiathings.vein_sediment_t0": "Mantello Inferiore",
+  "block.tharidiathings.vein_sediment_t1": "Mantello Comune",
+  "block.tharidiathings.vein_sediment_t2": "Mantello Non Comune",
+  "block.tharidiathings.vein_sediment_t3": "Mantello Maggiore",
+  "block.tharidiathings.vein_sediment_t4": "Mantello Superiore",
+
   "container.tharidiathings.claim": "Rivendicazione",
   "container.tharidiathings.pietro": "Reame",
 
@@ -415,8 +430,6 @@
   "item.tharidiathings.iron_crusher_hammer": "Martello da Frantumazione",
   "item.tharidiathings.smithing_hammer": "Martello da Fabbro",
 
-  "block.tharidiathings.sieve": "Setaccio",
-
   "block.tharidiathings.compressed_leaves": "Foglie Compresse",
   "block.tharidiathings.wet_compressed_leaves": "Foglie Compresse Bagnate",
   "block.tharidiathings.dried_compressed_leaves": "Foglie Compresse Essiccate",
@@ -426,4 +439,6 @@
   "item.tharidiathings.zoccoletta": "Zoccoletta",
   "block.tharidiathings.fertilized_dirt": "Terra Fertilizzata",
   "block.tharidiathings.abnormal_grass": "Erba Alta Anomala"
+
+  "jei.tharidiathings.washer_recipe": "Lavaggio"
 }

@@ -11,6 +11,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
 import net.neoforged.neoforge.fluids.FluidStack;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
+import software.bernie.geckolib.cache.object.GeoBone;
 import software.bernie.geckolib.renderer.GeoRenderer;
 import software.bernie.geckolib.renderer.layer.GeoRenderLayer;
 
@@ -47,9 +48,25 @@ public class TankFluidLayer extends GeoRenderLayer<TankBlockEntity> {
         RenderType fluidRenderType = RenderType.entityTranslucent(texturePath);
 
         if (animatable.isOpen()) {
+            GeoBone cascata = bakedModel.getBone("cascata").orElse(null);
+            if (cascata == null)
+                return;
+
+            GeoBone tank = bakedModel.getBone("tank").orElse(null);
+            GeoBone scala = bakedModel.getBone("scala").orElse(null);
+
+            boolean tankHidden = tank != null && tank.isHidden();
+            boolean scalaHidden = scala != null && scala.isHidden();
+            boolean cascataHidden = cascata.isHidden();
+
+            if (tank != null)
+                tank.setHidden(true);
+            if (scala != null)
+                scala.setHidden(true);
+            cascata.setHidden(false);
+
             getRenderer().reRender(
-                    this.getGeoModel().getBakedModel(ResourceLocation.fromNamespaceAndPath(
-                            TharidiaThings.MODID, "geo/tank_water.geo.json")),
+                    bakedModel,
                     poseStack,
                     bufferSource,
                     animatable,
@@ -59,6 +76,12 @@ public class TankFluidLayer extends GeoRenderLayer<TankBlockEntity> {
                     highLight,
                     packedOverlay,
                     color);
+
+            if (tank != null)
+                tank.setHidden(tankHidden);
+            if (scala != null)
+                scala.setHidden(scalaHidden);
+            cascata.setHidden(cascataHidden);
         }
     }
 }
