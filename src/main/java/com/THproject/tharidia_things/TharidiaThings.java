@@ -131,8 +131,13 @@ import com.THproject.tharidia_things.sounds.ModSounds;
 import com.THproject.tharidia_things.servertransfer.DevWhitelistManager;
 
 import com.THproject.tharidia_things.recipe.WasherRecipe;
+import com.THproject.tharidia_things.spice.SpiceAttachments;
+import com.THproject.tharidia_things.spice.SpiceDataComponents;
+import com.THproject.tharidia_things.spice.SpiceHandler;
+import com.THproject.tharidia_things.spice.SpicedFoodRecipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.item.crafting.SimpleCraftingRecipeSerializer;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -210,6 +215,10 @@ public class TharidiaThings {
             .register("washing", () -> RecipeType.simple(ResourceLocation.fromNamespaceAndPath(MODID, "washing")));
     public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<WasherRecipe>> WASHER_RECIPE_SERIALIZER = RECIPE_SERIALIZERS
             .register("washing", WasherRecipe.Serializer::new);
+
+    // Spiced food recipe serializer
+    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<SpicedFoodRecipe>> SPICED_FOOD_RECIPE_SERIALIZER = RECIPE_SERIALIZERS
+            .register("spiced_food", () -> new SimpleCraftingRecipeSerializer<>(SpicedFoodRecipe::new));
 
     // Database system for cross-server communication
     private DatabaseManager databaseManager;
@@ -534,6 +543,12 @@ public class TharidiaThings {
     public static final DeferredItem<Item> TRUST_CONTRACT = ITEMS.register("trust_contract",
             () -> new com.THproject.tharidia_things.item.TrustContractItem(new Item.Properties().stacksTo(16)));
 
+    // Spice items
+    public static final DeferredItem<Item> COCA = ITEMS.register("coca",
+            () -> new Item(new Item.Properties().stacksTo(64)));
+    public static final DeferredItem<Item> SPIRU = ITEMS.register("spiru",
+            () -> new Item(new Item.Properties().stacksTo(64)));
+
     // Creates a creative tab with the id "tharidiathings:tharidia_tab" for the mod
     // items, that is placed after the combat tab
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> THARIDIA_TAB = CREATIVE_MODE_TABS
@@ -624,6 +639,10 @@ public class TharidiaThings {
                         // Claim utilities
                         output.accept(TRUST_CONTRACT.get());
 
+                        // Spices
+                        output.accept(COCA.get());
+                        output.accept(SPIRU.get());
+
                         // Smithing
                         output.accept(SMITHING_FURNACE_ITEM.get());
                         output.accept(BELLOWS.get());
@@ -701,6 +720,8 @@ public class TharidiaThings {
         CharacterAttachments.ATTACHMENT_TYPES.register(modEventBus);
         StaminaAttachments.ATTACHMENT_TYPES.register(modEventBus);
         AnimalWellnessAttachments.ATTACHMENT_TYPES.register(modEventBus);
+        SpiceAttachments.ATTACHMENT_TYPES.register(modEventBus);
+        SpiceDataComponents.DATA_COMPONENT_TYPES.register(modEventBus);
 
         // Register custom stats
         ModStats.register(modEventBus);
