@@ -17,6 +17,7 @@ import com.THproject.tharidia_things.client.renderer.TankRenderer;
 import com.THproject.tharidia_things.client.renderer.SinkRenderer;
 import com.THproject.tharidia_things.client.renderer.HotIronAnvilRenderer;
 import com.THproject.tharidia_things.client.renderer.HotGoldAnvilRenderer;
+import com.THproject.tharidia_things.client.renderer.HerbalistTreeRenderer;
 import com.THproject.tharidia_things.client.renderer.HotCopperAnvilRenderer;
 import com.THproject.tharidia_things.client.renderer.StableBlockRenderer;
 import com.THproject.tharidia_things.client.renderer.SmithingFurnaceRenderer;
@@ -119,6 +120,7 @@ public class TharidiaThingsClient {
         event.registerBlockEntityRenderer(TharidiaThings.SIEVE_BLOCK_ENTITY.get(), context -> new SieveRenderer());
         event.registerBlockEntityRenderer(TharidiaThings.TANK_BLOCK_ENTITY.get(), context -> new TankRenderer());
         event.registerBlockEntityRenderer(TharidiaThings.SINK_BLOCK_ENTITY.get(), context -> new SinkRenderer());
+        event.registerBlockEntityRenderer(TharidiaThings.HERBALIST_TREE_BLOCK_ENTITY.get(), context -> new HerbalistTreeRenderer());
         event.registerBlockEntityRenderer(TharidiaThings.POT_BLOCK_ENTITY.get(), context -> new PotRenderer());
         event.registerBlockEntityRenderer(TharidiaThings.SMITHING_FURNACE_BLOCK_ENTITY.get(), SmithingFurnaceRenderer::new);
     }
