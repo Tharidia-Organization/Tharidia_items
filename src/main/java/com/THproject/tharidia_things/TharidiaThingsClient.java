@@ -11,6 +11,7 @@ import com.THproject.tharidia_things.client.StaminaHudOverlay;
 import com.THproject.tharidia_things.client.ZoneMusicPlayer;
 import com.THproject.tharidia_things.client.video.DependencyCheckHandler;
 import com.THproject.tharidia_things.client.renderer.PietroBlockRenderer;
+import com.THproject.tharidia_things.client.renderer.PotRenderer;
 import com.THproject.tharidia_things.client.renderer.SieveRenderer;
 import com.THproject.tharidia_things.client.renderer.TankRenderer;
 import com.THproject.tharidia_things.client.renderer.SinkRenderer;
@@ -118,6 +119,7 @@ public class TharidiaThingsClient {
         event.registerBlockEntityRenderer(TharidiaThings.SIEVE_BLOCK_ENTITY.get(), context -> new SieveRenderer());
         event.registerBlockEntityRenderer(TharidiaThings.TANK_BLOCK_ENTITY.get(), context -> new TankRenderer());
         event.registerBlockEntityRenderer(TharidiaThings.SINK_BLOCK_ENTITY.get(), context -> new SinkRenderer());
+        event.registerBlockEntityRenderer(TharidiaThings.POT_BLOCK_ENTITY.get(), context -> new PotRenderer());
         event.registerBlockEntityRenderer(TharidiaThings.SMITHING_FURNACE_BLOCK_ENTITY.get(), SmithingFurnaceRenderer::new);
     }
 

@@ -1,7 +1,8 @@
 package com.THproject.tharidia_things;
 
-import com.THproject.tharidia_things.block.ore_chunks.iron.IronChunkBlock;
-import com.THproject.tharidia_things.block.ore_chunks.iron.IronChunkBlockEntity;
+import com.THproject.tharidia_things.block.pot.PotBlock;
+import com.THproject.tharidia_things.block.pot.PotBlockEntity;
+import com.THproject.tharidia_things.block.pot.PotBlockItem;
 import com.THproject.tharidia_things.claim.ClaimRegistry;
 import com.THproject.tharidia_things.client.ClientSeekPacketHandler;
 import com.THproject.tharidia_things.client.HandshakeBypass;
@@ -97,26 +98,8 @@ import com.THproject.tharidia_things.fatigue.FatigueAttachments;
 import com.THproject.tharidia_things.houseboundry.AnimalWellnessAttachments;
 import com.THproject.tharidia_things.houseboundry.config.AnimalConfigLoader;
 import com.THproject.tharidia_things.stable.StableConfigLoader;
-import com.THproject.tharidia_things.network.BattlePackets;
-import com.THproject.tharidia_things.network.ClaimOwnerSyncPacket;
-import com.THproject.tharidia_things.network.FatigueSyncPacket;
-import com.THproject.tharidia_things.network.DungeonQueuePacket;
-import com.THproject.tharidia_things.network.JoinGroupQueuePacket;
-import com.THproject.tharidia_things.network.LeaveGroupQueuePacket;
-import com.THproject.tharidia_things.network.StartGroupDungeonPacket;
-import com.THproject.tharidia_things.network.SyncGroupQueuePacket;
-import com.THproject.tharidia_things.network.HierarchySyncPacket;
-import com.THproject.tharidia_things.network.RealmSyncPacket;
-import com.THproject.tharidia_things.network.UpdateHierarchyPacket;
-import com.THproject.tharidia_things.network.ToggleParticlePacket;
 import com.THproject.tharidia_things.network.revive.ReviveSyncPayload;
 import com.THproject.tharidia_things.network.revive.ReviveGiveUpPacket;
-import com.THproject.tharidia_things.network.SelectComponentPacket;
-import com.THproject.tharidia_things.network.SubmitNamePacket;
-import com.THproject.tharidia_things.network.SyncGateRestrictionsPacket;
-import com.THproject.tharidia_things.network.EquipActionPacket;
-import com.THproject.tharidia_things.network.EquipListSyncPacket;
-import com.THproject.tharidia_things.command.EquipCommand;
 import com.THproject.tharidia_things.realm.RealmManager;
 import com.THproject.tharidia_things.registry.ModAttributes;
 import com.THproject.tharidia_things.registry.ModStats;
@@ -257,6 +240,21 @@ public class TharidiaThings {
     // Dye Vats Dummy Block (multiblock slave)
     public static final DeferredBlock<DyeVatsDummyBlock> DYE_VATS_DUMMY = BLOCKS.register("dye_vats_dummy",
             () -> new DyeVatsDummyBlock());
+
+    // Pot
+    public static final DeferredBlock<PotBlock> POT_BLOCK = BLOCKS.register("pot",
+            () -> new PotBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.STONE)
+                    .strength(1.0f)
+                    .noOcclusion()));
+
+    public static final DeferredItem<PotBlockItem> POT_ITEM = ITEMS.register("pot",
+            () -> new PotBlockItem(POT_BLOCK.get(), new Item.Properties()));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<PotBlockEntity>> POT_BLOCK_ENTITY = BLOCK_ENTITIES
+            .register("pot",
+                    () -> BlockEntityType.Builder.of(PotBlockEntity::new,
+                            POT_BLOCK.get()).build(null));
 
     // Smithing Furnace Block (5x2x3 multiblock, GeckoLib animated)
     public static final DeferredBlock<SmithingFurnaceBlock> SMITHING_FURNACE = BLOCKS.register("smithing_furnace",
@@ -574,6 +572,9 @@ public class TharidiaThings {
                         // Dye Vats
                         output.accept(DYE_VATS_ITEM.get());
 
+                        // Pot
+                        output.accept(POT_ITEM.get());
+
                         // Chunks
                         output.accept(ChunksRegistry.COAL_CHUNK_ITEM.get());
                         output.accept(ChunksRegistry.COPPER_CHUNK_ITEM.get());
@@ -636,17 +637,35 @@ public class TharidiaThings {
                         output.accept(PINZA_CRUCIBLE.get());
 
                         // Seed Extraction — Leaves
-                        output.accept(com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.COMPRESSED_LEAVES_ITEM.get());
-                        output.accept(com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.WET_COMPRESSED_LEAVES_ITEM.get());
-                        output.accept(com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.DRIED_COMPRESSED_LEAVES_ITEM.get());
+                        output.accept(
+                                com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.COMPRESSED_LEAVES_ITEM
+                                        .get());
+                        output.accept(
+                                com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.WET_COMPRESSED_LEAVES_ITEM
+                                        .get());
+                        output.accept(
+                                com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.DRIED_COMPRESSED_LEAVES_ITEM
+                                        .get());
                         // Seed Extraction — Grass
-                        output.accept(com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.COMPRESSED_GRASS_ITEM.get());
-                        output.accept(com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.WET_COMPRESSED_GRASS_ITEM.get());
-                        output.accept(com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.DRIED_COMPRESSED_GRASS_ITEM.get());
-                        output.accept(com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.ZOCCOLETTA.get());
+                        output.accept(
+                                com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.COMPRESSED_GRASS_ITEM
+                                        .get());
+                        output.accept(
+                                com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.WET_COMPRESSED_GRASS_ITEM
+                                        .get());
+                        output.accept(
+                                com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.DRIED_COMPRESSED_GRASS_ITEM
+                                        .get());
+                        output.accept(
+                                com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.ZOCCOLETTA
+                                        .get());
                         // Seed Extraction — Fertilized Dirt & Abnormal Grass
-                        output.accept(com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.FERTILIZED_DIRT_ITEM.get());
-                        output.accept(com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.ABNORMAL_GRASS_ITEM.get());
+                        output.accept(
+                                com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.FERTILIZED_DIRT_ITEM
+                                        .get());
+                        output.accept(
+                                com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.ABNORMAL_GRASS_ITEM
+                                        .get());
 
                         // Add all dynamically registered baby mob items
                         BabyMobRegistry.addToCreativeTab(output);
