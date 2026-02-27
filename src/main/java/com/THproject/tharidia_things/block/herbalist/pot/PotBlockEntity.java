@@ -1,4 +1,4 @@
-package com.THproject.tharidia_things.block.pot;
+package com.THproject.tharidia_things.block.herbalist.pot;
 
 import com.THproject.tharidia_things.TharidiaThings;
 

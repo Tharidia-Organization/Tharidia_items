@@ -1,7 +1,7 @@
 package com.THproject.tharidia_things.client.renderer;
 
 import com.THproject.tharidia_things.TharidiaThings;
-import com.THproject.tharidia_things.block.pot.PotBlockEntity;
+import com.THproject.tharidia_things.block.herbalist.pot.PotBlockEntity;
 import com.mojang.blaze3d.vertex.PoseStack;
 
 import net.minecraft.client.renderer.MultiBufferSource;

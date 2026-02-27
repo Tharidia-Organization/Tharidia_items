@@ -1,4 +1,4 @@
-package com.THproject.tharidia_things.block.pot;
+package com.THproject.tharidia_things.block.herbalist.pot;
 
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.level.block.Block;

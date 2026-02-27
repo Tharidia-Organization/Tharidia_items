@@ -1,8 +1,5 @@
 package com.THproject.tharidia_things;
 
-import com.THproject.tharidia_things.block.pot.PotBlock;
-import com.THproject.tharidia_things.block.pot.PotBlockEntity;
-import com.THproject.tharidia_things.block.pot.PotBlockItem;
 import com.THproject.tharidia_things.claim.ClaimRegistry;
 import com.THproject.tharidia_things.client.ClientSeekPacketHandler;
 import com.THproject.tharidia_things.client.HandshakeBypass;
@@ -45,6 +42,9 @@ import com.THproject.tharidia_things.block.entity.StableBlockEntity;
 import com.THproject.tharidia_things.block.herbalist.herbalist_tree.HerbalistTreeBlock;
 import com.THproject.tharidia_things.block.herbalist.herbalist_tree.HerbalistTreeBlockEntity;
 import com.THproject.tharidia_things.block.herbalist.herbalist_tree.HerbalistTreeBlockItem;
+import com.THproject.tharidia_things.block.herbalist.pot.PotBlock;
+import com.THproject.tharidia_things.block.herbalist.pot.PotBlockEntity;
+import com.THproject.tharidia_things.block.herbalist.pot.PotBlockItem;
 import com.THproject.tharidia_things.block.station_crystal.StationCrystalBlock;
 import com.THproject.tharidia_things.block.station_crystal.StationCrystalBlockEntity;
 import com.THproject.tharidia_things.block.station_crystal.StationCrystalBlockItem;
