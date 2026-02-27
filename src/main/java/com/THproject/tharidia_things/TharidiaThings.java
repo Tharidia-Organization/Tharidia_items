@@ -42,6 +42,7 @@ import com.THproject.tharidia_things.block.entity.StableBlockEntity;
 import com.THproject.tharidia_things.block.herbalist.herbalist_tree.HerbalistTreeBlock;
 import com.THproject.tharidia_things.block.herbalist.herbalist_tree.HerbalistTreeBlockEntity;
 import com.THproject.tharidia_things.block.herbalist.herbalist_tree.HerbalistTreeBlockItem;
+import com.THproject.tharidia_things.block.herbalist.herbalist_tree.HerbalistTreeDummyBlock;
 import com.THproject.tharidia_things.block.herbalist.pot.PotBlock;
 import com.THproject.tharidia_things.block.herbalist.pot.PotBlockEntity;
 import com.THproject.tharidia_things.block.herbalist.pot.PotBlockItem;
@@ -245,20 +246,29 @@ public class TharidiaThings {
             () -> new DyeVatsDummyBlock());
 
     // Herbalist Tree
-    public static final DeferredBlock<HerbalistTreeBlock> HERBALIST_TREE_BLOCK = BLOCKS.register("herbalist_tree",
+    public static final DeferredBlock<HerbalistTreeBlock> HERBALIST_TREE_BLOCK = BLOCKS.register(
+            "herbalist_tree",
             () -> new HerbalistTreeBlock(BlockBehaviour.Properties.of()
                     .mapColor(MapColor.STONE)
                     .strength(1.0f)
                     .noOcclusion()));
 
-    public static final DeferredItem<HerbalistTreeBlockItem> HERBALIST_TREE_ITEM = ITEMS.register("herbalist_tree",
+    public static final DeferredBlock<HerbalistTreeDummyBlock> HERBALIST_TREE_DUMMY_BLOCK = BLOCKS.register(
+            "herbalist_tree_dummy",
+            () -> new HerbalistTreeDummyBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.STONE)
+                    .strength(1.0f)
+                    .noOcclusion()));
+
+    public static final DeferredItem<HerbalistTreeBlockItem> HERBALIST_TREE_ITEM = ITEMS.register(
+            "herbalist_tree",
             () -> new HerbalistTreeBlockItem(HERBALIST_TREE_BLOCK.get(), new Item.Properties()));
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<HerbalistTreeBlockEntity>> HERBALIST_TREE_BLOCK_ENTITY = BLOCK_ENTITIES
             .register("herbalist_tree",
                     () -> BlockEntityType.Builder.of(HerbalistTreeBlockEntity::new,
                             HERBALIST_TREE_BLOCK.get()).build(null));
-            
+
     // Pot
     public static final DeferredBlock<PotBlock> POT_BLOCK = BLOCKS.register("pot",
             () -> new PotBlock(BlockBehaviour.Properties.of()
@@ -591,8 +601,8 @@ public class TharidiaThings {
                         output.accept(DYE_VATS_ITEM.get());
 
                         // Herbalist
-                        output.accept(POT_ITEM.get());
                         output.accept(HERBALIST_TREE_ITEM.get());
+                        output.accept(POT_ITEM.get());
 
                         // Chunks
                         output.accept(ChunksRegistry.COAL_CHUNK_ITEM.get());

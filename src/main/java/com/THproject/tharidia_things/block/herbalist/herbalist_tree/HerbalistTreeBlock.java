@@ -1,17 +1,81 @@
 package com.THproject.tharidia_things.block.herbalist.herbalist_tree;
 
+import javax.annotation.Nullable;
+
+import com.THproject.tharidia_things.TharidiaThings;
 import com.mojang.serialization.MapCodec;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
 
 public class HerbalistTreeBlock extends BaseEntityBlock {
     public static final MapCodec<HerbalistTreeBlock> CODEC = simpleCodec(HerbalistTreeBlock::new);
 
     public HerbalistTreeBlock(Properties properties) {
         super(properties);
+    }
+
+    @Override
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state,
+            @Nullable LivingEntity placer, ItemStack stack) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+        if (!level.isClientSide) {
+            if (!canFormMultiblock(level, pos)) {
+                level.destroyBlock(pos, true);
+                return;
+            }
+            formMultiblock(level, pos);
+        }
+    }
+
+    @Override
+    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
+            Player player, InteractionHand hand, BlockHitResult hitResult) {
+        return super.useItemOn(stack, state, level, pos, player, hand, hitResult);
+    }
+
+    @Override
+    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
+        if (!state.is(newState.getBlock()) && !level.isClientSide) {
+            destroyMultiblock(level, pos);
+        }
+        super.onRemove(state, level, pos, newState, isMoving);
+    }
+
+    private boolean canFormMultiblock(Level level, BlockPos masterPos) {
+        for (int y = 1; y < 3; y++) {
+            BlockPos checkPos = masterPos.above(y);
+            BlockState existingState = level.getBlockState(checkPos);
+            if (!existingState.canBeReplaced())
+                return false;
+        }
+        return true;
+    }
+
+    private void formMultiblock(Level level, BlockPos masterPos) {
+        for (int y = 1; y < 3; y++) {
+            BlockPos dummyPos = masterPos.above(y);
+            level.setBlock(dummyPos, TharidiaThings.HERBALIST_TREE_DUMMY_BLOCK.get().defaultBlockState()
+                    .setValue(HerbalistTreeDummyBlock.OFFSET_Y, y), 3);
+        }
+    }
+
+    private void destroyMultiblock(Level level, BlockPos masterPos) {
+        for (int y = 1; y < 3; y++) {
+            BlockPos dummyPos = masterPos.above(y);
+            if (level.getBlockState(dummyPos).getBlock() instanceof HerbalistTreeDummyBlock) {
+                level.removeBlock(dummyPos, false);
+            }
+        }
     }
 
     @Override
@@ -23,5 +87,4 @@ public class HerbalistTreeBlock extends BaseEntityBlock {
     protected MapCodec<? extends BaseEntityBlock> codec() {
         return this.codec();
     }
-    
 }
