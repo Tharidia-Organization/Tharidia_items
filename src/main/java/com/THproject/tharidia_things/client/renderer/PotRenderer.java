@@ -49,8 +49,7 @@ public class PotRenderer extends GeoBlockRenderer<PotBlockEntity> {
             BlockRenderDispatcher blockRenderer = Minecraft.getInstance().getBlockRenderer();
 
             poseStack.pushPose();
-            poseStack.translate(0.5, 0.2, 0.5); // Center and raise the plant
-            poseStack.scale(0.6f, 0.6f, 0.6f); // Scale down for pot
+            poseStack.translate(0, 0.2, 0);
 
             blockRenderer.renderSingleBlock(
                     plantState,

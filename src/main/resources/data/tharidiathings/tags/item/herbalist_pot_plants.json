@@ -1,6 +1,7 @@
 {
     "values": [
         "minecraft:poppy",
-        "minecraft:dandelion"
+        "minecraft:dandelion",
+        "mushroomquest:mini_mushies"
     ]
 }
