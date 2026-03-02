@@ -250,14 +250,14 @@ public class TharidiaThings {
             "herbalist_tree",
             () -> new HerbalistTreeBlock(BlockBehaviour.Properties.of()
                     .mapColor(MapColor.STONE)
-                    .strength(1.0f)
+                    .strength(2.0f)
                     .noOcclusion()));
 
     public static final DeferredBlock<HerbalistTreeDummyBlock> HERBALIST_TREE_DUMMY_BLOCK = BLOCKS.register(
             "herbalist_tree_dummy",
             () -> new HerbalistTreeDummyBlock(BlockBehaviour.Properties.of()
                     .mapColor(MapColor.STONE)
-                    .strength(1.0f)
+                    .strength(2.0f)
                     .noOcclusion()));
 
     public static final DeferredItem<HerbalistTreeBlockItem> HERBALIST_TREE_ITEM = ITEMS.register(
@@ -273,7 +273,8 @@ public class TharidiaThings {
     public static final DeferredBlock<PotBlock> POT_BLOCK = BLOCKS.register("pot",
             () -> new PotBlock(BlockBehaviour.Properties.of()
                     .mapColor(MapColor.STONE)
-                    .strength(1.0f)
+                    .strength(2.0f)
+                    .requiresCorrectToolForDrops()
                     .noOcclusion()));
 
     public static final DeferredItem<PotBlockItem> POT_ITEM = ITEMS.register("pot",
