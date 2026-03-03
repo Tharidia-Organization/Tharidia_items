@@ -63,12 +63,13 @@ public class PotBlock extends BaseEntityBlock {
             }
         } else {
             if (pot.hasPlant() && player.hasPermissions(4)) {
-                ItemStack plant = pot.getPlant();
-                pot.removePlant();
+                ItemStack plant = pot.removePlant();
+                level.playSound(null, pos, SoundEvents.GRASS_BREAK, SoundSource.BLOCKS);
                 if (!player.getInventory().add(plant)) {
                     player.drop(stack, false);
                 }
-            } else if (pot.removeDirt()) {
+            } else if (pot.hasDirt() && !pot.hasPlant()) {
+                pot.removeDirt();
                 level.playSound(null, pos, SoundEvents.GRASS_BREAK, SoundSource.BLOCKS);
                 if (!player.getInventory().add(new ItemStack(Items.DIRT)))
                     player.drop(new ItemStack(Items.DIRT), false);
