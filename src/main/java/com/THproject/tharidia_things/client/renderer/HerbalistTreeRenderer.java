@@ -8,7 +8,9 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.phys.AABB;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
 import software.bernie.geckolib.cache.object.GeoBone;
 import software.bernie.geckolib.model.GeoModel;
@@ -29,7 +31,8 @@ public class HerbalistTreeRenderer extends GeoBlockRenderer<HerbalistTreeBlockEn
 
             @Override
             public ResourceLocation getAnimationResource(HerbalistTreeBlockEntity animatable) {
-                return ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, "animations/herbalist_tree.animation.json");
+                return ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID,
+                        "animations/herbalist_tree.animation.json");
             }
         });
     }
@@ -51,5 +54,13 @@ public class HerbalistTreeRenderer extends GeoBlockRenderer<HerbalistTreeBlockEn
         if (bone != null) {
             bone.setHidden(!visible);
         }
+    }
+
+    @Override
+    public AABB getRenderBoundingBox(HerbalistTreeBlockEntity blockEntity) {
+        BlockPos pos = blockEntity.getBlockPos();
+        return new AABB(
+                pos.getX() - 3, pos.getY(), pos.getZ() - 3,
+                pos.getX() + 5, pos.getY() + 3, pos.getZ() + 5);
     }
 }
