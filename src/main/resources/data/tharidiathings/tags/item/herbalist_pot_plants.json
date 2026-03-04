@@ -2,6 +2,9 @@
     "values": [
         "minecraft:poppy",
         "minecraft:dandelion",
-        "mushroomquest:mini_mushies"
+        {
+            "id": "mushroomquest:mini_mushies",
+            "required": false
+        }
     ]
 }

@@ -48,15 +48,6 @@ public class HerbalistTreeRenderer extends GeoBlockRenderer<HerbalistTreeBlockEn
         for (int i = 1; i <= 8; i++) {
             setBoneVisible(model, "Radice" + i, animatable.hasPotAtRoot(i));
         }
-
-        float scale = animatable.getPetalScale();
-        for (int i = 0; i < HerbalistTreeBlockEntity.getPetalCount(); i++) {
-            String boneName = (i == 0) ? "Petali" : "Petali" + i;
-            GeoBone bone = model.getBone(boneName).orElse(null);
-            if (bone != null) {
-                bone.updateScale(scale, scale, scale);
-            }
-        }
     }
 
     @Override
@@ -65,6 +56,10 @@ public class HerbalistTreeRenderer extends GeoBlockRenderer<HerbalistTreeBlockEn
             float partialTick, int packedLight, int packedOverlay, int colour) {
         if (bone.getName().startsWith("Petali")) {
             colour = animatable.getPetalColor();
+            float scale = animatable.getPetalScale();
+            bone.setScaleX(scale);
+            bone.setScaleY(scale);
+            bone.setScaleZ(scale);
         }
         super.renderRecursively(poseStack, animatable, bone, renderType, bufferSource, buffer, isReRender,
                 partialTick, packedLight, packedOverlay, colour);

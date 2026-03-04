@@ -63,6 +63,7 @@ import com.THproject.tharidia_things.block.washer.tank.TankBlockItem;
 import com.THproject.tharidia_things.item.HotIronItem;
 import com.THproject.tharidia_things.item.HotGoldItem;
 import com.THproject.tharidia_things.item.HotCopperItem;
+import com.THproject.tharidia_things.item.PetalItem;
 import com.THproject.tharidia_things.item.PinzaItem;
 import com.THproject.tharidia_things.item.LamaLungaItem;
 import com.THproject.tharidia_things.item.LamaCortaItem;
@@ -284,6 +285,10 @@ public class TharidiaThings {
             .register("pot",
                     () -> BlockEntityType.Builder.of(PotBlockEntity::new,
                             POT_BLOCK.get()).build(null));
+
+    // Herbalist Petal (dyeable item, result of herbalist tree minigame)
+    public static final DeferredItem<PetalItem> PETAL = ITEMS.register("petal",
+            () -> new PetalItem(new Item.Properties().stacksTo(64)));
 
     // Smithing Furnace Block (5x2x3 multiblock, GeckoLib animated)
     public static final DeferredBlock<SmithingFurnaceBlock> SMITHING_FURNACE = BLOCKS.register("smithing_furnace",
