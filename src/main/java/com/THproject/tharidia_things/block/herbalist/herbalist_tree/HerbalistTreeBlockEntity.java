@@ -171,6 +171,22 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
         if (step == 0 && currentNoteIndex < SYMPHONY_LENGTH) {
             int note = symphonyNotes[currentNoteIndex];
             float pitch = symphonyPitches[currentNoteIndex];
+            BlockPos pos = getBlockPos();
+
+            level.playSound(null, pos, symphonyInstrument, SoundSource.RECORDS, 3.0F, pitch);
+
+            if (level instanceof ServerLevel serverLevel) {
+                double noteColor = note / 24.0;
+                serverLevel.sendParticles(ParticleTypes.NOTE,
+                        pos.getX() + 0.5, pos.getY() + 3.2, pos.getZ() + 0.5,
+                        0, noteColor, 0, 0, 1);
+            }
+        }
+
+        // Step 1: pot right note
+        if (step == 1 && currentNoteIndex < SYMPHONY_LENGTH) {
+            int note = symphonyNotes[currentNoteIndex];
+            float pitch = symphonyPitches[currentNoteIndex];
             BlockPos pos = getPotPositionForRoot(currentNoteIndex + 1);
 
             level.playSound(null, pos, symphonyInstrument, SoundSource.RECORDS, 3.0F, pitch);
@@ -183,8 +199,8 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
             }
         }
 
-        // Step 1: pot note
-        if (step == 1 && currentNoteIndex < SYMPHONY_LENGTH) {
+        // Step 2: pot note
+        if (step == 2 && currentNoteIndex < SYMPHONY_LENGTH) {
             // Randomly select two distinct pots and set them to true
             if (currentNoteIndex == 0) {
                 List<Integer> keys = new ArrayList<>(pots.keySet());
@@ -245,7 +261,7 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
             step++;
         }
 
-        if (step == 2) {
+        if (step == 3) {
             isCrafting = false;
             step = 0;
         }
