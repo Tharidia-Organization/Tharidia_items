@@ -15,11 +15,9 @@ import com.THproject.tharidia_things.block.herbalist.pot.PotBlock;
 import com.THproject.tharidia_things.block.herbalist.pot.PotBlockEntity;
 import com.THproject.tharidia_things.client.gui.medieval.MedievalGuiRenderer;
 
-import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
-import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -64,8 +62,6 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
 
     private float petalScale = PETAL_SCALE_MIN;
     private int petalColor = 0xFFFFFFFF;
-
-    private boolean isMysticalPetal = false;
 
     // HP / Fame / Sete system
     private static final int MAX_HP = 100;
@@ -309,22 +305,27 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
             BlockPos potPos = getPotPositionForRoot(i + 1);
             BlockEntity be = level.getBlockEntity(potPos);
             if (be instanceof PotBlockEntity potBE && potBE.hasPlant()) {
+                if (Plants.getPlantTypes(potBE.getPlant()).equals(Plants.PlantTypes.FLOWER))
+                    hasFlower = true;
+                else if (Plants.getPlantTypes(potBE.getPlant()).equals(Plants.PlantTypes.MUSHROOM))
+                    hasMushroom = true;
                 potBE.removePlant();
-                
             }
         }
 
-        petalStack.set(DataComponents.ITEM_NAME, Component.translatable("item.tharidiathings.petal")
-                .withStyle(style -> style
-                        .withFont(MedievalGuiRenderer.MEDIEVAL_FONT)));
-
-        if (!this.isMysticalPetal) {
+        if (hasFlower && hasMushroom) {
+            // Mystical petal (flower + mushroom)
             petalStack.set(DataComponents.RARITY, Rarity.EPIC);
             petalStack.set(DataComponents.ITEM_NAME, Component.translatable("item.tharidiathings.petal_2")
                     .withStyle(style -> style
                             .withFont(MedievalGuiRenderer.MEDIEVAL_FONT)
                             .withColor(craftedColor)
                             .withBold(true)));
+        } else {
+            // Petal (flower or mushroom)
+            petalStack.set(DataComponents.ITEM_NAME, Component.translatable("item.tharidiathings.petal")
+                    .withStyle(style -> style
+                            .withFont(MedievalGuiRenderer.MEDIEVAL_FONT)));
         }
 
         if (!player.getInventory().add(petalStack)) {

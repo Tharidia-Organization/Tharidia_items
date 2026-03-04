@@ -46,6 +46,15 @@ public enum Plants {
         return false;
     }
 
+    public static PlantTypes getPlantTypes(ItemStack stack) {
+        for (Plants value : values()) {
+            if (value.plant.equals(stack.getItem().toString())) {
+                return value.type;
+            }
+        }
+        return null;
+    }
+
     public enum PlantTypes {
         FLOWER,
         MUSHROOM
