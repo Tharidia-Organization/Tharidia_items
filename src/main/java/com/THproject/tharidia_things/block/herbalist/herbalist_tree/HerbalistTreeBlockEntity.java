@@ -25,6 +25,7 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import software.bernie.geckolib.animatable.GeoBlockEntity;
@@ -166,28 +167,20 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
         if (tickCounter % NOTE_INTERVAL != 0)
             return;
 
-        currentNoteIndex++;
-        if (currentNoteIndex == SYMPHONY_LENGTH + 1) {
-            currentNoteIndex = 0;
-            step++;
-        }
-
         // Step 0: tree note
         if (step == 0 && currentNoteIndex < SYMPHONY_LENGTH) {
             int note = symphonyNotes[currentNoteIndex];
             float pitch = symphonyPitches[currentNoteIndex];
-            System.out.println(pitch);
-            BlockPos pos = getBlockPos();
+            BlockPos pos = getPotPositionForRoot(currentNoteIndex + 1);
 
             level.playSound(null, pos, symphonyInstrument, SoundSource.RECORDS, 3.0F, pitch);
 
             if (level instanceof ServerLevel serverLevel) {
                 double noteColor = note / 24.0;
                 serverLevel.sendParticles(ParticleTypes.NOTE,
-                        pos.getX() + 0.5, pos.getY() + 3.2, pos.getZ() + 0.5,
+                        pos.getX() + 0.5, pos.getY() + 1, pos.getZ() + 0.5,
                         0, noteColor, 0, 0, 1);
             }
-
         }
 
         // Step 1: pot note
@@ -218,7 +211,7 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
 
                 int newNote;
                 while (true) {
-                    newNote = symphonyNotes[rand.nextInt(symphonyNotes.length)];
+                    newNote = rand.nextInt(48);
                     boolean isNoteRight = false;
                     for (float n : symphonyNotes) {
                         if (n != newNote)
@@ -238,16 +231,18 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
                         potPos.getX() + 0.5, potPos.getY() + 1, potPos.getZ() + 0.5,
                         0, noteColor, 0, 0, 1);
 
-                if (value)
-                    serverLevel.sendParticles(ParticleTypes.HEART,
-                            potPos.getX() + 0.5, potPos.getY() + 1, potPos.getZ() + 0.5,
-                            0, 0, 0, 0, 1);
-                else {
-                    serverLevel.sendParticles(ParticleTypes.ANGRY_VILLAGER,
-                            potPos.getX() + 0.5, potPos.getY() + 1, potPos.getZ() + 0.5,
-                            0, 0, 0, 0, 1);
+                if (value) {
+                    level.setBlock(potPos.below(), Blocks.GREEN_WOOL.defaultBlockState(), 3);
+                } else {
+                    level.setBlock(potPos.below(), Blocks.RED_WOOL.defaultBlockState(), 3);
                 }
             }
+        }
+
+        currentNoteIndex++;
+        if (currentNoteIndex == SYMPHONY_LENGTH + 1) {
+            currentNoteIndex = 0;
+            step++;
         }
 
         if (step == 2) {
