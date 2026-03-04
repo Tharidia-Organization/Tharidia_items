@@ -238,6 +238,14 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
         syncAndSave();
     }
 
+    /** Fertilize the tree with concime: +3 HP, +1 sete */
+    public void fertilizeTree() {
+        if (treeDead) return;
+        treeHp = Math.min(MAX_HP, treeHp + 3);
+        sete = Math.min(MAX_SETE, sete + 1);
+        syncAndSave();
+    }
+
     /** Water the tree with water bucket: +2 sete */
     public void waterTree() {
         if (treeDead)

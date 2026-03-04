@@ -65,14 +65,14 @@ public class HerbalistTreeBlock extends BaseEntityBlock {
                 return ItemInteractionResult.SUCCESS;
             }
 
-            // Feeding: items in the herbalist_tree_food tag
+            // Fertilizing: items in the herbalist_tree_food tag (concime)
             if (stack.is(ItemTags.create(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(
                     TharidiaThings.MODID, "herbalist_tree_food")))) {
-                treeBE.feedFlowersOnly();
+                treeBE.fertilizeTree();
                 if (!player.getAbilities().instabuild) {
                     stack.shrink(1);
                 }
-                level.playSound(null, pos, SoundEvents.GENERIC_EAT, SoundSource.BLOCKS, 1.0F, 1.0F);
+                level.playSound(null, pos, SoundEvents.BONE_MEAL_USE, SoundSource.BLOCKS, 1.0F, 1.0F);
                 return ItemInteractionResult.SUCCESS;
             }
 
