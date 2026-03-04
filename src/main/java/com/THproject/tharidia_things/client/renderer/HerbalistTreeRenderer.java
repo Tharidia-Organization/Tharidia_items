@@ -8,6 +8,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
 import software.bernie.geckolib.cache.object.GeoBone;
@@ -44,6 +45,26 @@ public class HerbalistTreeRenderer extends GeoBlockRenderer<HerbalistTreeBlockEn
         for (int i = 1; i <= 8; i++) {
             setBoneVisible(model, "Radice" + i, animatable.hasPotAtRoot(i));
         }
+
+        float scale = animatable.getPetalScale();
+        for (int i = 0; i < HerbalistTreeBlockEntity.getPetalCount(); i++) {
+            String boneName = (i == 0) ? "Petali" : "Petali" + i;
+            GeoBone bone = model.getBone(boneName).orElse(null);
+            if (bone != null) {
+                bone.updateScale(scale, scale, scale);
+            }
+        }
+    }
+
+    @Override
+    public void renderRecursively(PoseStack poseStack, HerbalistTreeBlockEntity animatable, GeoBone bone,
+            RenderType renderType, MultiBufferSource bufferSource, VertexConsumer buffer, boolean isReRender,
+            float partialTick, int packedLight, int packedOverlay, int colour) {
+        if (bone.getName().startsWith("Petali")) {
+            colour = animatable.getPetalColor();
+        }
+        super.renderRecursively(poseStack, animatable, bone, renderType, bufferSource, buffer, isReRender,
+                partialTick, packedLight, packedOverlay, colour);
     }
 
     private void setBoneVisible(BakedGeoModel model, String boneName, boolean visible) {
