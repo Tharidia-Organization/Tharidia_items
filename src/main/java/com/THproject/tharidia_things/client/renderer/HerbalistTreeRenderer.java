@@ -57,9 +57,10 @@ public class HerbalistTreeRenderer extends GeoBlockRenderer<HerbalistTreeBlockEn
         if (bone.getName().startsWith("Petali")) {
             colour = animatable.getPetalColor();
             float scale = animatable.getPetalScale();
-            bone.setScaleX(scale);
-            bone.setScaleY(scale);
-            bone.setScaleZ(scale);
+            // Multiply with animation scale instead of overwriting it
+            bone.setScaleX(bone.getScaleX() * scale);
+            bone.setScaleY(bone.getScaleY() * scale);
+            bone.setScaleZ(bone.getScaleZ() * scale);
         }
         super.renderRecursively(poseStack, animatable, bone, renderType, bufferSource, buffer, isReRender,
                 partialTick, packedLight, packedOverlay, colour);

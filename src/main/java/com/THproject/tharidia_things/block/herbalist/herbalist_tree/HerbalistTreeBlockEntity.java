@@ -91,7 +91,7 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
             SoundEvents.NOTE_BLOCK_BANJO.value(),
             SoundEvents.NOTE_BLOCK_PLING.value()
     };
-    private static final int NOTE_INTERVAL = 1;
+    private static final int NOTE_INTERVAL = 10;
     private static final int SYMPHONY_LENGTH = 8;
     private static final int WRONG_FLOWER_TIMEOUT = 40;
     private static final int STEP3_TIME_LIMIT = 200; // 10 seconds (200 ticks)
@@ -238,11 +238,11 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
         syncAndSave();
     }
 
-    /** Fertilize the tree with concime: +3 HP, +1 sete */
+    /** Feed the tree with manure: +3 HP, +2 fame */
     public void fertilizeTree() {
         if (treeDead) return;
         treeHp = Math.min(MAX_HP, treeHp + 3);
-        sete = Math.min(MAX_SETE, sete + 1);
+        fame = Math.min(MAX_FAME, fame + 2);
         syncAndSave();
     }
 
