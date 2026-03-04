@@ -1,5 +1,11 @@
 package com.THproject.tharidia_things.block.herbalist.herbalist_tree;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+
 import com.THproject.tharidia_things.TharidiaThings;
 import com.THproject.tharidia_things.block.herbalist.pot.PotBlock;
 
@@ -57,9 +63,19 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
 
     private boolean isCrafting = false;
     private int[] symphonyNotes = new int[SYMPHONY_LENGTH];
+    private float[] symphonyPitches = new float[SYMPHONY_LENGTH];
     private SoundEvent symphonyInstrument = null;
     private int currentNoteIndex = 0;
     private int tickCounter = 0;
+
+    private int step = 0;
+
+    private Map<Integer, Boolean> pots = new HashMap<>() {
+        {
+            for (int i = 0; i < SYMPHONY_LENGTH; i++)
+                put(i, false);
+        }
+    };
 
     public HerbalistTreeBlockEntity(BlockPos pos, BlockState state) {
         super(TharidiaThings.HERBALIST_TREE_BLOCK_ENTITY.get(), pos, state);
@@ -71,19 +87,28 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
 
     public boolean hasAllPots() {
         for (int i = 1; i <= 8; i++) {
-            if (!hasPotAtRoot(i)) return false;
+            if (!hasPotAtRoot(i))
+                return false;
         }
         return true;
     }
 
     public void startCrafting() {
-        if (level == null || !hasAllPots()) return;
+        if (level == null || !hasAllPots())
+            return;
 
         java.util.Random rand = new java.util.Random();
         for (int i = 0; i < SYMPHONY_LENGTH; i++) {
             symphonyNotes[i] = rand.nextInt(25); // 0-24
+            symphonyPitches[i] = (float) Math.pow(2.0, (symphonyNotes[i] - 12) / 12.0);
         }
         symphonyInstrument = NOTEBLOCK_INSTRUMENTS[rand.nextInt(NOTEBLOCK_INSTRUMENTS.length)];
+
+        // Ensure all pots for the symphony are initialized to false
+        pots.clear();
+        for (int i = 0; i < SYMPHONY_LENGTH; i++) {
+            pots.put(i, false);
+        }
 
         isCrafting = true;
         currentNoteIndex = 0;
@@ -92,14 +117,24 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
     }
 
     public void serverTick() {
-        if (!isCrafting || level == null) return;
+        if (!isCrafting || level == null)
+            return;
 
         tickCounter++;
-        if (tickCounter % NOTE_INTERVAL != 0) return;
+        if (tickCounter % NOTE_INTERVAL != 0)
+            return;
 
-        if (currentNoteIndex < SYMPHONY_LENGTH) {
+        currentNoteIndex++;
+        if (currentNoteIndex == SYMPHONY_LENGTH + 1) {
+            currentNoteIndex = 0;
+            step++;
+        }
+
+        // Step 0: tree note
+        if (step == 0 && currentNoteIndex < SYMPHONY_LENGTH) {
             int note = symphonyNotes[currentNoteIndex];
-            float pitch = (float) Math.pow(2.0, (note - 12) / 12.0);
+            float pitch = symphonyPitches[currentNoteIndex];
+            System.out.println(pitch);
             BlockPos pos = getBlockPos();
 
             level.playSound(null, pos, symphonyInstrument, SoundSource.RECORDS, 3.0F, pitch);
@@ -111,15 +146,77 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
                         0, noteColor, 0, 0, 1);
             }
 
-            currentNoteIndex++;
         }
-        // Symphony completed: isCrafting stays true for future minigame
+
+        // Step 1: pot note
+        if (step == 1 && currentNoteIndex < SYMPHONY_LENGTH) {
+            // Randomly select two distinct pots and set them to true
+            if (currentNoteIndex == 0) {
+                List<Integer> keys = new ArrayList<>(pots.keySet());
+                Random rand = new Random();
+                int firstIdx = rand.nextInt(keys.size());
+                int secondIdx;
+                do {
+                    secondIdx = rand.nextInt(keys.size());
+                } while (secondIdx == firstIdx);
+                pots.put(keys.get(firstIdx), true);
+                pots.put(keys.get(secondIdx), true);
+            }
+
+            int note = symphonyNotes[currentNoteIndex];
+            float pitch = symphonyPitches[currentNoteIndex];
+            BlockPos potPos = getPotPositionForRoot(currentNoteIndex + 1);
+            boolean value = pots.get(currentNoteIndex);
+
+            double noteColor = note / 24.0;
+            if (value) {
+                level.playSound(null, potPos, symphonyInstrument, SoundSource.RECORDS, 3.0F, pitch);
+            } else {
+                Random rand = new Random();
+
+                int newNote;
+                while (true) {
+                    newNote = symphonyNotes[rand.nextInt(25)]; //
+                    boolean isNoteRight = false;
+                    for (float n : symphonyNotes) {
+                        if (n != newNote)
+                            isNoteRight = true;
+                    }
+                    if (isNoteRight)
+                        break;
+                }
+
+                float newPitch = (float) Math.pow(2.0, (newNote - 12) / 12.0);
+
+                level.playSound(null, potPos, symphonyInstrument, SoundSource.RECORDS, 3.0F, newPitch);
+            }
+
+            if (level instanceof ServerLevel serverLevel) {
+                serverLevel.sendParticles(ParticleTypes.NOTE,
+                        potPos.getX() + 0.5, potPos.getY() + 1, potPos.getZ() + 0.5,
+                        0, noteColor, 0, 0, 1);
+
+                if (value)
+                    serverLevel.sendParticles(ParticleTypes.HEART,
+                            potPos.getX() + 0.5, potPos.getY() + 1, potPos.getZ() + 0.5,
+                            0, 0, 0, 0, 1);
+                else {
+                    serverLevel.sendParticles(ParticleTypes.ANGRY_VILLAGER,
+                            potPos.getX() + 0.5, potPos.getY() + 1, potPos.getZ() + 0.5,
+                            0, 0, 0, 0, 1);
+                }
+            }
+        }
+
+        if (step == 2) {
+            isCrafting = false;
+            step = 0;
+        }
     }
 
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
-        tag.putBoolean("isCrafting", isCrafting);
         tag.putIntArray("symphonyNotes", symphonyNotes);
         tag.putInt("currentNoteIndex", currentNoteIndex);
         tag.putInt("tickCounter", tickCounter);
@@ -132,7 +229,6 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
-        isCrafting = tag.getBoolean("isCrafting");
         if (tag.contains("symphonyNotes")) {
             int[] loaded = tag.getIntArray("symphonyNotes");
             if (loaded.length == SYMPHONY_LENGTH) {
@@ -178,7 +274,8 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
 
     public boolean hasPotAtRoot(int rootIndex) {
         Level level = this.getLevel();
-        if (level == null) return false;
+        if (level == null)
+            return false;
         BlockPos potPos = getPotPositionForRoot(rootIndex);
         return level.getBlockState(potPos).getBlock() instanceof PotBlock;
     }
@@ -211,10 +308,10 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
         }));
 
         // Branch animation controllers for roots that have animations
-        addRootController(controllers, 1, ROOT1_ANIM);  // Radice1 -> "root"
-        addRootController(controllers, 3, ROOT3_ANIM);  // Radice3 -> "root3"
-        addRootController(controllers, 4, ROOT4_ANIM);  // Radice4 -> "root4"
-        addRootController(controllers, 8, ROOT2_ANIM);  // Radice8 -> "root2"
+        addRootController(controllers, 1, ROOT1_ANIM); // Radice1 -> "root"
+        addRootController(controllers, 3, ROOT3_ANIM); // Radice3 -> "root3"
+        addRootController(controllers, 4, ROOT4_ANIM); // Radice4 -> "root4"
+        addRootController(controllers, 8, ROOT2_ANIM); // Radice8 -> "root2"
     }
 
     private void addRootController(ControllerRegistrar controllers, int rootIndex, RawAnimation anim) {
