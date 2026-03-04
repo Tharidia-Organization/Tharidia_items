@@ -178,6 +178,18 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
 
     // ==================== HP / FAME / SETE ====================
 
+    public int healTree(int amount) {
+        treeHp = Math.min(treeHp + amount, MAX_HP);
+        syncAndSave();
+        return treeHp;
+    }
+
+    public int damageTree(int amount) {
+        treeHp = Math.max(treeHp - amount, 0);
+        syncAndSave();
+        return treeHp;
+    }
+
     public int getTreeHp() {
         return treeHp;
     }
@@ -321,11 +333,15 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
                             .withFont(MedievalGuiRenderer.MEDIEVAL_FONT)
                             .withColor(craftedColor)
                             .withBold(true)));
+
+            damageTree(15);
         } else {
             // Petal (flower or mushroom)
             petalStack.set(DataComponents.ITEM_NAME, Component.translatable("item.tharidiathings.petal")
                     .withStyle(style -> style
                             .withFont(MedievalGuiRenderer.MEDIEVAL_FONT)));
+
+            healTree(5);
         }
 
         if (!player.getInventory().add(petalStack)) {
