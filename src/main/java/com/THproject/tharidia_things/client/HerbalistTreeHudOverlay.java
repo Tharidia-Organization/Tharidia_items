@@ -51,11 +51,6 @@ public class HerbalistTreeHudOverlay {
     private static final float BODY_SCALE = 0.75f;
     private static final int BODY_LINE_SPACING = 2;
 
-    private static final int IND_GOOD = 0x55AA55;
-    private static final int IND_OK = 0x8B6914;
-    private static final int IND_WARNING = 0xCC8800;
-    private static final int IND_DANGER = 0xCC2222;
-
     @SubscribeEvent
     public static void onRenderGui(RenderGuiEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();

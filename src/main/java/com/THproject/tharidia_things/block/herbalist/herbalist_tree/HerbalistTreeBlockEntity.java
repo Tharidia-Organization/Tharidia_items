@@ -53,7 +53,6 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
     private static final RawAnimation ROOT3_ANIM = RawAnimation.begin().thenPlayAndHold("root3");
     private static final RawAnimation ROOT4_ANIM = RawAnimation.begin().thenPlayAndHold("root4");
 
-    private static final int PETAL_COUNT = 22;
     private static final float PETAL_SCALE_MIN = 1.0f;
     private static final float PETAL_SCALE_MAX = 4.0f;
 
@@ -72,9 +71,6 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
     private int fame = 0;       // hunger counter 0-6
     private int sete = 0;       // thirst counter 0-4
     private long lastDayChecked = -1;
-    private int fungiOnlyToday = 0;
-    private int mixToday = 0;
-    private int concimeToday = 0;
     private boolean treeDead = false;
 
     private static final SoundEvent[] NOTEBLOCK_INSTRUMENTS = {
@@ -152,27 +148,12 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
         }
     }
 
-    public void setPetalColor(float r, float g, float b) {
-        int ri = Math.round(Math.clamp(r, 0f, 1f) * 255);
-        int gi = Math.round(Math.clamp(g, 0f, 1f) * 255);
-        int bi = Math.round(Math.clamp(b, 0f, 1f) * 255);
-        setPetalColor(0xFF000000 | (ri << 16) | (gi << 8) | bi);
-    }
-
-    public static int getPetalCount() {
-        return PETAL_COUNT;
-    }
-
     public boolean isCrafting() {
         return isCrafting;
     }
 
     public boolean isMinigameComplete() {
         return minigameComplete;
-    }
-
-    public int getCraftedColor() {
-        return craftedColor;
     }
 
     public int getErrorCount() { return errorCount; }
@@ -183,8 +164,6 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
     // ==================== HP / FAME / SETE ====================
 
     public int getTreeHp() { return treeHp; }
-    public int getFame() { return fame; }
-    public int getSete() { return sete; }
     public boolean isTreeDead() { return treeDead; }
 
     /** Returns HP status: 0=healthy, 1=weak, 2=critical, 3=dead */
@@ -218,44 +197,11 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
         syncAndSave();
     }
 
-    /** Feed the tree with fungi only: +10 HP, +2 fame. Max 2/day. */
-    public boolean feedFungiOnly() {
-        if (treeDead || fungiOnlyToday >= 2) return false;
-        treeHp = Math.min(MAX_HP, treeHp + 10);
-        fame = Math.min(MAX_FAME, fame + 2);
-        fungiOnlyToday++;
-        syncAndSave();
-        return true;
-    }
-
-    /** Feed with mix (flowers + fungi): -15 HP, +2 fame, x1.8 quality. Max 2/day. */
-    public boolean feedMix() {
-        if (treeDead || mixToday >= 2) return false;
-        treeHp = Math.max(0, treeHp - 15);
-        fame = Math.min(MAX_FAME, fame + 2);
-        mixToday++;
-        if (treeHp <= 0) {
-            treeDead = true;
-        }
-        syncAndSave();
-        return true;
-    }
-
-    /** Water the tree with watering can: +2 sete */
+    /** Water the tree with water bucket: +2 sete */
     public void waterTree() {
         if (treeDead) return;
         sete = Math.min(MAX_SETE, sete + 2);
         syncAndSave();
-    }
-
-    /** Fertilize: +1 sete, +3 HP. Max 2/day. */
-    public boolean fertilizeTree() {
-        if (treeDead || concimeToday >= 2) return false;
-        sete = Math.min(MAX_SETE, sete + 1);
-        treeHp = Math.min(MAX_HP, treeHp + 3);
-        concimeToday++;
-        syncAndSave();
-        return true;
     }
 
     /** Daily evaluation at tick 18000. Called from serverTick. */
@@ -290,11 +236,6 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
             if (treeHp <= 0) {
                 treeDead = true;
             }
-
-            // Reset daily caps
-            fungiOnlyToday = 0;
-            mixToday = 0;
-            concimeToday = 0;
 
             syncAndSave();
         }
@@ -924,15 +865,6 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
         }
     }
 
-    public int findPotIndex(BlockPos targetPos) {
-        for (int i = 0; i < SYMPHONY_LENGTH; i++) {
-            if (getPotPositionForRoot(i + 1).equals(targetPos)) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
@@ -950,9 +882,6 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
         tag.putInt("fame", fame);
         tag.putInt("sete", sete);
         tag.putLong("lastDayChecked", lastDayChecked);
-        tag.putInt("fungiOnlyToday", fungiOnlyToday);
-        tag.putInt("mixToday", mixToday);
-        tag.putInt("concimeToday", concimeToday);
         tag.putBoolean("treeDead", treeDead);
         // Minigame state
         tag.putBoolean("isCrafting", isCrafting);
@@ -977,9 +906,6 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
         if (tag.contains("fame")) fame = tag.getInt("fame");
         if (tag.contains("sete")) sete = tag.getInt("sete");
         if (tag.contains("lastDayChecked")) lastDayChecked = tag.getLong("lastDayChecked");
-        if (tag.contains("fungiOnlyToday")) fungiOnlyToday = tag.getInt("fungiOnlyToday");
-        if (tag.contains("mixToday")) mixToday = tag.getInt("mixToday");
-        if (tag.contains("concimeToday")) concimeToday = tag.getInt("concimeToday");
         if (tag.contains("treeDead")) treeDead = tag.getBoolean("treeDead");
         // Minigame state (for client sync)
         if (tag.contains("isCrafting")) isCrafting = tag.getBoolean("isCrafting");
