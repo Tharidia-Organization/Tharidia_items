@@ -19,6 +19,10 @@ import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.network.Connection;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
@@ -43,6 +47,13 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
     private static final RawAnimation ROOT2_ANIM = RawAnimation.begin().thenPlayAndHold("root2");
     private static final RawAnimation ROOT3_ANIM = RawAnimation.begin().thenPlayAndHold("root3");
     private static final RawAnimation ROOT4_ANIM = RawAnimation.begin().thenPlayAndHold("root4");
+
+    private static final int PETAL_COUNT = 22;
+    private static final float PETAL_SCALE_MIN = 1.0f;
+    private static final float PETAL_SCALE_MAX = 3.0f;
+
+    private float petalScale = PETAL_SCALE_MIN;
+    private int petalColor = 0xFFFFFFFF; // ARGB packed, default white (no tint)
 
     private static final SoundEvent[] NOTEBLOCK_INSTRUMENTS = {
             SoundEvents.NOTE_BLOCK_HARP.value(),
@@ -79,6 +90,41 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
 
     public HerbalistTreeBlockEntity(BlockPos pos, BlockState state) {
         super(TharidiaThings.HERBALIST_TREE_BLOCK_ENTITY.get(), pos, state);
+    }
+
+    public float getPetalScale() {
+        return petalScale;
+    }
+
+    public void setPetalScale(float scale) {
+        this.petalScale = Math.max(PETAL_SCALE_MIN, Math.min(PETAL_SCALE_MAX, scale));
+        setChanged();
+        if (level != null && !level.isClientSide) {
+            level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+        }
+    }
+
+    public int getPetalColor() {
+        return petalColor;
+    }
+
+    public void setPetalColor(int argb) {
+        this.petalColor = argb;
+        setChanged();
+        if (level != null && !level.isClientSide) {
+            level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+        }
+    }
+
+    public void setPetalColor(float r, float g, float b) {
+        int ri = Math.round(Math.clamp(r, 0f, 1f) * 255);
+        int gi = Math.round(Math.clamp(g, 0f, 1f) * 255);
+        int bi = Math.round(Math.clamp(b, 0f, 1f) * 255);
+        setPetalColor(0xFF000000 | (ri << 16) | (gi << 8) | bi);
+    }
+
+    public static int getPetalCount() {
+        return PETAL_COUNT;
     }
 
     public boolean isCrafting() {
@@ -217,6 +263,8 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
+        tag.putFloat("petalScale", petalScale);
+        tag.putInt("petalColor", petalColor);
         tag.putIntArray("symphonyNotes", symphonyNotes);
         tag.putInt("currentNoteIndex", currentNoteIndex);
         tag.putInt("tickCounter", tickCounter);
@@ -229,6 +277,39 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
+        if (tag.contains("petalScale")) {
+            petalScale = tag.getFloat("petalScale");
+        }
+        if (tag.contains("petalColor")) {
+            petalColor = tag.getInt("petalColor");
+        }
+    }
+
+    @Override
+    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+        CompoundTag tag = new CompoundTag();
+        saveAdditional(tag, registries);
+        return tag;
+    }
+
+    @Override
+    public Packet<ClientGamePacketListener> getUpdatePacket() {
+        return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    @Override
+    public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket pkt,
+            HolderLookup.Provider lookupProvider) {
+        CompoundTag tag = pkt.getTag();
+        if (tag != null) {
+            handleUpdateTag(tag, lookupProvider);
+        }
+    }
+
+    @Override
+    public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider lookupProvider) {
+        super.loadAdditional(tag, lookupProvider);
+        loadAdditional(tag, lookupProvider);
         if (tag.contains("symphonyNotes")) {
             int[] loaded = tag.getIntArray("symphonyNotes");
             if (loaded.length == SYMPHONY_LENGTH) {
