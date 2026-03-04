@@ -19,10 +19,6 @@ import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
-import net.minecraft.network.Connection;
-import net.minecraft.network.protocol.Packet;
-import net.minecraft.network.protocol.game.ClientGamePacketListener;
-import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
@@ -222,7 +218,7 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
 
                 int newNote;
                 while (true) {
-                    newNote = symphonyNotes[rand.nextInt(25)]; //
+                    newNote = symphonyNotes[rand.nextInt(symphonyNotes.length)];
                     boolean isNoteRight = false;
                     for (float n : symphonyNotes) {
                         if (n != newNote)
