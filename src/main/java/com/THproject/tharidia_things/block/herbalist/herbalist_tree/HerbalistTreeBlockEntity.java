@@ -293,11 +293,6 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
     }
 
     @Override
-    public Packet<ClientGamePacketListener> getUpdatePacket() {
-        return ClientboundBlockEntityDataPacket.create(this);
-    }
-
-    @Override
     public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket pkt,
             HolderLookup.Provider lookupProvider) {
         CompoundTag tag = pkt.getTag();
@@ -327,30 +322,8 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
     }
 
     @Override
-    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
-        CompoundTag tag = new CompoundTag();
-        saveAdditional(tag, registries);
-        return tag;
-    }
-
-    @Override
     public Packet<ClientGamePacketListener> getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
-    }
-
-    @Override
-    public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket pkt,
-            HolderLookup.Provider lookupProvider) {
-        CompoundTag tag = pkt.getTag();
-        if (tag != null) {
-            handleUpdateTag(tag, lookupProvider);
-        }
-    }
-
-    @Override
-    public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider lookupProvider) {
-        super.loadAdditional(tag, lookupProvider);
-        loadAdditional(tag, lookupProvider);
     }
 
     public boolean hasPotAtRoot(int rootIndex) {
