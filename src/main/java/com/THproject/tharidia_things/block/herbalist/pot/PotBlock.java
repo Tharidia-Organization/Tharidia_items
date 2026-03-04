@@ -1,10 +1,9 @@
 package com.THproject.tharidia_things.block.herbalist.pot;
 
-import com.THproject.tharidia_things.TharidiaThings;
+import com.THproject.tharidia_things.block.herbalist.Plants;
 import com.mojang.serialization.MapCodec;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.ItemTags;
@@ -41,9 +40,7 @@ public class PotBlock extends BaseEntityBlock {
         PotBlockEntity pot = (PotBlockEntity) level.getBlockEntity(pos);
 
         if (!player.isShiftKeyDown()) {
-            if (stack.is(ItemTags.create(ResourceLocation.fromNamespaceAndPath(
-                    TharidiaThings.MODID,
-                    "herbalist_pot_plants")))) {
+            if (Plants.isPlant(stack)) {
                 if (!pot.hasPlant() && pot.hasDirt() && pot.isFarmed()) {
                     pot.setPlant(stack.copyWithCount(1));
                     level.playSound(null, pos, SoundEvents.GRASS_PLACE, SoundSource.BLOCKS);
@@ -85,8 +82,6 @@ public class PotBlock extends BaseEntityBlock {
 
         if (pot.hasDirt())
             Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), new ItemStack(Items.DIRT));
-        if (pot.hasPlant())
-            Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), pot.getPlant());
 
         super.onRemove(state, level, pos, newState, movedByPiston);
     }

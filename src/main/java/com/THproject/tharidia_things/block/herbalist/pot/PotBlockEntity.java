@@ -23,6 +23,7 @@ public class PotBlockEntity extends BlockEntity implements GeoBlockEntity {
     private ItemStack plant = ItemStack.EMPTY;
     private boolean hasDirt = false;
     private boolean isFarmed = false;
+    private BlockPos treePos = null;
 
     public PotBlockEntity(BlockPos pos, BlockState state) {
         super(TharidiaThings.POT_BLOCK_ENTITY.get(), pos, state);
@@ -93,6 +94,15 @@ public class PotBlockEntity extends BlockEntity implements GeoBlockEntity {
         return this.isFarmed;
     }
 
+    public void setTreePos(BlockPos pos) {
+        this.treePos = pos;
+        this.setChanged();
+    }
+
+    public BlockPos getTreePos() {
+        return this.treePos;
+    }
+
     @Override
     public void setChanged() {
         super.setChanged();
@@ -107,6 +117,8 @@ public class PotBlockEntity extends BlockEntity implements GeoBlockEntity {
         super.saveAdditional(tag, registries);
         tag.putBoolean("hasDirt", this.hasDirt);
         tag.putBoolean("isFarmed", this.isFarmed);
+        if (this.treePos != null)
+            tag.putLong("treePos", this.treePos.asLong());
         if (!this.plant.isEmpty())
             tag.put("plant", this.plant.save(registries));
         else
@@ -118,6 +130,10 @@ public class PotBlockEntity extends BlockEntity implements GeoBlockEntity {
         super.loadAdditional(tag, registries);
         this.hasDirt = tag.getBoolean("hasDirt");
         this.isFarmed = tag.getBoolean("isFarmed");
+        if (tag.contains("treePos"))
+            this.treePos = BlockPos.of(tag.getLong("treePos"));
+        else
+            this.treePos = null;
         if (tag.contains("plant"))
             this.plant = ItemStack.parse(registries, tag.get("plant")).orElse(ItemStack.EMPTY);
         else

@@ -10,16 +10,22 @@ import java.util.Random;
 import java.util.Set;
 
 import com.THproject.tharidia_things.TharidiaThings;
+import com.THproject.tharidia_things.block.herbalist.Plants;
 import com.THproject.tharidia_things.block.herbalist.pot.PotBlock;
 import com.THproject.tharidia_things.block.herbalist.pot.PotBlockEntity;
+import com.THproject.tharidia_things.client.gui.medieval.MedievalGuiRenderer;
 
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.component.DataComponentType;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.Connection;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
@@ -31,7 +37,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Containers;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
+import net.minecraft.world.item.Rarity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -59,6 +65,8 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
     private float petalScale = PETAL_SCALE_MIN;
     private int petalColor = 0xFFFFFFFF;
 
+    private boolean isMysticalPetal = false;
+
     // HP / Fame / Sete system
     private static final int MAX_HP = 100;
     private static final int MAX_FAME = 6;
@@ -68,8 +76,8 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
     private static final long DAY_EVALUATION_TICK = 18000; // Tramonto
 
     private int treeHp = MAX_HP;
-    private int fame = 0;       // hunger counter 0-6
-    private int sete = 0;       // thirst counter 0-4
+    private int fame = 0; // hunger counter 0-6
+    private int sete = 0; // thirst counter 0-4
     private long lastDayChecked = -1;
     private boolean treeDead = false;
 
@@ -87,7 +95,7 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
             SoundEvents.NOTE_BLOCK_BANJO.value(),
             SoundEvents.NOTE_BLOCK_PLING.value()
     };
-    private static final int NOTE_INTERVAL = 10;
+    private static final int NOTE_INTERVAL = 1;
     private static final int SYMPHONY_LENGTH = 8;
     private static final int WRONG_FLOWER_TIMEOUT = 40;
     private static final int STEP3_TIME_LIMIT = 200; // 10 seconds (200 ticks)
@@ -156,42 +164,67 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
         return minigameComplete;
     }
 
-    public int getErrorCount() { return errorCount; }
-    public int getStepTimer() { return stepTimer; }
-    public int getStep() { return step; }
-    public int getFilledPotsCount() { return filledPots.size(); }
+    public int getErrorCount() {
+        return errorCount;
+    }
+
+    public int getStepTimer() {
+        return stepTimer;
+    }
+
+    public int getStep() {
+        return step;
+    }
+
+    public int getFilledPotsCount() {
+        return filledPots.size();
+    }
 
     // ==================== HP / FAME / SETE ====================
 
-    public int getTreeHp() { return treeHp; }
-    public boolean isTreeDead() { return treeDead; }
+    public int getTreeHp() {
+        return treeHp;
+    }
+
+    public boolean isTreeDead() {
+        return treeDead;
+    }
 
     /** Returns HP status: 0=healthy, 1=weak, 2=critical, 3=dead */
     public int getHpStatus() {
-        if (treeDead || treeHp <= 0) return 3;
-        if (treeHp <= 10) return 2;
-        if (treeHp <= 50) return 1;
+        if (treeDead || treeHp <= 0)
+            return 3;
+        if (treeHp <= 10)
+            return 2;
+        if (treeHp <= 50)
+            return 1;
         return 0;
     }
 
     /** Returns fame status: 0=sated, 1=hungry, 2=very hungry, 3=starving */
     public int getFameStatus() {
-        if (fame >= 4) return 0;
-        if (fame >= 2) return 1;
-        if (fame >= 1) return 2;
+        if (fame >= 4)
+            return 0;
+        if (fame >= 2)
+            return 1;
+        if (fame >= 1)
+            return 2;
         return 3;
     }
 
     /** Returns sete status: 0=hydrated, 1=thirsty, 2=dehydrated */
     public int getSeteStatus() {
-        if (sete >= 3) return 0;
-        if (sete >= 1) return 1;
+        if (sete >= 3)
+            return 0;
+        if (sete >= 1)
+            return 1;
         return 2;
     }
 
     /** Feed the tree with flowers only: +5 HP, +2 fame */
     public void feedFlowersOnly() {
-        if (treeDead) return;
+        if (treeDead)
+            return;
         treeHp = Math.min(MAX_HP, treeHp + 5);
         fame = Math.min(MAX_FAME, fame + 2);
         syncAndSave();
@@ -199,14 +232,16 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
 
     /** Water the tree with water bucket: +2 sete */
     public void waterTree() {
-        if (treeDead) return;
+        if (treeDead)
+            return;
         sete = Math.min(MAX_SETE, sete + 2);
         syncAndSave();
     }
 
     /** Daily evaluation at tick 18000. Called from serverTick. */
     private void checkDailyEvaluation() {
-        if (level == null || treeDead) return;
+        if (level == null || treeDead)
+            return;
         long dayTime = level.getDayTime() % 24000;
         long currentDay = level.getDayTime() / 24000;
 
@@ -220,16 +255,21 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
             // Fame penalties
             int famePenalty = 0;
             if (fame < 4) {
-                if (fame >= 2) famePenalty = 3;
-                else if (fame >= 1) famePenalty = 6;
-                else famePenalty = 10;
+                if (fame >= 2)
+                    famePenalty = 3;
+                else if (fame >= 1)
+                    famePenalty = 6;
+                else
+                    famePenalty = 10;
             }
 
             // Sete penalties
             int setePenalty = 0;
             if (sete < 3) {
-                if (sete >= 1) setePenalty = 3;
-                else setePenalty = 8;
+                if (sete >= 1)
+                    setePenalty = 3;
+                else
+                    setePenalty = 8;
             }
 
             treeHp = Math.max(0, treeHp - famePenalty - setePenalty);
@@ -261,9 +301,8 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
         petalStack.set(net.minecraft.core.component.DataComponents.DYED_COLOR,
                 new net.minecraft.world.item.component.DyedItemColor(craftedColor, true));
 
-        if (!player.getInventory().add(petalStack)) {
-            player.drop(petalStack, false);
-        }
+        boolean hasFlower = false;
+        boolean hasMushroom = false;
 
         // Remove all flowers from pots
         for (int i = 0; i < SYMPHONY_LENGTH; i++) {
@@ -271,7 +310,25 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
             BlockEntity be = level.getBlockEntity(potPos);
             if (be instanceof PotBlockEntity potBE && potBE.hasPlant()) {
                 potBE.removePlant();
+                
             }
+        }
+
+        petalStack.set(DataComponents.ITEM_NAME, Component.translatable("item.tharidiathings.petal")
+                .withStyle(style -> style
+                        .withFont(MedievalGuiRenderer.MEDIEVAL_FONT)));
+
+        if (!this.isMysticalPetal) {
+            petalStack.set(DataComponents.RARITY, Rarity.EPIC);
+            petalStack.set(DataComponents.ITEM_NAME, Component.translatable("item.tharidiathings.petal_2")
+                    .withStyle(style -> style
+                            .withFont(MedievalGuiRenderer.MEDIEVAL_FONT)
+                            .withColor(craftedColor)
+                            .withBold(true)));
+        }
+
+        if (!player.getInventory().add(petalStack)) {
+            player.drop(petalStack, false);
         }
 
         // Reset petals to default
@@ -305,6 +362,13 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
             symphonyPitches[i] = (float) Math.pow(2.0, (symphonyNotes[i] - 12) / 12.0);
         }
         symphonyInstrument = NOTEBLOCK_INSTRUMENTS[rand.nextInt(NOTEBLOCK_INSTRUMENTS.length)];
+
+        for (int i = 0; i < 8; i++) {
+            BlockPos potPos = getPotPositionForRoot(i + 1);
+            if (level.getBlockEntity(potPos) instanceof PotBlockEntity potBe) {
+                potBe.setTreePos(getBlockPos());
+            }
+        }
 
         filledPots.clear();
         roundCorrectPots.clear();
@@ -398,7 +462,8 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
     }
 
     public void serverTick() {
-        if (level == null) return;
+        if (level == null)
+            return;
 
         // Daily evaluation runs always
         checkDailyEvaluation();
@@ -547,7 +612,8 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
             // Bloom of particles spiraling outward from the tree canopy
             for (int i = 0; i < 8; i++) {
                 BlockPos potPos = getPotPositionForRoot(i + 1);
-                if (filledPots.contains(i)) continue;
+                if (filledPots.contains(i))
+                    continue;
                 serverLevel.sendParticles(ParticleTypes.END_ROD,
                         potPos.getX() + 0.5, potPos.getY() + 1.2, potPos.getZ() + 0.5,
                         5, 0.2, 0.3, 0.2, 0.02);
@@ -801,7 +867,8 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
         // Mix the two flower colors
         int pairMix = mixColors(color1, color2);
 
-        // Blend into petal color: first pair sets the color, subsequent pairs average in
+        // Blend into petal color: first pair sets the color, subsequent pairs average
+        // in
         if (completedPairs == 1) {
             setPetalColor(pairMix);
         } else {
@@ -816,27 +883,8 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
         BlockPos potPos = getPotPositionForRoot(potIndex + 1);
         BlockEntity be = level.getBlockEntity(potPos);
         if (be instanceof PotBlockEntity potBE) {
-            return getFlowerColor(potBE.getPlant());
+            return Plants.getColor(potBE.getPlant());
         }
-        return 0xFFFFFF;
-    }
-
-    private static int getFlowerColor(ItemStack stack) {
-        if (stack.isEmpty()) return 0xFFFFFF;
-        if (stack.is(Items.POPPY)) return 0xED1C24;
-        if (stack.is(Items.DANDELION)) return 0xFED83D;
-        if (stack.is(Items.BLUE_ORCHID)) return 0x2ABFFD;
-        if (stack.is(Items.ALLIUM)) return 0xB878ED;
-        if (stack.is(Items.AZURE_BLUET)) return 0xD6E8E8;
-        if (stack.is(Items.RED_TULIP)) return 0xED1C24;
-        if (stack.is(Items.ORANGE_TULIP)) return 0xFF6A00;
-        if (stack.is(Items.WHITE_TULIP)) return 0xFFFFFF;
-        if (stack.is(Items.PINK_TULIP)) return 0xFF69B4;
-        if (stack.is(Items.OXEYE_DAISY)) return 0xF0E68C;
-        if (stack.is(Items.CORNFLOWER)) return 0x466EEB;
-        if (stack.is(Items.LILY_OF_THE_VALLEY)) return 0xF0FFF0;
-        if (stack.is(Items.WITHER_ROSE)) return 0x2C2C2C;
-        if (stack.is(Items.TORCHFLOWER)) return 0xFF8C00;
         return 0xFFFFFF;
     }
 
@@ -902,17 +950,27 @@ public class HerbalistTreeBlockEntity extends BlockEntity implements GeoBlockEnt
             petalColor = tag.getInt("petalColor");
         }
         // HP / Fame / Sete
-        if (tag.contains("treeHp")) treeHp = tag.getInt("treeHp");
-        if (tag.contains("fame")) fame = tag.getInt("fame");
-        if (tag.contains("sete")) sete = tag.getInt("sete");
-        if (tag.contains("lastDayChecked")) lastDayChecked = tag.getLong("lastDayChecked");
-        if (tag.contains("treeDead")) treeDead = tag.getBoolean("treeDead");
+        if (tag.contains("treeHp"))
+            treeHp = tag.getInt("treeHp");
+        if (tag.contains("fame"))
+            fame = tag.getInt("fame");
+        if (tag.contains("sete"))
+            sete = tag.getInt("sete");
+        if (tag.contains("lastDayChecked"))
+            lastDayChecked = tag.getLong("lastDayChecked");
+        if (tag.contains("treeDead"))
+            treeDead = tag.getBoolean("treeDead");
         // Minigame state (for client sync)
-        if (tag.contains("isCrafting")) isCrafting = tag.getBoolean("isCrafting");
-        if (tag.contains("step")) step = tag.getInt("step");
-        if (tag.contains("errorCount")) errorCount = tag.getInt("errorCount");
-        if (tag.contains("stepTimer")) stepTimer = tag.getInt("stepTimer");
-        if (tag.contains("minigameComplete")) minigameComplete = tag.getBoolean("minigameComplete");
+        if (tag.contains("isCrafting"))
+            isCrafting = tag.getBoolean("isCrafting");
+        if (tag.contains("step"))
+            step = tag.getInt("step");
+        if (tag.contains("errorCount"))
+            errorCount = tag.getInt("errorCount");
+        if (tag.contains("stepTimer"))
+            stepTimer = tag.getInt("stepTimer");
+        if (tag.contains("minigameComplete"))
+            minigameComplete = tag.getBoolean("minigameComplete");
     }
 
     @Override
