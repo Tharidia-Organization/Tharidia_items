@@ -3,6 +3,7 @@ package com.THproject.tharidia_things.block.herbalist.herbalist_tree;
 import javax.annotation.Nullable;
 
 import com.THproject.tharidia_things.TharidiaThings;
+import com.THproject.tharidia_things.block.herbalist.pot.PotBlockEntity;
 import com.mojang.serialization.MapCodec;
 
 import net.minecraft.core.BlockPos;
@@ -46,7 +47,8 @@ public class HerbalistTreeBlock extends BaseEntityBlock {
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hitResult) {
-        if (level.isClientSide) return ItemInteractionResult.SUCCESS;
+        if (level.isClientSide)
+            return ItemInteractionResult.SUCCESS;
 
         BlockEntity be = level.getBlockEntity(pos);
         if (be instanceof HerbalistTreeBlockEntity treeBE) {
@@ -103,6 +105,15 @@ public class HerbalistTreeBlock extends BaseEntityBlock {
         if (!state.is(newState.getBlock()) && !level.isClientSide) {
             destroyMultiblock(level, pos);
         }
+
+        HerbalistTreeBlockEntity tree = (HerbalistTreeBlockEntity) level.getBlockEntity(pos);
+        for (int i = 1; i <= 8; i++) {
+            BlockPos potPos = tree.getPotPositionForRoot(i);
+            if (level.getBlockEntity(potPos) instanceof PotBlockEntity pot)
+                if (pot.getTreePos() != null && pot.getTreePos().equals(pos))
+                    pot.setTreePos(null);
+        }
+
         super.onRemove(state, level, pos, newState, isMoving);
     }
 
