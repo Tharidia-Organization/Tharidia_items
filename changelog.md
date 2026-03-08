@@ -280,3 +280,37 @@ La generazione procedurale costruisce stanze, corridoi e ponti in modo diverso a
 - Fix interazione con blocco dummy del sink
 - Fix inizializzazione fornace da fabbro in singleplayer
 
+# Changelog 0.6.7
+
+## 🌿 Albero dell'Erbalista.. Classe: Manovale
+
+> **La natura vi chiede qualcosa in cambio.** L'albero dell'erborista è una creatura vivente: ha fame, ha sete, e se lo trascurate, muore. Prendetevene cura e lui vi ricompenserà con petali colorati unici, forgiati dalla musica e dai fiori che gli offrite.
+
+- **Albero vivente** — L'albero ha punti vita, fame e sete. Ogni giorno al tramonto viene valutato il suo stato: se non lo nutrite e non lo innaffiate, perderà vita fino a morire
+- **Nutrizione** — Dategli da mangiare con la manure per sfamarlo e curarlo, e innaffiatelo con un secchio d'acqua per idratarlo
+- **HUD informativo** — Guardando l'albero appare un pannello in stile pergamena medievale con tutte le informazioni: salute, fame, sete, e durante il minigioco lo stato della partita in tempo reale
+
+### 🎵 Il Canto dei Vasi — Minigioco musicale
+
+> **Ascoltate, osservate, piazzate.** L'albero suona una sinfonia di 8 note e i vasi attorno a lui le ripetono. Sta a voi capire quali vasi suonano la nota giusta e piazzarci il fiore corretto.
+
+- **Sinfonia unica** — Ad ogni partita l'albero genera una melodia casuale con strumento e note diverse
+- **3 fasi musicali** — Prima l'albero suona la sinfonia completa, poi ogni vaso suona la propria nota corretta, infine i vasi suonano un mix: alcuni la nota giusta, altri una sbagliata. Dovrete ricordare quali sono quelli giusti
+- **Piazzamento fiori** — Dopo le fasi musicali potete piazzare i fiori nei vasi. Indovinate e il fiore resta, sbagliate e dopo 2 secondi il fiore scompare con fumo e un suono di errore
+- **Round progressivi** — Il gioco procede a coppie: ogni round dovete trovare 2 vasi corretti. Sbagliateli entrambi e il round si resetta. Azzeccatene solo uno e al prossimo round ne basterà uno
+- **Timer** — Avete 10 secondi per piazzare i fiori, visibile nell'HUD con countdown che cambia colore man mano che il tempo scorre
+- **Errori e Wipe** — Ogni fiore sbagliato o timeout conta come errore. Al sesto errore l'albero si spegne con una nuvola di fumo, il gioco si resetta completamente e dovrete ricominciare da capo
+- **Segnali** — Un battito cardiaco crescente del Warden annuncia l'inizio di ogni round, una cascata di cristalli di ametista e particelle End Rod vi segnalano quando potete piazzare i fiori
+- **Colore dei petali** — I petali dell'albero cambiano colore in base ai fiori che piazzate. Ogni coppia completata mescola i colori dei due fiori e li applica ai petali, che crescono di dimensione ad ogni coppia
+- **Raccolta** — Completato il minigioco, interagite a mani vuote per raccogliere 4 petali del colore che avete creato
+- **Petali nell'inventario** — I petali emettono delicate particelle colorate quando sono nel vostro inventario. I petali mistici hanno un effetto più luminoso e intenso
+
+### 🌱 8 Vasi dell'Erborista
+
+- **Vasi piazzabili** attorno all'albero nelle 8 posizioni delle radici
+- **Sistema terra** — Aggiungete terra, zappatela con la zappa, poi piantate i fiori
+- **Modello 3D** — Ogni vaso ha rendering dedicato con terra, terreno zappato e pianta visibili direttamente sul blocco
+
+### Scopo
+
+> L'albero del **MANOVALE** non è altro che un strumento antico che permette di infondere energia nei fiori per farvi ottenere petali. Questi petali avranno un preciso scopo **ALCHEMICO**. Il Manovale è una classe complessa e completa che copre tantissime sfaccettature della vita quotidiana tra i giocatori, come esser l'unico a poter gestire gli **STATION CRYSTAL** di cui avete sentito parlare nei precedenti Changelog. 
