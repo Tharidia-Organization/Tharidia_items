@@ -1,0 +1,16 @@
+{
+    "type": "tharidiathings:pulverizer",
+    "input": {
+        "item": "minecraft:gravel"
+    },
+    "outputs": [
+        {
+            "item": {
+                "id": "minecraft:sand",
+                "count": 1
+            },
+            "chance": 1.0
+        }
+    ],
+    "processingTime": 40
+}

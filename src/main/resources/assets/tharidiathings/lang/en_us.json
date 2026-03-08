@@ -2,7 +2,7 @@
   "itemGroup.tharidiathings": "Tharidia Things",
   "block.tharidiathings.pietro": "Realm",
   "block.tharidiathings.claim": "Claim",
-  
+
   "block.tharidiathings.tank": "Tank",
   "block.tharidiathings.sieve": "Sieve",
   "block.tharidiathings.sink": "Sink",
@@ -17,6 +17,9 @@
   "block.tharidiathings.vein_sediment_t2": "Uncommon Mantle Cluster",
   "block.tharidiathings.vein_sediment_t3": "Greater Mantle Cluster",
   "block.tharidiathings.vein_sediment_t4": "Superior Mantle Cluster",
+
+  "block.tharidiathings.pulverizer": "Pulverizer",
+  "item.tharidiathings.grinder": "Grinder",
 
   "container.tharidiathings.claim": "Claim",
   "container.tharidiathings.pietro": "Realm",
@@ -474,5 +477,7 @@
   "gui.tharidiathings.herbalist_tree.timer": "Time: %ss",
   "gui.tharidiathings.herbalist_tree.complete": "Minigame complete! Right-click to collect.",
   "gui.tharidiathings.herbalist_tree.hint.dead": "The tree is dead.",
-  "gui.tharidiathings.herbalist_tree.hint.place_pots": "Place 8 pots to start."
+  "gui.tharidiathings.herbalist_tree.hint.place_pots": "Place 8 pots to start.",
+
+  "jei.tharidiathings.pulverizer_recipe": "Pulverizer"
 }

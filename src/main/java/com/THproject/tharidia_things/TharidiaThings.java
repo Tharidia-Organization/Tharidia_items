@@ -1,5 +1,9 @@
 package com.THproject.tharidia_things;
 
+import com.THproject.tharidia_things.block.pulverizer.PulverizerBlock;
+import com.THproject.tharidia_things.block.pulverizer.PulverizerDummyBlock;
+import com.THproject.tharidia_things.block.pulverizer.PulverizerBlockEntity;
+import com.THproject.tharidia_things.block.pulverizer.PulverizerBlockItem;
 import com.THproject.tharidia_things.claim.ClaimRegistry;
 import com.THproject.tharidia_things.client.ClientSeekPacketHandler;
 import com.THproject.tharidia_things.client.HandshakeBypass;
@@ -69,6 +73,7 @@ import com.THproject.tharidia_things.item.LamaLungaItem;
 import com.THproject.tharidia_things.item.LamaCortaItem;
 import com.THproject.tharidia_things.item.ElsaItem;
 import com.THproject.tharidia_things.item.GoldLamaLungaItem;
+import com.THproject.tharidia_things.item.Grinder;
 import com.THproject.tharidia_things.item.GoldLamaCortaItem;
 import com.THproject.tharidia_things.item.CopperLamaLungaItem;
 import com.THproject.tharidia_things.item.CopperLamaCortaItem;
@@ -117,7 +122,7 @@ import com.THproject.tharidia_things.servertransfer.ServerTransferCommands;
 import com.THproject.tharidia_things.servertransfer.TransferTokenManager;
 import com.THproject.tharidia_things.sounds.ModSounds;
 import com.THproject.tharidia_things.servertransfer.DevWhitelistManager;
-
+import com.THproject.tharidia_things.recipe.PulverizerRecipe;
 import com.THproject.tharidia_things.recipe.WasherRecipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
@@ -188,16 +193,24 @@ public class TharidiaThings {
     public static final DeferredRegister<net.minecraft.world.inventory.MenuType<?>> MENU_TYPES = DeferredRegister
             .create(BuiltInRegistries.MENU, MODID);
 
-    // Sieve Recipes
+    // Recipes
     public static final DeferredRegister<RecipeType<?>> RECIPE_TYPES = DeferredRegister.create(Registries.RECIPE_TYPE,
             MODID);
     public static final DeferredRegister<RecipeSerializer<?>> RECIPE_SERIALIZERS = DeferredRegister
             .create(Registries.RECIPE_SERIALIZER, MODID);
 
+    // Washer Recipes
     public static final DeferredHolder<RecipeType<?>, RecipeType<WasherRecipe>> WASHER_RECIPE_TYPE = RECIPE_TYPES
             .register("washing", () -> RecipeType.simple(ResourceLocation.fromNamespaceAndPath(MODID, "washing")));
     public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<WasherRecipe>> WASHER_RECIPE_SERIALIZER = RECIPE_SERIALIZERS
             .register("washing", WasherRecipe.Serializer::new);
+
+    // Pulverizer Recipe
+    public static final DeferredHolder<RecipeType<?>, RecipeType<PulverizerRecipe>> PULVERIZER_RECIPE_TYPE = RECIPE_TYPES
+            .register("pulverizer",
+                    () -> RecipeType.simple(ResourceLocation.fromNamespaceAndPath(MODID, "pulverizer")));
+    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<PulverizerRecipe>> PULVERIZER_RECIPE_SERIALIZER = RECIPE_SERIALIZERS
+            .register("pulverizer", PulverizerRecipe.Serializer::new);
 
     // Database system for cross-server communication
     private DatabaseManager databaseManager;
@@ -429,6 +442,24 @@ public class TharidiaThings {
                                     SINK_BLOCK.get())
                             .build(null));
 
+    // Pulverizer Block
+    public static final DeferredBlock<PulverizerBlock> PULVERIZER_BLOCK = BLOCKS.register("pulverizer",
+            () -> new PulverizerBlock());
+
+    public static final DeferredBlock<PulverizerDummyBlock> PULVERIZER_DUMMY_BLOCK = BLOCKS.register("pulverizer_dummy",
+            () -> new PulverizerDummyBlock());
+
+    public static final DeferredItem<PulverizerBlockItem> PULVERIZER_BLOCK_ITEM = ITEMS.register(
+            "pulverizer",
+            () -> new PulverizerBlockItem(PULVERIZER_BLOCK.get(),
+                    new Item.Properties()));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<PulverizerBlockEntity>> PULVERIZER_BLOCK_ENTITY = BLOCK_ENTITIES
+            .register("pulverizer",
+                    () -> BlockEntityType.Builder.of(PulverizerBlockEntity::new, PULVERIZER_BLOCK.get()).build(null));
+
+    public static final DeferredItem<Item> GRINDER = ITEMS.register("grinder", () -> new Grinder());
+
     // Creates a new BlockEntityType for the Pietro block
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<PietroBlockEntity>> PIETRO_BLOCK_ENTITY = BLOCK_ENTITIES
             .register("pietro", () -> BlockEntityType.Builder.of(PietroBlockEntity::new, PIETRO.get()).build(null));
@@ -656,6 +687,10 @@ public class TharidiaThings {
                         output.accept(STATION_CRYSTAL_BLOCK_ITEM.get());
                         output.accept(STATION_CRYSTAL_TOOL.get());
                         output.accept(STATION_CRYSTAL_REPAIRER.get());
+
+                        // Pulverizer
+                        output.accept(PULVERIZER_BLOCK_ITEM.get());
+                        output.accept(GRINDER.get());
 
                         // Claim utilities
                         output.accept(TRUST_CONTRACT.get());

@@ -18,6 +18,9 @@
   "block.tharidiathings.vein_sediment_t3": "Mantello Maggiore",
   "block.tharidiathings.vein_sediment_t4": "Mantello Superiore",
 
+  "block.tharidiathings.pulverizer": "Polverizzatore",
+  "item.tharidiathings.grinder": "Macina",
+
   "container.tharidiathings.claim": "Rivendicazione",
   "container.tharidiathings.pietro": "Reame",
 
@@ -474,5 +477,7 @@
   "gui.tharidiathings.herbalist_tree.hint.dead": "L'albero e' morto.",
   "gui.tharidiathings.herbalist_tree.hint.place_pots": "Piazza 8 vasi per iniziare.",
 
-  "jei.tharidiathings.washer_recipe": "Lavaggio"
+  "jei.tharidiathings.washer_recipe": "Lavaggio",
+
+  "jei.tharidiathings.pulverizer_recipe": "Polverizzatore"
 }
