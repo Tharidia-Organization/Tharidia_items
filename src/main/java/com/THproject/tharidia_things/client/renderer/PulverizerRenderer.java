@@ -6,13 +6,16 @@ import com.THproject.tharidia_things.TharidiaThings;
 import com.THproject.tharidia_things.block.pulverizer.PulverizerBlockEntity;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.math.Axis;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
+import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.AABB;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
 import software.bernie.geckolib.cache.object.GeoBone;
@@ -53,7 +56,9 @@ public class PulverizerRenderer extends GeoBlockRenderer<PulverizerBlockEntity> 
             float processRatio = 1 - animatable.getProcessPercentage();
             poseStack.pushPose();
             poseStack.translate(0.5, 1, 0.5);
+            poseStack.translate(0, -0.25, 0);
             poseStack.scale(1.2f, processRatio, 1.2f);
+            poseStack.translate(0, 0.25, 0);
 
             Minecraft.getInstance().getItemRenderer().renderStatic(input_item, ItemDisplayContext.FIXED, packedLight,
                     packedOverlay, poseStack, bufferSource, animatable.getLevel(), 0);
@@ -74,8 +79,16 @@ public class PulverizerRenderer extends GeoBlockRenderer<PulverizerBlockEntity> 
         if (!output_item.isEmpty()) {
             poseStack.pushPose();
 
-            poseStack.translate(2.5, 1.5, 0.5);
-            poseStack.scale(0.5f, 0.5f, 0.5f);
+            Direction facing = animatable.getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING);
+
+            poseStack.translate(0.5, 0, 0.5);
+
+            float angle = -facing.toYRot();
+            poseStack.mulPose(Axis.YP.rotationDegrees(angle - 90));
+
+            poseStack.translate(0.7, 0.35, 0.0);
+
+            poseStack.scale(0.4f, 0.4f, 0.4f);
 
             Minecraft.getInstance().getItemRenderer().renderStatic(output_item, ItemDisplayContext.FIXED, packedLight,
                     packedOverlay, poseStack, bufferSource, animatable.getLevel(), 0);
