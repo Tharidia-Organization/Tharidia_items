@@ -5,11 +5,7 @@ import java.util.Optional;
 
 import com.THproject.tharidia_things.TharidiaThings;
 import com.THproject.tharidia_things.recipe.PulverizerRecipe;
-import com.THproject.tharidia_things.sounds.ModSounds;
-import com.THproject.tharidia_things.sounds.PulverizerWorkingSound;
 
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
@@ -82,8 +78,8 @@ public class PulverizerBlockEntity extends BlockEntity implements GeoBlockEntity
         this.workingSoundInstance = sound;
     }
 
-    public SoundInstance getWorkingSound() {
-        return (SoundInstance) workingSoundInstance;
+    public Object getWorkingSound() {
+        return workingSoundInstance;
     }
 
     public void tickActive() {
@@ -144,19 +140,6 @@ public class PulverizerBlockEntity extends BlockEntity implements GeoBlockEntity
 
     public float getProcessPercentage() {
         return ((float) this.progress / this.maxProgress);
-    }
-
-    public static void clientTick(Level level, BlockPos pos, BlockState state, PulverizerBlockEntity pulverizer) {
-        tick(level, pos, state, pulverizer);
-        if (pulverizer.isActive()) {
-            Minecraft mc = Minecraft.getInstance();
-            if (!mc.getSoundManager().isActive(pulverizer.getWorkingSound())) {
-                PulverizerWorkingSound sound = new PulverizerWorkingSound(pulverizer,
-                        ModSounds.PULVERIZER_WORKING.get());
-                pulverizer.setWorkingSound(sound);
-                mc.getSoundManager().play(sound);
-            }
-        }
     }
 
     public static void tick(Level level, BlockPos pos, BlockState state, PulverizerBlockEntity pulverizer) {

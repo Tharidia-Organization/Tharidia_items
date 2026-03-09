@@ -119,7 +119,7 @@ public class PulverizerBlock extends BaseEntityBlock {
             BlockEntityType<T> type) {
         if (level.isClientSide) {
             return createTickerHelper(type, TharidiaThings.PULVERIZER_BLOCK_ENTITY.get(),
-                    PulverizerBlockEntity::clientTick);
+                    PulverizerClientTicker::clientTick);
         }
         return createTickerHelper(type, TharidiaThings.PULVERIZER_BLOCK_ENTITY.get(), PulverizerBlockEntity::tick);
     }
