@@ -1,7 +1,8 @@
 package com.THproject.tharidia_things.client.model;
 
 import com.THproject.tharidia_things.TharidiaThings;
-import com.THproject.tharidia_things.block.entity.AlchemistTableBlockEntity;
+import com.THproject.tharidia_things.block.alchemist.AlchemistTableBlockEntity;
+
 import net.minecraft.resources.ResourceLocation;
 import software.bernie.geckolib.model.GeoModel;
 

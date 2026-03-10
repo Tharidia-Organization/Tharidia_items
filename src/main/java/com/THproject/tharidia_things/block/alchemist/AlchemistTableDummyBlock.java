@@ -1,6 +1,5 @@
-package com.THproject.tharidia_things.block;
+package com.THproject.tharidia_things.block.alchemist;
 
-import com.THproject.tharidia_things.block.entity.AlchemistTableBlockEntity;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;

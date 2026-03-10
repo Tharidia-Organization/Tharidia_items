@@ -1,6 +1,6 @@
 package com.THproject.tharidia_things.client.renderer;
 
-import com.THproject.tharidia_things.block.entity.AlchemistTableBlockEntity;
+import com.THproject.tharidia_things.block.alchemist.AlchemistTableBlockEntity;
 import com.THproject.tharidia_things.client.model.AlchemistTableModel;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;

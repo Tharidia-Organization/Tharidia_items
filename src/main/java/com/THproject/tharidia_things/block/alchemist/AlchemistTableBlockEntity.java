@@ -1,4 +1,4 @@
-package com.THproject.tharidia_things.block.entity;
+package com.THproject.tharidia_things.block.alchemist;
 
 import com.THproject.tharidia_things.TharidiaThings;
 import net.minecraft.core.BlockPos;
