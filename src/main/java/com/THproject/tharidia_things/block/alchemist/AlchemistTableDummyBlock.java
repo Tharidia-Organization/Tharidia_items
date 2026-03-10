@@ -6,7 +6,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.context.BlockPlaceContext;
-import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RenderShape;
@@ -18,13 +17,12 @@ import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.shapes.CollisionContext;
-import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Dummy block for the Alchemist Table multiblock structure.
- * Invisible (master's GeckoLib model renders the entire structure), provides collision and interaction forwarding.
+ * Invisible (master's GeckoLib model renders the entire structure), provides
+ * collision and interaction forwarding.
  */
 public class AlchemistTableDummyBlock extends Block {
 
@@ -32,8 +30,6 @@ public class AlchemistTableDummyBlock extends Block {
 
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final IntegerProperty PART_INDEX = IntegerProperty.create("part_index", 0, 7);
-
-    private static final VoxelShape SHAPE = Block.box(0, 0, 0, 16, 12, 16);
 
     public AlchemistTableDummyBlock(BlockBehaviour.Properties properties) {
         super(properties);
@@ -72,17 +68,8 @@ public class AlchemistTableDummyBlock extends Block {
     }
 
     @Override
-    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return SHAPE;
-    }
-
-    @Override
-    public VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return SHAPE;
-    }
-
-    @Override
-    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
+    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player,
+            BlockHitResult hitResult) {
         BlockPos masterPos = findMaster(level, pos, state);
         if (masterPos != null) {
             if (level.getBlockEntity(masterPos) instanceof AlchemistTableBlockEntity table) {
