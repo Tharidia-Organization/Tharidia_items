@@ -64,7 +64,7 @@ public class AlchemistTableDummyBlock extends Block {
 
     @Override
     public RenderShape getRenderShape(BlockState state) {
-        return RenderShape.MODEL;
+        return RenderShape.INVISIBLE;
     }
 
     @Override
