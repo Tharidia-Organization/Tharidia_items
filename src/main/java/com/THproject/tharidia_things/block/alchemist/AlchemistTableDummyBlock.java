@@ -31,7 +31,7 @@ public class AlchemistTableDummyBlock extends Block {
     public static final MapCodec<AlchemistTableDummyBlock> CODEC = simpleCodec(AlchemistTableDummyBlock::new);
 
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
-    public static final IntegerProperty PART_INDEX = IntegerProperty.create("part_index", 0, 6);
+    public static final IntegerProperty PART_INDEX = IntegerProperty.create("part_index", 0, 7);
 
     private static final VoxelShape SHAPE = Block.box(0, 0, 0, 16, 12, 16);
 
@@ -68,7 +68,7 @@ public class AlchemistTableDummyBlock extends Block {
 
     @Override
     public RenderShape getRenderShape(BlockState state) {
-        return RenderShape.INVISIBLE;
+        return RenderShape.MODEL;
     }
 
     @Override
