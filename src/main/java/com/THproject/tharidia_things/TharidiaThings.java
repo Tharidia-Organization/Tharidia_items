@@ -1,7 +1,9 @@
 package com.THproject.tharidia_things;
 
-import com.THproject.tharidia_things.block.ore_chunks.iron.IronChunkBlock;
-import com.THproject.tharidia_things.block.ore_chunks.iron.IronChunkBlockEntity;
+import com.THproject.tharidia_things.block.pulverizer.PulverizerBlock;
+import com.THproject.tharidia_things.block.pulverizer.PulverizerDummyBlock;
+import com.THproject.tharidia_things.block.pulverizer.PulverizerBlockEntity;
+import com.THproject.tharidia_things.block.pulverizer.PulverizerBlockItem;
 import com.THproject.tharidia_things.claim.ClaimRegistry;
 import com.THproject.tharidia_things.client.ClientSeekPacketHandler;
 import com.THproject.tharidia_things.client.HandshakeBypass;
@@ -43,6 +45,13 @@ import com.THproject.tharidia_things.block.entity.HotIronAnvilEntity;
 import com.THproject.tharidia_things.block.entity.HotGoldAnvilEntity;
 import com.THproject.tharidia_things.block.entity.HotCopperAnvilEntity;
 import com.THproject.tharidia_things.block.entity.StableBlockEntity;
+import com.THproject.tharidia_things.block.herbalist.herbalist_tree.HerbalistTreeBlock;
+import com.THproject.tharidia_things.block.herbalist.herbalist_tree.HerbalistTreeBlockEntity;
+import com.THproject.tharidia_things.block.herbalist.herbalist_tree.HerbalistTreeBlockItem;
+import com.THproject.tharidia_things.block.herbalist.herbalist_tree.HerbalistTreeDummyBlock;
+import com.THproject.tharidia_things.block.herbalist.pot.PotBlock;
+import com.THproject.tharidia_things.block.herbalist.pot.PotBlockEntity;
+import com.THproject.tharidia_things.block.herbalist.pot.PotBlockItem;
 import com.THproject.tharidia_things.block.station_crystal.StationCrystalBlock;
 import com.THproject.tharidia_things.block.station_crystal.StationCrystalBlockEntity;
 import com.THproject.tharidia_things.block.station_crystal.StationCrystalBlockItem;
@@ -55,14 +64,19 @@ import com.THproject.tharidia_things.block.veins.VeinBlocks;
 import com.THproject.tharidia_things.block.veins.VeinSediments;
 import com.THproject.tharidia_things.block.washer.sieve.SieveBlock;
 import com.THproject.tharidia_things.block.washer.sieve.SieveBlockEntity;
+import com.THproject.tharidia_things.block.washer.sieve.SieveBlockItem;
+import com.THproject.tharidia_things.block.washer.sink.SinkBlockItem;
+import com.THproject.tharidia_things.block.washer.tank.TankBlockItem;
 import com.THproject.tharidia_things.item.HotIronItem;
 import com.THproject.tharidia_things.item.HotGoldItem;
 import com.THproject.tharidia_things.item.HotCopperItem;
+import com.THproject.tharidia_things.item.PetalItem;
 import com.THproject.tharidia_things.item.PinzaItem;
 import com.THproject.tharidia_things.item.LamaLungaItem;
 import com.THproject.tharidia_things.item.LamaCortaItem;
 import com.THproject.tharidia_things.item.ElsaItem;
 import com.THproject.tharidia_things.item.GoldLamaLungaItem;
+import com.THproject.tharidia_things.item.Grinder;
 import com.THproject.tharidia_things.item.GoldLamaCortaItem;
 import com.THproject.tharidia_things.item.CopperLamaLungaItem;
 import com.THproject.tharidia_things.item.CopperLamaCortaItem;
@@ -97,26 +111,8 @@ import com.THproject.tharidia_things.fatigue.FatigueAttachments;
 import com.THproject.tharidia_things.houseboundry.AnimalWellnessAttachments;
 import com.THproject.tharidia_things.houseboundry.config.AnimalConfigLoader;
 import com.THproject.tharidia_things.stable.StableConfigLoader;
-import com.THproject.tharidia_things.network.BattlePackets;
-import com.THproject.tharidia_things.network.ClaimOwnerSyncPacket;
-import com.THproject.tharidia_things.network.FatigueSyncPacket;
-import com.THproject.tharidia_things.network.DungeonQueuePacket;
-import com.THproject.tharidia_things.network.JoinGroupQueuePacket;
-import com.THproject.tharidia_things.network.LeaveGroupQueuePacket;
-import com.THproject.tharidia_things.network.StartGroupDungeonPacket;
-import com.THproject.tharidia_things.network.SyncGroupQueuePacket;
-import com.THproject.tharidia_things.network.HierarchySyncPacket;
-import com.THproject.tharidia_things.network.RealmSyncPacket;
-import com.THproject.tharidia_things.network.UpdateHierarchyPacket;
-import com.THproject.tharidia_things.network.ToggleParticlePacket;
 import com.THproject.tharidia_things.network.revive.ReviveSyncPayload;
 import com.THproject.tharidia_things.network.revive.ReviveGiveUpPacket;
-import com.THproject.tharidia_things.network.SelectComponentPacket;
-import com.THproject.tharidia_things.network.SubmitNamePacket;
-import com.THproject.tharidia_things.network.SyncGateRestrictionsPacket;
-import com.THproject.tharidia_things.network.EquipActionPacket;
-import com.THproject.tharidia_things.network.EquipListSyncPacket;
-import com.THproject.tharidia_things.command.EquipCommand;
 import com.THproject.tharidia_things.realm.RealmManager;
 import com.THproject.tharidia_things.registry.ModAttributes;
 import com.THproject.tharidia_things.registry.ModStats;
@@ -129,7 +125,7 @@ import com.THproject.tharidia_things.servertransfer.ServerTransferCommands;
 import com.THproject.tharidia_things.servertransfer.TransferTokenManager;
 import com.THproject.tharidia_things.sounds.ModSounds;
 import com.THproject.tharidia_things.servertransfer.DevWhitelistManager;
-
+import com.THproject.tharidia_things.recipe.PulverizerRecipe;
 import com.THproject.tharidia_things.recipe.WasherRecipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
@@ -200,16 +196,24 @@ public class TharidiaThings {
     public static final DeferredRegister<net.minecraft.world.inventory.MenuType<?>> MENU_TYPES = DeferredRegister
             .create(BuiltInRegistries.MENU, MODID);
 
-    // Sieve Recipes
+    // Recipes
     public static final DeferredRegister<RecipeType<?>> RECIPE_TYPES = DeferredRegister.create(Registries.RECIPE_TYPE,
             MODID);
     public static final DeferredRegister<RecipeSerializer<?>> RECIPE_SERIALIZERS = DeferredRegister
             .create(Registries.RECIPE_SERIALIZER, MODID);
 
+    // Washer Recipes
     public static final DeferredHolder<RecipeType<?>, RecipeType<WasherRecipe>> WASHER_RECIPE_TYPE = RECIPE_TYPES
             .register("washing", () -> RecipeType.simple(ResourceLocation.fromNamespaceAndPath(MODID, "washing")));
     public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<WasherRecipe>> WASHER_RECIPE_SERIALIZER = RECIPE_SERIALIZERS
             .register("washing", WasherRecipe.Serializer::new);
+
+    // Pulverizer Recipe
+    public static final DeferredHolder<RecipeType<?>, RecipeType<PulverizerRecipe>> PULVERIZER_RECIPE_TYPE = RECIPE_TYPES
+            .register("pulverizer",
+                    () -> RecipeType.simple(ResourceLocation.fromNamespaceAndPath(MODID, "pulverizer")));
+    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<PulverizerRecipe>> PULVERIZER_RECIPE_SERIALIZER = RECIPE_SERIALIZERS
+            .register("pulverizer", PulverizerRecipe.Serializer::new);
 
     // Database system for cross-server communication
     private DatabaseManager databaseManager;
@@ -257,6 +261,50 @@ public class TharidiaThings {
     // Dye Vats Dummy Block (multiblock slave)
     public static final DeferredBlock<DyeVatsDummyBlock> DYE_VATS_DUMMY = BLOCKS.register("dye_vats_dummy",
             () -> new DyeVatsDummyBlock());
+
+    // Herbalist Tree
+    public static final DeferredBlock<HerbalistTreeBlock> HERBALIST_TREE_BLOCK = BLOCKS.register(
+            "herbalist_tree",
+            () -> new HerbalistTreeBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.STONE)
+                    .strength(2.0f)
+                    .noOcclusion()));
+
+    public static final DeferredBlock<HerbalistTreeDummyBlock> HERBALIST_TREE_DUMMY_BLOCK = BLOCKS.register(
+            "herbalist_tree_dummy",
+            () -> new HerbalistTreeDummyBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.STONE)
+                    .strength(2.0f)
+                    .noOcclusion()));
+
+    public static final DeferredItem<HerbalistTreeBlockItem> HERBALIST_TREE_ITEM = ITEMS.register(
+            "herbalist_tree",
+            () -> new HerbalistTreeBlockItem(HERBALIST_TREE_BLOCK.get(), new Item.Properties()));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<HerbalistTreeBlockEntity>> HERBALIST_TREE_BLOCK_ENTITY = BLOCK_ENTITIES
+            .register("herbalist_tree",
+                    () -> BlockEntityType.Builder.of(HerbalistTreeBlockEntity::new,
+                            HERBALIST_TREE_BLOCK.get()).build(null));
+
+    // Pot
+    public static final DeferredBlock<PotBlock> POT_BLOCK = BLOCKS.register("pot",
+            () -> new PotBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.STONE)
+                    .strength(2.0f)
+                    .requiresCorrectToolForDrops()
+                    .noOcclusion()));
+
+    public static final DeferredItem<PotBlockItem> POT_ITEM = ITEMS.register("pot",
+            () -> new PotBlockItem(POT_BLOCK.get(), new Item.Properties()));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<PotBlockEntity>> POT_BLOCK_ENTITY = BLOCK_ENTITIES
+            .register("pot",
+                    () -> BlockEntityType.Builder.of(PotBlockEntity::new,
+                            POT_BLOCK.get()).build(null));
+
+    // Herbalist Petal (dyeable item, result of herbalist tree minigame)
+    public static final DeferredItem<PetalItem> PETAL = ITEMS.register("petal",
+            () -> new PetalItem(new Item.Properties().stacksTo(64)));
 
     // Smithing Furnace Block (5x2x3 multiblock, GeckoLib animated)
     public static final DeferredBlock<SmithingFurnaceBlock> SMITHING_FURNACE = BLOCKS.register("smithing_furnace",
@@ -338,7 +386,7 @@ public class TharidiaThings {
 
     public static final DeferredItem<BlockItem> SIEVE_ITEM = ITEMS.register(
             "sieve",
-            () -> new BlockItem(SIEVE_BLOCK.get(), new Item.Properties()));
+            () -> new SieveBlockItem(SIEVE_BLOCK.get(), new Item.Properties()));
 
     public static final DeferredBlock<com.THproject.tharidia_things.block.washer.sieve.SieveDummyBlock> SIEVE_DUMMY = BLOCKS
             .register("sieve_dummy",
@@ -363,7 +411,7 @@ public class TharidiaThings {
 
     public static final DeferredItem<BlockItem> TANK_ITEM = ITEMS.register(
             "tank",
-            () -> new BlockItem(TANK_BLOCK.get(), new Item.Properties()));
+            () -> new TankBlockItem(TANK_BLOCK.get(), new Item.Properties()));
 
     public static final DeferredBlock<com.THproject.tharidia_things.block.washer.tank.TankDummyBlock> TANK_DUMMY = BLOCKS
             .register("tank_dummy",
@@ -390,7 +438,7 @@ public class TharidiaThings {
 
     public static final DeferredItem<BlockItem> SINK_ITEM = ITEMS.register(
             "sink",
-            () -> new BlockItem(SINK_BLOCK.get(), new Item.Properties()));
+            () -> new SinkBlockItem(SINK_BLOCK.get(), new Item.Properties()));
 
     public static final DeferredBlock<com.THproject.tharidia_things.block.washer.sink.SinkDummyBlock> SINK_DUMMY_BLOCK = BLOCKS
             .register("sink_dummy",
@@ -406,6 +454,24 @@ public class TharidiaThings {
                             .of(com.THproject.tharidia_things.block.washer.sink.SinkBlockEntity::new,
                                     SINK_BLOCK.get())
                             .build(null));
+
+    // Pulverizer Block
+    public static final DeferredBlock<PulverizerBlock> PULVERIZER_BLOCK = BLOCKS.register("pulverizer",
+            () -> new PulverizerBlock());
+
+    public static final DeferredBlock<PulverizerDummyBlock> PULVERIZER_DUMMY_BLOCK = BLOCKS.register("pulverizer_dummy",
+            () -> new PulverizerDummyBlock());
+
+    public static final DeferredItem<PulverizerBlockItem> PULVERIZER_BLOCK_ITEM = ITEMS.register(
+            "pulverizer",
+            () -> new PulverizerBlockItem(PULVERIZER_BLOCK.get(),
+                    new Item.Properties()));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<PulverizerBlockEntity>> PULVERIZER_BLOCK_ENTITY = BLOCK_ENTITIES
+            .register("pulverizer",
+                    () -> BlockEntityType.Builder.of(PulverizerBlockEntity::new, PULVERIZER_BLOCK.get()).build(null));
+
+    public static final DeferredItem<Item> GRINDER = ITEMS.register("grinder", () -> new Grinder());
 
     // Creates a new BlockEntityType for the Pietro block
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<PietroBlockEntity>> PIETRO_BLOCK_ENTITY = BLOCK_ENTITIES
@@ -516,7 +582,7 @@ public class TharidiaThings {
     public static final DeferredItem<Item> MANURE = ITEMS.register("manure",
             () -> new Item(new Item.Properties().stacksTo(64)));
     public static final DeferredItem<Item> MESH = ITEMS.register("mesh",
-            () -> new Item(new Item.Properties().stacksTo(64)));
+            () -> new Item(new Item.Properties().stacksTo(1)));
 
     // Battle Gauntlet
     public static final DeferredItem<Item> BATTLE_GAUNTLE = ITEMS.register("battle_gauntlet",
@@ -590,6 +656,10 @@ public class TharidiaThings {
                         // Dye Vats
                         output.accept(DYE_VATS_ITEM.get());
 
+                        // Herbalist
+                        output.accept(HERBALIST_TREE_ITEM.get());
+                        output.accept(POT_ITEM.get());
+
                         // Chunks
                         output.accept(ChunksRegistry.COAL_CHUNK_ITEM.get());
                         output.accept(ChunksRegistry.COPPER_CHUNK_ITEM.get());
@@ -637,6 +707,10 @@ public class TharidiaThings {
                         output.accept(STATION_CRYSTAL_TOOL.get());
                         output.accept(STATION_CRYSTAL_REPAIRER.get());
 
+                        // Pulverizer
+                        output.accept(PULVERIZER_BLOCK_ITEM.get());
+                        output.accept(GRINDER.get());
+
                         // Claim utilities
                         output.accept(TRUST_CONTRACT.get());
 
@@ -655,17 +729,35 @@ public class TharidiaThings {
                         output.accept(PINZA_CRUCIBLE.get());
 
                         // Seed Extraction — Leaves
-                        output.accept(com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.COMPRESSED_LEAVES_ITEM.get());
-                        output.accept(com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.WET_COMPRESSED_LEAVES_ITEM.get());
-                        output.accept(com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.DRIED_COMPRESSED_LEAVES_ITEM.get());
+                        output.accept(
+                                com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.COMPRESSED_LEAVES_ITEM
+                                        .get());
+                        output.accept(
+                                com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.WET_COMPRESSED_LEAVES_ITEM
+                                        .get());
+                        output.accept(
+                                com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.DRIED_COMPRESSED_LEAVES_ITEM
+                                        .get());
                         // Seed Extraction — Grass
-                        output.accept(com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.COMPRESSED_GRASS_ITEM.get());
-                        output.accept(com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.WET_COMPRESSED_GRASS_ITEM.get());
-                        output.accept(com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.DRIED_COMPRESSED_GRASS_ITEM.get());
-                        output.accept(com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.ZOCCOLETTA.get());
+                        output.accept(
+                                com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.COMPRESSED_GRASS_ITEM
+                                        .get());
+                        output.accept(
+                                com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.WET_COMPRESSED_GRASS_ITEM
+                                        .get());
+                        output.accept(
+                                com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.DRIED_COMPRESSED_GRASS_ITEM
+                                        .get());
+                        output.accept(
+                                com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.ZOCCOLETTA
+                                        .get());
                         // Seed Extraction — Fertilized Dirt & Abnormal Grass
-                        output.accept(com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.FERTILIZED_DIRT_ITEM.get());
-                        output.accept(com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.ABNORMAL_GRASS_ITEM.get());
+                        output.accept(
+                                com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.FERTILIZED_DIRT_ITEM
+                                        .get());
+                        output.accept(
+                                com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.ABNORMAL_GRASS_ITEM
+                                        .get());
 
                         // Add all dynamically registered baby mob items
                         BabyMobRegistry.addToCreativeTab(output);

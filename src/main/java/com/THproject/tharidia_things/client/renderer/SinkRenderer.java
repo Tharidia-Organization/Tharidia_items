@@ -72,7 +72,7 @@ public class SinkRenderer extends GeoBlockRenderer<SinkBlockEntity> {
             poseStack.mulPose(Axis.YP.rotationDegrees(-facing.toYRot()));
 
             // 3. APPLY OFFSET (FIXED)
-            poseStack.translate(-0.8, 0, 0.0);
+            poseStack.translate(0.8, 0, 0.0);
 
             // 4. Scale down
             poseStack.scale(ITEM_SCALE, ITEM_SCALE, ITEM_SCALE);

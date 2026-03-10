@@ -188,19 +188,20 @@ La generazione procedurale costruisce stanze, corridoi e ponti in modo diverso a
 
 # Changelog 0.6.2
 
-## 💎 Cristalli
+## 💎 Cristalli?
 
 - **5 tipologie di cristalli** con modelli 3D dedicati e stadi di crescita progressivi
-- **Texture reworkate** — Nuove texture ad alta risoluzione per tutti i cristalli puri
-- **Blocchi piazzabili** con block entity e registrazione dedicata
+- **Texture** — Nuove texture ad alta risoluzione per tutti i cristalli puri [IN REWORK]
+- **Blocchi piazzabili** —  tutti i cristalli grezzi sono posizionabili nel mondo per poter esser lavorati
+- **Uso** — I cristalli non avranno solo una parte fondamentale nell'estetica per i giocatori, ma altrettanto importante nel mondo
+  - I cristalli sono essenziali per alcune lavorazioni, come il corretto funzionamento delle fucine del fabbro, come se catalizzassero l'energia
+  - Sono essenziali soprattutto a chiunque voglia usare una station, che sia una semplice crafting, fino al più complesso dei tavoli da lavoro [FUTURO CHANGELOG]
 
 ## ⛏️ Ore Chunks — Espansione
 
 - **Chunk di Carbone e Stagno** — Due nuovi minerali frantumabili con modelli a 5 stadi
-- **Refactor a classe base** — Codice condiviso tra tutti i tipi di chunk per manutenibilità
-- **Vene e Sedimenti** — Nuovi blocchi naturali aggiunti al mondo
-
-
+- **Vene e Sedimenti** — Ora ci sono vene di molti materiali nella cava, come argilla e materiali utili a costruire
+- **Tool** — Il martello per lavorare i chunk è stato ricreato, modello e texture
 
 # Changelog 0.6.3
 
@@ -208,7 +209,7 @@ La generazione procedurale costruisce stanze, corridoi e ponti in modo diverso a
 
 ## 🔮 Station Crystal
 
-- **Nuovo blocco di supporto** — Questo è un blocco creato da un insieme di cristalli e una materia instabile
+- **Nuovo blocco di supporto** — Questo è un blocco creato da un insieme di cristalli e una materia instable
 - **Scopo** — Implementata meccanica core, è possibile piazzare le station solo sopra di esso
 - **Riparazione o Distruzione** — Il cristallo allo scadere di un timer interno distrugge i blocchi sopra di sé, se non viene riparato prima
 - **Riparazione** — Il blocco è riparabile tramite speciali attrezzi soltanto tramite una classe giocante specifica, bisogna fare la manutenzione alle proprie attrezzature
@@ -218,18 +219,16 @@ La generazione procedurale costruisce stanze, corridoi e ponti in modo diverso a
 
 # Changelog 0.6.4
 
-> **Un nuovo livello sotto l'armatura.** Indossate strati aggiuntivi sotto la corazza, con attributi e rendering dedicati.
-
 ## 🛡️ Sotto-Armatura & Sistema Equip
+
+**Un nuovo livello sotto l'armatura.** Indossate strati aggiuntivi sotto la corazza, con attributi e rendering dedicati.
 
 - **Slot sotto-armatura** — Elmo, corazza, gambali e stivali con tag dedicati
 - **Attributi custom** — Ogni pezzo sotto-armatura applica bonus specifici al personaggio
 - **Renderer custom** — Layer di rendering aggiuntivo per visualizzare la sotto-armatura sul modello
 - **GUI armatura rinnovata** — Nuova schermata con slot vanilla e sotto-armatura unificati
-- **Scopo** — Creare una meccanica che permette di suddividere le armature in diverse tipologie dandogli scopi specifici ispirandoci il più possibile al reale utilizzo delle armature medievali
-# Changelog 0.6.5
 
-> Dato il fatto che qualunque mod di revive in minecraft attualmente non ci piaceva, l'abbiamo fatta noi a mano.
+# Changelog 0.6.5
 
 ## 💀 Fallen/Revive — Potenziato
 
@@ -239,8 +238,6 @@ La generazione procedurale costruisce stanze, corridoi e ponti in modo diverso a
 - **Tracciamento tempo caduto** — Il sistema tiene traccia di quanto tempo un giocatore è rimasto a terra
 - **Titolo caduto** — Visualizzazione a schermo del titolo quando si cade
 
-# Changelog 0.6.6
-> Era già presente un sistema che permette ai giocatori di commerciare in gioco, evitando semplicemente di lanciarsi soldi o materiali in faccia. (Al di fuori dei negozi ovviamente), ho migliorato il sistema a livello tecnico, e il teoria quello che è la Tesoreria verrà sfruttata durante la guerra, ma non è ancora stato definito.
 ## 💰 Mercato — Potenziato
 
 - **Sistema di tassazione** — Ogni transazione è tassata in funzione del valore della merce
@@ -248,11 +245,11 @@ La generazione procedurale costruisce stanze, corridoi e ponti in modo diverso a
 - **Tracciamento completo** — Tipo di blocco, NBT e dettagli registrati per ogni scambio
 - **Statistiche giocatore** — Sconti progressivi basati sul volume di vendita
 - **Tesoreria** — Contenitore centralizzato per tutte le tasse raccolte
-- **Fix** — Fix bug di duplicazione, sparizione e gestione logout
+- Fix bug di duplicazione, sparizione e gestione logout
 
-# Changelog 0.6.7
+# Changelog 0.6.6
 
-> Changelog dedicato ai BUG FIX
+
 ## 🎭 Creazione Personaggio — Fix Maggiore
 
 - **Validazione nome server-side** — Nuovo pacchetto server-client per verificare l'accettazione del nome scelto
@@ -283,3 +280,37 @@ La generazione procedurale costruisce stanze, corridoi e ponti in modo diverso a
 - Fix interazione con blocco dummy del sink
 - Fix inizializzazione fornace da fabbro in singleplayer
 
+# Changelog 0.6.7
+
+## 🌿 Albero dell'Erbalista.. Classe: Manovale
+
+> **La natura vi chiede qualcosa in cambio.** L'albero dell'erborista è una creatura vivente: ha fame, ha sete, e se lo trascurate, muore. Prendetevene cura e lui vi ricompenserà con petali colorati unici, forgiati dalla musica e dai fiori che gli offrite.
+
+- **Albero vivente** — L'albero ha punti vita, fame e sete. Ogni giorno al tramonto viene valutato il suo stato: se non lo nutrite e non lo innaffiate, perderà vita fino a morire
+- **Nutrizione** — Dategli da mangiare con la manure per sfamarlo e curarlo, e innaffiatelo con un secchio d'acqua per idratarlo
+- **HUD informativo** — Guardando l'albero appare un pannello in stile pergamena medievale con tutte le informazioni: salute, fame, sete, e durante il minigioco lo stato della partita in tempo reale
+
+### 🎵 Il Canto dei Vasi — Minigioco musicale
+
+> **Ascoltate, osservate, piazzate.** L'albero suona una sinfonia di 8 note e i vasi attorno a lui le ripetono. Sta a voi capire quali vasi suonano la nota giusta e piazzarci il fiore corretto.
+
+- **Sinfonia unica** — Ad ogni partita l'albero genera una melodia casuale con strumento e note diverse
+- **3 fasi musicali** — Prima l'albero suona la sinfonia completa, poi ogni vaso suona la propria nota corretta, infine i vasi suonano un mix: alcuni la nota giusta, altri una sbagliata. Dovrete ricordare quali sono quelli giusti
+- **Piazzamento fiori** — Dopo le fasi musicali potete piazzare i fiori nei vasi. Indovinate e il fiore resta, sbagliate e dopo 2 secondi il fiore scompare con fumo e un suono di errore
+- **Round progressivi** — Il gioco procede a coppie: ogni round dovete trovare 2 vasi corretti. Sbagliateli entrambi e il round si resetta. Azzeccatene solo uno e al prossimo round ne basterà uno
+- **Timer** — Avete 10 secondi per piazzare i fiori, visibile nell'HUD con countdown che cambia colore man mano che il tempo scorre
+- **Errori e Wipe** — Ogni fiore sbagliato o timeout conta come errore. Al sesto errore l'albero si spegne con una nuvola di fumo, il gioco si resetta completamente e dovrete ricominciare da capo
+- **Segnali** — Un battito cardiaco crescente del Warden annuncia l'inizio di ogni round, una cascata di cristalli di ametista e particelle End Rod vi segnalano quando potete piazzare i fiori
+- **Colore dei petali** — I petali dell'albero cambiano colore in base ai fiori che piazzate. Ogni coppia completata mescola i colori dei due fiori e li applica ai petali, che crescono di dimensione ad ogni coppia
+- **Raccolta** — Completato il minigioco, interagite a mani vuote per raccogliere 4 petali del colore che avete creato
+- **Petali nell'inventario** — I petali emettono delicate particelle colorate quando sono nel vostro inventario. I petali mistici hanno un effetto più luminoso e intenso
+
+### 🌱 8 Vasi dell'Erborista
+
+- **Vasi piazzabili** attorno all'albero nelle 8 posizioni delle radici
+- **Sistema terra** — Aggiungete terra, zappatela con la zappa, poi piantate i fiori
+- **Modello 3D** — Ogni vaso ha rendering dedicato con terra, terreno zappato e pianta visibili direttamente sul blocco
+
+### Scopo
+
+> L'albero del **MANOVALE** non è altro che un strumento antico che permette di infondere energia nei fiori per farvi ottenere petali. Questi petali avranno un preciso scopo **ALCHEMICO**. Il Manovale è una classe complessa e completa che copre tantissime sfaccettature della vita quotidiana tra i giocatori, come esser l'unico a poter gestire gli **STATION CRYSTAL** di cui avete sentito parlare nei precedenti Changelog. 

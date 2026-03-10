@@ -1,0 +1,19 @@
+{
+    "variants": {
+        "facing=north": {
+            "model": "tharidiathings:block/pulverizer"
+        },
+        "facing=south": {
+            "model": "tharidiathings:block/pulverizer",
+            "y": 180
+        },
+        "facing=east": {
+            "model": "tharidiathings:block/pulverizer",
+            "y": 90
+        },
+        "facing=west": {
+            "model": "tharidiathings:block/pulverizer",
+            "y": 270
+        }
+    }
+}

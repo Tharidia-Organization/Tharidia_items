@@ -1,0 +1,19 @@
+{
+    "variants": {
+        "facing=north": {
+            "model": "tharidiathings:block/sieve"
+        },
+        "facing=east": {
+            "model": "tharidiathings:block/sieve",
+            "y": 90
+        },
+        "facing=south": {
+            "model": "tharidiathings:block/sieve",
+            "y": 180
+        },
+        "facing=west": {
+            "model": "tharidiathings:block/sieve",
+            "y": 270
+        }
+    }
+}

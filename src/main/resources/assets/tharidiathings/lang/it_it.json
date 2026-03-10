@@ -3,6 +3,24 @@
   "block.tharidiathings.pietro": "Reame",
   "block.tharidiathings.claim": "Rivendicazione",
 
+  "block.tharidiathings.tank": "Cisterna",
+  "block.tharidiathings.sieve": "Setaccio",
+  "block.tharidiathings.sink": "Lavello",
+
+  "block.tharidiathings.vein_block_t0": "Vena Inferiore",
+  "block.tharidiathings.vein_block_t1": "Vena Comune",
+  "block.tharidiathings.vein_block_t2": "Vena Non Comune",
+  "block.tharidiathings.vein_block_t3": "Vena Maggiore",
+  "block.tharidiathings.vein_block_t4": "Vena Superiore",
+  "block.tharidiathings.vein_sediment_t0": "Mantello Inferiore",
+  "block.tharidiathings.vein_sediment_t1": "Mantello Comune",
+  "block.tharidiathings.vein_sediment_t2": "Mantello Non Comune",
+  "block.tharidiathings.vein_sediment_t3": "Mantello Maggiore",
+  "block.tharidiathings.vein_sediment_t4": "Mantello Superiore",
+
+  "block.tharidiathings.pulverizer": "Polverizzatore",
+  "item.tharidiathings.grinder": "Macina",
+
   "container.tharidiathings.claim": "Rivendicazione",
   "container.tharidiathings.pietro": "Reame",
 
@@ -415,8 +433,6 @@
   "item.tharidiathings.iron_crusher_hammer": "Martello da Frantumazione",
   "item.tharidiathings.smithing_hammer": "Martello da Fabbro",
 
-  "block.tharidiathings.sieve": "Setaccio",
-
   "block.tharidiathings.compressed_leaves": "Foglie Compresse",
   "block.tharidiathings.wet_compressed_leaves": "Foglie Compresse Bagnate",
   "block.tharidiathings.dried_compressed_leaves": "Foglie Compresse Essiccate",
@@ -425,5 +441,43 @@
   "block.tharidiathings.dried_compressed_grass": "Erba Compressa Essiccata",
   "item.tharidiathings.zoccoletta": "Zoccoletta",
   "block.tharidiathings.fertilized_dirt": "Terra Fertilizzata",
-  "block.tharidiathings.abnormal_grass": "Erba Alta Anomala"
+  "block.tharidiathings.abnormal_grass": "Erba Alta Anomala",
+
+  "block.tharidiathings.herbalist_tree": "Albero dell'Erborista",
+  "block.tharidiathings.pot": "Vaso",
+  "item.tharidiathings.petal": "Petalo",
+  "item.tharidiathings.petal_2": "Petalo Mistico",
+
+  "gui.tharidiathings.herbalist_tree.title": "Albero dell'Erborista",
+  "gui.tharidiathings.herbalist_tree.status": "Stato",
+  "gui.tharidiathings.herbalist_tree.hp": "HP: %s/100",
+  "gui.tharidiathings.herbalist_tree.hp.healthy": "Sano",
+  "gui.tharidiathings.herbalist_tree.hp.weak": "Debole",
+  "gui.tharidiathings.herbalist_tree.hp.critical": "Critico",
+  "gui.tharidiathings.herbalist_tree.hp.dead": "Morto",
+  "gui.tharidiathings.herbalist_tree.fame": "Fame",
+  "gui.tharidiathings.herbalist_tree.fame.sated": "Sazio",
+  "gui.tharidiathings.herbalist_tree.fame.hungry": "Affamato",
+  "gui.tharidiathings.herbalist_tree.fame.very_hungry": "Molto Affamato",
+  "gui.tharidiathings.herbalist_tree.fame.starving": "Denutrito",
+  "gui.tharidiathings.herbalist_tree.sete": "Sete",
+  "gui.tharidiathings.herbalist_tree.sete.hydrated": "Idratato",
+  "gui.tharidiathings.herbalist_tree.sete.thirsty": "Assetato",
+  "gui.tharidiathings.herbalist_tree.sete.dehydrated": "Disidratato",
+  "gui.tharidiathings.herbalist_tree.minigame": "Minigioco",
+  "gui.tharidiathings.herbalist_tree.step.awakening": "L'albero si sta risvegliando...",
+  "gui.tharidiathings.herbalist_tree.step.tree_plays": "L'albero sta suonando...",
+  "gui.tharidiathings.herbalist_tree.step.pots_correct": "I vasi suonano le note corrette...",
+  "gui.tharidiathings.herbalist_tree.step.pots_mix": "I vasi suonano le note miste...",
+  "gui.tharidiathings.herbalist_tree.step.waiting": "Piazza i tuoi fiori!",
+  "gui.tharidiathings.herbalist_tree.pots_filled": "Vasi: %s/%s",
+  "gui.tharidiathings.herbalist_tree.errors": "Errori: %s/%s",
+  "gui.tharidiathings.herbalist_tree.timer": "Tempo: %ss",
+  "gui.tharidiathings.herbalist_tree.complete": "Minigioco completato! Tasto destro per raccogliere.",
+  "gui.tharidiathings.herbalist_tree.hint.dead": "L'albero e' morto.",
+  "gui.tharidiathings.herbalist_tree.hint.place_pots": "Piazza 8 vasi per iniziare.",
+
+  "jei.tharidiathings.washer_recipe": "Lavaggio",
+
+  "jei.tharidiathings.pulverizer_recipe": "Polverizzatore"
 }

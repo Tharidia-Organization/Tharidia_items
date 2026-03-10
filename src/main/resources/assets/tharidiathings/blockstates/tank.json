@@ -1,0 +1,19 @@
+{
+    "variants": {
+        "facing=north": {
+            "model": "tharidiathings:block/tank"
+        },
+        "facing=east": {
+            "model": "tharidiathings:block/tank",
+            "y": 90
+        },
+        "facing=south": {
+            "model": "tharidiathings:block/tank",
+            "y": 180
+        },
+        "facing=west": {
+            "model": "tharidiathings:block/tank",
+            "y": 270
+        }
+    }
+}

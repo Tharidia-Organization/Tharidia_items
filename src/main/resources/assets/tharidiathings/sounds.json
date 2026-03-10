@@ -20,5 +20,10 @@
                 "stream": true
             }
         ]
+    },
+    "pulverizer_working": {
+        "sounds": [
+            "tharidiathings:pulverizer/pulverizer_working"
+        ]
     }
 }
