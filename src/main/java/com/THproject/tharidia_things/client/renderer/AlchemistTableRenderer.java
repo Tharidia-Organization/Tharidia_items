@@ -32,7 +32,7 @@ public class AlchemistTableRenderer extends GeoBlockRenderer<AlchemistTableBlock
     @Override
     public RenderType getRenderType(AlchemistTableBlockEntity animatable, ResourceLocation texture,
             @Nullable MultiBufferSource bufferSource, float partialTick) {
-        return RenderType.entityCutout(texture);
+        return RenderType.entityTranslucent(texture);
     }
 
     @Override
