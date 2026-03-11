@@ -13,7 +13,7 @@ public class AlchemistTableModel extends GeoModel<AlchemistTableBlockEntity> {
     private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(
             TharidiaThings.MODID, "textures/block/alchemist_table.png");
     private static final ResourceLocation ANIMATIONS = ResourceLocation.fromNamespaceAndPath(
-            TharidiaThings.MODID, "animations/model.animation.json");
+            TharidiaThings.MODID, "animations/alchemist_table.animation.json");
 
     @Override
     public ResourceLocation getModelResource(AlchemistTableBlockEntity animatable) {
