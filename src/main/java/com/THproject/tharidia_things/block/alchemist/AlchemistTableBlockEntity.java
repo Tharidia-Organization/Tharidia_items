@@ -8,7 +8,12 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.ItemTags;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -45,6 +50,32 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
 
     // Crafting state machine
     private final AlchemistCraftingHandler craftingHandler = new AlchemistCraftingHandler(this);
+
+    // ==================== Jar Storage ====================
+
+    /** Maximum items each jar can hold. */
+    public static final int JAR_CAPACITY = 5;
+
+    /**
+     * Item tag accepted by jar slots 0 and 1.
+     * Any flower recognized by the minecraft:flowers tag is valid.
+     */
+    private static final TagKey<Item> FLOWER_TAG = ItemTags.FLOWERS;
+
+    /**
+     * Item tag accepted by jar slots 2 and 3.
+     * Add items to data/tharidiathings/tags/item/manure.json to populate this tag.
+     */
+    private static final TagKey<Item> MANURE_TAG =
+            ItemTags.create(ResourceLocation.fromNamespaceAndPath("tharidiathings", "manure"));
+
+    /**
+     * Four jar slots. Each stores a single item type with a count in [0, JAR_CAPACITY].
+     * Slots 0-1 accept flowers; slots 2-3 accept manure.
+     */
+    private final ItemStack[] jars = new ItemStack[]{
+            ItemStack.EMPTY, ItemStack.EMPTY, ItemStack.EMPTY, ItemStack.EMPTY
+    };
 
     public AlchemistTableBlockEntity(BlockPos pos, BlockState state) {
         super(TharidiaThings.ALCHEMIST_TABLE_BLOCK_ENTITY.get(), pos, state);
@@ -123,6 +154,64 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         return craftingHandler;
     }
 
+    // ==================== Jar Filling ====================
+
+    /**
+     * Tries to insert one item from the player's hand into the first valid, non-full jar.
+     * Jars are tried in order 0 → 3. A jar accepts an item only if:
+     * <ul>
+     *   <li>the jar's category matches the item type (flowers for 0-1, manure for 2-3), AND</li>
+     *   <li>the jar is empty OR already contains that exact item, AND</li>
+     *   <li>the jar is not full (count &lt; JAR_CAPACITY).</li>
+     * </ul>
+     *
+     * @return {@code true} if an item was successfully inserted.
+     */
+    public boolean tryInsertIntoJar(ItemStack stack, Player player) {
+        for (int i = 0; i < jars.length; i++) {
+            if (!jarAccepts(i, stack)) continue;
+
+            ItemStack jar = jars[i];
+            boolean sameType = !jar.isEmpty() && jar.is(stack.getItem());
+            boolean notFull  = jar.getCount() < JAR_CAPACITY;
+
+            if (jar.isEmpty() || (sameType && notFull)) {
+                // Insert one item
+                if (jar.isEmpty()) {
+                    jars[i] = new ItemStack(stack.getItem(), 1);
+                } else {
+                    jars[i].grow(1);
+                }
+
+                // Consume from player inventory (skip in creative)
+                if (!player.isCreative()) {
+                    stack.shrink(1);
+                }
+
+                // Notify if now full
+                if (jars[i].getCount() >= JAR_CAPACITY) {
+                    player.displayClientMessage(
+                            Component.literal("Jar " + (i + 1) + " is full!"), true);
+                }
+
+                syncToClient();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Returns whether jar slot {@code index} is willing to accept {@code stack}. */
+    private boolean jarAccepts(int index, ItemStack stack) {
+        if (index < 2) return stack.is(FLOWER_TAG);
+        return stack.is(MANURE_TAG);
+    }
+
+    /** Returns the current contents of jar slot {@code index} (may be {@link ItemStack#EMPTY}). */
+    public ItemStack getJar(int index) {
+        return jars[index];
+    }
+
     // ==================== Independent Animation Triggers ====================
 
     public void toggleMantice() {
@@ -175,6 +264,12 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         super.saveAdditional(tag, registries);
         tag.putBoolean("ManticeActive", manticeActive);
         craftingHandler.save(tag);
+        // Save jars: only write non-empty slots
+        for (int i = 0; i < jars.length; i++) {
+            if (!jars[i].isEmpty()) {
+                tag.put("Jar" + i, jars[i].save(registries));
+            }
+        }
     }
 
     @Override
@@ -182,6 +277,12 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         super.loadAdditional(tag, registries);
         manticeActive = tag.getBoolean("ManticeActive");
         craftingHandler.load(tag);
+        for (int i = 0; i < jars.length; i++) {
+            String key = "Jar" + i;
+            jars[i] = tag.contains(key)
+                    ? ItemStack.parseOptional(registries, tag.getCompound(key))
+                    : ItemStack.EMPTY;
+        }
     }
 
     // ==================== Network Sync ====================
