@@ -94,6 +94,7 @@ import com.THproject.tharidia_things.item.PinzaCrucibleItem;
 import com.THproject.tharidia_things.item.AnimalFeedItem;
 import com.THproject.tharidia_things.item.AnimalBrushItem;
 import com.THproject.tharidia_things.item.FreshStrawItem;
+import com.THproject.tharidia_things.block.alchemist.AlchemistTokenItem;
 import com.THproject.tharidia_things.item.DirtyStrawItem;
 import com.THproject.tharidia_things.item.ShelterUpgradeKitItem;
 import com.THproject.tharidia_things.item.StationCrystalRepairerItem;
@@ -581,6 +582,8 @@ public class TharidiaThings {
             () -> new AnimalFeedItem(new Item.Properties().stacksTo(64)));
     public static final DeferredItem<Item> MANURE = ITEMS.register("manure",
             () -> new Item(new Item.Properties().stacksTo(64)));
+    public static final DeferredItem<AlchemistTokenItem> ALCHEMIST_TOKEN = ITEMS.register("alchemist_token",
+            () -> new AlchemistTokenItem(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<Item> MESH = ITEMS.register("mesh",
             () -> new Item(new Item.Properties().stacksTo(1)));
 

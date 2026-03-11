@@ -11,6 +11,7 @@ import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.tags.TagKey;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -51,6 +52,23 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
     // Crafting state machine
     private final AlchemistCraftingHandler craftingHandler = new AlchemistCraftingHandler(this);
 
+    // ==================== Interactive Crafting Session ====================
+
+    /**
+     * Dummy index that corresponds to the result table with 3 jars.
+     * Adjust this constant to match the physical position of the result table in the model.
+     */
+    public static final int RESULT_TABLE_DUMMY_INDEX = 5;
+
+    private final AlchemistCraftingSession session = new AlchemistCraftingSession();
+
+    /**
+     * Values stored in the 3 result jars of the result table.
+     * Numbers are intentionally hidden from the player — only filled/empty status is shown.
+     */
+    private final int[] resultJarValues = new int[3];
+    private int resultJarCount = 0;
+
     // ==================== Jar Storage ====================
 
     /** Maximum items each jar can hold. */
@@ -79,22 +97,6 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
 
     public AlchemistTableBlockEntity(BlockPos pos, BlockState state) {
         super(TharidiaThings.ALCHEMIST_TABLE_BLOCK_ENTITY.get(), pos, state);
-    }
-
-    public void addInteraction(Player player) {
-        player.displayClientMessage(Component.literal("Add interaction triggered!"), true);
-    }
-
-    public void subtractInteraction(Player player) {
-        player.displayClientMessage(Component.literal("Subtract interaction triggered!"), true);
-    }
-
-    public void divideInteraction(Player player) {
-        player.displayClientMessage(Component.literal("Divide interaction triggered!"), true);
-    }
-
-    public void multiplyInteraction(Player player) {
-        player.displayClientMessage(Component.literal("Multiply interaction triggered!"), true);
     }
 
     // ==================== Server Tick ====================
@@ -168,6 +170,14 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
      * @return {@code true} if an item was successfully inserted.
      */
     public boolean tryInsertIntoJar(ItemStack stack, Player player) {
+        if (resultJarCount >= resultJarValues.length) {
+            player.displayClientMessage(Component.literal("The result table is full — collect the results first!"), true);
+            return false;
+        }
+        if (session.isActive()) {
+            player.displayClientMessage(Component.literal("Cannot change jars during an active session!"), true);
+            return false;
+        }
         for (int i = 0; i < jars.length; i++) {
             if (!jarAccepts(i, stack)) continue;
 
@@ -210,6 +220,168 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
     /** Returns the current contents of jar slot {@code index} (may be {@link ItemStack#EMPTY}). */
     public ItemStack getJar(int index) {
         return jars[index];
+    }
+
+    // ==================== Crafting Session — Jar Picking (empty hand on D1) ====================
+
+    /**
+     * Called when the player right-clicks dummy 1 with an empty hand.
+     * Activates the session on first call, then gives the player an
+     * {@link AlchemistTokenItem} carrying the next jar's value.
+     */
+    public void tryPickJar(Player player) {
+        if (!player.getMainHandItem().isEmpty()) {
+            player.displayClientMessage(Component.literal("Empty your hand first!"), true);
+            return;
+        }
+        if (!allJarsFull()) {
+            player.displayClientMessage(Component.literal("Fill all 4 jars first!"), true);
+            return;
+        }
+        if (session.isTokenOut()) {
+            player.displayClientMessage(
+                    Component.literal("Use your current token on an operation dummy first!"), true);
+            return;
+        }
+        if (!session.isActive()) {
+            session.activate();
+            triggerAnim("book_controller", "flip");
+        }
+        int jarIndex = session.pickNextJar();
+        if (jarIndex < 0) {
+            player.displayClientMessage(Component.literal("All jars have already been used!"), true);
+            return;
+        }
+        int value = AlchemistJarRegistry.getItemValue(jars[jarIndex]);
+        player.setItemInHand(InteractionHand.MAIN_HAND, AlchemistTokenItem.create(value));
+        player.displayClientMessage(
+                Component.literal("Picked jar " + (jarIndex + 1) + " ["
+                        + AlchemistJarRegistry.describeJar(jars[jarIndex]) + "]"), true);
+        syncToClient();
+    }
+
+    // ==================== Crafting Session — Operations (token on operation dummy) ====================
+
+    /**
+     * Called from empty-hand right-click on an operation dummy.
+     * Shows the dummy's current state without consuming anything.
+     */
+    public void addInteraction(Player player)      { showOperationStatus(player, AlchemistOperation.ADD); }
+    public void subtractInteraction(Player player) { showOperationStatus(player, AlchemistOperation.SUBTRACT); }
+    public void divideInteraction(Player player)   { showOperationStatus(player, AlchemistOperation.DIVIDE); }
+    public void multiplyInteraction(Player player) { showOperationStatus(player, AlchemistOperation.MULTIPLY); }
+
+    private void showOperationStatus(Player player, AlchemistOperation op) {
+        if (!session.isActive()) {
+            player.displayClientMessage(
+                    Component.literal("[" + op.name() + "] Idle — start by picking a jar from D1."), true);
+            return;
+        }
+        Integer first = session.getDummyOperand(op.dummyIndex);
+        if (first == null) {
+            player.displayClientMessage(
+                    Component.literal("[" + op.name() + "] Empty — bring a token here to set the first operand."), true);
+        } else {
+            player.displayClientMessage(
+                    Component.literal("[" + op.name() + "] Primed: _ " + op.symbol + " ? — bring a token to complete."), true);
+        }
+    }
+
+    /**
+     * Called from {@link AlchemistTableDummyBlock#useItemOn} when the player uses an
+     * {@link AlchemistTokenItem} on an operation dummy.
+     * Consumes the token and either sets the first operand or executes the operation.
+     */
+    public void handleOperationInteraction(Player player, InteractionHand hand,
+                                           ItemStack tokenStack, AlchemistOperation op) {
+        if (!session.isActive()) {
+            player.displayClientMessage(Component.literal("Pick a jar from D1 first."), true);
+            return;
+        }
+        int held      = AlchemistTokenItem.getValue(tokenStack);
+        int dummyIndex = op.dummyIndex;
+
+        if (!session.hasDummyOperand(dummyIndex)) {
+            if (session.isFinalResult()) {
+                player.displayClientMessage(
+                        Component.literal("All jars used — complete an existing operation first."), true);
+                return;
+            }
+            // Store as first operand, consume token
+            session.setDummyFirstOperand(dummyIndex, held);
+            player.setItemInHand(hand, ItemStack.EMPTY);
+            player.displayClientMessage(
+                    Component.literal("[" + op.name() + "] Stored " + held + " — pick another jar."), true);
+        } else {
+            // Execute: first op second
+            int firstOp = session.getDummyOperand(dummyIndex);
+            int result  = session.executeOperation(dummyIndex, op, held);
+            player.displayClientMessage(
+                    Component.literal(firstOp + " " + op.symbol + " " + held + " = " + result), true);
+
+            if (session.isFinalResult()) {
+                // All jars consumed → store result, clear jars, end session
+                player.setItemInHand(hand, ItemStack.EMPTY);
+                session.setTokenOut(false);
+                storeResultInJar(result, player);
+                java.util.Arrays.fill(jars, ItemStack.EMPTY);
+                session.reset();
+            } else {
+                // Give result token back to the player
+                player.setItemInHand(hand, AlchemistTokenItem.create(result));
+                session.setTokenOut(true);
+            }
+        }
+        syncToClient();
+    }
+
+    // ==================== Result Table Jars ====================
+
+    /**
+     * Stores a final crafting result into the next empty result jar.
+     * The value is saved internally but never shown to the player.
+     */
+    private void storeResultInJar(int result, Player player) {
+        if (resultJarCount >= resultJarValues.length) {
+            player.displayClientMessage(
+                    Component.literal("Result table is full! (" + resultJarCount + "/3)"), true);
+            return;
+        }
+        resultJarValues[resultJarCount++] = result;
+        player.displayClientMessage(
+                Component.literal("Result jar " + resultJarCount + " filled! (" + resultJarCount + "/3)"), true);
+        // TODO: trigger jar-fill animation on result table dummy
+    }
+
+    /**
+     * Shows only the fill status of the result table jars — values are intentionally hidden.
+     * Called when dummy {@link #RESULT_TABLE_DUMMY_INDEX} is right-clicked empty-handed.
+     */
+    public void displayResultJars(Player player) {
+        StringBuilder sb = new StringBuilder("Result jars: ");
+        for (int i = 0; i < resultJarValues.length; i++) {
+            if (i > 0) sb.append("  ");
+            sb.append("[").append(i + 1).append("] ")
+              .append(i < resultJarCount ? "● " + resultJarValues[i] : "○");
+        }
+        player.displayClientMessage(Component.literal(sb.toString()), true);
+    }
+
+    /** Returns the number of result jars currently filled (0-3). */
+    public int getResultJarCount() { return resultJarCount; }
+
+    /** Returns the value stored in result jar {@code index}. Only meaningful if {@code index < resultJarCount}. */
+    public int getResultJarValue(int index) { return resultJarValues[index]; }
+
+    // ==================== Helpers ====================
+
+    /** Returns true only when all 4 jars are filled to capacity with a known-value item. */
+    private boolean allJarsFull() {
+        for (ItemStack jar : jars) {
+            if (jar.isEmpty() || jar.getCount() < JAR_CAPACITY) return false;
+            if (AlchemistJarRegistry.getItemValue(jar) == 0) return false;
+        }
+        return true;
     }
 
     // ==================== Independent Animation Triggers ====================
@@ -264,12 +436,14 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         super.saveAdditional(tag, registries);
         tag.putBoolean("ManticeActive", manticeActive);
         craftingHandler.save(tag);
-        // Save jars: only write non-empty slots
+        // Jars
         for (int i = 0; i < jars.length; i++) {
-            if (!jars[i].isEmpty()) {
-                tag.put("Jar" + i, jars[i].save(registries));
-            }
+            if (!jars[i].isEmpty()) tag.put("Jar" + i, jars[i].save(registries));
         }
+        // Session
+        session.save(tag);
+        // Result table jars
+        tag.putIntArray("ResultJarValues", java.util.Arrays.copyOf(resultJarValues, resultJarCount));
     }
 
     @Override
@@ -277,12 +451,19 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         super.loadAdditional(tag, registries);
         manticeActive = tag.getBoolean("ManticeActive");
         craftingHandler.load(tag);
+        // Jars
         for (int i = 0; i < jars.length; i++) {
             String key = "Jar" + i;
             jars[i] = tag.contains(key)
                     ? ItemStack.parseOptional(registries, tag.getCompound(key))
                     : ItemStack.EMPTY;
         }
+        // Session
+        session.load(tag);
+        // Result table jars
+        int[] saved = tag.getIntArray("ResultJarValues");
+        resultJarCount = Math.min(saved.length, resultJarValues.length);
+        System.arraycopy(saved, 0, resultJarValues, 0, resultJarCount);
     }
 
     // ==================== Network Sync ====================

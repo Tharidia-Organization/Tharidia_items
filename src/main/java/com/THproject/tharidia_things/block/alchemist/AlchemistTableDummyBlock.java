@@ -72,23 +72,41 @@ public class AlchemistTableDummyBlock extends Block {
 
     /**
      * Called when the player right-clicks this dummy with an item in hand.
-     * Only dummy index 1 (the jar block) handles item insertion; all others pass through.
+     * - Index 1 (jar dummy): fills jars with flowers/manure, or rejects tokens.
+     * - Indices 0,2,3,4 (operation dummies): consumes a token to apply to the operation.
      */
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hitResult) {
-        if (state.getValue(PART_INDEX) != 1) return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        int partIndex = state.getValue(PART_INDEX);
 
         BlockPos masterPos = findMaster(level, pos, state);
         if (masterPos == null) return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         if (!(level.getBlockEntity(masterPos) instanceof AlchemistTableBlockEntity table))
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
 
-        if (level.isClientSide) return ItemInteractionResult.SUCCESS;
+        // Operation dummies: token interaction
+        AlchemistOperation op = AlchemistOperation.fromDummyIndex(partIndex);
+        if (op != null) {
+            if (!AlchemistTokenItem.isToken(stack)) return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+            if (level.isClientSide) return ItemInteractionResult.SUCCESS;
+            table.handleOperationInteraction(player, hand, stack, op);
+            return ItemInteractionResult.SUCCESS;
+        }
 
-        return table.tryInsertIntoJar(stack, player)
-                ? ItemInteractionResult.SUCCESS
-                : ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        // Jar dummy (index 1): block tokens, allow flowers/manure
+        if (partIndex == 1) {
+            if (AlchemistTokenItem.isToken(stack)) {
+                // Token cannot be inserted into a jar
+                return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+            }
+            if (level.isClientSide) return ItemInteractionResult.SUCCESS;
+            return table.tryInsertIntoJar(stack, player)
+                    ? ItemInteractionResult.SUCCESS
+                    : ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        }
+
+        return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
     }
 
     @Override
@@ -100,21 +118,20 @@ public class AlchemistTableDummyBlock extends Block {
                 int partIndex = state.getValue(PART_INDEX);
                 if (!level.isClientSide) {
                     switch (partIndex) {
-                        case 0 -> { // Add
+                        case 1 -> // Jar dummy: pick next jar (empty-hand; filling is handled in useItemOn)
+                            table.tryPickJar(player);
+                        case 0 -> // Add
                             table.addInteraction(player);
-                        }
-                        case 2 -> { // Subtract
+                        case 2 -> // Subtract
                             table.subtractInteraction(player);
-                        }
-                        case 3 -> { // Divide
+                        case 3 -> // Divide
                             table.divideInteraction(player);
-                        }
-                        case 4 -> { // Multiply
+                        case 4 -> // Multiply
                             table.multiplyInteraction(player);
-                        }
-                        case 7 -> {
+                        case 5 -> // Result table with 3 jars (RESULT_TABLE_DUMMY_INDEX)
+                            table.displayResultJars(player);
+                        case 7 ->
                             table.toggleMantice();
-                        }
                     }
                 }
                 return InteractionResult.sidedSuccess(level.isClientSide);
