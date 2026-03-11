@@ -7,6 +7,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
@@ -20,37 +21,95 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 
 /**
  * Block entity for the Alchemist Table multiblock.
- * Handles GeckoLib animations and future crafting state.
+ * Handles GeckoLib animations, crafting state, and network sync.
+ *
+ * <p>Crafting is initiated by right-clicking dummy index 1 (most external block
+ * on the short arm), which calls {@link #startCraftingSequence()}. The
+ * {@link AlchemistCraftingHandler} drives phase transitions and this class
+ * reacts via {@link #onCraftingPhaseChanged} to play animations and sync state.
  */
 public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEntity {
 
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
 
-    // Looping animation for mantice (chimney flap)
+    // GeckoLib animations
     private static final RawAnimation MANTICE_ANIM = RawAnimation.begin().thenLoop("mantice");
-    // One-shot triggered animations
-    private static final RawAnimation BOOK_ANIM = RawAnimation.begin().thenPlay("book");
-    private static final RawAnimation PESTEL_ANIM = RawAnimation.begin().thenPlay("pestel");
+    private static final RawAnimation BOOK_ANIM    = RawAnimation.begin().thenPlay("book");
+    private static final RawAnimation PESTEL_ANIM  = RawAnimation.begin().thenPlay("pestel");
 
-    // State
+    // Independent toggle (not tied to crafting)
     private boolean manticeActive = false;
+
+    // Crafting state machine
+    private final AlchemistCraftingHandler craftingHandler = new AlchemistCraftingHandler(this);
 
     public AlchemistTableBlockEntity(BlockPos pos, BlockState state) {
         super(TharidiaThings.ALCHEMIST_TABLE_BLOCK_ENTITY.get(), pos, state);
     }
 
-    // ==================== Animation Triggers ====================
+    // ==================== Server Tick ====================
+
+    /**
+     * Static ticker method registered by {@link AlchemistTableBlock#getTicker}.
+     * Drives the crafting state machine every server tick.
+     */
+    public static void serverTick(Level level, BlockPos pos, BlockState state, AlchemistTableBlockEntity be) {
+        be.craftingHandler.serverTick();
+    }
+
+    // ==================== Crafting Entry Point ====================
+
+    /**
+     * Called when dummy index 1 (most external block on the short arm) is right-clicked.
+     * Hands off to the crafting handler; returns {@code true} if the sequence started.
+     */
+    public boolean startCraftingSequence() {
+        return craftingHandler.startSequence();
+    }
+
+    // ==================== Crafting Callbacks (called by AlchemistCraftingHandler) ====================
+
+    /**
+     * Reacts to a phase transition in the crafting handler.
+     * This is the central coordinator: trigger the appropriate animations
+     * for each phase and notify the client.
+     */
+    void onCraftingPhaseChanged(AlchemistCraftingPhase newPhase) {
+        switch (newPhase) {
+            case PROCESSING -> {
+                // TODO: activate cauldron/fire animations
+            }
+            case FINISHING -> {
+                // TODO: play output-ready animation
+            }
+            case IDLE -> {
+                // Sequence ended (success or abort); nothing extra needed here
+            }
+        }
+        syncToClient();
+    }
+
+    /**
+     * Called by the crafting handler at the end of the FINISHING phase.
+     * TODO: consume ingredients from inventory, drop/insert the output item.
+     */
+    void onCraftingComplete() {
+        // TODO: implement output logic
+    }
+
+    /** Accessor for the crafting handler (e.g. for GUI or recipe validation). */
+    public AlchemistCraftingHandler getCraftingHandler() {
+        return craftingHandler;
+    }
+
+    // ==================== Independent Animation Triggers ====================
 
     public void toggleMantice() {
         this.manticeActive = !this.manticeActive;
         syncToClient();
     }
 
-    public void triggerBookAnimation() {
-        triggerAnim("book_controller", "flip");
-        syncToClient();
-    }
-
+    /** Directly triggers the pestle animation (independent of crafting, e.g. from dummy index 3). */
     public void triggerPestelAnimation() {
         triggerAnim("pestel_controller", "grind");
         syncToClient();
@@ -91,12 +150,14 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
         tag.putBoolean("ManticeActive", manticeActive);
+        craftingHandler.save(tag);
     }
 
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
         manticeActive = tag.getBoolean("ManticeActive");
+        craftingHandler.load(tag);
     }
 
     // ==================== Network Sync ====================
@@ -114,7 +175,7 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         return ClientboundBlockEntityDataPacket.create(this);
     }
 
-    private void syncToClient() {
+    void syncToClient() {
         setChanged();
         if (level != null && !level.isClientSide) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);

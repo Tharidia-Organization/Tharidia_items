@@ -76,7 +76,9 @@ public class AlchemistTableDummyBlock extends Block {
                 int partIndex = state.getValue(PART_INDEX);
                 if (!level.isClientSide) {
                     switch (partIndex) {
-                        case 1 -> table.triggerBookAnimation();
+                        // Index 1: most external block on the short arm — starts the crafting sequence.
+                        // The sequence itself triggers book/pestel animations at the right phases.
+                        case 1 -> table.startCraftingSequence();
                         case 3 -> table.triggerPestelAnimation();
                         case 6 -> table.toggleMantice();
                     }
