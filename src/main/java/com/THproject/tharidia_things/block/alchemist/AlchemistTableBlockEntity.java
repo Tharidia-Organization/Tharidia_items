@@ -4,9 +4,11 @@ import com.THproject.tharidia_things.TharidiaThings;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -23,7 +25,8 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  * Block entity for the Alchemist Table multiblock.
  * Handles GeckoLib animations, crafting state, and network sync.
  *
- * <p>Crafting is initiated by right-clicking dummy index 1 (most external block
+ * <p>
+ * Crafting is initiated by right-clicking dummy index 1 (most external block
  * on the short arm), which calls {@link #startCraftingSequence()}. The
  * {@link AlchemistCraftingHandler} drives phase transitions and this class
  * reacts via {@link #onCraftingPhaseChanged} to play animations and sync state.
@@ -47,6 +50,22 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         super(TharidiaThings.ALCHEMIST_TABLE_BLOCK_ENTITY.get(), pos, state);
     }
 
+    public void addInteraction(Player player) {
+        player.displayClientMessage(Component.literal("Add interaction triggered!"), true);
+    }
+
+    public void subtractInteraction(Player player) {
+        player.displayClientMessage(Component.literal("Subtract interaction triggered!"), true);
+    }
+
+    public void divideInteraction(Player player) {
+        player.displayClientMessage(Component.literal("Divide interaction triggered!"), true);
+    }
+
+    public void multiplyInteraction(Player player) {
+        player.displayClientMessage(Component.literal("Multiply interaction triggered!"), true);
+    }
+
     // ==================== Server Tick ====================
 
     /**
@@ -60,14 +79,16 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
     // ==================== Crafting Entry Point ====================
 
     /**
-     * Called when dummy index 1 (most external block on the short arm) is right-clicked.
-     * Hands off to the crafting handler; returns {@code true} if the sequence started.
+     * Called when dummy index 1 (most external block on the short arm) is
+     * right-clicked.
+     * Hands off to the crafting handler; returns {@code true} if the sequence
+     * started.
      */
     public boolean startCraftingSequence() {
         return craftingHandler.startSequence();
     }
 
-    // ==================== Crafting Callbacks (called by AlchemistCraftingHandler) ====================
+    // ========== Crafting Callbacks (called by AlchemistCraftingHandler) ==========
 
     /**
      * Reacts to a phase transition in the crafting handler.
@@ -109,7 +130,10 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         syncToClient();
     }
 
-    /** Directly triggers the pestle animation (independent of crafting, e.g. from dummy index 3). */
+    /**
+     * Directly triggers the pestle animation
+     * (independent of crafting, e.g. from dummy index 3).
+     */
     public void triggerPestelAnimation() {
         triggerAnim("pestel_controller", "grind");
         syncToClient();
