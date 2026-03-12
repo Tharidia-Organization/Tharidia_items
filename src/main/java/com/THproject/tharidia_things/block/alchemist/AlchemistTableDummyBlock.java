@@ -72,19 +72,23 @@ public class AlchemistTableDummyBlock extends Block {
 
     /**
      * Called when the player right-clicks this dummy with an item in hand.
-     * Only dummy index 1 (the jar block) handles item insertion; all others pass through.
+     * Only dummy index 1 (the jar block) handles item insertion; all others pass
+     * through.
      */
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hitResult) {
-        if (state.getValue(PART_INDEX) != 1) return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        if (state.getValue(PART_INDEX) != 1)
+            return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
 
         BlockPos masterPos = findMaster(level, pos, state);
-        if (masterPos == null) return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        if (masterPos == null)
+            return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         if (!(level.getBlockEntity(masterPos) instanceof AlchemistTableBlockEntity table))
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
 
-        if (level.isClientSide) return ItemInteractionResult.SUCCESS;
+        if (level.isClientSide)
+            return ItemInteractionResult.SUCCESS;
 
         return table.tryInsertIntoJar(stack, player)
                 ? ItemInteractionResult.SUCCESS
@@ -111,6 +115,10 @@ public class AlchemistTableDummyBlock extends Block {
                         }
                         case 4 -> { // Multiply
                             table.multiplyInteraction(player);
+                        }
+                        case 6 -> {
+                            boolean result = table.isRightCauldronClick(hitResult.getLocation());
+                            System.out.println(result);
                         }
                         case 7 -> {
                             table.toggleMantice();
