@@ -3,6 +3,7 @@ package com.THproject.tharidia_things.block.alchemist;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.ItemInteractionResult;
@@ -118,7 +119,12 @@ public class AlchemistTableDummyBlock extends Block {
                         }
                         case 6 -> {
                             boolean result = table.isRightCauldronClick(hitResult.getLocation());
-                            System.out.println(result);
+                            if (result)
+                                player.displayClientMessage(
+                                        Component.literal("Hit right cauldron!").withColor(0x00FF00), true);
+                            else
+                                player.displayClientMessage(
+                                        Component.literal("Hit left cauldron!").withColor(0xFF0000), true);
                         }
                         case 7 -> {
                             table.toggleMantice();

@@ -248,26 +248,27 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         return new float[] { (float) rotatedX, 1.05f, (float) rotatedZ, radius };
     }
 
-    // This doesn't works
     public boolean isRightCauldronClick(Vec3 hitVec) {
-        // 1. Convert the world-space hitVec to a local-space vector relative to the
-        // Master Pos
-        BlockPos masterPos = AlchemistTableBlock.getMasterPosFromDummy(worldPosition, 6,
+        BlockPos dummyPos = AlchemistTableBlock.getDummyPos(worldPosition, 6,
                 getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING));
 
-        // This gives us a vector where (0,0,0) is the corner of the Master Block
-        double localHitX = hitVec.x - masterPos.getX();
-        double localHitY = hitVec.y - masterPos.getY();
-        double localHitZ = hitVec.z - masterPos.getZ();
-        Vec3 relativeHit = new Vec3(localHitX, localHitY, localHitZ);
+        float hitX = (float) hitVec.x;
+        float hitY = (float) hitVec.y;
+        float hitZ = (float) hitVec.z;
 
-        // 2. Get the hotspot (which is already relative to Master Pos)
         float[] hotspot = getCauldronHotspot();
-        Vec3 hotspotCenter = new Vec3(hotspot[0], hotspot[1], hotspot[2]);
-        float radius = hotspot[3];
 
-        // 3. Compare the two relative vectors
-        return relativeHit.distanceToSqr(hotspotCenter) < (radius * radius);
+        float hotspotX = (float) dummyPos.getX() + hotspot[0] + 0.5f;
+        float hotspotY = (float) dummyPos.getY() + hotspot[1];
+        float hotspotZ = (float) dummyPos.getZ() + hotspot[2] + 0.5f;
+
+        Vec3 hit = new Vec3(hitX, hitY, hitZ);
+        Vec3 hotspotVec = new Vec3(hotspotX, hotspotY, hotspotZ);
+
+        Vec3 diff = hit.subtract(hotspotVec);
+        double distance = diff.length();
+
+        return distance <= hotspot[3];
     }
 
     // ==================== Independent Animation Triggers ====================
