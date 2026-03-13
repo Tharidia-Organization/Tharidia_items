@@ -136,7 +136,16 @@ public class AlchemistTableBlock extends BaseEntityBlock {
             }
         }
         return true;
+    }    /**
+     * Gets the world position of a specific dummy block by its index.
+     */
+    public static BlockPos getDummyPos(BlockPos masterPos, int index, Direction facing) {
+        if (index < 0 || index >= DUMMY_OFFSETS.length) {
+            return masterPos;
+        }
+        return getWorldPos(masterPos, DUMMY_OFFSETS[index][0], DUMMY_OFFSETS[index][2], facing);
     }
+
 
     /**
      * Places all dummy blocks to form the multiblock.

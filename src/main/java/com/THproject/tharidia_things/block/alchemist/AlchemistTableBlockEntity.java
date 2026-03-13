@@ -18,6 +18,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.phys.Vec3;
+
 import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.animatable.GeoBlockEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
@@ -42,9 +45,7 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
 
     // GeckoLib animations
-    private static final RawAnimation MANTICE_ANIM = RawAnimation.begin().thenLoop("mantice");
-    private static final RawAnimation BOOK_ANIM    = RawAnimation.begin().thenPlay("book");
-    private static final RawAnimation PESTEL_ANIM  = RawAnimation.begin().thenPlay("pestel");
+    private static final RawAnimation CAULDRON_ANIM = RawAnimation.begin().thenLoop("Mestolone");
 
     // Independent toggle (not tied to crafting)
     private boolean manticeActive = false;
@@ -84,14 +85,15 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
      * Item tag accepted by jar slots 2 and 3.
      * Add items to data/tharidiathings/tags/item/manure.json to populate this tag.
      */
-    private static final TagKey<Item> MANURE_TAG =
-            ItemTags.create(ResourceLocation.fromNamespaceAndPath("tharidiathings", "manure"));
+    private static final TagKey<Item> MANURE_TAG = ItemTags
+            .create(ResourceLocation.fromNamespaceAndPath("tharidiathings", "manure"));
 
     /**
-     * Four jar slots. Each stores a single item type with a count in [0, JAR_CAPACITY].
+     * Four jar slots. Each stores a single item type with a count in [0,
+     * JAR_CAPACITY].
      * Slots 0-1 accept flowers; slots 2-3 accept manure.
      */
-    private final ItemStack[] jars = new ItemStack[]{
+    private final ItemStack[] jars = new ItemStack[] {
             ItemStack.EMPTY, ItemStack.EMPTY, ItemStack.EMPTY, ItemStack.EMPTY
     };
 
@@ -159,12 +161,14 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
     // ==================== Jar Filling ====================
 
     /**
-     * Tries to insert one item from the player's hand into the first valid, non-full jar.
+     * Tries to insert one item from the player's hand into the first valid,
+     * non-full jar.
      * Jars are tried in order 0 → 3. A jar accepts an item only if:
      * <ul>
-     *   <li>the jar's category matches the item type (flowers for 0-1, manure for 2-3), AND</li>
-     *   <li>the jar is empty OR already contains that exact item, AND</li>
-     *   <li>the jar is not full (count &lt; JAR_CAPACITY).</li>
+     * <li>the jar's category matches the item type (flowers for 0-1, manure for
+     * 2-3), AND</li>
+     * <li>the jar is empty OR already contains that exact item, AND</li>
+     * <li>the jar is not full (count &lt; JAR_CAPACITY).</li>
      * </ul>
      *
      * @return {@code true} if an item was successfully inserted.
@@ -179,11 +183,12 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
             return false;
         }
         for (int i = 0; i < jars.length; i++) {
-            if (!jarAccepts(i, stack)) continue;
+            if (!jarAccepts(i, stack))
+                continue;
 
             ItemStack jar = jars[i];
             boolean sameType = !jar.isEmpty() && jar.is(stack.getItem());
-            boolean notFull  = jar.getCount() < JAR_CAPACITY;
+            boolean notFull = jar.getCount() < JAR_CAPACITY;
 
             if (jar.isEmpty() || (sameType && notFull)) {
                 // Insert one item
@@ -211,15 +216,69 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         return false;
     }
 
-    /** Returns whether jar slot {@code index} is willing to accept {@code stack}. */
+    /**
+     * Returns whether jar slot {@code index} is willing to accept {@code stack}.
+     */
     private boolean jarAccepts(int index, ItemStack stack) {
-        if (index < 2) return stack.is(FLOWER_TAG);
+        if (index < 2)
+            return stack.is(FLOWER_TAG);
         return stack.is(MANURE_TAG);
     }
 
-    /** Returns the current contents of jar slot {@code index} (may be {@link ItemStack#EMPTY}). */
+    /**
+     * Returns the current contents of jar slot {@code index} (may be
+     * {@link ItemStack#EMPTY}).
+     */
     public ItemStack getJar(int index) {
         return jars[index];
+    }
+
+    public float[] getCauldronHotspot() {
+        float radius = 0.15f;
+        BlockPos masterPos = AlchemistTableBlock.getMasterPosFromDummy(worldPosition, 6,
+                getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING));
+        BlockPos dummyPos = worldPosition;
+
+        float relX = dummyPos.getX() - masterPos.getX();
+        float relZ = dummyPos.getZ() - masterPos.getZ();
+
+        relX += 0.5f;
+        relZ += 0.5f;
+
+        float rotation = (float) (level.getGameTime() * 3.0f);
+        double radians = Math.toRadians(rotation);
+        double cos = Math.cos(radians);
+        double sin = Math.sin(radians);
+        double rotatedX = relX * cos - relZ * sin;
+        double rotatedZ = relX * sin + relZ * cos;
+
+        rotatedX /= 12.0f;
+        rotatedZ /= 12.0f;
+
+        return new float[] { (float) rotatedX, 1.05f, (float) rotatedZ, radius };
+    }
+
+    public boolean isRightCauldronClick(Vec3 hitVec) {
+        BlockPos dummyPos = AlchemistTableBlock.getDummyPos(worldPosition, 6,
+                getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING));
+
+        float hitX = (float) hitVec.x;
+        float hitY = (float) hitVec.y;
+        float hitZ = (float) hitVec.z;
+
+        float[] hotspot = getCauldronHotspot();
+
+        float hotspotX = (float) dummyPos.getX() + hotspot[0] + 0.5f;
+        float hotspotY = (float) dummyPos.getY() + hotspot[1];
+        float hotspotZ = (float) dummyPos.getZ() + hotspot[2] + 0.5f;
+
+        Vec3 hit = new Vec3(hitX, hitY, hitZ);
+        Vec3 hotspotVec = new Vec3(hotspotX, hotspotY, hotspotZ);
+
+        Vec3 diff = hit.subtract(hotspotVec);
+        double distance = diff.length();
+
+        return distance <= hotspot[3];
     }
 
     // ==================== Crafting Session — Jar Picking (empty hand on D1) ====================
@@ -405,23 +464,14 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
         // Mantice (looping, state-driven)
-        controllers.add(new AnimationController<>(this, "mantice_controller", 5, state -> {
-            if (this.manticeActive) {
-                state.getController().setAnimation(MANTICE_ANIM);
+        controllers.add(new AnimationController<>(this, "cauldron", 5, state -> {
+            if (this.craftingHandler.getPhase() == AlchemistCraftingPhase.FINISHING) {
+                state.getController().setAnimationSpeed(0.5).setAnimation(CAULDRON_ANIM);
                 return PlayState.CONTINUE;
             }
-            return PlayState.STOP;
+            state.getController().setAnimationSpeed(0);
+            return PlayState.CONTINUE;
         }));
-
-        // Book (one-shot, triggered)
-        controllers.add(new AnimationController<>(this, "book_controller", 5,
-                state -> PlayState.STOP)
-                .triggerableAnim("flip", BOOK_ANIM));
-
-        // Pestel (one-shot, triggered)
-        controllers.add(new AnimationController<>(this, "pestel_controller", 5,
-                state -> PlayState.STOP)
-                .triggerableAnim("grind", PESTEL_ANIM));
     }
 
     @Override
