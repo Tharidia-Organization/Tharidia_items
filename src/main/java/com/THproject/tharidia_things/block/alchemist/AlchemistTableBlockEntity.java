@@ -25,9 +25,6 @@ import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.animatable.GeoBlockEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.animation.AnimatableManager;
-import software.bernie.geckolib.animation.AnimationController;
-import software.bernie.geckolib.animation.PlayState;
-import software.bernie.geckolib.animation.RawAnimation;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 /**
@@ -44,11 +41,17 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
 
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
 
-    // GeckoLib animations
-    private static final RawAnimation CAULDRON_ANIM = RawAnimation.begin().thenLoop("Mestolone");
-
     // Independent toggle (not tied to crafting)
     private boolean manticeActive = false;
+
+    // ==================== Stirring Angle ====================
+
+    /** Accumulated rotation angle of the Mestolone in degrees. Advances only while the player stirs correctly. */
+    private float craftingAngle = 0f;
+    /** Angle from the previous server tick — used by the renderer for partialTick interpolation. */
+    private float prevCraftingAngle = 0f;
+    /** Set to true by tryStir() each tick the player hits the hotspot; consumed and reset in serverTick. */
+    private boolean isBeingStirred = false;
 
     // Crafting state machine
     private final AlchemistCraftingHandler craftingHandler = new AlchemistCraftingHandler(this);
@@ -109,6 +112,14 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
      */
     public static void serverTick(Level level, BlockPos pos, BlockState state, AlchemistTableBlockEntity be) {
         be.craftingHandler.serverTick();
+
+        // Advance stirring angle only when the player is actively hitting the hotspot
+        be.prevCraftingAngle = be.craftingAngle;
+        if (be.isBeingStirred) {
+            be.craftingAngle += 3.0f;
+            be.syncToClient(); // send updated angle to renderer
+        }
+        be.isBeingStirred = false; // reset every tick — must be refreshed by player input
     }
 
     // ==================== Crafting Entry Point ====================
@@ -233,7 +244,13 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         return jars[index];
     }
 
-    public float[] getCauldronHotspot() {
+    /**
+     * Returns the world-space hotspot position driven by the accumulated {@link #craftingAngle}.
+     * Pass {@code partialTick = 1.0f} for server-side checks; use the actual partialTick on the client.
+     *
+     * @return float[4] — {offsetX, offsetY, offsetZ, radius}, relative to the cauldron dummy block centre.
+     */
+    public float[] getCauldronHotspot(float partialTick) {
         float radius = 0.15f;
         BlockPos masterPos = AlchemistTableBlock.getMasterPosFromDummy(worldPosition, 6,
                 getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING));
@@ -245,8 +262,9 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         relX += 0.5f;
         relZ += 0.5f;
 
-        float rotation = (float) (level.getGameTime() * 3.0f);
-        double radians = Math.toRadians(rotation);
+        // Interpolate between prev and current angle for smooth client rendering
+        float angle = prevCraftingAngle + (craftingAngle - prevCraftingAngle) * partialTick;
+        double radians = Math.toRadians(angle);
         double cos = Math.cos(radians);
         double sin = Math.sin(radians);
         double rotatedX = relX * cos - relZ * sin;
@@ -258,27 +276,36 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         return new float[] { (float) rotatedX, 1.05f, (float) rotatedZ, radius };
     }
 
-    public boolean isRightCauldronClick(Vec3 hitVec) {
+    /**
+     * Returns the interpolated Mestolone angle in degrees for use in the renderer.
+     */
+    public float getInterpolatedCraftingAngle(float partialTick) {
+        return prevCraftingAngle + (craftingAngle - prevCraftingAngle) * partialTick;
+    }
+
+    /**
+     * Called each tick the player right-clicks the cauldron dummy.
+     * If the hit lands on the current hotspot, the stirring flag is set so
+     * {@link #serverTick} can advance the angle.
+     */
+    public void tryStir(Vec3 hitVec, Player player) {
         BlockPos dummyPos = AlchemistTableBlock.getDummyPos(worldPosition, 6,
                 getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING));
 
-        float hitX = (float) hitVec.x;
-        float hitY = (float) hitVec.y;
-        float hitZ = (float) hitVec.z;
-
-        float[] hotspot = getCauldronHotspot();
-
+        float[] hotspot = getCauldronHotspot(1.0f); // server-side: no partialTick
         float hotspotX = (float) dummyPos.getX() + hotspot[0] + 0.5f;
         float hotspotY = (float) dummyPos.getY() + hotspot[1];
         float hotspotZ = (float) dummyPos.getZ() + hotspot[2] + 0.5f;
 
-        Vec3 hit = new Vec3(hitX, hitY, hitZ);
-        Vec3 hotspotVec = new Vec3(hotspotX, hotspotY, hotspotZ);
-
-        Vec3 diff = hit.subtract(hotspotVec);
-        double distance = diff.length();
-
-        return distance <= hotspot[3];
+        double distance = hitVec.distanceTo(new Vec3(hotspotX, hotspotY, hotspotZ));
+        if (distance <= hotspot[3]) {
+            isBeingStirred = true;
+            player.displayClientMessage(
+                    Component.literal("✓ Stirring!").withColor(0x00FF00), true);
+        } else {
+            player.displayClientMessage(
+                    Component.literal("✗ Missed!").withColor(0xFF0000), true);
+        }
     }
 
     // ==================== Crafting Session — Jar Picking (empty hand on D1) ====================
@@ -463,15 +490,8 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
 
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
-        // Mantice (looping, state-driven)
-        controllers.add(new AnimationController<>(this, "cauldron", 5, state -> {
-            if (this.craftingHandler.getPhase() == AlchemistCraftingPhase.FINISHING) {
-                state.getController().setAnimationSpeed(0.5).setAnimation(CAULDRON_ANIM);
-                return PlayState.CONTINUE;
-            }
-            state.getController().setAnimationSpeed(0);
-            return PlayState.CONTINUE;
-        }));
+        // Mestolone bone rotation is driven procedurally in AlchemistTableRenderer#renderRecursively
+        // using craftingAngle — no GeckoLib keyframe controller needed for it.
     }
 
     @Override
@@ -485,6 +505,7 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
         tag.putBoolean("ManticeActive", manticeActive);
+        tag.putFloat("CraftingAngle", craftingAngle);
         craftingHandler.save(tag);
         // Jars
         for (int i = 0; i < jars.length; i++) {
@@ -500,6 +521,8 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
         manticeActive = tag.getBoolean("ManticeActive");
+        craftingAngle = tag.getFloat("CraftingAngle");
+        prevCraftingAngle = craftingAngle;
         craftingHandler.load(tag);
         // Jars
         for (int i = 0; i < jars.length; i++) {

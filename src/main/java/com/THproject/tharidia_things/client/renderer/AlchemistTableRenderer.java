@@ -14,6 +14,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.AABB;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
+import software.bernie.geckolib.cache.object.GeoBone;
 import software.bernie.geckolib.renderer.GeoBlockRenderer;
 
 /**
@@ -74,7 +75,7 @@ public class AlchemistTableRenderer extends GeoBlockRenderer<AlchemistTableBlock
 
         poseStack.translate(relX + 0.5, 0, relZ + 0.5);
 
-        float[] pos = entity.getCauldronHotspot();
+        float[] pos = entity.getCauldronHotspot(partialTick);
         float posX = pos[0];
         float posY = pos[1];
         float posZ = pos[2];
@@ -138,6 +139,28 @@ public class AlchemistTableRenderer extends GeoBlockRenderer<AlchemistTableBlock
             vc.addVertex(matrix, x + dx[next], y, z + dz[next])
                     .setColor(r, g, b, alpha).setNormal(0, 1, 0);
         }
+    }
+
+    /**
+     * Called by GeckoLib for each bone before it is rendered.
+     * We intercept the "Mestolone" bone to force its Y rotation to match
+     * the stored craftingAngle — guaranteeing it stays in sync with the hotspot.
+     */
+    @Override
+    public void renderRecursively(PoseStack poseStack, AlchemistTableBlockEntity animatable,
+            GeoBone bone, RenderType renderType, MultiBufferSource bufferSource,
+            VertexConsumer buffer, boolean isReRender, float partialTick,
+            int packedLight, int packedOverlay, int colour) {
+
+        if (bone.getName().equals("Mestolone")) {
+            float angleDeg = animatable.getInterpolatedCraftingAngle(partialTick);
+            // Negative to match the animation's original -360° direction.
+            // If the ladle rotates the wrong way in-game, remove the minus sign.
+            bone.setRotY((float) Math.toRadians(-angleDeg));
+        }
+
+        super.renderRecursively(poseStack, animatable, bone, renderType, bufferSource,
+                buffer, isReRender, partialTick, packedLight, packedOverlay, colour);
     }
 
     @Override
