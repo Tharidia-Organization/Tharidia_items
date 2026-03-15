@@ -2,8 +2,10 @@ package com.THproject.tharidia_things.block.alchemist;
 
 import com.THproject.tharidia_things.TharidiaThings;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import java.util.UUID;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
@@ -99,6 +101,31 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
     private final ItemStack[] jars = new ItemStack[] {
             ItemStack.EMPTY, ItemStack.EMPTY, ItemStack.EMPTY, ItemStack.EMPTY
     };
+
+    // ==================== Jar Interaction Entities ====================
+
+    /**
+     * Offsets (localX, Y, localZ) relative to the dummy block centre for the 4 input jars.
+     * localX = arm direction, localZ = column direction. Tune these to match the model visually.
+     */
+    private static final double[][] INPUT_JAR_OFFSETS = {
+        { -0.20, 1.1, -0.20 }, // Jar 0 — flower slot
+        {  0.20, 1.1, -0.20 }, // Jar 1 — flower slot
+        { -0.20, 1.1,  0.20 }, // Jar 2 — manure slot
+        {  0.20, 1.1,  0.20 }, // Jar 3 — manure slot
+    };
+
+    /**
+     * Offsets (localX, Y, localZ) for the 3 output jars on D5.
+     */
+    private static final double[][] OUTPUT_JAR_OFFSETS = {
+        { -0.28, 1.1, 0.0 }, // Output jar 0
+        {   0.0, 1.1, 0.0 }, // Output jar 1
+        {  0.28, 1.1, 0.0 }, // Output jar 2
+    };
+
+    private UUID[] inputJarEntityIds  = new UUID[4];
+    private UUID[] outputJarEntityIds = new UUID[3];
 
     public AlchemistTableBlockEntity(BlockPos pos, BlockState state) {
         super(TharidiaThings.ALCHEMIST_TABLE_BLOCK_ENTITY.get(), pos, state);
@@ -308,6 +335,115 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         }
     }
 
+    // ==================== Jar Interaction Entities ====================
+
+    /**
+     * Spawns invisible Interaction entities positioned over each jar slot.
+     * Call this server-side when the multiblock forms.
+     */
+    public void spawnJarInteractions(Direction facing) {
+        Level level = getLevel();
+        if (level == null || level.isClientSide) return;
+
+        BlockPos masterPos = worldPosition;
+
+        // 4 input jars on D1 (dummy index 1, arm at localX=2)
+        BlockPos d1 = AlchemistTableBlock.getDummyPos(masterPos, 1, facing);
+        for (int i = 0; i < INPUT_JAR_OFFSETS.length; i++) {
+            inputJarEntityIds[i] = spawnSingleJarEntity(level, d1, INPUT_JAR_OFFSETS[i], facing, true, i);
+        }
+
+        // 3 output jars on D5 (dummy index 5, column at localZ=4)
+        BlockPos d5 = AlchemistTableBlock.getDummyPos(masterPos, 5, facing);
+        for (int i = 0; i < OUTPUT_JAR_OFFSETS.length; i++) {
+            outputJarEntityIds[i] = spawnSingleJarEntity(level, d5, OUTPUT_JAR_OFFSETS[i], facing, false, i);
+        }
+
+        setChanged();
+    }
+
+    private UUID spawnSingleJarEntity(Level level, BlockPos blockPos, double[] localOffset,
+                                       Direction facing, boolean isInput, int jarIndex) {
+        double[] wo = transformLocalOffset(localOffset, facing);
+        double wx = blockPos.getX() + 0.5 + wo[0];
+        double wy = blockPos.getY() + wo[1];
+        double wz = blockPos.getZ() + 0.5 + wo[2];
+
+        net.minecraft.world.entity.Interaction entity =
+                net.minecraft.world.entity.EntityType.INTERACTION.create(level);
+        if (entity == null) return null;
+
+        entity.setPos(wx, wy, wz);
+        setInteractionSize(entity, 0.35f, 0.5f);
+
+        net.minecraft.nbt.CompoundTag data = entity.getPersistentData();
+        data.putInt("AlchemistMasterX", worldPosition.getX());
+        data.putInt("AlchemistMasterY", worldPosition.getY());
+        data.putInt("AlchemistMasterZ", worldPosition.getZ());
+        data.putBoolean("AlchemistIsInput", isInput);
+        data.putInt("AlchemistJarIndex", jarIndex);
+
+        level.addFreshEntity(entity);
+        return entity.getUUID();
+    }
+
+    /** Removes all jar Interaction entities owned by this block entity. */
+    public void removeJarInteractions() {
+        Level level = getLevel();
+        if (level == null || level.isClientSide || !(level instanceof net.minecraft.server.level.ServerLevel serverLevel))
+            return;
+        discardEntities(serverLevel, inputJarEntityIds);
+        discardEntities(serverLevel, outputJarEntityIds);
+        java.util.Arrays.fill(inputJarEntityIds, null);
+        java.util.Arrays.fill(outputJarEntityIds, null);
+    }
+
+    private static void discardEntities(net.minecraft.server.level.ServerLevel serverLevel, UUID[] ids) {
+        for (UUID uuid : ids) {
+            if (uuid == null) continue;
+            net.minecraft.world.entity.Entity e = serverLevel.getEntity(uuid);
+            if (e != null) e.discard();
+        }
+    }
+
+    /**
+     * Sets the hitbox size on an Interaction entity via reflection, because
+     * {@code setWidth}/{@code setHeight} are private in {@link net.minecraft.world.entity.Interaction}.
+     */
+    @SuppressWarnings("unchecked")
+    private static void setInteractionSize(net.minecraft.world.entity.Interaction entity, float width, float height) {
+        try {
+            java.lang.reflect.Field wf = net.minecraft.world.entity.Interaction.class.getDeclaredField("DATA_WIDTH_ID");
+            wf.setAccessible(true);
+            java.lang.reflect.Field hf = net.minecraft.world.entity.Interaction.class.getDeclaredField("DATA_HEIGHT_ID");
+            hf.setAccessible(true);
+            var wa = (net.minecraft.network.syncher.EntityDataAccessor<Float>) wf.get(null);
+            var ha = (net.minecraft.network.syncher.EntityDataAccessor<Float>) hf.get(null);
+            entity.getEntityData().set(wa, width);
+            entity.getEntityData().set(ha, height);
+        } catch (Exception e) {
+            com.THproject.tharidia_things.TharidiaThings.LOGGER.warn(
+                    "Could not set Interaction entity size via reflection: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Transforms a local-space offset (localX = arm dir, localZ = col dir) to world-space
+     * based on the multiblock facing, consistent with {@link AlchemistTableBlock#getWorldPos}.
+     */
+    private static double[] transformLocalOffset(double[] local, Direction facing) {
+        double lx = local[0], ly = local[1], lz = local[2];
+        double wx, wz;
+        switch (facing) {
+            case NORTH -> { wx = -lz; wz = -lx; }
+            case SOUTH -> { wx =  lz; wz =  lx; }
+            case EAST  -> { wx =  lx; wz = -lz; }
+            case WEST  -> { wx = -lx; wz =  lz; }
+            default    -> { wx = -lz; wz = -lx; }
+        }
+        return new double[]{ wx, ly, wz };
+    }
+
     // ==================== Crafting Session — Jar Picking (empty hand on D1) ====================
 
     /**
@@ -511,6 +647,11 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         for (int i = 0; i < jars.length; i++) {
             if (!jars[i].isEmpty()) tag.put("Jar" + i, jars[i].save(registries));
         }
+        // Jar interaction entity UUIDs
+        for (int i = 0; i < inputJarEntityIds.length; i++)
+            if (inputJarEntityIds[i] != null) tag.putUUID("InputJarEnt" + i, inputJarEntityIds[i]);
+        for (int i = 0; i < outputJarEntityIds.length; i++)
+            if (outputJarEntityIds[i] != null) tag.putUUID("OutputJarEnt" + i, outputJarEntityIds[i]);
         // Session
         session.save(tag);
         // Result table jars
@@ -531,6 +672,11 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
                     ? ItemStack.parseOptional(registries, tag.getCompound(key))
                     : ItemStack.EMPTY;
         }
+        // Jar interaction entity UUIDs
+        for (int i = 0; i < inputJarEntityIds.length; i++)
+            if (tag.contains("InputJarEnt" + i)) inputJarEntityIds[i] = tag.getUUID("InputJarEnt" + i);
+        for (int i = 0; i < outputJarEntityIds.length; i++)
+            if (tag.contains("OutputJarEnt" + i)) outputJarEntityIds[i] = tag.getUUID("OutputJarEnt" + i);
         // Session
         session.load(tag);
         // Result table jars

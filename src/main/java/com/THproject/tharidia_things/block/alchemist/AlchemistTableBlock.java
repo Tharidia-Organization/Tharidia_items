@@ -158,6 +158,10 @@ public class AlchemistTableBlock extends BaseEntityBlock {
                     .setValue(AlchemistTableDummyBlock.FACING, facing), 3);
             System.out.println("Placed dummy at " + dummyPos + " for part index " + i);
         }
+        // Spawn jar interaction entities
+        if (level.getBlockEntity(masterPos) instanceof AlchemistTableBlockEntity be) {
+            be.spawnJarInteractions(facing);
+        }
     }
 
     @Override
@@ -172,6 +176,10 @@ public class AlchemistTableBlock extends BaseEntityBlock {
      * Removes all dummy blocks belonging to this multiblock.
      */
     private void destroyMultiblock(Level level, BlockPos masterPos, Direction facing) {
+        // Remove jar interaction entities first
+        if (level.getBlockEntity(masterPos) instanceof AlchemistTableBlockEntity be) {
+            be.removeJarInteractions();
+        }
         for (int i = 0; i < DUMMY_OFFSETS.length; i++) {
             BlockPos dummyPos = getWorldPos(masterPos, DUMMY_OFFSETS[i][0], DUMMY_OFFSETS[i][2], facing);
             BlockState dummyState = level.getBlockState(dummyPos);

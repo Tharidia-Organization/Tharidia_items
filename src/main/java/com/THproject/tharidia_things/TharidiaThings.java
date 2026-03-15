@@ -32,6 +32,7 @@ import com.THproject.tharidia_things.block.HotGoldMarkerBlock;
 import com.THproject.tharidia_things.block.HotCopperMarkerBlock;
 import com.THproject.tharidia_things.block.StableBlock;
 import com.THproject.tharidia_things.block.StableDummyBlock;
+import com.THproject.tharidia_things.block.alchemist.AlchemistJarInteractionHandler;
 import com.THproject.tharidia_things.block.alchemist.AlchemistTableBlock;
 import com.THproject.tharidia_things.block.alchemist.AlchemistTableBlockEntity;
 import com.THproject.tharidia_things.block.alchemist.AlchemistTableDummyBlock;
@@ -852,6 +853,8 @@ public class TharidiaThings {
         NeoForge.EVENT_BUS.register(TradeInventoryBlocker.class);
         // Register the currency protection handler
         NeoForge.EVENT_BUS.register(CurrencyProtectionHandler.class);
+        // Register the alchemist jar interaction handler
+        NeoForge.EVENT_BUS.register(AlchemistJarInteractionHandler.class);
 
         BattleGauntleAttachments.register(modEventBus);
 
