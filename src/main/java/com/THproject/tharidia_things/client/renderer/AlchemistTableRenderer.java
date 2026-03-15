@@ -170,16 +170,6 @@ public class AlchemistTableRenderer extends GeoBlockRenderer<AlchemistTableBlock
     }
 
     @Override
-    public boolean shouldRenderOffScreen(AlchemistTableBlockEntity blockEntity) {
-        return true;
-    }
-
-    @Override
-    public int getViewDistance() {
-        return 128;
-    }
-
-    @Override
     public AABB getRenderBoundingBox(AlchemistTableBlockEntity blockEntity) {
         var pos = blockEntity.getBlockPos();
         // Generous bounding box for the L-shape multiblock
