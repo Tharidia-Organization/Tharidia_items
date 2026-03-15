@@ -11,9 +11,13 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Interaction;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -21,7 +25,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.minecraft.world.phys.Vec3;
 
 import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.animatable.GeoBlockEntity;
@@ -127,6 +130,8 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
     private UUID[] inputJarEntityIds  = new UUID[4];
     private UUID[] outputJarEntityIds = new UUID[3];
 
+    private UUID cauldronEntityId;
+
     public AlchemistTableBlockEntity(BlockPos pos, BlockState state) {
         super(TharidiaThings.ALCHEMIST_TABLE_BLOCK_ENTITY.get(), pos, state);
     }
@@ -143,7 +148,7 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         // Advance stirring angle only when the player is actively hitting the hotspot
         be.prevCraftingAngle = be.craftingAngle;
         if (be.isBeingStirred) {
-            be.craftingAngle += 3.0f;
+            be.craftingAngle += 10.0f;
             be.syncToClient(); // send updated angle to renderer
         }
         be.isBeingStirred = false; // reset every tick — must be refreshed by player input
@@ -310,29 +315,10 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         return prevCraftingAngle + (craftingAngle - prevCraftingAngle) * partialTick;
     }
 
-    /**
-     * Called each tick the player right-clicks the cauldron dummy.
-     * If the hit lands on the current hotspot, the stirring flag is set so
-     * {@link #serverTick} can advance the angle.
-     */
-    public void tryStir(Vec3 hitVec, Player player) {
-        BlockPos dummyPos = AlchemistTableBlock.getDummyPos(worldPosition, 6,
-                getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING));
-
-        float[] hotspot = getCauldronHotspot(1.0f); // server-side: no partialTick
-        float hotspotX = (float) dummyPos.getX() + hotspot[0] + 0.5f;
-        float hotspotY = (float) dummyPos.getY() + hotspot[1];
-        float hotspotZ = (float) dummyPos.getZ() + hotspot[2] + 0.5f;
-
-        double distance = hitVec.distanceTo(new Vec3(hotspotX, hotspotY, hotspotZ));
-        if (distance <= hotspot[3]) {
-            isBeingStirred = true;
-            player.displayClientMessage(
-                    Component.literal("✓ Stirring!").withColor(0x00FF00), true);
-        } else {
-            player.displayClientMessage(
-                    Component.literal("✗ Missed!").withColor(0xFF0000), true);
-        }
+    public void stir(Player player){
+        isBeingStirred = true;
+        player.displayClientMessage(Component.literal("✓ Stirring!").withColor(0x00FF00), true);
+        moveCauldronInteraction(getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING));
     }
 
     // ==================== Jar Interaction Entities ====================
@@ -442,6 +428,62 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
             default    -> { wx = -lz; wz = -lx; }
         }
         return new double[]{ wx, ly, wz };
+    }
+
+    public void spawnCauldronInteraction(Direction facing) {
+        Level level = getLevel();
+        if (level == null || level.isClientSide) return;
+
+        BlockPos masterPos = worldPosition;
+
+        BlockPos cauldronPos = AlchemistTableBlock.getDummyPos(masterPos, 6, facing);
+
+        Interaction entity = EntityType.INTERACTION.create(level);
+        if (entity == null) return;
+        entity.setPos(cauldronPos.getX() + 0.5, cauldronPos.getY() + 1.05, cauldronPos.getZ() + 0.5);
+        setInteractionSize(entity, 0.2f, 0.3f);
+        
+        CompoundTag data = entity.getPersistentData();
+        data.putInt("AlchemistMasterX", worldPosition.getX());
+        data.putInt("AlchemistMasterY", worldPosition.getY());
+        data.putInt("AlchemistMasterZ", worldPosition.getZ());
+        level.addFreshEntity(entity);
+
+        cauldronEntityId = entity.getUUID();
+
+        moveCauldronInteraction(facing);
+    }
+
+    public void removeCauldronInteraction() {
+        if (cauldronEntityId != null) {
+            Level level = getLevel();
+            if (level instanceof ServerLevel serverLevel) {
+                Entity entity = serverLevel.getEntity(cauldronEntityId);
+                if (entity != null) {
+                    entity.discard();
+                }
+            }
+            cauldronEntityId = null;
+        }
+    }
+
+    public void moveCauldronInteraction(Direction facing) {
+        float[] hotspot = getCauldronHotspot(1.0f);
+        BlockPos dummyPos = AlchemistTableBlock.getDummyPos(worldPosition, 6, facing);
+
+        float hotspotX = (float) dummyPos.getX() + hotspot[0] + 0.5f;
+        float hotspotY = (float) dummyPos.getY() + hotspot[1];
+        float hotspotZ = (float) dummyPos.getZ() + hotspot[2] + 0.5f;
+        
+        if (cauldronEntityId != null) {
+            Level level = getLevel();
+            if (level instanceof ServerLevel serverLevel){
+                Entity entity = serverLevel.getEntity(cauldronEntityId);
+                if(entity != null){
+                    entity.setPos(hotspotX, hotspotY, hotspotZ);
+                }
+            }
+        }
     }
 
     // ==================== Crafting Session — Jar Picking (empty hand on D1) ====================
@@ -652,6 +694,10 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
             if (inputJarEntityIds[i] != null) tag.putUUID("InputJarEnt" + i, inputJarEntityIds[i]);
         for (int i = 0; i < outputJarEntityIds.length; i++)
             if (outputJarEntityIds[i] != null) tag.putUUID("OutputJarEnt" + i, outputJarEntityIds[i]);
+
+        //Cauldron interaction entity UUID
+        if (cauldronEntityId != null) tag.putUUID("CauldronEnt", cauldronEntityId);
+        
         // Session
         session.save(tag);
         // Result table jars
@@ -677,6 +723,8 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
             if (tag.contains("InputJarEnt" + i)) inputJarEntityIds[i] = tag.getUUID("InputJarEnt" + i);
         for (int i = 0; i < outputJarEntityIds.length; i++)
             if (tag.contains("OutputJarEnt" + i)) outputJarEntityIds[i] = tag.getUUID("OutputJarEnt" + i);
+        // Cauldron interaction entity UUID
+        if (tag.contains("CauldronEnt")) cauldronEntityId = tag.getUUID("CauldronEnt");
         // Session
         session.load(tag);
         // Result table jars

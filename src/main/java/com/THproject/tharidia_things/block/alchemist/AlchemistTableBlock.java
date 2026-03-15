@@ -161,6 +161,7 @@ public class AlchemistTableBlock extends BaseEntityBlock {
         // Spawn jar interaction entities
         if (level.getBlockEntity(masterPos) instanceof AlchemistTableBlockEntity be) {
             be.spawnJarInteractions(facing);
+            be.spawnCauldronInteraction(facing);
         }
     }
 
@@ -179,6 +180,7 @@ public class AlchemistTableBlock extends BaseEntityBlock {
         // Remove jar interaction entities first
         if (level.getBlockEntity(masterPos) instanceof AlchemistTableBlockEntity be) {
             be.removeJarInteractions();
+            be.removeCauldronInteraction();
         }
         for (int i = 0; i < DUMMY_OFFSETS.length; i++) {
             BlockPos dummyPos = getWorldPos(masterPos, DUMMY_OFFSETS[i][0], DUMMY_OFFSETS[i][2], facing);

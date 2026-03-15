@@ -131,7 +131,6 @@ public class AlchemistTableDummyBlock extends Block {
                                 table.multiplyInteraction(player);
                         case 5 -> // Result table with 3 jars (RESULT_TABLE_DUMMY_INDEX)
                                 table.displayResultJars(player);
-                        case 6 -> table.tryStir(hitResult.getLocation(), player);
                         case 7 -> table.toggleMantice();
                     }
                 }
