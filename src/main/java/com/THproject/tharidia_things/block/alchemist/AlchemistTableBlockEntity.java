@@ -270,8 +270,8 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         double rotatedX = relX * cos - relZ * sin;
         double rotatedZ = relX * sin + relZ * cos;
 
-        rotatedX /= 12.0f;
-        rotatedZ /= 12.0f;
+        rotatedX /= 16.0f;
+        rotatedZ /= 16.0f;
 
         return new float[] { (float) rotatedX, 1.05f, (float) rotatedZ, radius };
     }
@@ -384,7 +384,7 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
             player.displayClientMessage(Component.literal("Pick a jar from D1 first."), true);
             return;
         }
-        int held      = AlchemistTokenItem.getValue(tokenStack);
+        int held       = AlchemistTokenItem.getValue(tokenStack);
         int dummyIndex = op.dummyIndex;
 
         if (!session.hasDummyOperand(dummyIndex)) {
