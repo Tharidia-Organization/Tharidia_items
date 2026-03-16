@@ -585,6 +585,8 @@ public class TharidiaThings {
             () -> new Item(new Item.Properties().stacksTo(64)));
     public static final DeferredItem<AlchemistTokenItem> ALCHEMIST_TOKEN = ITEMS.register("alchemist_token",
             () -> new AlchemistTokenItem(new Item.Properties().stacksTo(1)));
+    public static final DeferredItem<com.THproject.tharidia_things.block.alchemist.BuraBasePotionItem> BURA_BASE_POTION = ITEMS.register("bura_base_potion",
+            () -> new com.THproject.tharidia_things.block.alchemist.BuraBasePotionItem(new Item.Properties().stacksTo(16)));
     public static final DeferredItem<Item> MESH = ITEMS.register("mesh",
             () -> new Item(new Item.Properties().stacksTo(1)));
 

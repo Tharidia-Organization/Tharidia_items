@@ -37,10 +37,13 @@ public class AlchemistStirringPhase {
      */
     private static final int POUR_ANIMATION_TICKS = 40;
 
+    /** Ticks of final stirring after the last jar is poured before completion (1 s). */
+    private static final int COMPLETING_TICKS = 20;
+
     /** GeckoLib animation controller for all output-jar animations. */
     private static final String JAR_CONTROLLER = "jar_f_controller";
 
-    public enum State { IDLE, STIRRING, JAR_SHAKING, JAR_POURING, COMPLETE }
+    public enum State { IDLE, STIRRING, JAR_SHAKING, JAR_POURING, COMPLETING, COMPLETE }
 
     // ── fields ───────────────────────────────────────────────────────────────
 
@@ -77,6 +80,14 @@ public class AlchemistStirringPhase {
             case JAR_POURING -> {
                 if (--timer <= 0) {
                     onPourComplete();
+                }
+            }
+            case COMPLETING -> {
+                if (--timer <= 0) {
+                    state = State.COMPLETE;
+                    be.spawnCompletionParticles();
+                    be.onStirringComplete();
+                    be.syncToClient();
                 }
             }
             default -> { /* IDLE / JAR_SHAKING / COMPLETE: nothing to count */ }
@@ -136,6 +147,9 @@ public class AlchemistStirringPhase {
         return state != State.IDLE && state != State.COMPLETE;
     }
 
+    /** @return whether the phase is in its final countdown (particles about to spawn). */
+    public boolean isCompleting() { return state == State.COMPLETING; }
+
     public State getState()     { return state; }
     public int   getActiveJar() { return activeJar; }
 
@@ -166,8 +180,9 @@ public class AlchemistStirringPhase {
     private void onPourComplete() {
         activeJar = -1;
         if (jarQueue.isEmpty()) {
-            state = State.COMPLETE;
-            be.onStirringComplete();
+            // All jars poured — short countdown before the magic finale
+            state = State.COMPLETING;
+            timer = COMPLETING_TICKS;
         } else {
             state = State.STIRRING;
             timer = randomStirTicks();

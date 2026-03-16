@@ -20,8 +20,12 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Interaction;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.alchemy.PotionContents;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -145,6 +149,15 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
     private UUID cauldronEntityId;
 
     private final AlchemistStirringPhase stirringPhase = new AlchemistStirringPhase(this);
+
+    // ==================== Potion Extraction ====================
+
+    private enum PotionState { NONE, READY, DILUTED }
+    private PotionState potionState = PotionState.NONE;
+    /** The matched output stack (1 dose), set in onStirringComplete(). */
+    private ItemStack potionStack = ItemStack.EMPTY;
+    /** Remaining doses (0-4) while potionState == DILUTED. */
+    private int potionDoses = 0;
 
     public AlchemistTableBlockEntity(BlockPos pos, BlockState state) {
         super(TharidiaThings.ALCHEMIST_TABLE_BLOCK_ENTITY.get(), pos, state);
@@ -359,9 +372,79 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
     }
 
     public void stir(Player player) {
+        ItemStack held = player.getMainHandItem();
+
+        // ── Potion ready: needs water bottle to dilute ────────────────────────
+        if (potionState == PotionState.READY) {
+            if (isWaterBottle(held)) {
+                dilute(player, held);
+            } else {
+                player.displayClientMessage(
+                        Component.literal("La pozione è pronta — aggiungi una boccetta d'acqua per diluirla!")
+                                .withColor(0x00FFCC), true);
+            }
+            return;
+        }
+
+        // ── Potion diluted: needs glass bottle to collect ─────────────────────
+        if (potionState == PotionState.DILUTED) {
+            if (held.is(Items.GLASS_BOTTLE)) {
+                collectDose(player, held);
+            } else {
+                player.displayClientMessage(
+                        Component.literal("Usa una boccetta vuota per raccogliere la pozione! (" + potionDoses + " dosi rimaste)")
+                                .withColor(0xFFAA00), true);
+            }
+            return;
+        }
+
+        // ── Normal stirring ───────────────────────────────────────────────────
         isBeingStirred = true;
         stirringPhase.onStir(player);
         moveCauldronInteraction(getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING));
+    }
+
+    private void dilute(Player player, ItemStack waterBottle) {
+        if (!player.isCreative()) {
+            waterBottle.shrink(1);
+            player.getInventory().add(new ItemStack(Items.GLASS_BOTTLE));
+        }
+        potionState = PotionState.DILUTED;
+        potionDoses = 4;
+        player.displayClientMessage(
+                Component.literal("Pozione diluita! Usa 4 boccette vuote per raccogliere le dosi.").withColor(0x00FFCC), true);
+        syncToClient();
+    }
+
+    private void collectDose(Player player, ItemStack bottle) {
+        if (!player.isCreative()) {
+            bottle.shrink(1);
+        }
+        player.getInventory().add(potionStack.copy());
+        potionDoses--;
+        if (potionDoses <= 0) {
+            resetAfterCrafting();
+            player.displayClientMessage(
+                    Component.literal("Crafting completato!").withColor(0x00FF88), true);
+        } else {
+            player.displayClientMessage(
+                    Component.literal("Raccolta 1 dose! (" + potionDoses + " rimaste)").withColor(0x00FFAA), true);
+        }
+        syncToClient();
+    }
+
+    private void resetAfterCrafting() {
+        potionState = PotionState.NONE;
+        potionStack = ItemStack.EMPTY;
+        potionDoses = 0;
+        resultJarCount = 0;
+        java.util.Arrays.fill(resultJarValues, 0);
+    }
+
+    private static boolean isWaterBottle(ItemStack stack) {
+        if (!stack.is(Items.POTION)) return false;
+        PotionContents contents = stack.get(DataComponents.POTION_CONTENTS);
+        return contents == null || !contents.getAllEffects().iterator().hasNext();
     }
 
     /**
@@ -372,10 +455,28 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         stirringPhase.onJarClicked(jarIndex, player);
     }
 
-    /** Called by AlchemistStirringPhase when all 3 jars have been collected. */
+    /** Called by AlchemistStirringPhase after the COMPLETING countdown ends. */
     void onStirringComplete() {
-        // TODO: finalize crafting output (consume result jars, give final item, etc.)
+        ItemStack matched = AlchemistPotionRegistry.findPotion(resultJarValues);
+        if (matched != null && !matched.isEmpty()) {
+            potionStack = matched;
+            potionState = PotionState.READY;
+        } else {
+            resetAfterCrafting();
+        }
         syncToClient();
+    }
+
+    /** Spawns magic completion particles at the cauldron. Called from AlchemistStirringPhase. */
+    void spawnCompletionParticles() {
+        if (!(level instanceof ServerLevel serverLevel)) return;
+        BlockPos cauldronPos = AlchemistTableBlock.getDummyPos(worldPosition, 6,
+                getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING));
+        double cx = cauldronPos.getX() + 0.5;
+        double cy = cauldronPos.getY() + 1.5;
+        double cz = cauldronPos.getZ() + 0.5;
+        serverLevel.sendParticles(ParticleTypes.TOTEM_OF_UNDYING, cx, cy, cz, 80, 0.5, 0.5, 0.5, 0.3);
+        serverLevel.sendParticles(ParticleTypes.WITCH, cx, cy, cz, 40, 0.3, 0.3, 0.3, 0.1);
     }
 
     // ==================== Jar Interaction Entities ====================
@@ -824,6 +925,11 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         session.save(tag);
         // Result table jars
         tag.putIntArray("ResultJarValues", java.util.Arrays.copyOf(resultJarValues, resultJarCount));
+        // Potion extraction state
+        tag.putString("PotionState", potionState.name());
+        tag.putInt("PotionDoses", potionDoses);
+        if (!potionStack.isEmpty())
+            tag.put("PotionStack", potionStack.save(registries));
     }
 
     @Override
@@ -855,6 +961,13 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         int[] saved = tag.getIntArray("ResultJarValues");
         resultJarCount = Math.min(saved.length, resultJarValues.length);
         System.arraycopy(saved, 0, resultJarValues, 0, resultJarCount);
+        // Potion extraction state
+        try { potionState = PotionState.valueOf(tag.getString("PotionState")); }
+        catch (Exception e) { potionState = PotionState.NONE; }
+        potionDoses = tag.getInt("PotionDoses");
+        potionStack = tag.contains("PotionStack")
+                ? ItemStack.parseOptional(registries, tag.getCompound("PotionStack"))
+                : ItemStack.EMPTY;
     }
 
     // ==================== Network Sync ====================
