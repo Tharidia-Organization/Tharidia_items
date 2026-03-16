@@ -19,15 +19,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.UseAnim;
 import net.minecraft.world.item.alchemy.PotionContents;
-import net.minecraft.world.item.alchemy.Potions;
-import net.minecraft.world.item.component.DyedItemColor;
 import net.minecraft.world.level.Level;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.registries.DeferredItem;
 
-@EventBusSubscriber(modid = TharidiaThings.MODID)
 public class AlchemistPotions {
     public static final DeferredItem<Item> BALL_POTION = TharidiaThings.ITEMS.register(
             "ball_potion", () -> new Item(new Item.Properties()) {
@@ -92,18 +86,5 @@ public class AlchemistPotions {
     public static List<ItemStack> getAllPotions() {
         return List.of(
                 new ItemStack(BALL_POTION.get()));
-    }
-
-    @SubscribeEvent
-    public static void asd(PlayerInteractEvent.RightClickBlock event) {
-        if (event.getEntity().level().isClientSide)
-            return;
-
-        ItemStack stack = new ItemStack(BALL_POTION.get());
-        stack.set(DataComponents.DYED_COLOR, new DyedItemColor(0xFF0000, false));
-        stack.set(DataComponents.POTION_CONTENTS,
-                new PotionContents(Potions.REGENERATION).withEffectAdded(Potions.HEALING.value().getEffects().get(0)));
-
-        event.getEntity().getInventory().add(stack);
     }
 }

@@ -49,7 +49,7 @@ public class AlchemistTemperatureConfig {
 
     public static AlchemistTemperatureConfig fromJson(JsonObject j) {
         AlchemistTemperatureConfig c = new AlchemistTemperatureConfig();
-        if (j.has("temp_critical_low"))           c.tempCriticalLow           = j.get("temp_critical_low").getAsFloat();
+        if (j.has("temp_critical_low"))            c.tempCriticalLow            = j.get("temp_critical_low").getAsFloat();
         if (j.has("temp_optimal_min"))             c.tempOptimalMin             = j.get("temp_optimal_min").getAsFloat();
         if (j.has("temp_optimal_max"))             c.tempOptimalMax             = j.get("temp_optimal_max").getAsFloat();
         if (j.has("temp_critical_high"))           c.tempCriticalHigh           = j.get("temp_critical_high").getAsFloat();

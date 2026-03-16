@@ -2,13 +2,14 @@ package com.THproject.tharidia_things.block.alchemist;
 
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.item.alchemy.PotionContents;
 import net.minecraft.world.item.alchemy.Potions;
+import net.minecraft.world.item.component.DyedItemColor;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Optional;
 import java.util.function.Supplier;
+
+import static com.THproject.tharidia_things.item.alchemist_potion.AlchemistPotions.BALL_POTION;
 
 /**
  * Hard-coded mapping from result-jar value triplets to alchemist output ItemStacks.
@@ -42,9 +43,10 @@ public class AlchemistPotionRegistry {
     // ── Recipe builders ───────────────────────────────────────────────────────
 
     private static ItemStack instantHealthStack() {
-        ItemStack stack = new ItemStack(Items.POTION);
+        ItemStack stack = new ItemStack(BALL_POTION.get());
+        stack.set(DataComponents.DYED_COLOR, new DyedItemColor(0xFF0000, false));
         stack.set(DataComponents.POTION_CONTENTS,
-                new PotionContents(Optional.of(Potions.HEALING), Optional.empty(), java.util.List.of()));
+                new PotionContents(Potions.REGENERATION).withEffectAdded(Potions.HEALING.value().getEffects().get(0)));
         return stack;
     }
 }
