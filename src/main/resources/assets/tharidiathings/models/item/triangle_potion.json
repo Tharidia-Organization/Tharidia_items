@@ -1,0 +1,7 @@
+{
+    "parent": "minecraft:item/generated",
+    "textures": {
+        "layer0": "tharidiathings:item/triangle_potion_overlay",
+        "layer1": "tharidiathings:item/triangle_potion"
+    }
+}

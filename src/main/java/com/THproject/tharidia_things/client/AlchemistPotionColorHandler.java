@@ -17,18 +17,24 @@ public class AlchemistPotionColorHandler {
     @SubscribeEvent
     public static void registerItemColor(RegisterColorHandlersEvent.Item event) {
         List<Item> potionItems = List.of(
-            AlchemistPotions.BALL_POTION.get()
+            AlchemistPotions.BALL_POTION.get(),
+            AlchemistPotions.TRIANG_POTION.get(),
+            AlchemistPotions.DROP_POTION.get(),
+            AlchemistPotions.FANTASY_POTION.get()
         );
-        
+
         potionItems.forEach(potion -> {
-            event.register((stack, tinkIndex)->{
-                if(tinkIndex == 0){
+            event.register((stack, tintIndex) -> {
+                if (tintIndex == 0) {
                     DyedItemColor dyedColor = stack.get(DataComponents.DYED_COLOR);
                     if (dyedColor != null) {
+                        // Filled: tint overlay with the potion's colour
                         return 0xFF000000 | dyedColor.rgb();
                     }
+                    // Empty: make overlay fully transparent so only the base bottle shows
+                    return 0;
                 }
-                return 0xFFFFFFFF;
+                return 0xFFFFFFFF; // layer1 (base bottle) — no tint
             }, potion);
         });
     }

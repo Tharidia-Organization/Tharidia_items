@@ -1,6 +1,8 @@
 package com.THproject.tharidia_things.block.alchemist;
 
 import com.THproject.tharidia_things.TharidiaThings;
+import com.THproject.tharidia_things.item.alchemist_potion.AlchemistPotions;
+import net.minecraft.world.item.component.DyedItemColor;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -484,7 +486,7 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         potionState = PotionState.DILUTED;
         potionDoses = Math.max(1, 4 - yieldPenalty);
         player.displayClientMessage(
-                Component.literal("Pozione diluita! Usa 4 boccette vuote per raccogliere le dosi.").withColor(0x00FFCC), true);
+                Component.literal("Pozione diluita! Usa le tue boccette custom per raccogliere le dosi.").withColor(0x00FFCC), true);
         syncToClient();
     }
 
@@ -492,7 +494,13 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         if (!player.isCreative()) {
             bottle.shrink(1);
         }
-        player.getInventory().add(potionStack.copy());
+        // Build result using the provided bottle's shape — keeps effects/color from potionStack
+        ItemStack result = new ItemStack(bottle.getItem());
+        PotionContents contents = potionStack.get(DataComponents.POTION_CONTENTS);
+        if (contents != null) result.set(DataComponents.POTION_CONTENTS, contents);
+        DyedItemColor color = potionStack.get(DataComponents.DYED_COLOR);
+        if (color != null) result.set(DataComponents.DYED_COLOR, color);
+        player.getInventory().add(result);
         potionDoses--;
         if (potionDoses <= 0) {
             resetAfterCrafting();
@@ -533,8 +541,8 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
             dilute(player, stack);
             return true;
         }
-        // Potion diluted: collect a dose with glass bottle
-        if (potionState == PotionState.DILUTED && stack.is(Items.GLASS_BOTTLE)) {
+        // Potion diluted: collect a dose with one of the 4 custom empty bottles
+        if (potionState == PotionState.DILUTED && isCustomEmptyBottle(stack)) {
             collectDose(player, stack);
             return true;
         }
@@ -555,6 +563,16 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
 
     private static boolean isWaterBottle(ItemStack stack) {
         if (!stack.is(Items.POTION)) return false;
+        PotionContents contents = stack.get(DataComponents.POTION_CONTENTS);
+        return contents == null || !contents.getAllEffects().iterator().hasNext();
+    }
+
+    /** Returns true if the stack is one of the 4 custom alchemist bottles with no potion contents yet. */
+    private static boolean isCustomEmptyBottle(ItemStack stack) {
+        if (!stack.is(AlchemistPotions.BALL_POTION.get()) &&
+            !stack.is(AlchemistPotions.TRIANG_POTION.get()) &&
+            !stack.is(AlchemistPotions.DROP_POTION.get()) &&
+            !stack.is(AlchemistPotions.FANTASY_POTION.get())) return false;
         PotionContents contents = stack.get(DataComponents.POTION_CONTENTS);
         return contents == null || !contents.getAllEffects().iterator().hasNext();
     }
