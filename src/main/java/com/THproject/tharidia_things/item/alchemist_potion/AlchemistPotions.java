@@ -34,7 +34,7 @@ public class AlchemistPotions {
 
                 @Override
                 public UseAnim getUseAnimation(ItemStack stack) {
-                    return UseAnim.DRINK;
+                    return UseAnim.BOW;
                 }
 
                 @Override
