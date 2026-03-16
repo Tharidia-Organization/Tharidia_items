@@ -99,6 +99,7 @@ import com.THproject.tharidia_things.block.alchemist.AlchemistTokenItem;
 import com.THproject.tharidia_things.item.DirtyStrawItem;
 import com.THproject.tharidia_things.item.ShelterUpgradeKitItem;
 import com.THproject.tharidia_things.item.StationCrystalRepairerItem;
+import com.THproject.tharidia_things.item.alchemist_potion.AlchemistPotions;
 import com.THproject.tharidia_things.item.crusher_hammers.IronCrusherHammer;
 import com.THproject.tharidia_things.registry.BabyMobRegistry;
 import com.THproject.tharidia_things.client.ClientPacketHandler;
@@ -763,6 +764,9 @@ public class TharidiaThings {
                                 com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.ABNORMAL_GRASS_ITEM
                                         .get());
 
+                        // Potions
+                        output.acceptAll(AlchemistPotions.getAllPotions());
+
                         // Add all dynamically registered baby mob items
                         BabyMobRegistry.addToCreativeTab(output);
                     }).build());
@@ -872,6 +876,9 @@ public class TharidiaThings {
         // Register Veins
         VeinBlocks.init();
         VeinSediments.init();
+
+        // Register Alchemist Potions
+        AlchemistPotions.register();
 
         // Register Seed Extraction
         com.THproject.tharidia_things.block.seed_extraction.SeedExtractionRegistry.init();
