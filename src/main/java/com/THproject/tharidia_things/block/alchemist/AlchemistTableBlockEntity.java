@@ -123,8 +123,8 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
      */
     private static final double[][] INPUT_JAR_OFFSETS = {
         {  0.247, 1.1246,  0.149, 0.3626, 0.3120 }, // Jar_start1
-        { -0.246, 1.1246, -0.181, 0.3626, 0.3901 }, // Jar_start2
-        { -0.119, 1.1246,  0.178, 0.2231, 0.2401 }, // Jar_start3
+        { -0.119, 1.1246,  0.178, 0.2231, 0.2401 }, // Jar_start2 (swapped)
+        { -0.246, 1.1246, -0.181, 0.3626, 0.3901 }, // Jar_start3 (swapped)
         {  0.117, 1.1246, -0.145, 0.3626, 0.4463 }, // Jar_start4
     };
 
@@ -220,15 +220,52 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
     // ==================== Jar Filling ====================
 
     /**
+     * Tries to insert one item into the jar at the given index.
+     * Used when the player clicks a specific jar's Interaction entity.
+     *
+     * @return {@code true} if an item was successfully inserted.
+     */
+    public boolean tryInsertIntoJar(ItemStack stack, Player player, int jarIndex) {
+        if (jarIndex < 0 || jarIndex >= jars.length) return false;
+        if (resultJarCount >= resultJarValues.length) {
+            player.displayClientMessage(Component.literal("The result table is full — collect the results first!"), true);
+            return false;
+        }
+        if (session.isActive()) {
+            player.displayClientMessage(Component.literal("Cannot change jars during an active session!"), true);
+            return false;
+        }
+        if (!jarAccepts(jarIndex, stack)) {
+            player.displayClientMessage(
+                    Component.literal("Jar " + (jarIndex + 1) + " does not accept that item!"), true);
+            return false;
+        }
+        ItemStack jar = jars[jarIndex];
+        boolean sameType = !jar.isEmpty() && jar.is(stack.getItem());
+        boolean notFull  = jar.getCount() < JAR_CAPACITY;
+        if (!jar.isEmpty() && (!sameType || !notFull)) {
+            if (!notFull)
+                player.displayClientMessage(Component.literal("Jar " + (jarIndex + 1) + " is already full!"), true);
+            else
+                player.displayClientMessage(Component.literal("Jar " + (jarIndex + 1) + " already contains a different item!"), true);
+            return false;
+        }
+        if (jar.isEmpty()) {
+            jars[jarIndex] = new ItemStack(stack.getItem(), 1);
+        } else {
+            jars[jarIndex].grow(1);
+        }
+        if (!player.isCreative()) stack.shrink(1);
+        if (jars[jarIndex].getCount() >= JAR_CAPACITY)
+            player.displayClientMessage(Component.literal("Jar " + (jarIndex + 1) + " is full!"), true);
+        syncToClient();
+        return true;
+    }
+
+    /**
      * Tries to insert one item from the player's hand into the first valid,
-     * non-full jar.
-     * Jars are tried in order 0 → 3. A jar accepts an item only if:
-     * <ul>
-     * <li>the jar's category matches the item type (flowers for 0-1, manure for
-     * 2-3), AND</li>
-     * <li>the jar is empty OR already contains that exact item, AND</li>
-     * <li>the jar is not full (count &lt; JAR_CAPACITY).</li>
-     * </ul>
+     * non-full jar (fallback used by the dummy block).
+     * Jars are tried in order 0 → 3.
      *
      * @return {@code true} if an item was successfully inserted.
      */
@@ -250,24 +287,14 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
             boolean notFull = jar.getCount() < JAR_CAPACITY;
 
             if (jar.isEmpty() || (sameType && notFull)) {
-                // Insert one item
                 if (jar.isEmpty()) {
                     jars[i] = new ItemStack(stack.getItem(), 1);
                 } else {
                     jars[i].grow(1);
                 }
-
-                // Consume from player inventory (skip in creative)
-                if (!player.isCreative()) {
-                    stack.shrink(1);
-                }
-
-                // Notify if now full
-                if (jars[i].getCount() >= JAR_CAPACITY) {
-                    player.displayClientMessage(
-                            Component.literal("Jar " + (i + 1) + " is full!"), true);
-                }
-
+                if (!player.isCreative()) stack.shrink(1);
+                if (jars[i].getCount() >= JAR_CAPACITY)
+                    player.displayClientMessage(Component.literal("Jar " + (i + 1) + " is full!"), true);
                 syncToClient();
                 return true;
             }
@@ -519,6 +546,42 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
     }
 
     // ==================== Crafting Session — Jar Picking (empty hand on D1) ====================
+
+    /**
+     * Called when the player right-clicks a specific input-jar Interaction entity with an empty hand.
+     * Activates the session on first call, then gives the player the token for that exact jar.
+     */
+    public void tryPickJar(Player player, int jarIndex) {
+        if (!player.getMainHandItem().isEmpty()) {
+            player.displayClientMessage(Component.literal("Empty your hand first!"), true);
+            return;
+        }
+        if (!allJarsFull()) {
+            player.displayClientMessage(Component.literal("Fill all 4 jars first!"), true);
+            return;
+        }
+        if (session.isTokenOut()) {
+            player.displayClientMessage(
+                    Component.literal("Use your current token on an operation dummy first!"), true);
+            return;
+        }
+        if (jarIndex < 0 || jarIndex >= jars.length) return;
+        if (session.isJarUsed(jarIndex)) {
+            player.displayClientMessage(Component.literal("Jar " + (jarIndex + 1) + " was already picked!"), true);
+            return;
+        }
+        if (!session.isActive()) {
+            session.activate();
+            triggerAnim("book_controller", "flip");
+        }
+        session.pickJar(jarIndex);
+        int value = AlchemistJarRegistry.getItemValue(jars[jarIndex]);
+        player.setItemInHand(InteractionHand.MAIN_HAND, AlchemistTokenItem.create(value));
+        player.displayClientMessage(
+                Component.literal("Picked jar " + (jarIndex + 1) + " ["
+                        + AlchemistJarRegistry.describeJar(jars[jarIndex]) + "]"), true);
+        syncToClient();
+    }
 
     /**
      * Called when the player right-clicks dummy 1 with an empty hand.

@@ -98,6 +98,24 @@ public class AlchemistCraftingSession {
         return -1;
     }
 
+    /**
+     * Marks a specific jar as used.
+     *
+     * @return true if the jar was available and has been picked, false if already used
+     */
+    public boolean pickJar(int index) {
+        if (index < 0 || index >= 4 || jarUsed[index]) return false;
+        jarUsed[index] = true;
+        jarsPickedCount++;
+        tokenOut = true;
+        return true;
+    }
+
+    /** Returns whether a specific jar has already been picked. */
+    public boolean isJarUsed(int index) {
+        return index >= 0 && index < 4 && jarUsed[index];
+    }
+
     // ==================== Operation Interactions ====================
 
     /** True if the given operation dummy already has a first operand waiting. */

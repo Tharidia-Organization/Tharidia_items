@@ -51,9 +51,9 @@ public class AlchemistJarInteractionHandler {
 
         if (isInput) {
             if (held.isEmpty()) {
-                table.tryPickJar(event.getEntity());
+                table.tryPickJar(event.getEntity(), jarIndex);
             } else {
-                table.tryInsertIntoJar(held, event.getEntity());
+                table.tryInsertIntoJar(held, event.getEntity(), jarIndex);
             }
         } else {
             table.onOutputJarClicked(jarIndex, event.getEntity());
