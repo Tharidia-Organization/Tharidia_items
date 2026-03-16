@@ -160,6 +160,19 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
     private int potionDoses = 0;
     /** True once the player has poured a water bottle into the cauldron (required to start stirring). */
     private boolean cauldronHasWater = false;
+
+    // ==================== Temperature Mini-game ====================
+
+    /** True when the fuel under the cauldron has been ignited (flint & steel on dummy 6). */
+    private boolean isLit = false;
+    /** Current temperature (0–100 scale). Optimal range defined in AlchemistTemperatureConfig. */
+    private float temperature = 0f;
+    /** Accumulated penalty points (0–maxYieldPenalty). Each point reduces final dose count by 1. */
+    private int yieldPenalty = 0;
+    /** Ticks spent out of critical range during stirring; resets each time a penalty point is awarded. */
+    private int penaltyTimer = 0;
+    /** Countdown to next smoke particle burst. */
+    private int smokeParticleTimer = 0;
     /** Countdown to the next bubble sound (ticks). */
     private int bubbleSoundTimer = 0;
     /** Ticks remaining since last stir action (0.8 s = 16 ticks). Sound plays while > 0. */
@@ -187,6 +200,31 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
             be.syncToClient(); // send updated angle to renderer
         }
         be.stirringPhase.tick(be.isBeingStirred);
+
+        // ── Temperature ───────────────────────────────────────────────────────
+        if (be.isLit) {
+            AlchemistTemperatureConfig cfg = AlchemistTemperatureConfig.INSTANCE;
+            if (be.manticeActive) be.temperature += cfg.tempGainPerBellowsTick;
+            be.temperature = Math.max(0f, Math.min(100f, be.temperature - cfg.tempDecayPerTick));
+
+            // Penalty accumulates only while the stirring minigame is active
+            if (be.stirringPhase.isActive()) {
+                boolean outOfRange = be.temperature < cfg.tempCriticalLow
+                                  || be.temperature > cfg.tempCriticalHigh;
+                if (outOfRange) {
+                    if (++be.penaltyTimer >= cfg.penaltyIntervalTicks) {
+                        be.penaltyTimer = 0;
+                        be.yieldPenalty = Math.min(be.yieldPenalty + 1, cfg.maxYieldPenalty);
+                    }
+                }
+            }
+
+            // Smoke particles
+            if (--be.smokeParticleTimer <= 0) {
+                be.spawnSmokeParticles();
+                be.smokeParticleTimer = cfg.smokeParticleIntervalTicks;
+            }
+        }
 
         // ── Sounds ───────────────────────────────────────────────────────────
         if (be.cauldronHasWater && be.potionState == PotionState.NONE) {
@@ -401,50 +439,34 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
     }
 
     public void stir(Player player) {
-        ItemStack held = player.getMainHandItem();
-
-        // ── Potion ready: needs water bottle to dilute ────────────────────────
-        if (potionState == PotionState.READY) {
-            if (isWaterBottle(held)) {
-                dilute(player, held);
-            } else {
-                player.displayClientMessage(
-                        Component.literal("La pozione è pronta — aggiungi una boccetta d'acqua per diluirla!")
-                                .withColor(0x00FFCC), true);
-            }
+        // ── Fire required before anything else ───────────────────────────────
+        if (!isLit && resultJarCount >= 3 && !stirringPhase.isActive()) {
+            player.displayClientMessage(
+                    Component.literal("Accendi prima il fuoco sotto il calderone!").withColor(0xFF4400), true);
             return;
         }
 
-        // ── Potion diluted: needs glass bottle to collect ─────────────────────
-        if (potionState == PotionState.DILUTED) {
-            if (held.is(Items.GLASS_BOTTLE)) {
-                collectDose(player, held);
-            } else {
-                player.displayClientMessage(
-                        Component.literal("Usa una boccetta vuota per raccogliere la pozione! (" + potionDoses + " dosi rimaste)")
-                                .withColor(0xFFAA00), true);
-            }
-            return;
-        }
-
-        // ── Water bottle required before minigame can start ───────────────────
+        // ── Water required before minigame can start ──────────────────────────
         if (!cauldronHasWater && resultJarCount >= 3 && !stirringPhase.isActive()) {
-            if (isWaterBottle(held)) {
-                if (!player.isCreative()) {
-                    held.shrink(1);
-                    player.getInventory().add(new ItemStack(Items.GLASS_BOTTLE));
-                }
-                cauldronHasWater = true;
-                player.displayClientMessage(
-                        Component.literal("Acqua versata — inizia a mescolare!").withColor(0x00FFCC), true);
-                syncToClient();
-                return;
-            }
             player.displayClientMessage(
                     Component.literal("Versa una boccetta d'acqua nel calderone prima di mescolare!").withColor(0xFFAA00), true);
             // Ladle still spins visually but minigame won't activate
             isBeingStirred = true;
             moveCauldronInteraction(getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING));
+            return;
+        }
+
+        // ── Potion ready / diluted: redirect to cauldron block ────────────────
+        if (potionState == PotionState.READY) {
+            player.displayClientMessage(
+                    Component.literal("La pozione è pronta — usa una boccetta d'acqua sul calderone per diluirla!")
+                            .withColor(0x00FFCC), true);
+            return;
+        }
+        if (potionState == PotionState.DILUTED) {
+            player.displayClientMessage(
+                    Component.literal("Usa una boccetta vuota sul calderone! (" + potionDoses + " dosi rimaste)")
+                            .withColor(0xFFAA00), true);
             return;
         }
 
@@ -460,7 +482,7 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
             player.getInventory().add(new ItemStack(Items.GLASS_BOTTLE));
         }
         potionState = PotionState.DILUTED;
-        potionDoses = 4;
+        potionDoses = Math.max(1, 4 - yieldPenalty);
         player.displayClientMessage(
                 Component.literal("Pozione diluita! Usa 4 boccette vuote per raccogliere le dosi.").withColor(0x00FFCC), true);
         syncToClient();
@@ -489,11 +511,47 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         potionDoses = 0;
         cauldronHasWater = false;
         if (stirInertia > 0) { stirInertia = 0; sendStirSoundPacket(level, false); }
+        isLit = false;
+        temperature = 0f;
+        yieldPenalty = 0;
+        penaltyTimer = 0;
+        manticeActive = false;
         resultJarCount = 0;
         java.util.Arrays.fill(resultJarValues, 0);
     }
 
     public boolean hasCauldronWater() { return cauldronHasWater; }
+    public boolean isStirringPhaseActive() { return stirringPhase.isActive(); }
+
+    /**
+     * Handles item interactions directed at the cauldron block (dummy index 6).
+     * Returns true if the interaction was consumed.
+     */
+    public boolean tryHandleCauldronItem(Player player, ItemStack stack) {
+        // Potion ready: dilute with water bottle
+        if (potionState == PotionState.READY && isWaterBottle(stack)) {
+            dilute(player, stack);
+            return true;
+        }
+        // Potion diluted: collect a dose with glass bottle
+        if (potionState == PotionState.DILUTED && stack.is(Items.GLASS_BOTTLE)) {
+            collectDose(player, stack);
+            return true;
+        }
+        // Pour water to enable the stirring minigame
+        if (!cauldronHasWater && isWaterBottle(stack)) {
+            if (!player.isCreative()) {
+                stack.shrink(1);
+                player.getInventory().add(new ItemStack(Items.GLASS_BOTTLE));
+            }
+            cauldronHasWater = true;
+            player.displayClientMessage(
+                    Component.literal("Acqua versata — inizia a mescolare!").withColor(0x00FFCC), true);
+            syncToClient();
+            return true;
+        }
+        return false;
+    }
 
     private static boolean isWaterBottle(ItemStack stack) {
         if (!stack.is(Items.POTION)) return false;
@@ -532,7 +590,7 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         level.playSound(null, cauldronPos,
                 sound,
                 net.minecraft.sounds.SoundSource.BLOCKS,
-                0.2f + rng.nextFloat() * 0.3f,   // volume 0.6–0.9
+                0.04f + rng.nextFloat() * 0.04f, // volume 0.04–0.08
                 0.9f + rng.nextFloat() * 0.2f);  // pitch  0.9–1.1
     }
 
@@ -545,6 +603,50 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         serverLevel.players().stream()
                 .filter(p -> p.blockPosition().distSqr(cauldronPos) <= 32 * 32)
                 .forEach(p -> net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(p, payload));
+    }
+
+    /**
+     * Called when the player right-clicks dummy index 6 (cauldron block) with flint & steel.
+     * Lights the fire and sets the initial temperature.
+     */
+    public void lightFire(Player player, net.minecraft.world.InteractionHand hand, ItemStack stack) {
+        if (isLit) {
+            player.displayClientMessage(
+                    Component.literal("Il fuoco è già acceso!").withColor(0xFF6600), true);
+            return;
+        }
+        isLit = true;
+        temperature = AlchemistTemperatureConfig.INSTANCE.tempInitial;
+        if (!player.isCreative() && level instanceof ServerLevel sl
+                && player instanceof net.minecraft.server.level.ServerPlayer sp) {
+            stack.hurtAndBreak(1, sl, sp, item -> {});
+        }
+        player.displayClientMessage(
+                Component.literal("Fuoco acceso! Versa l'acqua nel calderone per iniziare.").withColor(0xFF6600), true);
+        syncToClient();
+    }
+
+    /** Spawns colored smoke particles at the cauldron base based on current temperature. */
+    private void spawnSmokeParticles() {
+        if (!(level instanceof ServerLevel sl)) return;
+        AlchemistTemperatureConfig cfg = AlchemistTemperatureConfig.INSTANCE;
+        BlockPos cauldronPos = AlchemistTableBlock.getDummyPos(worldPosition, 6,
+                getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING));
+        double cx = cauldronPos.getX() + 0.5 + (rng.nextDouble() - 0.5) * 0.4;
+        double cy = cauldronPos.getY() + 0.1;
+        double cz = cauldronPos.getZ() + 0.5 + (rng.nextDouble() - 0.5) * 0.4;
+
+        if (temperature < cfg.tempCriticalLow) {
+            // Too cold → dark/large smoke
+            sl.sendParticles(net.minecraft.core.particles.ParticleTypes.LARGE_SMOKE, cx, cy, cz, 2, 0.1, 0.05, 0.1, 0.01);
+        } else if (temperature > cfg.tempCriticalHigh) {
+            // Too hot → reddish smoke (smoke + flame)
+            sl.sendParticles(net.minecraft.core.particles.ParticleTypes.SMOKE, cx, cy, cz, 2, 0.1, 0.05, 0.1, 0.01);
+            sl.sendParticles(net.minecraft.core.particles.ParticleTypes.FLAME,  cx, cy, cz, 1, 0.1, 0.05, 0.1, 0.01);
+        } else {
+            // Normal → regular smoke
+            sl.sendParticles(net.minecraft.core.particles.ParticleTypes.SMOKE, cx, cy, cz, 1, 0.1, 0.05, 0.1, 0.005);
+        }
     }
 
     /** Spawns magic completion particles at the cauldron. Called from AlchemistStirringPhase. */
@@ -940,6 +1042,11 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         syncToClient();
     }
 
+    public void triggerRitualAnimation() {
+        triggerAnim("ritual_controller", "ritual");
+        syncToClient();
+    }
+
     // ==================== GeckoLib ====================
 
     @Override
@@ -971,7 +1078,11 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
             }
             return PlayState.STOP;
         }));
-        
+
+        // Ritual animation (triggered from the dummy to the left of the result table)
+        controllers.add(new AnimationController<>(this, "ritual_controller", 0, s -> PlayState.STOP)
+                .triggerableAnim("ritual", RawAnimation.begin().thenPlay("ritual")));
+
     }
 
     @Override
@@ -1011,6 +1122,11 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         tag.putBoolean("CauldronHasWater", cauldronHasWater);
         if (!potionStack.isEmpty())
             tag.put("PotionStack", potionStack.save(registries));
+        // Temperature
+        tag.putBoolean("IsLit", isLit);
+        tag.putFloat("Temperature", temperature);
+        tag.putInt("YieldPenalty", yieldPenalty);
+        tag.putInt("PenaltyTimer", penaltyTimer);
     }
 
     @Override
@@ -1050,6 +1166,11 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         potionStack = tag.contains("PotionStack")
                 ? ItemStack.parseOptional(registries, tag.getCompound("PotionStack"))
                 : ItemStack.EMPTY;
+        // Temperature
+        isLit = tag.getBoolean("IsLit");
+        temperature = tag.getFloat("Temperature");
+        yieldPenalty = tag.getInt("YieldPenalty");
+        penaltyTimer = tag.getInt("PenaltyTimer");
     }
 
     // ==================== Network Sync ====================

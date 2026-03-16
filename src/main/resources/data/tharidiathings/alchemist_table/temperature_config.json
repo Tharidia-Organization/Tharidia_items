@@ -1,0 +1,16 @@
+{
+  "_comment": "Alchemist Table — Temperature Mini-game Configuration. Reload with /reload.",
+
+  "temp_critical_low":  20.0,
+  "temp_optimal_min":   35.0,
+  "temp_optimal_max":   65.0,
+  "temp_critical_high": 80.0,
+
+  "temp_decay_per_tick":        0.08,
+  "temp_gain_per_bellows_tick": 0.35,
+  "temp_initial":               50.0,
+
+  "penalty_interval_ticks":        60,
+  "max_yield_penalty":              3,
+  "smoke_particle_interval_ticks":  4
+}

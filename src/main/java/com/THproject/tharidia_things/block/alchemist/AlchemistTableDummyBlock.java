@@ -107,6 +107,19 @@ public class AlchemistTableDummyBlock extends Block {
                     : ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
 
+        // Cauldron dummy (index 6): ignition, water pouring, and dose collection
+        if (partIndex == 6) {
+            if (stack.is(net.minecraft.world.item.Items.FLINT_AND_STEEL)) {
+                if (level.isClientSide) return ItemInteractionResult.SUCCESS;
+                table.lightFire(player, hand, stack);
+                return ItemInteractionResult.SUCCESS;
+            }
+            if (level.isClientSide) return ItemInteractionResult.SUCCESS;
+            return table.tryHandleCauldronItem(player, stack)
+                    ? ItemInteractionResult.SUCCESS
+                    : ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        }
+
         return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
     }
 
@@ -127,8 +140,14 @@ public class AlchemistTableDummyBlock extends Block {
                                 table.subtractInteraction(player);
                         case 3 -> // Divide
                                 table.divideInteraction(player);
-                        case 4 -> // Multiply
+                        case 4 -> {
+                            // During initial crafting phase → ritual animation; during stirring → multiply
+                            if (!table.isStirringPhaseActive()) {
+                                table.triggerRitualAnimation();
+                            } else {
                                 table.multiplyInteraction(player);
+                            }
+                        }
                         case 5 -> // Result table with 3 jars (RESULT_TABLE_DUMMY_INDEX)
                                 table.displayResultJars(player);
                         case 7 -> table.toggleMantice();

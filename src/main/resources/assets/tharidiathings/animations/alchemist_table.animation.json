@@ -482,7 +482,7 @@
 				}
 			}
 		},
-        	"mantice": {
+		"mantice": {
 			"loop": true,
 			"animation_length": 2,
 			"bones": {
@@ -625,6 +625,52 @@
 							"vector": [0, 0, 18.5]
 						},
 						"2.0": {
+							"vector": [0, 0, 0]
+						}
+					}
+				}
+			}
+		},
+		"ritual": {
+			"animation_length": 4,
+			"bones": {
+				"l1": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"1.0": {
+							"vector": [0, 127.5, 0],
+							"easing": "easeInOutQuad"
+						},
+						"2.0417": {
+							"vector": [0, 35.73, 0],
+							"easing": "easeInOutQuad"
+						},
+						"3.2917": {
+							"vector": [0, 125.42, 0],
+							"easing": "easeInOutQuint"
+						},
+						"4.0": {
+							"vector": [0, 0, 0],
+							"easing": "easeInOutQuad"
+						}
+					}
+				},
+				"l2": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"1.0": {
+							"vector": [0, -215, 0],
+							"easing": "easeInOutExpo"
+						},
+						"3.25": {
+							"vector": [0, 223.75, 0],
+							"easing": "easeInOutBounce"
+						},
+						"4.0": {
 							"vector": [0, 0, 0]
 						}
 					}

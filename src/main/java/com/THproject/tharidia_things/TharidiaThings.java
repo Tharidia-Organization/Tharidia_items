@@ -857,6 +857,7 @@ public class TharidiaThings {
         NeoForge.EVENT_BUS.register(CurrencyProtectionHandler.class);
         // Register the alchemist jar interaction handler
         NeoForge.EVENT_BUS.register(AlchemistJarInteractionHandler.class);
+        NeoForge.EVENT_BUS.register(com.THproject.tharidia_things.block.alchemist.AlchemistTemperatureConfigLoader.class);
 
         BattleGauntleAttachments.register(modEventBus);
 
