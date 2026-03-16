@@ -33,5 +33,6 @@ public class AlchemistCauldronInteractionHandler {
             return;
 
         table.stir(event.getEntity());
+        event.getEntity().swing(InteractionHand.MAIN_HAND, true);
     }
 }
