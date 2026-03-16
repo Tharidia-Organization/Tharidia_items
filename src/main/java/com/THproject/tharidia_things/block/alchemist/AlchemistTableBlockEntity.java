@@ -1,6 +1,7 @@
 package com.THproject.tharidia_things.block.alchemist;
 
 import com.THproject.tharidia_things.TharidiaThings;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
@@ -30,6 +31,9 @@ import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.animatable.GeoBlockEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.animation.AnimatableManager;
+import software.bernie.geckolib.animation.AnimationController;
+import software.bernie.geckolib.animation.PlayState;
+import software.bernie.geckolib.animation.RawAnimation;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 /**
@@ -668,8 +672,16 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
 
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
-        // Mestolone bone rotation is driven procedurally in AlchemistTableRenderer#renderRecursively
-        // using craftingAngle — no GeckoLib keyframe controller needed for it.
+        controllers.add(new AnimationController<>(this, "mantice_controller", 0, state -> {
+            if(manticeActive){
+                state.setAnimation(RawAnimation.begin().thenLoop("mantice"));
+                return PlayState.CONTINUE;
+            }else{
+                state.resetCurrentAnimation();
+            }
+            return PlayState.STOP;
+        }));
+        
     }
 
     @Override
