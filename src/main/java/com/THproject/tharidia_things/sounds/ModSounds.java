@@ -18,6 +18,11 @@ public class ModSounds {
     public static final Supplier<SoundEvent> DUNGEON_START = registerSoundEvent("dungeon_start");
     public static final Supplier<SoundEvent> PULVERIZER_WORKING = registerSoundEvent("pulverizer_working");
 
+    // Alchemist Table
+    public static final Supplier<SoundEvent> ALCHEMIST_CAULDRON   = registerSoundEvent("cauldron");
+    public static final Supplier<SoundEvent> ALCHEMIST_CAULDRON2  = registerSoundEvent("cauldron2");
+    public static final Supplier<SoundEvent> ALCHEMIST_STIR       = registerSoundEvent("stir");
+
     public static Supplier<SoundEvent> registerSoundEvent(String name) {
         ResourceLocation id = ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, name);
         return SOUND_EVENTS.register(name, () -> SoundEvent.createVariableRangeEvent(id));

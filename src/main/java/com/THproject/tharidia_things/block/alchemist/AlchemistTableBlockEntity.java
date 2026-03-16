@@ -158,6 +158,13 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
     private ItemStack potionStack = ItemStack.EMPTY;
     /** Remaining doses (0-4) while potionState == DILUTED. */
     private int potionDoses = 0;
+    /** True once the player has poured a water bottle into the cauldron (required to start stirring). */
+    private boolean cauldronHasWater = false;
+    /** Countdown to the next bubble sound (ticks). */
+    private int bubbleSoundTimer = 0;
+    /** Ticks remaining since last stir action (0.8 s = 16 ticks). Sound plays while > 0. */
+    private int stirInertia = 0;
+    private final java.util.Random rng = new java.util.Random();
 
     public AlchemistTableBlockEntity(BlockPos pos, BlockState state) {
         super(TharidiaThings.ALCHEMIST_TABLE_BLOCK_ENTITY.get(), pos, state);
@@ -180,6 +187,22 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
             be.syncToClient(); // send updated angle to renderer
         }
         be.stirringPhase.tick(be.isBeingStirred);
+
+        // ── Sounds ───────────────────────────────────────────────────────────
+        if (be.cauldronHasWater && be.potionState == PotionState.NONE) {
+            // Bubble sounds: play randomly, possibly overlapping
+            if (--be.bubbleSoundTimer <= 0) {
+                be.playBubbleSound();
+                be.bubbleSoundTimer = 30 + be.rng.nextInt(40); // 1.5–3.5 s
+            }
+        }
+        boolean wasStirring = be.stirInertia > 0;
+        if (be.isBeingStirred) be.stirInertia = 16; // refresh 0.8 s window
+        if (be.stirInertia > 0) be.stirInertia--;
+        boolean isStirring = be.stirInertia > 0;
+        if (!wasStirring && isStirring)  be.sendStirSoundPacket(level, true);
+        else if (wasStirring && !isStirring) be.sendStirSoundPacket(level, false);
+
         be.isBeingStirred = false; // reset every tick — must be refreshed by player input
     }
 
@@ -263,12 +286,15 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
                 player.displayClientMessage(Component.literal("Jar " + (jarIndex + 1) + " already contains a different item!"), true);
             return false;
         }
+        int current = jar.isEmpty() ? 0 : jar.getCount();
+        int toAdd   = player.isCreative() ? (JAR_CAPACITY - current)
+                                          : Math.min(JAR_CAPACITY - current, stack.getCount());
         if (jar.isEmpty()) {
-            jars[jarIndex] = new ItemStack(stack.getItem(), 1);
+            jars[jarIndex] = new ItemStack(stack.getItem(), toAdd);
         } else {
-            jars[jarIndex].grow(1);
+            jars[jarIndex].grow(toAdd);
         }
-        if (!player.isCreative()) stack.shrink(1);
+        if (!player.isCreative()) stack.shrink(toAdd);
         if (jars[jarIndex].getCount() >= JAR_CAPACITY)
             player.displayClientMessage(Component.literal("Jar " + (jarIndex + 1) + " is full!"), true);
         syncToClient();
@@ -300,12 +326,15 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
             boolean notFull = jar.getCount() < JAR_CAPACITY;
 
             if (jar.isEmpty() || (sameType && notFull)) {
+                int current = jar.isEmpty() ? 0 : jar.getCount();
+                int toAdd   = player.isCreative() ? (JAR_CAPACITY - current)
+                                                  : Math.min(JAR_CAPACITY - current, stack.getCount());
                 if (jar.isEmpty()) {
-                    jars[i] = new ItemStack(stack.getItem(), 1);
+                    jars[i] = new ItemStack(stack.getItem(), toAdd);
                 } else {
-                    jars[i].grow(1);
+                    jars[i].grow(toAdd);
                 }
-                if (!player.isCreative()) stack.shrink(1);
+                if (!player.isCreative()) stack.shrink(toAdd);
                 if (jars[i].getCount() >= JAR_CAPACITY)
                     player.displayClientMessage(Component.literal("Jar " + (i + 1) + " is full!"), true);
                 syncToClient();
@@ -398,6 +427,27 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
             return;
         }
 
+        // ── Water bottle required before minigame can start ───────────────────
+        if (!cauldronHasWater && resultJarCount >= 3 && !stirringPhase.isActive()) {
+            if (isWaterBottle(held)) {
+                if (!player.isCreative()) {
+                    held.shrink(1);
+                    player.getInventory().add(new ItemStack(Items.GLASS_BOTTLE));
+                }
+                cauldronHasWater = true;
+                player.displayClientMessage(
+                        Component.literal("Acqua versata — inizia a mescolare!").withColor(0x00FFCC), true);
+                syncToClient();
+                return;
+            }
+            player.displayClientMessage(
+                    Component.literal("Versa una boccetta d'acqua nel calderone prima di mescolare!").withColor(0xFFAA00), true);
+            // Ladle still spins visually but minigame won't activate
+            isBeingStirred = true;
+            moveCauldronInteraction(getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING));
+            return;
+        }
+
         // ── Normal stirring ───────────────────────────────────────────────────
         isBeingStirred = true;
         stirringPhase.onStir(player);
@@ -437,9 +487,13 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         potionState = PotionState.NONE;
         potionStack = ItemStack.EMPTY;
         potionDoses = 0;
+        cauldronHasWater = false;
+        if (stirInertia > 0) { stirInertia = 0; sendStirSoundPacket(level, false); }
         resultJarCount = 0;
         java.util.Arrays.fill(resultJarValues, 0);
     }
+
+    public boolean hasCauldronWater() { return cauldronHasWater; }
 
     private static boolean isWaterBottle(ItemStack stack) {
         if (!stack.is(Items.POTION)) return false;
@@ -465,6 +519,32 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
             resetAfterCrafting();
         }
         syncToClient();
+    }
+
+    private void playBubbleSound() {
+        if (level == null) return;
+        BlockPos cauldronPos = AlchemistTableBlock.getDummyPos(worldPosition, 6,
+                getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING));
+        // Alternate between cauldron and cauldron2 randomly for overlapping feel
+        net.minecraft.sounds.SoundEvent sound = rng.nextBoolean()
+                ? com.THproject.tharidia_things.sounds.ModSounds.ALCHEMIST_CAULDRON.get()
+                : com.THproject.tharidia_things.sounds.ModSounds.ALCHEMIST_CAULDRON2.get();
+        level.playSound(null, cauldronPos,
+                sound,
+                net.minecraft.sounds.SoundSource.BLOCKS,
+                0.2f + rng.nextFloat() * 0.3f,   // volume 0.6–0.9
+                0.9f + rng.nextFloat() * 0.2f);  // pitch  0.9–1.1
+    }
+
+    private void sendStirSoundPacket(Level level, boolean start) {
+        if (!(level instanceof ServerLevel serverLevel)) return;
+        BlockPos cauldronPos = AlchemistTableBlock.getDummyPos(worldPosition, 6,
+                getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING));
+        double cx = cauldronPos.getX() + 0.5, cy = cauldronPos.getY() + 1.0, cz = cauldronPos.getZ() + 0.5;
+        var payload = new AlchemistStirSoundPayload(start, cx, cy, cz);
+        serverLevel.players().stream()
+                .filter(p -> p.blockPosition().distSqr(cauldronPos) <= 32 * 32)
+                .forEach(p -> net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(p, payload));
     }
 
     /** Spawns magic completion particles at the cauldron. Called from AlchemistStirringPhase. */
@@ -928,6 +1008,7 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         // Potion extraction state
         tag.putString("PotionState", potionState.name());
         tag.putInt("PotionDoses", potionDoses);
+        tag.putBoolean("CauldronHasWater", cauldronHasWater);
         if (!potionStack.isEmpty())
             tag.put("PotionStack", potionStack.save(registries));
     }
@@ -965,6 +1046,7 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         try { potionState = PotionState.valueOf(tag.getString("PotionState")); }
         catch (Exception e) { potionState = PotionState.NONE; }
         potionDoses = tag.getInt("PotionDoses");
+        cauldronHasWater = tag.getBoolean("CauldronHasWater");
         potionStack = tag.contains("PotionStack")
                 ? ItemStack.parseOptional(registries, tag.getCompound("PotionStack"))
                 : ItemStack.EMPTY;

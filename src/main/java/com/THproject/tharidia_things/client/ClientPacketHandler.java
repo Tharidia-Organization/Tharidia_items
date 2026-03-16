@@ -2,20 +2,26 @@ package com.THproject.tharidia_things.client;
 
 import com.THproject.tharidia_things.Config;
 import com.THproject.tharidia_things.TharidiaThings;
+import com.THproject.tharidia_things.block.alchemist.AlchemistStirSoundPayload;
 import com.THproject.tharidia_things.client.screen.RaceSelectionScreen;
 import com.THproject.tharidia_things.client.video.ClientVideoScreenManager;
 import com.THproject.tharidia_things.compoundTag.ReviveAttachments;
 import com.THproject.tharidia_things.client.gui.PreLoginNameScreen;
 import com.THproject.tharidia_things.network.*;
 import com.THproject.tharidia_things.network.revive.ReviveSyncPayload;
+import com.THproject.tharidia_things.sounds.ModSounds;
 import com.mojang.logging.LogUtils;
 import com.THproject.tharidia_things.block.entity.PietroBlockEntity;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.client.resources.sounds.SoundInstance;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 import java.util.ArrayList;
@@ -26,6 +32,33 @@ import java.util.UUID;
 
 public class ClientPacketHandler {
     private static final Logger LOGGER = LogUtils.getLogger();
+
+    @Nullable private static SoundInstance stirSoundInstance;
+
+    public static void handleAlchemistStirSound(AlchemistStirSoundPayload packet, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            var sm = Minecraft.getInstance().getSoundManager();
+            if (packet.start()) {
+                if (stirSoundInstance != null) sm.stop(stirSoundInstance);
+                stirSoundInstance = new SimpleSoundInstance(
+                        ModSounds.ALCHEMIST_STIR.get().getLocation(),
+                        SoundSource.BLOCKS,
+                        0.5f, 1.0f,
+                        SoundInstance.createUnseededRandom(),
+                        true,  // looping
+                        0,
+                        SoundInstance.Attenuation.LINEAR,
+                        packet.x(), packet.y(), packet.z(),
+                        false);
+                sm.play(stirSoundInstance);
+            } else {
+                if (stirSoundInstance != null) {
+                    sm.stop(stirSoundInstance);
+                    stirSoundInstance = null;
+                }
+            }
+        });
+    }
 
     public static List<PietroBlockEntity> syncedRealms = new ArrayList<>();
     // Stores hierarchy data: Map of player UUID to rank level

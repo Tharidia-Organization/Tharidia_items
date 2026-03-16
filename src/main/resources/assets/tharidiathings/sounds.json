@@ -25,5 +25,20 @@
         "sounds": [
             "tharidiathings:pulverizer/pulverizer_working"
         ]
+    },
+    "cauldron": {
+        "sounds": [
+            "tharidiathings:alchemist_table/cauldron"
+        ]
+    },
+    "cauldron2": {
+        "sounds": [
+            "tharidiathings:alchemist_table/cauldron2"
+        ]
+    },
+    "stir": {
+        "sounds": [
+            "tharidiathings:alchemist_table/stir"
+        ]
     }
 }

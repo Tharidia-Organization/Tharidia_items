@@ -1322,6 +1322,13 @@ public class TharidiaThings {
                 EquipListSyncPacket.TYPE,
                 EquipListSyncPacket.STREAM_CODEC,
                 EquipListSyncPacket::handle);
+
+        if (FMLEnvironment.dist.isClient()) {
+            registrar.playToClient(
+                    com.THproject.tharidia_things.block.alchemist.AlchemistStirSoundPayload.TYPE,
+                    com.THproject.tharidia_things.block.alchemist.AlchemistStirSoundPayload.CODEC,
+                    com.THproject.tharidia_things.client.ClientPacketHandler::handleAlchemistStirSound);
+        }
     }
 
     private void registerScreens(net.neoforged.neoforge.client.event.RegisterMenuScreensEvent event) {

@@ -105,6 +105,7 @@ public class AlchemistStirringPhase {
                         Component.literal("Fill all 3 result jars first!"), true);
                 return;
             }
+            if (!be.hasCauldronWater()) return; // guard: message already shown in stir()
             activate();
             player.displayClientMessage(
                     Component.literal("The cauldron awakens — keep stirring!").withColor(0x00FFCC), true);
