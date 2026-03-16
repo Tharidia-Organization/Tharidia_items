@@ -16,8 +16,14 @@ public class AlchemistJarInteractionHandler {
         if (event.getHand() != InteractionHand.MAIN_HAND) return;
         if (!(event.getTarget() instanceof Interaction)) return;
 
+        event.getEntity().swing(InteractionHand.MAIN_HAND, true);
+
         CompoundTag data = event.getTarget().getPersistentData();
-        if (!data.contains("AlchemistJarIndex")) return;
+
+        // Must be one of our entities (jar or cauldron)
+        boolean isJar     = data.contains("AlchemistJarIndex");
+        boolean isCauldron = data.getBoolean("AlchemistIsCauldron");
+        if (!isJar && !isCauldron) return;
 
         // Cancel vanilla Interaction entity behaviour
         event.setCanceled(true);
@@ -32,8 +38,16 @@ public class AlchemistJarInteractionHandler {
         if (!(event.getLevel().getBlockEntity(masterPos) instanceof AlchemistTableBlockEntity table))
             return;
 
-        boolean isInput  = data.getBoolean("AlchemistIsInput");
-        ItemStack held   = event.getEntity().getItemInHand(InteractionHand.MAIN_HAND);
+        // ── Cauldron (Mestolone) ──────────────────────────────────────────────
+        if (isCauldron) {
+            table.stir(event.getEntity());
+            return;
+        }
+
+        // ── Jar entity ────────────────────────────────────────────────────────
+        boolean isInput = data.getBoolean("AlchemistIsInput");
+        int jarIndex    = data.getInt("AlchemistJarIndex");
+        ItemStack held  = event.getEntity().getItemInHand(InteractionHand.MAIN_HAND);
 
         if (isInput) {
             if (held.isEmpty()) {
@@ -42,7 +56,7 @@ public class AlchemistJarInteractionHandler {
                 table.tryInsertIntoJar(held, event.getEntity());
             }
         } else {
-            table.displayResultJars(event.getEntity());
+            table.onOutputJarClicked(jarIndex, event.getEntity());
         }
     }
 }

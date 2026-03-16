@@ -30,6 +30,9 @@ import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.animatable.GeoBlockEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.animation.AnimatableManager;
+import software.bernie.geckolib.animation.AnimationController;
+import software.bernie.geckolib.animation.PlayState;
+import software.bernie.geckolib.animation.RawAnimation;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 /**
@@ -108,29 +111,36 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
     // ==================== Jar Interaction Entities ====================
 
     /**
-     * Offsets (localX, Y, localZ) relative to the dummy block centre for the 4 input jars.
-     * localX = arm direction, localZ = column direction. Tune these to match the model visually.
+     * Per-jar data: { localX, Y_base, localZ, width, height }
+     * localX/Z = offset from D1 dummy block centre (arm/column directions).
+     * Y_base = entity feet height above block floor (= jar model bottom).
+     * width/height = Interaction entity hitbox size derived from Blockbench bounding boxes.
+     * Bone order: Jar_start1, Jar_start2, Jar_start3, Jar_start4.
      */
     private static final double[][] INPUT_JAR_OFFSETS = {
-        { -0.20, 1.1, -0.20 }, // Jar 0 — flower slot
-        {  0.20, 1.1, -0.20 }, // Jar 1 — flower slot
-        { -0.20, 1.1,  0.20 }, // Jar 2 — manure slot
-        {  0.20, 1.1,  0.20 }, // Jar 3 — manure slot
+        {  0.247, 1.1246,  0.149, 0.3626, 0.3120 }, // Jar_start1
+        { -0.246, 1.1246, -0.181, 0.3626, 0.3901 }, // Jar_start2
+        { -0.119, 1.1246,  0.178, 0.2231, 0.2401 }, // Jar_start3
+        {  0.117, 1.1246, -0.145, 0.3626, 0.4463 }, // Jar_start4
     };
 
     /**
-     * Offsets (localX, Y, localZ) for the 3 output jars on D5.
+     * Per-jar data: { localX, Y_base, localZ, width, height }
+     * localX/Z = offset from D5 dummy block centre.
+     * Bone order: Jar_final1, Jar_final2, Jar_final3.
      */
     private static final double[][] OUTPUT_JAR_OFFSETS = {
-        { -0.28, 1.1, 0.0 }, // Output jar 0
-        {   0.0, 1.1, 0.0 }, // Output jar 1
-        {  0.28, 1.1, 0.0 }, // Output jar 2
+        { -0.280, 1.1246, 0.36, 0.21, 0.3588 }, // Jar_final1
+        { -0.021, 1.1246, 0.36, 0.21, 0.3588 }, // Jar_final2
+        {  0.242, 1.1246, 0.36, 0.21, 0.3588 }, // Jar_final3
     };
 
     private UUID[] inputJarEntityIds  = new UUID[4];
     private UUID[] outputJarEntityIds = new UUID[3];
 
     private UUID cauldronEntityId;
+
+    private final AlchemistStirringPhase stirringPhase = new AlchemistStirringPhase(this);
 
     public AlchemistTableBlockEntity(BlockPos pos, BlockState state) {
         super(TharidiaThings.ALCHEMIST_TABLE_BLOCK_ENTITY.get(), pos, state);
@@ -148,9 +158,11 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         // Advance stirring angle only when the player is actively hitting the hotspot
         be.prevCraftingAngle = be.craftingAngle;
         if (be.isBeingStirred) {
-            be.craftingAngle += 10.0f;
+            be.craftingAngle += 20.0f;
+            be.moveCauldronInteraction(state.getValue(BlockStateProperties.HORIZONTAL_FACING));
             be.syncToClient(); // send updated angle to renderer
         }
+        be.stirringPhase.tick(be.isBeingStirred);
         be.isBeingStirred = false; // reset every tick — must be refreshed by player input
     }
 
@@ -315,10 +327,24 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         return prevCraftingAngle + (craftingAngle - prevCraftingAngle) * partialTick;
     }
 
-    public void stir(Player player){
+    public void stir(Player player) {
         isBeingStirred = true;
-        player.displayClientMessage(Component.literal("✓ Stirring!").withColor(0x00FF00), true);
+        stirringPhase.onStir(player);
         moveCauldronInteraction(getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING));
+    }
+
+    /**
+     * Called when the player clicks an output-jar Interaction entity.
+     * Delegates to the stirring phase if active, otherwise shows jar status.
+     */
+    public void onOutputJarClicked(int jarIndex, Player player) {
+        stirringPhase.onJarClicked(jarIndex, player);
+    }
+
+    /** Called by AlchemistStirringPhase when all 3 jars have been collected. */
+    void onStirringComplete() {
+        // TODO: finalize crafting output (consume result jars, give final item, etc.)
+        syncToClient();
     }
 
     // ==================== Jar Interaction Entities ====================
@@ -359,8 +385,9 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
                 net.minecraft.world.entity.EntityType.INTERACTION.create(level);
         if (entity == null) return null;
 
+        // Set size BEFORE setPos so the AABB is computed with the correct dimensions
+        setInteractionSize(entity, (float) localOffset[3], (float) localOffset[4]);
         entity.setPos(wx, wy, wz);
-        setInteractionSize(entity, 0.35f, 0.5f);
 
         net.minecraft.nbt.CompoundTag data = entity.getPersistentData();
         data.putInt("AlchemistMasterX", worldPosition.getX());
@@ -447,6 +474,7 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         data.putInt("AlchemistMasterX", worldPosition.getX());
         data.putInt("AlchemistMasterY", worldPosition.getY());
         data.putInt("AlchemistMasterZ", worldPosition.getZ());
+        data.putBoolean("AlchemistIsCauldron", true);
         level.addFreshEntity(entity);
 
         cauldronEntityId = entity.getUUID();
@@ -668,8 +696,24 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
 
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
-        // Mestolone bone rotation is driven procedurally in AlchemistTableRenderer#renderRecursively
-        // using craftingAngle — no GeckoLib keyframe controller needed for it.
+        // Mestolone rotation is driven procedurally in AlchemistTableRenderer — no controller needed.
+
+        // Book (flip animation on dummy index 1)
+        controllers.add(new AnimationController<>(this, "book_controller", 0, s -> PlayState.STOP)
+                .triggerableAnim("flip", RawAnimation.begin().thenPlay("Libro")));
+
+        // Pestle (grind animation on dummy index 3)
+        controllers.add(new AnimationController<>(this, "pestel_controller", 0, s -> PlayState.STOP)
+                .triggerableAnim("grind", RawAnimation.begin().thenPlay("Pestel")));
+
+        // Final output jars — shake and pour animations
+        controllers.add(new AnimationController<>(this, "jar_f_controller", 0, s -> PlayState.STOP)
+                .triggerableAnim("jar_f_1",      RawAnimation.begin().thenPlay("jar_f_1"))
+                .triggerableAnim("jar_f_2",      RawAnimation.begin().thenPlay("jar_f_2"))
+                .triggerableAnim("jar_f_3",      RawAnimation.begin().thenPlay("jar_f_3"))
+                .triggerableAnim("jar_f_1_drop", RawAnimation.begin().thenPlay("jar_f_1_drop"))
+                .triggerableAnim("jar_f_2_drop", RawAnimation.begin().thenPlay("jar_f_2_drop"))
+                .triggerableAnim("jar_f_3_drop", RawAnimation.begin().thenPlay("jar_f_3_drop")));
     }
 
     @Override
@@ -697,7 +741,8 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
 
         //Cauldron interaction entity UUID
         if (cauldronEntityId != null) tag.putUUID("CauldronEnt", cauldronEntityId);
-        
+        // Stirring phase
+        stirringPhase.save(tag);
         // Session
         session.save(tag);
         // Result table jars
@@ -725,6 +770,8 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
             if (tag.contains("OutputJarEnt" + i)) outputJarEntityIds[i] = tag.getUUID("OutputJarEnt" + i);
         // Cauldron interaction entity UUID
         if (tag.contains("CauldronEnt")) cauldronEntityId = tag.getUUID("CauldronEnt");
+        // Stirring phase
+        stirringPhase.load(tag);
         // Session
         session.load(tag);
         // Result table jars
