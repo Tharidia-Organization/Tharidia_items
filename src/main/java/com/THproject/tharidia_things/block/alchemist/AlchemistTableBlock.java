@@ -2,10 +2,17 @@ package com.THproject.tharidia_things.block.alchemist;
 
 import com.THproject.tharidia_things.TharidiaThings;
 import com.mojang.serialization.MapCodec;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.inventory.BookViewScreen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
@@ -21,6 +28,9 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.phys.BlockHitResult;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
+
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -111,9 +121,53 @@ public class AlchemistTableBlock extends BaseEntityBlock {
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player,
             BlockHitResult hitResult) {
-        // Master block is the NW corner - no station animation here currently
+        if (level.getBlockEntity(pos) instanceof AlchemistTableBlockEntity blockEntity) {
+            ItemStack book = blockEntity.getBook();
+
+            // 1. SNEAKING = REMOVE BOOK
+            if (player.isShiftKeyDown()) {
+                if (!book.isEmpty()) {
+                    // Give book to player
+                    ItemStack copy = book.copy();
+                    if (!player.getInventory().add(copy)) {
+                        player.drop(copy, false);
+                    }
+                    // Empty the inventory
+                    blockEntity.getBookInventory().setItem(0, ItemStack.EMPTY);
+                    blockEntity.syncToClient();
+                    return InteractionResult.sidedSuccess(level.isClientSide);
+                }
+            }
+            // 2. NOT SNEAKING = ADD OR READ
+            else {
+                ItemStack heldItem = player.getMainHandItem();
+
+                // Deposit Book
+                if (heldItem.is(Items.WRITABLE_BOOK) && book.isEmpty()) {
+                    blockEntity.getBookInventory().setItem(0, heldItem.split(1));
+                    blockEntity.syncToClient();
+                    return InteractionResult.sidedSuccess(level.isClientSide);
+                }
+                // Read Book (Lectern Style)
+                else if (!book.isEmpty()) {
+                    if (level.isClientSide) {
+                        openBookGui(book);
+                    }
+                    level.playSound(null, pos, SoundEvents.BOOK_PAGE_TURN, SoundSource.BLOCKS);
+                    return InteractionResult.sidedSuccess(level.isClientSide);
+                }
+            }
+        }
         return InteractionResult.PASS;
     }
+
+    @OnlyIn(Dist.CLIENT)
+    private void openBookGui(ItemStack book){
+        var access = BookViewScreen.BookAccess.fromItem(book);
+
+        Minecraft.getInstance().setScreen(new BookViewScreen(access));
+    }
+
 
     @Override
     public void setPlacedBy(Level level, BlockPos pos, BlockState state,

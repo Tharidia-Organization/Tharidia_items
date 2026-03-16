@@ -10,6 +10,8 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.AABB;
 import org.jetbrains.annotations.Nullable;
+
+import software.bernie.geckolib.cache.object.BakedGeoModel;
 import software.bernie.geckolib.cache.object.GeoBone;
 import software.bernie.geckolib.renderer.GeoBlockRenderer;
 
@@ -51,6 +53,22 @@ public class AlchemistTableRenderer extends GeoBlockRenderer<AlchemistTableBlock
     public RenderType getRenderType(AlchemistTableBlockEntity animatable, ResourceLocation texture,
             @Nullable MultiBufferSource bufferSource, float partialTick) {
         return RenderType.entityTranslucent(texture);
+    }
+
+    @Override
+    public void preRender(PoseStack poseStack, AlchemistTableBlockEntity animatable, BakedGeoModel model,
+            @Nullable MultiBufferSource bufferSource, @Nullable VertexConsumer buffer, boolean isReRender,
+            float partialTick, int packedLight, int packedOverlay, int colour) {
+        super.preRender(poseStack, animatable, model, bufferSource, buffer, isReRender, partialTick, packedLight, packedOverlay, colour);
+
+        setBoneVisible(model, "libron7", !animatable.getBook().isEmpty());
+    }
+
+    private void setBoneVisible(BakedGeoModel model, String boneName, boolean visible) {
+        GeoBone bone = model.getBone(boneName).orElse(null);
+        if (bone != null) {
+            bone.setHidden(!visible);
+        }
     }
 
     @Override

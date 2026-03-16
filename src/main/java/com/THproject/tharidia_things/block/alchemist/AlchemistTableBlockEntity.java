@@ -32,14 +32,12 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.SimpleContainer;
 
 import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.animatable.GeoBlockEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.animation.AnimatableManager;
-import software.bernie.geckolib.animation.AnimationController;
-import software.bernie.geckolib.animation.PlayState;
-import software.bernie.geckolib.animation.RawAnimation;
 import software.bernie.geckolib.animation.AnimationController;
 import software.bernie.geckolib.animation.PlayState;
 import software.bernie.geckolib.animation.RawAnimation;
@@ -151,6 +149,8 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
     private UUID cauldronEntityId;
 
     private final AlchemistStirringPhase stirringPhase = new AlchemistStirringPhase(this);
+
+    private final SimpleContainer book = new SimpleContainer(1);
 
     // ==================== Potion Extraction ====================
 
@@ -1145,6 +1145,9 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         tag.putFloat("Temperature", temperature);
         tag.putInt("YieldPenalty", yieldPenalty);
         tag.putInt("PenaltyTimer", penaltyTimer);
+        if (!book.getItem(0).isEmpty()) {
+            tag.put("Book", book.getItem(0).save(registries));
+        }
     }
 
     @Override
@@ -1189,6 +1192,9 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         temperature = tag.getFloat("Temperature");
         yieldPenalty = tag.getInt("YieldPenalty");
         penaltyTimer = tag.getInt("PenaltyTimer");
+        if (tag.contains("Book")) {
+            book.setItem(0, ItemStack.parseOptional(registries, tag.getCompound("Book")));
+        }
     }
 
     // ==================== Network Sync ====================
@@ -1211,5 +1217,13 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         if (level != null && !level.isClientSide) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
         }
+    }
+
+    public ItemStack getBook() {
+        return book.getItem(0);
+    }
+
+    public SimpleContainer getBookInventory() {
+        return book;
     }
 }
