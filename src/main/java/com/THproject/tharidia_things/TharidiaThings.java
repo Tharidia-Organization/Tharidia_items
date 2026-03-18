@@ -323,8 +323,9 @@ public class TharidiaThings {
     // Alchemist Table (L-shaped 8-block multiblock, GeckoLib animated)
     public static final DeferredBlock<AlchemistTableBlock> ALCHEMIST_TABLE = BLOCKS.register("alchemist_table",
             () -> new AlchemistTableBlock());
-    public static final DeferredItem<BlockItem> ALCHEMIST_TABLE_ITEM = ITEMS.registerSimpleBlockItem(
-            "alchemist_table", ALCHEMIST_TABLE);
+    public static final DeferredItem<com.THproject.tharidia_things.item.AlchemistTableBlockItem> ALCHEMIST_TABLE_ITEM = ITEMS.register(
+            "alchemist_table",
+            () -> new com.THproject.tharidia_things.item.AlchemistTableBlockItem(ALCHEMIST_TABLE.get(), new Item.Properties()));
     // Alchemist Table Dummy Block (multiblock slave)
     public static final DeferredBlock<AlchemistTableDummyBlock> ALCHEMIST_TABLE_DUMMY = BLOCKS.register(
             "alchemist_table_dummy",
@@ -586,6 +587,8 @@ public class TharidiaThings {
             () -> new Item(new Item.Properties().stacksTo(64)));
     public static final DeferredItem<AlchemistTokenItem> ALCHEMIST_TOKEN = ITEMS.register("alchemist_token",
             () -> new AlchemistTokenItem(new Item.Properties().stacksTo(1)));
+    public static final DeferredItem<Item> ALCHEMIST_JAR = ITEMS.register("alchemist_jar",
+            () -> new Item(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<Item> MESH = ITEMS.register("mesh",
             () -> new Item(new Item.Properties().stacksTo(1)));
 
@@ -1334,6 +1337,10 @@ public class TharidiaThings {
                     com.THproject.tharidia_things.block.alchemist.AlchemistStirSoundPayload.TYPE,
                     com.THproject.tharidia_things.block.alchemist.AlchemistStirSoundPayload.CODEC,
                     com.THproject.tharidia_things.client.ClientPacketHandler::handleAlchemistStirSound);
+            registrar.playToClient(
+                    com.THproject.tharidia_things.block.alchemist.AlchemistFreezePayload.TYPE,
+                    com.THproject.tharidia_things.block.alchemist.AlchemistFreezePayload.CODEC,
+                    com.THproject.tharidia_things.client.ClientPacketHandler::handleAlchemistFreeze);
         }
     }
 

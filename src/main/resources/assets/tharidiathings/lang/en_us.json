@@ -479,5 +479,16 @@
   "gui.tharidiathings.herbalist_tree.hint.dead": "The tree is dead.",
   "gui.tharidiathings.herbalist_tree.hint.place_pots": "Place 8 pots to start.",
 
-  "jei.tharidiathings.pulverizer_recipe": "Pulverizer"
+  "jei.tharidiathings.pulverizer_recipe": "Pulverizer",
+
+  "block.tharidiathings.alchemist_table": "Alchemist Table",
+
+  "item.tharidiathings.alchemist_table": "Alchemist Table",
+  "item.tharidiathings.alchemist_jar": "Alchemist Jar",
+  "item.tharidiathings.alchemist_token": "Alchemist Token",
+
+  "item.tharidiathings.ball_potion": "Sip Potion",
+  "item.tharidiathings.triangle_potion": "Splash Potion",
+  "item.tharidiathings.drop_potion": "Drink Potion",
+  "item.tharidiathings.fantasy_potion": "Lingering Potion"
 }

@@ -62,6 +62,18 @@ public class AlchemistTableRenderer extends GeoBlockRenderer<AlchemistTableBlock
         super.preRender(poseStack, animatable, model, bufferSource, buffer, isReRender, partialTick, packedLight, packedOverlay, colour);
 
         setBoneVisible(model, "libron7", !animatable.getBook().isEmpty());
+
+        // Show all input jar bones, then hide the one currently carried by the player.
+        // Mapping: jar index 0→Jar_start1, 1→Jar_start3, 2→Jar_start2, 3→Jar_start4
+        setBoneVisible(model, "Jar_start1", true);
+        setBoneVisible(model, "Jar_start2", true);
+        setBoneVisible(model, "Jar_start3", true);
+        setBoneVisible(model, "Jar_start4", true);
+        int activeJar = animatable.getActiveJarIndex();
+        if (activeJar >= 0) {
+            String[] boneNames = { "Jar_start1", "Jar_start3", "Jar_start2", "Jar_start4" };
+            setBoneVisible(model, boneNames[activeJar], false);
+        }
     }
 
     private void setBoneVisible(BakedGeoModel model, String boneName, boolean visible) {

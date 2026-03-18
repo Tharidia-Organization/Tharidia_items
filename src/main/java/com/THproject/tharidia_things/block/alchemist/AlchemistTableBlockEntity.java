@@ -15,7 +15,10 @@ import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.ItemTags;
+import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.network.PacketDistributor;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
@@ -59,6 +62,25 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
 
     // Independent toggle (not tied to crafting)
     private boolean manticeActive = false;
+
+    // ==================== Active Jar Model ====================
+
+    /**
+     * Index of the input jar whose model is currently hidden because the player is
+     * carrying its token. -1 means all jar models are visible.
+     * Maps: 0→Jar_start1, 1→Jar_start3, 2→Jar_start2, 3→Jar_start4.
+     */
+    private int activeJarIndex = -1;
+
+    public int getActiveJarIndex() { return activeJarIndex; }
+
+    // ==================== Player Freeze ====================
+    /** UUID of the player currently frozen during an animation, or null if none. */
+    @Nullable private UUID frozenPlayerUUID = null;
+    /** Server ticks remaining in the current freeze. */
+    private int frozenTicksRemaining = 0;
+    /** World position the frozen player is snapped back to each tick. */
+    private double frozenX, frozenY, frozenZ;
 
     // ==================== Stirring Angle ====================
 
@@ -202,6 +224,19 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
             be.syncToClient(); // send updated angle to renderer
         }
         be.stirringPhase.tick(be.isBeingStirred);
+
+        // ── Player Freeze ─────────────────────────────────────────────────────
+        if (be.frozenTicksRemaining > 0 && be.frozenPlayerUUID != null
+                && level instanceof ServerLevel serverLevel) {
+            Entity frozenEntity = serverLevel.getEntity(be.frozenPlayerUUID);
+            if (frozenEntity instanceof ServerPlayer sp) {
+                sp.teleportTo(be.frozenX, be.frozenY, be.frozenZ);
+                sp.setDeltaMovement(Vec3.ZERO);
+            }
+            if (--be.frozenTicksRemaining <= 0) {
+                be.unfreezePlayer(serverLevel);
+            }
+        }
 
         // ── Temperature ───────────────────────────────────────────────────────
         if (be.isLit) {
@@ -876,8 +911,9 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
             triggerAnim("book_controller", "flip");
         }
         session.pickJar(jarIndex);
+        activeJarIndex = jarIndex;
         int value = AlchemistJarRegistry.getItemValue(jars[jarIndex]);
-        player.setItemInHand(InteractionHand.MAIN_HAND, AlchemistTokenItem.create(value));
+        player.setItemInHand(InteractionHand.MAIN_HAND, AlchemistTokenItem.createFromJar(value));
         player.displayClientMessage(
                 Component.literal("Picked jar " + (jarIndex + 1) + " ["
                         + AlchemistJarRegistry.describeJar(jars[jarIndex]) + "]"), true);
@@ -912,8 +948,9 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
             player.displayClientMessage(Component.literal("All jars have already been used!"), true);
             return;
         }
+        activeJarIndex = jarIndex;
         int value = AlchemistJarRegistry.getItemValue(jars[jarIndex]);
-        player.setItemInHand(InteractionHand.MAIN_HAND, AlchemistTokenItem.create(value));
+        player.setItemInHand(InteractionHand.MAIN_HAND, AlchemistTokenItem.createFromJar(value));
         player.displayClientMessage(
                 Component.literal("Picked jar " + (jarIndex + 1) + " ["
                         + AlchemistJarRegistry.describeJar(jars[jarIndex]) + "]"), true);
@@ -950,7 +987,8 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
     /**
      * Called from {@link AlchemistTableDummyBlock#useItemOn} when the player uses an
      * {@link AlchemistTokenItem} on an operation dummy.
-     * Consumes the token and either sets the first operand or executes the operation.
+     * Triggers the operation-specific animation, freezes the player for its duration,
+     * then consumes the token and either sets the first operand or executes the operation.
      */
     public void handleOperationInteraction(Player player, InteractionHand hand,
                                            ItemStack tokenStack, AlchemistOperation op) {
@@ -960,6 +998,9 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         }
         int held       = AlchemistTokenItem.getValue(tokenStack);
         int dummyIndex = op.dummyIndex;
+
+        // The jar token is leaving the player's hand — hide the jar model is no longer needed.
+        activeJarIndex = -1;
 
         if (!session.hasDummyOperand(dummyIndex)) {
             if (session.isFinalResult()) {
@@ -973,7 +1014,29 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
             player.displayClientMessage(
                     Component.literal("[" + op.name() + "] Stored " + held + " — pick another jar."), true);
         } else {
-            // Execute: first op second
+            // Execute: first op second — trigger animation and freeze only here (second jar).
+            // ADD(0) → centrifughe (10s = 200t), SUBTRACT(2) → distillation (4s = 80t),
+            // DIVIDE(3) → pestel (8s = 160t), MULTIPLY(4) → ritual when not stirring (4s = 80t).
+            switch (op) {
+                case ADD -> {
+                    triggerCentrifugheAnimation();
+                    startPlayerFreeze(player, 200);
+                }
+                case SUBTRACT -> {
+                    triggerDistillationAnimation();
+                    startPlayerFreeze(player, 80);
+                }
+                case DIVIDE -> {
+                    triggerPestelAnimation();
+                    startPlayerFreeze(player, 160);
+                }
+                case MULTIPLY -> {
+                    if (!isStirringPhaseActive()) {
+                        triggerRitualAnimation();
+                        startPlayerFreeze(player, 80);
+                    }
+                }
+            }
             int firstOp = session.getDummyOperand(dummyIndex);
             int result  = session.executeOperation(dummyIndex, op, held);
             player.displayClientMessage(
@@ -1065,6 +1128,47 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         syncToClient();
     }
 
+    public void triggerDistillationAnimation() {
+        triggerAnim("distillation_controller", "distillation");
+        syncToClient();
+    }
+
+    public void triggerCentrifugheAnimation() {
+        triggerAnim("centrifughe_controller", "centrifughe");
+        syncToClient();
+    }
+
+    // ==================== Player Freeze Logic ====================
+
+    /**
+     * Freezes {@code player} in place for {@code ticks} server ticks and
+     * notifies the client so it can suppress movement and screen inputs.
+     * Does nothing if another player is already frozen at this table.
+     */
+    public void startPlayerFreeze(Player player, int ticks) {
+        if (frozenTicksRemaining > 0) return; // already frozen someone
+        frozenPlayerUUID = player.getUUID();
+        frozenTicksRemaining = ticks;
+        frozenX = player.getX();
+        frozenY = player.getY();
+        frozenZ = player.getZ();
+        Level level = getLevel();
+        if (level instanceof ServerLevel && player instanceof ServerPlayer sp) {
+            PacketDistributor.sendToPlayer(sp, new AlchemistFreezePayload(true));
+        }
+    }
+
+    private void unfreezePlayer(ServerLevel serverLevel) {
+        if (frozenPlayerUUID != null) {
+            Entity e = serverLevel.getEntity(frozenPlayerUUID);
+            if (e instanceof ServerPlayer sp) {
+                PacketDistributor.sendToPlayer(sp, new AlchemistFreezePayload(false));
+            }
+        }
+        frozenPlayerUUID = null;
+        frozenTicksRemaining = 0;
+    }
+
     // ==================== GeckoLib ====================
 
     @Override
@@ -1097,9 +1201,17 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
             return PlayState.STOP;
         }));
 
-        // Ritual animation (triggered from the dummy to the left of the result table)
+        // Ritual animation (triggered on MULTIPLY dummy with token, outside stirring phase)
         controllers.add(new AnimationController<>(this, "ritual_controller", 0, s -> PlayState.STOP)
                 .triggerableAnim("ritual", RawAnimation.begin().thenPlay("ritual")));
+
+        // Distillation animation (dummy index 2 / SUBTRACT operation)
+        controllers.add(new AnimationController<>(this, "distillation_controller", 0, s -> PlayState.STOP)
+                .triggerableAnim("distillation", RawAnimation.begin().thenPlay("distillation")));
+
+        // Centrifuge animation (dummy index 0 / ADD operation)
+        controllers.add(new AnimationController<>(this, "centrifughe_controller", 0, s -> PlayState.STOP)
+                .triggerableAnim("centrifughe", RawAnimation.begin().thenPlay("centrifughe")));
 
     }
 
@@ -1115,6 +1227,7 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         super.saveAdditional(tag, registries);
         tag.putBoolean("ManticeActive", manticeActive);
         tag.putFloat("CraftingAngle", craftingAngle);
+        tag.putInt("ActiveJarIndex", activeJarIndex);
         craftingHandler.save(tag);
         // Jars
         for (int i = 0; i < jars.length; i++) {
@@ -1155,6 +1268,7 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         super.loadAdditional(tag, registries);
         manticeActive = tag.getBoolean("ManticeActive");
         craftingAngle = tag.getFloat("CraftingAngle");
+        activeJarIndex = tag.contains("ActiveJarIndex") ? tag.getInt("ActiveJarIndex") : -1;
         prevCraftingAngle = craftingAngle;
         craftingHandler.load(tag);
         // Jars

@@ -13,6 +13,8 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.InputEvent;
+import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;
+import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
@@ -24,10 +26,17 @@ public class ClientInputHandler {
     private static int LAST_NO_STAMINA_TICK = -999999;
     
     /**
-     * Intercepts attack input (left click) before swing animation
+     * Intercepts attack/use input. Also blocks ALL interactions while the player
+     * is frozen by an Alchemist Table animation.
      */
     @SubscribeEvent
     public static void onAttackInput(InputEvent.InteractionKeyMappingTriggered event) {
+        // Block ALL interactions while frozen by an Alchemist Table animation
+        if (ClientPacketHandler.isAlchemistFrozen()) {
+            event.setCanceled(true);
+            event.setSwingHand(false);
+            return;
+        }
         // Only care about attack key
         if (event.isAttack()) {
             Minecraft minecraft = Minecraft.getInstance();
@@ -76,6 +85,33 @@ public class ClientInputHandler {
 
             PacketDistributor.sendToServer(new MeleeSwingPacket());
         }
+    }
+
+    // ==================== Alchemist Table Freeze ====================
+
+    /**
+     * Zeroes out all movement input while the player is frozen by an Alchemist Table animation.
+     */
+    @SubscribeEvent
+    public static void onMovementInput(MovementInputUpdateEvent event) {
+        if (!ClientPacketHandler.isAlchemistFrozen()) return;
+        event.getInput().forwardImpulse  = 0f;
+        event.getInput().leftImpulse     = 0f;
+        event.getInput().jumping         = false;
+        event.getInput().shiftKeyDown    = false;
+    }
+
+    /**
+     * Blocks inventory and container screens from opening while the player is frozen.
+     * The pause menu (PauseScreen) is intentionally allowed through.
+     */
+    @SubscribeEvent
+    public static void onScreenOpen(ScreenEvent.Opening event) {
+        if (!ClientPacketHandler.isAlchemistFrozen()) return;
+        net.minecraft.client.gui.screens.Screen screen = event.getNewScreen();
+        // Allow the pause menu so the player can still quit if needed
+        if (screen instanceof net.minecraft.client.gui.screens.PauseScreen) return;
+        event.setCanceled(true);
     }
 
     /**

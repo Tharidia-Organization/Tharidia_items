@@ -141,10 +141,9 @@ public class AlchemistTableDummyBlock extends Block {
                         case 3 -> // Divide
                                 table.divideInteraction(player);
                         case 4 -> {
-                            // During initial crafting phase → ritual animation; during stirring → multiply
-                            if (!table.isStirringPhaseActive()) {
-                                table.triggerRitualAnimation();
-                            } else {
+                            // Ritual is triggered only when a token is in hand (via useItemOn → handleOperationInteraction).
+                            // Empty-hand click shows multiply status during stirring, or is a no-op otherwise.
+                            if (table.isStirringPhaseActive()) {
                                 table.multiplyInteraction(player);
                             }
                         }

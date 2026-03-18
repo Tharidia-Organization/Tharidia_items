@@ -2,6 +2,7 @@ package com.THproject.tharidia_things.client;
 
 import com.THproject.tharidia_things.Config;
 import com.THproject.tharidia_things.TharidiaThings;
+import com.THproject.tharidia_things.block.alchemist.AlchemistFreezePayload;
 import com.THproject.tharidia_things.block.alchemist.AlchemistStirSoundPayload;
 import com.THproject.tharidia_things.client.screen.RaceSelectionScreen;
 import com.THproject.tharidia_things.client.video.ClientVideoScreenManager;
@@ -34,6 +35,15 @@ public class ClientPacketHandler {
     private static final Logger LOGGER = LogUtils.getLogger();
 
     @Nullable private static SoundInstance stirSoundInstance;
+
+    /** True while the local player is frozen during an Alchemist Table animation. */
+    private static boolean alchemistFrozen = false;
+
+    public static boolean isAlchemistFrozen() { return alchemistFrozen; }
+
+    public static void handleAlchemistFreeze(AlchemistFreezePayload packet, IPayloadContext context) {
+        context.enqueueWork(() -> alchemistFrozen = packet.freeze());
+    }
 
     public static void handleAlchemistStirSound(AlchemistStirSoundPayload packet, IPayloadContext context) {
         context.enqueueWork(() -> {

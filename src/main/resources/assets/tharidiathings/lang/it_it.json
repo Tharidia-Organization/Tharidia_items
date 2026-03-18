@@ -479,5 +479,16 @@
 
   "jei.tharidiathings.washer_recipe": "Lavaggio",
 
-  "jei.tharidiathings.pulverizer_recipe": "Polverizzatore"
+  "jei.tharidiathings.pulverizer_recipe": "Polverizzatore",
+
+  "block.tharidiathings.alchemist_table": "Tavolo dell'Alchimista",
+
+  "item.tharidiathings.alchemist_table": "Tavolo dell'Alchimista",
+  "item.tharidiathings.alchemist_jar": "Giara dell'Alchimista",
+  "item.tharidiathings.alchemist_token": "Gettone dell'Alchimista",
+
+  "item.tharidiathings.ball_potion": "Pozione a Sorso",
+  "item.tharidiathings.triangle_potion": "Pozione da Lancio",
+  "item.tharidiathings.drop_potion": "Pozione da Bere",
+  "item.tharidiathings.fantasy_potion": "Pozione Persistente"
 }
