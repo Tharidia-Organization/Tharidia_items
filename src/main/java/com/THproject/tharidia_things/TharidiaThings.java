@@ -1658,6 +1658,7 @@ public class TharidiaThings {
         ReviveCommands.register(event.getDispatcher());
         StableDebugCommand.register(event.getDispatcher());
         EquipCommand.register(event.getDispatcher());
+        com.THproject.tharidia_things.command.PetalCommands.register(event.getDispatcher());
     }
 
     /**

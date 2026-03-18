@@ -117,12 +117,6 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
     public static final int JAR_CAPACITY = 5;
 
     /**
-     * Item tag accepted by jar slots 0 and 1.
-     * Any flower recognized by the minecraft:flowers tag is valid.
-     */
-    private static final TagKey<Item> FLOWER_TAG = ItemTags.FLOWERS;
-
-    /**
      * Item tag accepted by jar slots 2 and 3.
      * Add items to data/tharidiathings/tags/item/manure.json to populate this tag.
      */
@@ -132,7 +126,7 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
     /**
      * Four jar slots. Each stores a single item type with a count in [0,
      * JAR_CAPACITY].
-     * Slots 0-1 accept flowers; slots 2-3 accept manure.
+     * Slots 0-1 accept petals (PetalItem with DYED_COLOR); slots 2-3 accept manure.
      */
     private final ItemStack[] jars = new ItemStack[] {
             ItemStack.EMPTY, ItemStack.EMPTY, ItemStack.EMPTY, ItemStack.EMPTY
@@ -352,7 +346,7 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
             return false;
         }
         ItemStack jar = jars[jarIndex];
-        boolean sameType = !jar.isEmpty() && jar.is(stack.getItem());
+        boolean sameType = !jar.isEmpty() && jar.is(stack.getItem()) && sameJarColor(jar, stack);
         boolean notFull  = jar.getCount() < JAR_CAPACITY;
         if (!jar.isEmpty() && (!sameType || !notFull)) {
             if (!notFull)
@@ -365,7 +359,7 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
         int toAdd   = player.isCreative() ? (JAR_CAPACITY - current)
                                           : Math.min(JAR_CAPACITY - current, stack.getCount());
         if (jar.isEmpty()) {
-            jars[jarIndex] = new ItemStack(stack.getItem(), toAdd);
+            jars[jarIndex] = stack.copyWithCount(toAdd);
         } else {
             jars[jarIndex].grow(toAdd);
         }
@@ -397,7 +391,7 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
                 continue;
 
             ItemStack jar = jars[i];
-            boolean sameType = !jar.isEmpty() && jar.is(stack.getItem());
+            boolean sameType = !jar.isEmpty() && jar.is(stack.getItem()) && sameJarColor(jar, stack);
             boolean notFull = jar.getCount() < JAR_CAPACITY;
 
             if (jar.isEmpty() || (sameType && notFull)) {
@@ -405,7 +399,7 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
                 int toAdd   = player.isCreative() ? (JAR_CAPACITY - current)
                                                   : Math.min(JAR_CAPACITY - current, stack.getCount());
                 if (jar.isEmpty()) {
-                    jars[i] = new ItemStack(stack.getItem(), toAdd);
+                    jars[i] = stack.copyWithCount(toAdd);
                 } else {
                     jars[i].grow(toAdd);
                 }
@@ -421,11 +415,28 @@ public class AlchemistTableBlockEntity extends BlockEntity implements GeoBlockEn
 
     /**
      * Returns whether jar slot {@code index} is willing to accept {@code stack}.
+     * Slots 0-1 accept petals (PetalItem with a classifiable DYED_COLOR).
+     * Slots 2-3 accept manure.
      */
     private boolean jarAccepts(int index, ItemStack stack) {
-        if (index < 2)
-            return stack.is(FLOWER_TAG);
+        if (index < 2) {
+            if (!(stack.getItem() instanceof com.THproject.tharidia_things.item.PetalItem)) return false;
+            // Only accept petals whose color maps to a known alchemist value
+            return PetalColorRegistry.getPetalValue(stack) != 0;
+        }
         return stack.is(MANURE_TAG);
+    }
+
+    /**
+     * Returns {@code true} if {@code a} and {@code b} share the same DYED_COLOR
+     * (or both have none). Used to prevent mixing petal colours in one jar.
+     */
+    private static boolean sameJarColor(ItemStack a, ItemStack b) {
+        DyedItemColor ca = a.get(net.minecraft.core.component.DataComponents.DYED_COLOR);
+        DyedItemColor cb = b.get(net.minecraft.core.component.DataComponents.DYED_COLOR);
+        if (ca == null && cb == null) return true;
+        if (ca == null || cb == null) return false;
+        return ca.rgb() == cb.rgb();
     }
 
     /**
