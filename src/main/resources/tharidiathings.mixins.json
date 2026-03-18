@@ -9,7 +9,9 @@
   "client": [
     "ClientSuggestionsMixin",
     "MapwrightRenderingMixin",
-    "ArmorEquipMixin"
+    "ArmorEquipMixin",
+    "EpicFightArmorLayerMixin",
+    "HumanoidArmorLayerAccessor"
   ],
   "injectors": {
     "defaultRequire": 0
