@@ -88,11 +88,12 @@ public class ClientConnectionHandler {
     }
     
     /**
-     * Called when name has been submitted successfully
+     * Called when name selection is complete (server accepted the name).
+     * Resets the waiting flag so the screen can be opened again if needed.
      */
-    public static void onNameSubmitted() {
+    public static void onNameAccepted() {
         waitingForNameSelection = false;
-        LOGGER.info("[NAME SELECTION] Name submitted, continuing login");
+        LOGGER.info("[NAME SELECTION] Name accepted by server, proceeding");
     }
     
     /**

@@ -1,0 +1,37 @@
+{
+    "type": "tharidiathings:washing",
+    "input": {
+        "item": "tharidiathings:vein_sediment_t0"
+    },
+    "outputs": [
+        {
+            "item": {
+                "id": "tharidiathings:coal_chunk",
+                "count": 1
+            },
+            "chance": 1.0
+        },
+        {
+            "item": {
+                "id": "tharidiathings:copper_chunk",
+                "count": 1
+            },
+            "chance": 1.0
+        },
+        {
+            "item": {
+                "id": "tharidiathings:tin_chunk",
+                "count": 1
+            },
+            "chance": 1.0
+        },
+        {
+            "item": {
+                "id": "tharidiathings:iron_chunk",
+                "count": 1
+            },
+            "chance": 1.0
+        }
+    ],
+    "processingTime": 40
+}

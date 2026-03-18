@@ -13,15 +13,14 @@ import java.util.regex.Pattern;
 /**
  * Pre-login screen for name selection.
  * This screen appears BEFORE the player enters the world.
+ * Waits for server response before closing or re-enabling input.
  */
 public class PreLoginNameScreen extends Screen {
     private EditBox nameField;
     private Button confirmButton;
-    private String errorMessage = "";
-    private int errorTicksRemaining = 0;
-    private long lastTickTime = 0;
+    private String displayMessage = "";
+    private int messageTicksRemaining = 0;
     private boolean nameSubmitted = false;
-    private int closeDelayTicks = 0;
 
     // Name validation
     private static final int MIN_NAME_LENGTH = 3;
@@ -63,9 +62,9 @@ public class PreLoginNameScreen extends Screen {
                 this.confirmButton.active = isValidName(text) && !nameSubmitted;
             }
             // Clear error message when user starts typing
-            if (!text.isEmpty() && errorTicksRemaining > 0 && currentMessageType == MessageType.ERROR) {
-                errorTicksRemaining = 0;
-                errorMessage = "";
+            if (!text.isEmpty() && messageTicksRemaining > 0 && currentMessageType == MessageType.ERROR) {
+                messageTicksRemaining = 0;
+                displayMessage = "";
             }
         });
         this.addRenderableWidget(this.nameField);
@@ -81,9 +80,6 @@ public class PreLoginNameScreen extends Screen {
 
         // Set focus on the text field
         this.setInitialFocus(this.nameField);
-
-        // Initialize tick time
-        this.lastTickTime = System.currentTimeMillis();
     }
 
     /**
@@ -135,42 +131,54 @@ public class PreLoginNameScreen extends Screen {
         // Send packet to server
         PacketDistributor.sendToServer(new SubmitNamePacket(chosenName));
 
-        // Mark as submitted
+        // Lock UI while waiting for server response
         nameSubmitted = true;
         this.confirmButton.active = false;
         this.nameField.setEditable(false);
 
-        // Show waiting message and schedule close
+        // Show waiting message (no auto-close — we wait for NameResponsePacket)
         showMessage(Component.translatable("gui.tharidiathings.name_entry.status.submitting").getString(),
-                MessageType.SUCCESS, 100);
+                MessageType.INFO, 200);
+    }
 
-        // Schedule close after ~1 second (20 ticks)
-        this.closeDelayTicks = 20;
+    /**
+     * Called by ClientPacketHandler when a NameResponsePacket arrives.
+     * If accepted, closes the screen. If rejected, re-enables input.
+     */
+    public void handleServerResponse(boolean accepted, String message) {
+        if (accepted) {
+            showMessage(message, MessageType.SUCCESS, 40);
+            // Close after a brief delay so the player sees the success message
+            this.nameSubmitted = true; // keep locked
+            // The server will teleport us to chargen dimension which closes this screen.
+            // As a safety fallback, schedule a close in 40 ticks.
+            this.onClose();
+        } else {
+            // Rejection — re-enable input so the player can try again
+            this.nameSubmitted = false;
+            this.nameField.setEditable(true);
+            if (this.confirmButton != null) {
+                this.confirmButton.active = isValidName(this.nameField.getValue());
+            }
+            showMessage(message, MessageType.ERROR, 100);
+        }
     }
 
     private void showMessage(String message, MessageType type, int durationTicks) {
-        this.errorMessage = message;
+        this.displayMessage = message;
         this.currentMessageType = type;
-        this.errorTicksRemaining = durationTicks;
+        this.messageTicksRemaining = durationTicks;
     }
 
     @Override
     public void tick() {
         super.tick();
 
-        // Handle message timer (tick-based, not frame-based)
-        if (this.errorTicksRemaining > 0) {
-            this.errorTicksRemaining--;
-            if (this.errorTicksRemaining == 0 && !nameSubmitted) {
-                this.errorMessage = "";
-            }
-        }
-
-        // Handle close delay (tick-based scheduling instead of Thread.sleep)
-        if (this.closeDelayTicks > 0) {
-            this.closeDelayTicks--;
-            if (this.closeDelayTicks == 0) {
-                this.onClose();
+        // Handle message timer
+        if (this.messageTicksRemaining > 0) {
+            this.messageTicksRemaining--;
+            if (this.messageTicksRemaining == 0 && !nameSubmitted) {
+                this.displayMessage = "";
             }
         }
     }
@@ -207,10 +215,9 @@ public class PreLoginNameScreen extends Screen {
         super.render(guiGraphics, mouseX, mouseY, partialTick);
 
         // Render message if present
-        if (!this.errorMessage.isEmpty() && this.errorTicksRemaining > 0) {
-            // Strip color codes for display (use currentMessageType for color)
-            String displayMessage = this.errorMessage.replaceAll("§[0-9a-fk-or]", "");
-            Component message = Component.literal(displayMessage);
+        if (!this.displayMessage.isEmpty() && this.messageTicksRemaining > 0) {
+            String cleanMessage = this.displayMessage.replaceAll("\u00a7[0-9a-fk-or]", "");
+            Component message = Component.literal(cleanMessage);
             int messageX = centerX - this.font.width(message) / 2;
             guiGraphics.drawString(this.font, message, messageX, panelY + 95, currentMessageType.color, true);
         }

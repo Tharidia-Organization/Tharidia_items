@@ -15,8 +15,7 @@ import net.minecraft.world.level.block.state.BlockState;
 
 public class StationCrystalBlockEntity extends BlockEntity {
     // 10 seconds in milliseconds
-    // private static final long MAX_TIME = 10L * 24 * 60 * 60 * 1000;
-    private static final long MAX_TIME = 10L * 1000;
+    public static final long MAX_TIME = 10L * 24 * 60 * 60 * 1000;
     private long placedTime;
 
     public StationCrystalBlockEntity(BlockPos pos, BlockState blockState) {

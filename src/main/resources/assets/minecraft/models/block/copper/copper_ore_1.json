@@ -1,0 +1,32 @@
+{
+  "credit": "Made by AlleCraft",
+  "parent": "minecraft:block/copper_ore",
+  "textures": {
+    "particle": "minecraft:block/ore_copper_block",
+
+    "1_e": "minecraft:block/ore_copper_block",
+    "2_e": "minecraft:block/ore_copper_block",
+    "3_e": "minecraft:block/ore_copper_block",
+
+    "1_s": "minecraft:block/ore_copper_block",
+    "2_s": "minecraft:block/ore_copper_block",
+    "3_s": "minecraft:block/ore_copper_block",
+    
+    "1_w": "minecraft:block/ore_copper_block",
+    "2_w": "minecraft:block/ore_copper_block",
+    "3_w": "minecraft:block/ore_copper_block",
+
+    "1_n": "minecraft:block/ore_copper_block",
+    "2_n": "minecraft:block/ore_copper_block",
+    "3_n": "minecraft:block/ore_copper_block",
+
+    "1_t": "minecraft:block/ore_copper_block",
+    "2_t": "minecraft:block/ore_copper_block",
+    "3_t": "minecraft:block/ore_copper_block",
+
+    "1_b": "minecraft:block/ore_copper_block",
+    "2_b": "minecraft:block/ore_copper_block",
+    "3_b": "minecraft:block/ore_copper_block"
+
+  }
+}

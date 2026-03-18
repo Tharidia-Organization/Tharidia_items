@@ -1,0 +1,12 @@
+{
+  "credit": "Made by AlleCraft",
+  "variants": {
+      "": 
+      [
+        { "model": "minecraft:block/coal_ore" },
+        { "model": "minecraft:block/coal_ore", "x": 180 },
+        { "model": "minecraft:block/coal_ore", "y": 180 },
+        { "model": "minecraft:block/coal_ore", "y": 180, "x": 180 }
+      ]
+    }
+  }

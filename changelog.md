@@ -4,7 +4,7 @@
 
 > **I dungeon prendono vita.** Ogni istanza viene ora generata proceduralmente: stanze, corridoi e ponti non saranno mai gli stessi. Scendete al secondo piano, affrontate il boss, e preparatevi — il terzo piano è in costruzione. Nel frattempo, in superficie, un nuovo sistema minerario vi mette in mano un martello per frantumare i minerali colpo dopo colpo, e la stalla vi aspetta con animali da accudire e un intero ciclo di gestione da padroneggiare.
 
----
+
 
 ## ⚔️ Dungeon Procedurale
 
@@ -36,7 +36,7 @@ La generazione procedurale costruisce stanze, corridoi e ponti in modo diverso a
 - Fix errore database nel salvataggio eventi di combattimento
 - Fix bioma della dimensione Dungeon
 
----
+
 
 # Changelog 0.5.6
 
@@ -56,7 +56,7 @@ La generazione procedurale costruisce stanze, corridoi e ponti in modo diverso a
 - **Retina Filtrante** (Mesh) — Componente per il Lavatore
 - **Integrazione JEI** — Tutte le ricette del Lavatore consultabili nel browser ricette
 
----
+
 
 # Changelog 0.5.5
 
@@ -73,7 +73,7 @@ La generazione procedurale costruisce stanze, corridoi e ponti in modo diverso a
   - Forcone, Spazzola Animali, Paglia Fresca, Paglia Sporca
   - Letame (raccoglibile), Mangime, Kit Potenziamento Riparo
 
----
+
 
 # Changelog 0.5.4
 
@@ -82,7 +82,7 @@ La generazione procedurale costruisce stanze, corridoi e ponti in modo diverso a
 - **Il vostro nome scelto in creazione personaggio ora è ovunque** — In chat, nella tab list, in tutto il gioco. Nessun nickname Minecraft visibile
 - I nomi dei giocatori **non appaiono più nei suggerimenti chat** — Solo gli admin possono vederli
 
----
+
 
 ## 💀 Sistema Fallen/Revive — Potenziato
 
@@ -91,14 +91,14 @@ La generazione procedurale costruisce stanze, corridoi e ponti in modo diverso a
 - L'oggetto revive **si consuma** all'uso
 - Al posto di usare una mod per la revive abbiano scritto noi la funzionalità
 
----
+
 
 ## 🕳️ Grotte Procedurali [WIP]
 
 - **Nuova dimensione grotta** con generazione basata su rumore OpenSimplex2
 - Preset configurabili: **caverne ampie, tunnel densi, compatte, ricche di minerali**
 
----
+
 
 
 ## 🌍 Mondo
@@ -107,6 +107,210 @@ La generazione procedurale costruisce stanze, corridoi e ponti in modo diverso a
 - Miglioramenti al **blocco spawn mob** nelle zone protette
 
 
----
 
+
+# Changelog 0.5.8
+
+
+
+## ⚔️ Dungeon — Potenziato
+
+>**Il dungeon diventa un'esperienza completa.** Mob, bottino e boss sono ora gestiti con un sistema avanzato pensato per giocare un gruppo.
+
+- **Mob Manager** — Spawn dei mob per giocatore, non per tile. (I mob spawneranno in funzione della posizione, numero e ad ingresso dei giocatori nelle varie sezioni)
+- **Loot nelle casse** — Sistema data-driven con tabelle di loot per piano e boss
+- **Boss reworkato** — Countdown di spawn, boss bar gialla, cassa reward, exit countdown e pulizia stanza automatica
+- **Attivazione tile** — Trigger sulle porte per attivare mob e loot della stanza
+- **Scaling difficoltà** — Configurazione della difficoltà in base al numero di giocatori
+- **Drop blocker** — Impedisce ai giocatori di droppare oggetti all'interno del dungeon
+- **Fix multiplayer** — Gestione corretta del loot al rejoin nella stessa sessione
+- **Localizzazione completa** — Tutti i messaggi dungeon tradotti in italiano e inglese
+
+## 🕳️ Grotte — Potenziate
+
+- **Generazione spawn** — Nuovo sistema di spawn point nelle grotte con supporto a punti multipli basati su tag
+- **Vegetazione procedurale** — Generazione automatica di piante e vegetazione nelle grotte
+- **Nuovi materiali** — Blocchi di layout e materiali aggiuntivi per le caverne
+- **Protezione blocchi** — Handler dedicato per impedire la distruzione di blocchi strutturali
+- **Mob encounter manager** — Sistema di incontri con mob nelle grotte
+
+|| A breve un leak di entrambi, sono già completamente funzionanti @Colono ||
+# Changelog 0.5.9
+
+## 🔨 Fornace da Fabbro
+
+> **Dal minerale grezzo all'oggetto forgiato.** La fornace da fabbro è ora un sistema completo con componenti modulari, fusione nel crogiolo grande e battitura sull'incudine.
+
+- **Modulo Crogiolo grande** — Fondere i metalli e colarli negli stampi. Il renderer mostra la quantità di metallo fuso in tempo reale
+- **Minigame di battitura** — Un nuovo minigame sull'incudine per forgiare oggetti colpo dopo colpo
+- **Componenti modulari** — Mantice, camino, aspiratore, pinza e porta, ognuno con modello 3D e renderer dedicato
+- **Martello da fabbro** — Nuovo strumento con texture dedicata per la lavorazione sull'incudine
+- **Frammenti metallici e cenere** — Nuovi materiali di scarto e lavorazione
+- **Modello GeckoLib animato** — La fornace prende vita con animazioni di fusione e fiamme
+- **Dettagli della forgiatura** — L'accensione della fornace, il consumo di carburante e di cristalli è animato e creato tutto in modelli 3D
+- **GUI** — La fornace non avrà gui, è tutta basata su interazioni in gioco, modelli ed effetti visivi, come render liquidi dinamici, oggetti e particelle
+- **Casting** — Vi sono 2 modi per castare, o farlo direttamente prendendo il crogiolo piccolo pieno di liquido incandescente e versarlo nel cast oppure accumularlo nel crogiolo più grande per poter caster più lingotti in un colpo solo
+- **Deprecazione** — Ogni fase in cui è presente liquido incandescente, a meno che non sia su una fonte di calore, potrebbe solidificarsi costringendovi a riciclare lo scarto creato
+
+|| Attenti alla cenere 😈, e all'implementazione manca solo il cast multiplo simultaneo (il modello 3d), spiegazioni e leak arriveranno @Colono ||
+# Changelog 0.6.0
+> ## **Giornata magica, perchè oggi vi presentiamo 4 nuovi blocchi**
+## 🧪 Tini da Tintura
+
+> **Create i vostri colori.** Un nuovo blocco per mescolare pigmenti e tingere abiti e materiali con tonalità uniche.
+
+- **Blocco Tini da Tintura** — Modello 3D di una vasca (WIP)
+- **Miscelazione colori** — Il renderer mostra dinamicamente il colore del liquido all'interno
+- **Integrazione vestiario** — I colori creati possono essere applicati a vestiti e materiali
+- **Creazione colore** — Permette di miscelare con precisione i colori lanciandoli dentro ottenendo colorazioni uniche
+
+## 🚿 Lavatore — Setaccio, Cisterna e Lavello
+
+> **Tre blocchi, un sistema.** Il lavatore si evolve in una catena di lavorazione completa per processare i minerali scavati in cava.
+
+- **Setaccio (Sieve)** — Blocco con toggle attivo/inattivo, rendering dell'acqua e del blocco in lavorazione
+- **Cisterna (Tank)** — Sistema a cascata con rendering dell'acqua e modello con texture dedicata
+- **Lavello (Sink)** — Rendering inventario, bounding box personalizzata, otterrete qui gli **ore chunk** che verranno poi lavorati smartellando ||o polverizzando|| (Meccanica che vi verrà mostrata) 
+- **Rendering acqua** su tutti e tre i blocchi con effetti visivi dedicati
+- **Residui** — Sotto il setaccio è presente un contenitore per raccogliere tutti i residui di materiale, che in gioco si traduce nella produzione collaterale di SABBIA, GHIAIA, COSE e cose più utili, fatto per salvaguardare il mondo **[WIP]**
 ||@Colono||
+# Un buongiorno a tutti con il Changelog 0.6.1
+
+## ⚙️ Polverizzatore
+>**Macinate tutto.** Un nuovo blocco da lavorazione che riduce materiali grezzi in risorse più fini, con animazioni e feedback sonoro. Che entra al seguito del minatore
+
+- **Blocco Polverizzatore** — Macchinario con modello animato studiato per avere un comodo input superiore e l'output renderizzato sul blocco (No Gui)
+- **Grinder** — Componente con modello 3D dedicato da inserire nel polverizzatore che funge da macina
+- **Animazione di lavorazione** — Il polverizzatore si attiva visivamente durante la macinazione
+- **Utilizzo** — Il polverizzatore è azionato manualmente tramite una manovella [WIP] animata anch'essa
+- **Suono di lavorazione** — Audio dedicato che accompagna il processo di polverizzazione
+- **Integrazione JEI** — Categoria ricette dedicata consultabile nel browser ricette
+
+# Changelog 0.6.2
+
+## 💎 Cristalli?
+
+- **5 tipologie di cristalli** con modelli 3D dedicati e stadi di crescita progressivi
+- **Texture** — Nuove texture ad alta risoluzione per tutti i cristalli puri [IN REWORK]
+- **Blocchi piazzabili** —  tutti i cristalli grezzi sono posizionabili nel mondo per poter esser lavorati
+- **Uso** — I cristalli non avranno solo una parte fondamentale nell'estetica per i giocatori, ma altrettanto importante nel mondo
+  - I cristalli sono essenziali per alcune lavorazioni, come il corretto funzionamento delle fucine del fabbro, come se catalizzassero l'energia
+  - Sono essenziali soprattutto a chiunque voglia usare una station, che sia una semplice crafting, fino al più complesso dei tavoli da lavoro [FUTURO CHANGELOG]
+
+## ⛏️ Ore Chunks — Espansione
+
+- **Chunk di Carbone e Stagno** — Due nuovi minerali frantumabili con modelli a 5 stadi
+- **Vene e Sedimenti** — Ora ci sono vene di molti materiali nella cava, come argilla e materiali utili a costruire
+- **Tool** — Il martello per lavorare i chunk è stato ricreato, modello e texture
+
+# Changelog 0.6.3
+
+> Non ci è possibile dare una durabilità a tutte le station crafting moddate e non, quindi ci siamo ingegnati, per dar un pizzico di dinamica in più al Manovale (Tra le tante cose che può fare), ora avrà l'onere e l'ONORE di portare in ogni villaggio un po' della sua manovalanza. Così da potersi assicurare che tutte le station continuino a funzionare a dovere e non si logorino.
+
+## 🔮 Station Crystal
+
+- **Nuovo blocco di supporto** — Questo è un blocco creato da un insieme di cristalli e una materia instable
+- **Scopo** — Implementata meccanica core, è possibile piazzare le station solo sopra di esso
+- **Riparazione o Distruzione** — Il cristallo allo scadere di un timer interno distrugge i blocchi sopra di sé, se non viene riparato prima
+- **Riparazione** — Il blocco è riparabile tramite speciali attrezzi soltanto tramite una classe giocante specifica, bisogna fare la manutenzione alle proprie attrezzature
+- **Particelle d'allarme** quando il tempo rimanente scende sotto il 25%, il giocatore viene notificato
+- **Sostituzione** — è possibile rompere la station posizionata sopra per spostarla, ma non rompere il cristallo quando una station è sopra di lui, pena il rischio di perdere la propria amata attrezzatura
+- **Style** — Texture ancora in fase di sviluppo
+
+# Changelog 0.6.4
+
+## 🛡️ Sotto-Armatura & Sistema Equip
+
+**Un nuovo livello sotto l'armatura.** Indossate strati aggiuntivi sotto la corazza, con attributi e rendering dedicati.
+
+- **Slot sotto-armatura** — Elmo, corazza, gambali e stivali con tag dedicati
+- **Attributi custom** — Ogni pezzo sotto-armatura applica bonus specifici al personaggio
+- **Renderer custom** — Layer di rendering aggiuntivo per visualizzare la sotto-armatura sul modello
+- **GUI armatura rinnovata** — Nuova schermata con slot vanilla e sotto-armatura unificati
+
+# Changelog 0.6.5
+
+## 💀 Fallen/Revive — Potenziato
+
+- **Barra di progresso** — Overlay HUD sul giocatore che sta rianimando un compagno
+- **Rinuncia (Give Up)** — I giocatori caduti possono arrendersi con UI e gestione network dedicata
+- **Sincronizzazione stato** — Lo stato di revive è sincronizzato a tutti i giocatori in tempo reale
+- **Tracciamento tempo caduto** — Il sistema tiene traccia di quanto tempo un giocatore è rimasto a terra
+- **Titolo caduto** — Visualizzazione a schermo del titolo quando si cade
+
+## 💰 Mercato — Potenziato
+
+- **Sistema di tassazione** — Ogni transazione è tassata in funzione del valore della merce
+- **Bronzino minimo garantito** — Ogni transazione garantisce almeno 1 bronzino al venditore
+- **Tracciamento completo** — Tipo di blocco, NBT e dettagli registrati per ogni scambio
+- **Statistiche giocatore** — Sconti progressivi basati sul volume di vendita
+- **Tesoreria** — Contenitore centralizzato per tutte le tasse raccolte
+- Fix bug di duplicazione, sparizione e gestione logout
+
+# Changelog 0.6.6
+
+
+## 🎭 Creazione Personaggio — Fix Maggiore
+
+- **Validazione nome server-side** — Nuovo pacchetto server-client per verificare l'accettazione del nome scelto
+- **Flusso di creazione reworkato** — Fix al flusso completo di creazione personaggio con gestione corretta delle risposte
+
+## 🐄 Stalla — GUI Reworkata
+
+- **HUD rinnovato** — La GUI della stalla è stata completamente riscritta con rendering delle quantità migliorato
+
+## 🌍 Claim & Realm
+
+- **Nuovi flag di protezione** — Logica aggiornata per i permessi all'interno di claim e realm
+- **Marker status giocatore** — Nuovo indicatore visivo dello stato del giocatore all'interno del realm
+
+## 🎨 Assets & Texture
+
+- Nuove texture: **pinza**, **frammenti metallici**, **cenere**, **martello da fabbro**, **cristalli puri** (5 varianti)
+- Nuovi modelli: **tini da tintura**, **setaccio**, **vasca**, **lavandino**, **porta fornace**, **componenti fornace**, **polverizzatore**, **grinder**
+- Nuovi suoni: **polverizzatore** in lavorazione
+- Texture temporanee per chunk e cristalli in lavorazione
+
+## 🔧 Fix
+
+- Fix singleplayer che non salvava il mondo correttamente
+- Fix eccezione crash allo stop del server
+- Fix rottura sink che distruggeva tutti i lavandini vicini
+- Fix posizione e rendering del lavandino
+- Fix interazione con blocco dummy del sink
+- Fix inizializzazione fornace da fabbro in singleplayer
+
+# Changelog 0.6.7
+
+## 🌿 Albero dell'Erbalista.. Classe: Manovale
+
+> **La natura vi chiede qualcosa in cambio.** L'albero dell'erborista è una creatura vivente: ha fame, ha sete, e se lo trascurate, muore. Prendetevene cura e lui vi ricompenserà con petali colorati unici, forgiati dalla musica e dai fiori che gli offrite.
+
+- **Albero vivente** — L'albero ha punti vita, fame e sete. Ogni giorno al tramonto viene valutato il suo stato: se non lo nutrite e non lo innaffiate, perderà vita fino a morire
+- **Nutrizione** — Dategli da mangiare con la manure per sfamarlo e curarlo, e innaffiatelo con un secchio d'acqua per idratarlo
+- **HUD informativo** — Guardando l'albero appare un pannello in stile pergamena medievale con tutte le informazioni: salute, fame, sete, e durante il minigioco lo stato della partita in tempo reale
+
+### 🎵 Il Canto dei Vasi — Minigioco musicale
+
+> **Ascoltate, osservate, piazzate.** L'albero suona una sinfonia di 8 note e i vasi attorno a lui le ripetono. Sta a voi capire quali vasi suonano la nota giusta e piazzarci il fiore corretto.
+
+- **Sinfonia unica** — Ad ogni partita l'albero genera una melodia casuale con strumento e note diverse
+- **3 fasi musicali** — Prima l'albero suona la sinfonia completa, poi ogni vaso suona la propria nota corretta, infine i vasi suonano un mix: alcuni la nota giusta, altri una sbagliata. Dovrete ricordare quali sono quelli giusti
+- **Piazzamento fiori** — Dopo le fasi musicali potete piazzare i fiori nei vasi. Indovinate e il fiore resta, sbagliate e dopo 2 secondi il fiore scompare con fumo e un suono di errore
+- **Round progressivi** — Il gioco procede a coppie: ogni round dovete trovare 2 vasi corretti. Sbagliateli entrambi e il round si resetta. Azzeccatene solo uno e al prossimo round ne basterà uno
+- **Timer** — Avete 10 secondi per piazzare i fiori, visibile nell'HUD con countdown che cambia colore man mano che il tempo scorre
+- **Errori e Wipe** — Ogni fiore sbagliato o timeout conta come errore. Al sesto errore l'albero si spegne con una nuvola di fumo, il gioco si resetta completamente e dovrete ricominciare da capo
+- **Segnali** — Un battito cardiaco crescente del Warden annuncia l'inizio di ogni round, una cascata di cristalli di ametista e particelle End Rod vi segnalano quando potete piazzare i fiori
+- **Colore dei petali** — I petali dell'albero cambiano colore in base ai fiori che piazzate. Ogni coppia completata mescola i colori dei due fiori e li applica ai petali, che crescono di dimensione ad ogni coppia
+- **Raccolta** — Completato il minigioco, interagite a mani vuote per raccogliere 4 petali del colore che avete creato
+- **Petali nell'inventario** — I petali emettono delicate particelle colorate quando sono nel vostro inventario. I petali mistici hanno un effetto più luminoso e intenso
+
+### 🌱 8 Vasi dell'Erborista
+
+- **Vasi piazzabili** attorno all'albero nelle 8 posizioni delle radici
+- **Sistema terra** — Aggiungete terra, zappatela con la zappa, poi piantate i fiori
+- **Modello 3D** — Ogni vaso ha rendering dedicato con terra, terreno zappato e pianta visibili direttamente sul blocco
+
+### Scopo
+
+> L'albero del **MANOVALE** non è altro che un strumento antico che permette di infondere energia nei fiori per farvi ottenere petali. Questi petali avranno un preciso scopo **ALCHEMICO**. Il Manovale è una classe complessa e completa che copre tantissime sfaccettature della vita quotidiana tra i giocatori, come esser l'unico a poter gestire gli **STATION CRYSTAL** di cui avete sentito parlare nei precedenti Changelog. 

@@ -5,6 +5,7 @@ import com.THproject.tharidia_things.TharidiaThings;
 import com.THproject.tharidia_things.client.screen.RaceSelectionScreen;
 import com.THproject.tharidia_things.client.video.ClientVideoScreenManager;
 import com.THproject.tharidia_things.compoundTag.ReviveAttachments;
+import com.THproject.tharidia_things.client.gui.PreLoginNameScreen;
 import com.THproject.tharidia_things.network.*;
 import com.THproject.tharidia_things.network.revive.ReviveSyncPayload;
 import com.mojang.logging.LogUtils;
@@ -312,12 +313,27 @@ public class ClientPacketHandler {
     }
 
     /**
+     * Handles name response from server (accepted or rejected)
+     */
+    public static void handleNameResponse(NameResponsePacket packet, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            LOGGER.info("[NAME RESPONSE] accepted={}, message={}", packet.accepted(), packet.message());
+            if (packet.accepted()) {
+                ClientConnectionHandler.onNameAccepted();
+            }
+            // Pass response to the active PreLoginNameScreen if open
+            if (Minecraft.getInstance().screen instanceof PreLoginNameScreen screen) {
+                screen.handleServerResponse(packet.accepted(), packet.message());
+            }
+        });
+    }
+
+    /**
      * Handles opening the race selection GUI
      */
     public static void handleOpenRaceGui(OpenRaceGuiPacket packet, IPayloadContext context) {
         context.enqueueWork(() -> {
-            // Open the race GUI on client
-            Minecraft.getInstance().setScreen(new RaceSelectionScreen(packet.raceName()));
+            Minecraft.getInstance().setScreen(new RaceSelectionScreen());
         });
     }
 

@@ -14,6 +14,8 @@ public class ServerTransferEvents {
     @SubscribeEvent
     public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
+            // Skip transfer logic in singleplayer
+            if (!player.server.isDedicatedServer()) return;
             // Attendi un tick prima di ripristinare per assicurarsi che il giocatore sia completamente caricato
             player.server.execute(() -> {
                 TharidiaThings.LOGGER.info("Player {} connesso - tentativo ripristino dati transfer", player.getName().getString());
@@ -62,6 +64,8 @@ public class ServerTransferEvents {
     @SubscribeEvent
     public static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
+            // Skip transfer logic in singleplayer
+            if (!player.server.isDedicatedServer()) return;
             TharidiaThings.LOGGER.debug("Player {} disconnesso - salvataggio posizione server", player.getName().getString());
             ServerTransferManager.savePlayerPosition(player);
         }

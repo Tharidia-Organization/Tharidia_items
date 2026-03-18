@@ -26,7 +26,6 @@ import java.util.Map;
  * Full-screen GUI for displaying race information and selection
  */
 public class RaceSelectionScreen extends Screen {
-    private final String raceName;
     private List<FormattedCharSequence> wrappedDescription;
     private int scrollOffset = 0;
     private int maxScroll = 0;
@@ -57,9 +56,8 @@ public class RaceSelectionScreen extends Screen {
     private RaceData.RaceInfo selectedRaceInfo = null;
     private Button confirmButton = null;
 
-    public RaceSelectionScreen(String raceName) {
+    public RaceSelectionScreen() {
         super(Component.literal("Race Selection"));
-        this.raceName = raceName;
     }
 
     @Override
@@ -157,10 +155,6 @@ public class RaceSelectionScreen extends Screen {
 
         // Render map on right side
         renderMap(guiGraphics, leftColumnWidth);
-
-        // Instructions
-        int instructionY = this.height - 100;
-        guiGraphics.drawCenteredString(this.font, "Premi ESC per chiudere", this.width / 2, instructionY, 0xAAAAAA);
 
         // Render widgets
         this.renderables.forEach(widget -> widget.render(guiGraphics, mouseX, mouseY, partialTick));
@@ -333,11 +327,16 @@ public class RaceSelectionScreen extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        // Block ESC — player must select a race to proceed
         if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
-            this.onClose();
             return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    @Override
+    public boolean shouldCloseOnEsc() {
+        return false;
     }
 
     @Override

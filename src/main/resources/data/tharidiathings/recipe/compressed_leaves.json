@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "LLL",
+    "LLL",
+    "LLL"
+  ],
+  "key": {
+    "L": {
+      "tag": "minecraft:leaves"
+    }
+  },
+  "result": {
+    "id": "tharidiathings:compressed_leaves",
+    "count": 1
+  }
+}

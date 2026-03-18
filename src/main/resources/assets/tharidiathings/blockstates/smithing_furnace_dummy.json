@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "tharidiathings:block/smithing_furnace_dummy"
+    }
+  }
+}

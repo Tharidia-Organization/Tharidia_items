@@ -1,10 +1,13 @@
 package com.THproject.tharidia_things.client.screen;
 
+import java.security.Permission;
+
 import com.THproject.tharidia_things.compoundTag.ReviveAttachments;
 import com.THproject.tharidia_things.network.revive.ReviveGiveUpPacket;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -102,6 +105,22 @@ public class FallenScreen extends Screen {
                 guiGraphics.fill(barX, barY, barX + filledWidth, barY + barHeight, 0xFFCC0000);
             }
         }
+    }
+
+    @Override
+    public boolean keyPressed(int pKeyCode, int pScanCode, int pModifiers) {
+        if (!Minecraft.getInstance().player.hasPermissions(4))
+            return false;
+
+        if (this.minecraft.options.keyChat.matches(pKeyCode, pScanCode)) {
+            this.minecraft.setScreen(new ChatScreen(""));
+            return true;
+        }
+        if (this.minecraft.options.keyCommand.matches(pKeyCode, pScanCode)) {
+            this.minecraft.setScreen(new ChatScreen("/"));
+            return true;
+        }
+        return super.keyPressed(pKeyCode, pScanCode, pModifiers);
     }
 
     @Override

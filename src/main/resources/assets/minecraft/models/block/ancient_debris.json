@@ -1,0 +1,11 @@
+{
+  "credit": "Made by AlleCraft",
+  "parent": "minecraft:block/ore",
+  "textures": {
+
+    "base": "minecraft:block/netherrack",
+
+		"ore_top": "minecraft:block/ore_ancient_debris_top",
+    "ore_side": "minecraft:block/ore_ancient_debris_side"
+  }
+}

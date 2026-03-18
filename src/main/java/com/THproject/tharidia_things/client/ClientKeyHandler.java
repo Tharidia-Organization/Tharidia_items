@@ -6,6 +6,7 @@ import com.THproject.tharidia_things.TharidiaThings;
 import com.THproject.tharidia_things.stamina.StaminaAttachments;
 import com.THproject.tharidia_things.stamina.StaminaData;
 import com.THproject.tharidia_things.network.OpenArmorMenuPacket;
+import com.THproject.tharidia_things.client.gui.MasterMenuScreen;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.Mth;
@@ -40,6 +41,11 @@ public class ClientKeyHandler {
         // Check if armor menu key was pressed
         if (KeyBindings.OPEN_ARMOR_MENU.consumeClick()) {
             PacketDistributor.sendToServer(new OpenArmorMenuPacket());
+        }
+
+        if (KeyBindings.OPEN_MASTER_MENU.consumeClick()) {
+            if (mc.player.hasPermissions(2))
+                mc.setScreen(new MasterMenuScreen());
         }
 
         // Update video players

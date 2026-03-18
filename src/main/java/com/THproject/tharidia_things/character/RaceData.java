@@ -3,13 +3,15 @@ package com.THproject.tharidia_things.character;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Loads and stores race characteristics
+ * Loads and stores race characteristics.
+ * Thread-safe: uses ConcurrentHashMap and synchronized init.
  */
 public class RaceData {
-    private static final Map<String, RaceInfo> RACES = new HashMap<>();
-    private static boolean loaded = false;
+    private static final Map<String, RaceInfo> RACES = new ConcurrentHashMap<>();
+    private static volatile boolean loaded = false;
 
     public static class RaceInfo {
         public final String name;
@@ -30,7 +32,7 @@ public class RaceData {
         return new LinkedHashMap<>();
     }
 
-    public static void loadRaceData() {
+    public static synchronized void loadRaceData() {
         if (loaded) return;
 
         // Initialize races with their characteristics

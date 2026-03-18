@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/cube_all",
+  "textures": {
+    "all": "tharidiathings:block/smithing_furnace"
+  }
+}

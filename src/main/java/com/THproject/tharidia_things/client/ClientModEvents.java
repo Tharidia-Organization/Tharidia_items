@@ -4,6 +4,7 @@ import com.THproject.tharidia_things.TharidiaThings;
 import com.THproject.tharidia_things.entity.ModEntities;
 import com.THproject.tharidia_things.client.renderer.RacePointRenderer;
 import com.THproject.tharidia_things.client.renderer.DiceEntityRenderer;
+import com.THproject.tharidia_things.client.renderer.DyeVatsBlockEntityRenderer;
 import com.THproject.tharidia_things.client.model.DiceModel;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -31,5 +32,7 @@ public class ClientModEvents {
         // Register entity renderers
         event.registerEntityRenderer(ModEntities.RACE_POINT.get(), RacePointRenderer::new);
         event.registerEntityRenderer(ModEntities.DICE.get(), DiceEntityRenderer::new);
+        // Register block entity renderers
+        event.registerBlockEntityRenderer(TharidiaThings.DYE_VATS_BLOCK_ENTITY.get(), DyeVatsBlockEntityRenderer::new);
     }
 }

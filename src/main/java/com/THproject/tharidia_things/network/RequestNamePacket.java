@@ -30,18 +30,41 @@ public record RequestNamePacket(boolean needsName) implements CustomPacketPayloa
         return TYPE;
     }
     
-    /**
-     * Server-side method to check if a player needs to choose a name
-     * Uses reflection to call tharidia_tweaks NameService
-     */
-    public static boolean checkIfPlayerNeedsName(ServerPlayer serverPlayer) {
+    // Cached reflection — initialized once
+    private static boolean reflectionInitialized = false;
+    private static boolean reflectionAvailable = false;
+    private static java.lang.reflect.Method needsToChooseNameMethod;
+
+    private static boolean ensureReflection() {
+        if (reflectionInitialized) return reflectionAvailable;
+        reflectionInitialized = true;
+
         try {
             Class<?> nameServiceClass = Class.forName("com.THproject.tharidia_tweaks.name.NameService");
-            java.lang.reflect.Method needsToChooseNameMethod = nameServiceClass.getMethod("needsToChooseName", ServerPlayer.class);
-            return (boolean) needsToChooseNameMethod.invoke(null, serverPlayer);
+            needsToChooseNameMethod = nameServiceClass.getMethod("needsToChooseName", ServerPlayer.class);
+            reflectionAvailable = true;
         } catch (ClassNotFoundException e) {
-            TharidiaThings.LOGGER.error("tharidia_tweaks mod not found! NameService is required.", e);
+            TharidiaThings.LOGGER.warn("tharidia_tweaks mod not found! NameService is required.");
+            reflectionAvailable = false;
+        } catch (NoSuchMethodException e) {
+            TharidiaThings.LOGGER.warn("NameService API changed! needsToChooseName method not found.", e);
+            reflectionAvailable = false;
+        }
+
+        return reflectionAvailable;
+    }
+
+    /**
+     * Server-side method to check if a player needs to choose a name
+     * Uses reflection to call tharidia_tweaks NameService (cached)
+     */
+    public static boolean checkIfPlayerNeedsName(ServerPlayer serverPlayer) {
+        if (!ensureReflection()) {
             return false;
+        }
+
+        try {
+            return (boolean) needsToChooseNameMethod.invoke(null, serverPlayer);
         } catch (Exception e) {
             TharidiaThings.LOGGER.error("Error checking if player needs to choose name", e);
             return false;

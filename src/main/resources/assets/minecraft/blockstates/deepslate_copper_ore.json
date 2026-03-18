@@ -1,0 +1,37 @@
+{
+  "credit": "Made by AlleCraft",
+  "variants": {
+    "": 
+    [
+      { "model": "minecraft:block/deepslate_copper/deepslate_copper_ore_1", "weight": 7 },
+      { "model": "minecraft:block/deepslate_copper/deepslate_copper_ore_1", "weight": 7, "x": 180 },
+      { "model": "minecraft:block/deepslate_copper/deepslate_copper_ore_1", "weight": 7, "y": 180 },
+      { "model": "minecraft:block/deepslate_copper/deepslate_copper_ore_1", "weight": 7, "y": 180, "x": 180 },
+
+      { "model": "minecraft:block/deepslate_copper/deepslate_copper_ore_2", "weight": 6 },
+      { "model": "minecraft:block/deepslate_copper/deepslate_copper_ore_2", "weight": 6, "x": 180 },
+      { "model": "minecraft:block/deepslate_copper/deepslate_copper_ore_2", "weight": 6, "y": 180 },
+      { "model": "minecraft:block/deepslate_copper/deepslate_copper_ore_2", "weight": 6, "y": 180, "x": 180 },
+
+      { "model": "minecraft:block/deepslate_copper/deepslate_copper_ore_3", "weight": 5 },
+      { "model": "minecraft:block/deepslate_copper/deepslate_copper_ore_3", "weight": 5, "x": 180 },
+      { "model": "minecraft:block/deepslate_copper/deepslate_copper_ore_3", "weight": 5, "y": 180 },
+      { "model": "minecraft:block/deepslate_copper/deepslate_copper_ore_3", "weight": 5, "y": 180, "x": 180 },
+
+      { "model": "minecraft:block/deepslate_copper/deepslate_copper_ore_4", "weight": 4 },
+      { "model": "minecraft:block/deepslate_copper/deepslate_copper_ore_4", "weight": 4, "x": 180 },
+      { "model": "minecraft:block/deepslate_copper/deepslate_copper_ore_4", "weight": 4, "y": 180 },
+      { "model": "minecraft:block/deepslate_copper/deepslate_copper_ore_4", "weight": 4, "y": 180, "x": 180 },
+
+      { "model": "minecraft:block/deepslate_copper/deepslate_copper_ore_5", "weight": 2 },
+      { "model": "minecraft:block/deepslate_copper/deepslate_copper_ore_5", "weight": 2, "x": 180 },
+      { "model": "minecraft:block/deepslate_copper/deepslate_copper_ore_5", "weight": 2, "y": 180 },
+      { "model": "minecraft:block/deepslate_copper/deepslate_copper_ore_5", "weight": 2, "y": 180, "x": 180 },
+
+      { "model": "minecraft:block/deepslate_copper/deepslate_copper_ore_6", "weight": 1 },
+      { "model": "minecraft:block/deepslate_copper/deepslate_copper_ore_6", "weight": 1, "x": 180 },
+      { "model": "minecraft:block/deepslate_copper/deepslate_copper_ore_6", "weight": 1, "y": 180 },
+      { "model": "minecraft:block/deepslate_copper/deepslate_copper_ore_6", "weight": 1, "y": 180, "x": 180 }
+    ]
+  }
+}

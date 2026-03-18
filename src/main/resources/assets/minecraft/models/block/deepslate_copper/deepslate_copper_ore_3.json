@@ -1,0 +1,32 @@
+{
+  "credit": "Made by AlleCraft",
+  "parent": "minecraft:block/deepslate_copper_ore",
+  "textures": {
+    "particle": "minecraft:block/ore_weathered_copper",
+
+    "1_e": "minecraft:block/ore_exposed_copper",
+    "2_e": "minecraft:block/ore_weathered_copper",
+    "3_e": "minecraft:block/ore_copper_block",
+
+    "1_s": "minecraft:block/ore_copper_block",
+    "2_s": "minecraft:block/ore_exposed_copper",
+    "3_s": "minecraft:block/ore_weathered_copper",
+    
+    "1_w": "minecraft:block/ore_copper_block",
+    "2_w": "minecraft:block/ore_exposed_copper",
+    "3_w": "minecraft:block/ore_copper_block",
+
+    "1_n": "minecraft:block/ore_weathered_copper",
+    "2_n": "minecraft:block/ore_exposed_copper",
+    "3_n": "minecraft:block/ore_copper_block",
+
+    "1_t": "minecraft:block/ore_copper_block",
+    "2_t": "minecraft:block/ore_copper_block",
+    "3_t": "minecraft:block/ore_exposed_copper",
+
+    "1_b": "minecraft:block/ore_copper_block",
+    "2_b": "minecraft:block/ore_weathered_copper",
+    "3_b": "minecraft:block/ore_copper_block"
+
+  }
+}

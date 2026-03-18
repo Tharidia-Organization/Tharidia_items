@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "tharidiathings:block/dye_vats_dummy" },
+    "facing=south": { "model": "tharidiathings:block/dye_vats_dummy" },
+    "facing=east": { "model": "tharidiathings:block/dye_vats_dummy" },
+    "facing=west": { "model": "tharidiathings:block/dye_vats_dummy" }
+  }
+}

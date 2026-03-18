@@ -1,0 +1,12 @@
+{
+  "variants": {
+    "facing=north,filled=false": { "model": "tharidiathings:block/dye_vats" },
+    "facing=south,filled=false": { "model": "tharidiathings:block/dye_vats", "y": 180 },
+    "facing=east,filled=false": { "model": "tharidiathings:block/dye_vats", "y": 270 },
+    "facing=west,filled=false": { "model": "tharidiathings:block/dye_vats", "y": 90 },
+    "facing=north,filled=true": { "model": "tharidiathings:block/dye_vats_filled" },
+    "facing=south,filled=true": { "model": "tharidiathings:block/dye_vats_filled", "y": 180 },
+    "facing=east,filled=true": { "model": "tharidiathings:block/dye_vats_filled", "y": 270 },
+    "facing=west,filled=true": { "model": "tharidiathings:block/dye_vats_filled", "y": 90 }
+  }
+}
