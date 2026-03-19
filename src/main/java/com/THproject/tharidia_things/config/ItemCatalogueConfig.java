@@ -19,7 +19,7 @@ public class ItemCatalogueConfig {
 
     public static void reload() {
         config = load(FMLPaths.CONFIGDIR.get()
-                .resolve(TharidiaThings.MODID + "-item_catalogue" + ".json").toFile());
+                .resolve(TharidiaThings.MODID).resolve("item_catalogue.json").toFile());
     }
 
     private static final Gson GSON = new GsonBuilder()

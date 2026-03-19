@@ -133,11 +133,17 @@ def _filter_bar():
         dbc.CardBody(
             dbc.Row([
                 dbc.Col([
+                    html.Label("Server", className="text-muted small mb-1"),
+                    dcc.Dropdown(id="filter-servers", placeholder="All servers…", multi=True,
+                                 style={"backgroundColor": CARD_BG2, "color": TEXT},
+                                 className="dbc"),
+                ], xs=12, sm=6, md=2),
+                dbc.Col([
                     html.Label("Players", className="text-muted small mb-1"),
                     dcc.Dropdown(id="filter-players", placeholder="All players…", multi=True,
                                  style={"backgroundColor": CARD_BG2, "color": TEXT},
                                  className="dbc"),
-                ], xs=12, sm=6, md=3),
+                ], xs=12, sm=6, md=2),
                 dbc.Col([
                     html.Label("Date range", className="text-muted small mb-1"),
                     dcc.DatePickerRange(
@@ -147,7 +153,7 @@ def _filter_bar():
                         display_format="DD/MM/YYYY",
                         style={"width": "100%"},
                     ),
-                ], xs=12, sm=6, md=4),
+                ], xs=12, sm=6, md=3),
                 dbc.Col([
                     html.Label("Quick range", className="text-muted small mb-1"),
                     dcc.Dropdown(
@@ -227,6 +233,7 @@ app.layout = dbc.Container([
         dbc.Tab(label="🏆 Advancements",    tab_id="advancements"),
         dbc.Tab(label="🔍 Investigate",     tab_id="investigate"),
         dbc.Tab(label="🗺️ Map",             tab_id="map"),
+        dbc.Tab(label="🌐 3D Map",          tab_id="map3d"),
         dbc.Tab(label="📋 Reports",         tab_id="reports"),
         dbc.Tab(label="⚙️ Settings",        tab_id="settings"),
     ], id="main-tabs", active_tab="overview", className="mb-0"),
@@ -241,10 +248,10 @@ app.layout = dbc.Container([
 
 # ─── Tab renderers ────────────────────────────────────────────────────────────
 
-def render_overview(players, start, end):
-    kpis = db.get_overview_kpis(start, end)
-    activity_df = db.get_hourly_activity(start, end)
-    top_players_df = db.get_top_active_players(start, end)
+def render_overview(players, start, end, servers=None):
+    kpis = db.get_overview_kpis(start, end, servers=servers)
+    activity_df = db.get_hourly_activity(start, end, servers=servers)
+    top_players_df = db.get_top_active_players(start, end, servers=servers)
     online_df = db.get_online_players()
 
     # KPI row 1
@@ -308,11 +315,11 @@ def render_overview(players, start, end):
     ])
 
 
-def render_players(players, start, end):
+def render_players(players, start, end, servers=None):
     players_df = db.get_all_players()
-    sessions_df = db.get_session_stats(players, start, end)
-    logins_df = db.get_login_sessions(players, start, end)
-    logins_per_day = db.get_logins_per_day(players, start, end)
+    sessions_df = db.get_session_stats(players, start, end, servers=servers)
+    logins_df = db.get_login_sessions(players, start, end, servers=servers)
+    logins_per_day = db.get_logins_per_day(players, start, end, servers=servers)
 
     fig_lpd = no_data_fig("No login data")
     if not logins_per_day.empty:
@@ -349,14 +356,14 @@ def render_players(players, start, end):
     ])
 
 
-def render_combat(players, start, end):
-    dmg_df = db.get_damage_stats(players, start, end)
-    entity_df = db.get_entity_hit_counts(players, start, end)
-    ttk_df = db.get_ttk_by_entity(players, start, end)
-    kills_df = db.get_kills_per_player(players, start, end)
-    attack_df = db.get_attack_events(players, start, end, limit=500)
-    player_kills_df = db.get_player_kills(players, start, end, limit=500)
-    ttk_raw_df = db.get_time_to_kill(players, start, end, limit=500)
+def render_combat(players, start, end, servers=None):
+    dmg_df = db.get_damage_stats(players, start, end, servers=servers)
+    entity_df = db.get_entity_hit_counts(players, start, end, servers=servers)
+    ttk_df = db.get_ttk_by_entity(players, start, end, servers=servers)
+    kills_df = db.get_kills_per_player(players, start, end, servers=servers)
+    attack_df = db.get_attack_events(players, start, end, limit=500, servers=servers)
+    player_kills_df = db.get_player_kills(players, start, end, limit=500, servers=servers)
+    ttk_raw_df = db.get_time_to_kill(players, start, end, limit=500, servers=servers)
 
     # Damage per player bar
     fig_dmg = no_data_fig("No damage data")
@@ -434,11 +441,11 @@ def render_combat(players, start, end):
     ])
 
 
-def render_deaths(players, start, end):
-    deaths_df = db.get_deaths(players, start, end, limit=1000)
-    causes_df = db.get_death_causes(players, start, end)
-    timeline_df = db.get_deaths_per_day(players, start, end)
-    deadliest_df = db.get_deadliest_players(players, start, end)
+def render_deaths(players, start, end, servers=None):
+    deaths_df = db.get_deaths(players, start, end, limit=1000, servers=servers)
+    causes_df = db.get_death_causes(players, start, end, servers=servers)
+    timeline_df = db.get_deaths_per_day(players, start, end, servers=servers)
+    deadliest_df = db.get_deadliest_players(players, start, end, servers=servers)
 
     fig_cause = no_data_fig("No death data")
     if not causes_df.empty:
@@ -482,15 +489,15 @@ def render_deaths(players, start, end):
     ])
 
 
-def render_world(players, start, end):
-    bb_df = db.get_block_breaks(players, start, end)
-    top_bb = db.get_top_blocks_broken(players, start, end)
-    bb_by_player = db.get_block_break_by_player(players, start, end)
-    bp_df = db.get_block_places(players, start, end)
-    top_bp = db.get_top_blocks_placed(players, start, end)
-    bi_df = db.get_block_interact(players, start, end)
-    fp_df = db.get_fluid_places(players, start, end)
-    ei_df = db.get_entity_interact(players, start, end)
+def render_world(players, start, end, servers=None):
+    bb_df = db.get_block_breaks(players, start, end, servers=servers)
+    top_bb = db.get_top_blocks_broken(players, start, end, servers=servers)
+    bb_by_player = db.get_block_break_by_player(players, start, end, servers=servers)
+    bp_df = db.get_block_places(players, start, end, servers=servers)
+    top_bp = db.get_top_blocks_placed(players, start, end, servers=servers)
+    bi_df = db.get_block_interact(players, start, end, servers=servers)
+    fp_df = db.get_fluid_places(players, start, end, servers=servers)
+    ei_df = db.get_entity_interact(players, start, end, servers=servers)
 
     # Top broken blocks bar
     fig_bb = no_data_fig("No block break data")
@@ -549,15 +556,15 @@ def render_world(players, start, end):
     ])
 
 
-def render_items(players, start, end):
-    drops_df = db.get_item_drops(players, start, end)
-    picks_df = db.get_item_pickups(players, start, end)
-    top_drops = db.get_top_items_dropped(players, start, end)
-    top_picks = db.get_top_items_picked(players, start, end)
-    craft_df = db.get_crafting(players, start, end)
-    top_craft = db.get_top_crafted(players, start, end)
-    consume_df = db.get_item_consume(players, start, end)
-    top_consume = db.get_top_consumed(players, start, end)
+def render_items(players, start, end, servers=None):
+    drops_df = db.get_item_drops(players, start, end, servers=servers)
+    picks_df = db.get_item_pickups(players, start, end, servers=servers)
+    top_drops = db.get_top_items_dropped(players, start, end, servers=servers)
+    top_picks = db.get_top_items_picked(players, start, end, servers=servers)
+    craft_df = db.get_crafting(players, start, end, servers=servers)
+    top_craft = db.get_top_crafted(players, start, end, servers=servers)
+    consume_df = db.get_item_consume(players, start, end, servers=servers)
+    top_consume = db.get_top_consumed(players, start, end, servers=servers)
 
     def top_bar(df, x_col, y_col, title, colorscale):
         if df is None or df.empty:
@@ -591,11 +598,11 @@ def render_items(players, start, end):
     ])
 
 
-def render_chat(players, start, end):
-    chat_df = db.get_chat(players, start, end, limit=500)
-    cmds_df = db.get_commands(players, start, end, limit=500)
-    top_cmds = db.get_top_commands(players, start, end)
-    chat_pp = db.get_chat_per_player(players, start, end)
+def render_chat(players, start, end, servers=None):
+    chat_df = db.get_chat(players, start, end, limit=500, servers=servers)
+    cmds_df = db.get_commands(players, start, end, limit=500, servers=servers)
+    top_cmds = db.get_top_commands(players, start, end, servers=servers)
+    chat_pp = db.get_chat_per_player(players, start, end, servers=servers)
 
     fig_cmds = no_data_fig("No command data")
     if not top_cmds.empty:
@@ -633,10 +640,10 @@ def render_chat(players, start, end):
     ])
 
 
-def render_advancements(players, start, end):
-    adv_df = db.get_advancements(players, start, end, limit=500)
-    stats_df = db.get_advancement_stats(players, start, end)
-    first_df = db.get_first_to_advance(start, end)
+def render_advancements(players, start, end, servers=None):
+    adv_df = db.get_advancements(players, start, end, limit=500, servers=servers)
+    stats_df = db.get_advancement_stats(players, start, end, servers=servers)
+    first_df = db.get_first_to_advance(start, end, servers=servers)
 
     fig_stats = no_data_fig("No advancement data")
     if not stats_df.empty:
@@ -993,6 +1000,254 @@ def render_map_view(players, start, end):
     ])
 
 
+# ─── 3D Map View ──────────────────────────────────────────────────────────────
+
+_MAP_EVENT_OPTIONS = [
+    {"label": "💀 Deaths (all causes)",            "value": "deaths"},
+    {"label": "⚔️ PvP Deaths (player-on-player)",  "value": "pvp"},
+    {"label": "🗡️ Kills (what each player killed)", "value": "kills"},
+    {"label": "🏹 Attacks (all hit events)",        "value": "attacks"},
+    {"label": "⛏️ Block Breaks",                    "value": "block_breaks"},
+    {"label": "🧱 Block Places",                    "value": "block_places"},
+    {"label": "📦 Item Drops",                      "value": "drops"},
+    {"label": "🎒 Item Pickups",                    "value": "pickups"},
+    {"label": "🔨 Crafting locations",              "value": "crafts"},
+]
+
+_COLOR_BY_OPTIONS = [
+    {"label": "Player",    "value": "player"},
+    {"label": "Y height",  "value": "y"},
+    {"label": "Event type","value": "event_type"},
+]
+
+_3D_CAMERA_PRESETS = {
+    "iso":  dict(eye=dict(x=1.5, y=1.5, z=1.0)),
+    "top":  dict(eye=dict(x=0,   y=0,   z=2.5)),
+    "side": dict(eye=dict(x=2.5, y=0,   z=0.2)),
+    "front":dict(eye=dict(x=0,   y=2.5, z=0.2)),
+}
+
+
+def render_map3d_view(players, start, end):
+    return html.Div([
+        dcc.Store(id="map3d-data-store"),
+        section("🌐 3D Coordinate Map",
+                "Three-dimensional view: X = East/West · Y = Height · Z = North/South"),
+
+        # ── Controls row ──
+        dbc.Row([
+            dbc.Col([
+                html.Label("Event type", className="text-muted small mb-1"),
+                dcc.Dropdown(id="map3d-event-type", options=_MAP_EVENT_OPTIONS,
+                             value="deaths", clearable=False,
+                             style=_dropdown_style(), className="dbc"),
+            ], md=3),
+            dbc.Col([
+                html.Label("Colour by", className="text-muted small mb-1"),
+                dcc.Dropdown(id="map3d-color-by", options=_COLOR_BY_OPTIONS,
+                             value="player", clearable=False,
+                             style=_dropdown_style(), className="dbc"),
+            ], md=2),
+            dbc.Col([
+                html.Label("Max points", className="text-muted small mb-1"),
+                dcc.Dropdown(id="map3d-limit", options=[
+                    {"label": "2 000",  "value": 2000},
+                    {"label": "5 000",  "value": 5000},
+                    {"label": "10 000", "value": 10000},
+                ], value=5000, clearable=False,
+                style=_dropdown_style(), className="dbc"),
+            ], md=2),
+            dbc.Col([
+                html.Label("\u00a0", className="d-block small mb-1"),
+                dbc.Button("▶ Load 3D Map", id="map3d-load-btn", color="primary"),
+            ], md=2),
+        ], className="mb-2 align-items-end"),
+
+        html.Div(
+            html.Small(
+                "💡 Drag to rotate · Scroll to zoom · Double-click legend to isolate · "
+                "Hover for details. X = East/West, Y = Height (sea level ≈ 63), Z = North/South.",
+                className="text-muted fst-italic",
+            ),
+            className="mb-3",
+        ),
+
+        # ── Dimension + camera presets row (hidden until data loads) ──
+        html.Div(id="map3d-controls-row", style={"display": "none"}, children=[
+            dbc.Row([
+                dbc.Col([
+                    html.Label("Dimension", className="text-muted small mb-1"),
+                    dcc.Dropdown(id="map3d-dim-filter", options=[], value="__all__",
+                                 clearable=False, style=_dropdown_style(), className="dbc"),
+                ], md=4),
+                dbc.Col([
+                    html.Label("Camera preset", className="text-muted small mb-1"),
+                    dbc.ButtonGroup([
+                        dbc.Button("Isometric", id="map3d-cam-iso",   size="sm", outline=True, color="secondary"),
+                        dbc.Button("Top-down",  id="map3d-cam-top",   size="sm", outline=True, color="secondary"),
+                        dbc.Button("Side",      id="map3d-cam-side",  size="sm", outline=True, color="secondary"),
+                        dbc.Button("Front",     id="map3d-cam-front", size="sm", outline=True, color="secondary"),
+                    ]),
+                ], md=4, className="d-flex flex-column"),
+            ], className="mb-3 align-items-end"),
+        ]),
+
+        # ── 3D graph ──
+        dcc.Graph(
+            id="map3d-graph",
+            figure=_no_data_3d("Click ▶ Load 3D Map to render"),
+            config={"displayModeBar": True, "scrollZoom": True, "toImageButtonOptions": {"format": "png", "scale": 2}},
+            style={"height": "680px"},
+        ),
+
+        # ── Stats row (hidden until loaded) ──
+        html.Div(id="map3d-stats-row"),
+    ])
+
+
+def _no_data_3d(msg="No data"):
+    fig = go.Figure()
+    fig.add_annotation(text=msg, xref="paper", yref="paper", x=0.5, y=0.5,
+                       showarrow=False, font=dict(color=MUTED, size=14))
+    fig.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)",
+        margin=dict(l=0, r=0, t=30, b=0),
+    )
+    return fig
+
+
+def _to_num(series, default=0):
+    """Safe numeric conversion that survives JSON round-trip (handles None, str, mixed types)."""
+    return pd.to_numeric(series, errors="coerce").fillna(default)
+
+
+def _build_3d_figure(df, event_type, color_by, dim):
+    """Build the Scatter3d figure from a dataframe already filtered by dimension."""
+    label = (event_type or "events").replace("_", " ").title()
+    dim_tag = f" · {_dim_label(dim)}" if dim and dim != "__all__" else ""
+
+    # Safe numeric conversion after JSON round-trip
+    df = df.copy()
+    df["map_x"] = _to_num(df["map_x"])
+    df["map_z"] = _to_num(df["map_z"])
+    df["y"]     = _to_num(df["y"], default=64) if "y" in df.columns else 64
+
+    plot_df = df.dropna(subset=["map_x", "map_z"])
+    if plot_df.empty:
+        return _no_data_3d("No coordinate data for this selection")
+
+    y_col = plot_df["y"] if "y" in plot_df.columns else pd.Series([64] * len(plot_df), index=plot_df.index)
+
+    # ── Determine colour series ──
+    if color_by == "y":
+        fig = go.Figure(go.Scatter3d(
+            x=plot_df["map_x"].values,
+            y=plot_df["map_z"].values,
+            z=y_col.values,
+            mode="markers",
+            marker=dict(
+                size=4,
+                color=y_col.values,
+                colorscale="Viridis",
+                opacity=0.75,
+                colorbar=dict(title="Y height", thickness=14, len=0.6,
+                              bgcolor="rgba(0,0,0,0.4)", tickfont=dict(color=TEXT)),
+                showscale=True,
+            ),
+            text=_hover_text(plot_df),
+            hoverinfo="text",
+            name="Events",
+        ))
+    else:
+        group_col = "player" if color_by != "event_type" or "event_type" not in plot_df.columns else "event_type"
+        if group_col not in plot_df.columns:
+            # fallback: single trace, no grouping
+            fig = go.Figure(go.Scatter3d(
+                x=plot_df["map_x"].values,
+                y=plot_df["map_z"].values,
+                z=y_col.values,
+                mode="markers",
+                marker=dict(size=4, color=CHART_COLORS[0], opacity=0.75),
+                text=_hover_text(plot_df),
+                hoverinfo="text",
+                name="Events",
+            ))
+        else:
+            groups = sorted(plot_df[group_col].fillna("unknown").astype(str).unique())
+            palette = CHART_COLORS * (len(groups) // len(CHART_COLORS) + 1)
+            traces = []
+            for i, grp in enumerate(groups):
+                mask = plot_df[group_col].fillna("unknown").astype(str) == grp
+                sub = plot_df[mask]
+                sub_y = sub["y"].values if "y" in sub.columns else [64] * len(sub)
+                traces.append(go.Scatter3d(
+                    x=sub["map_x"].values,
+                    y=sub["map_z"].values,
+                    z=sub_y,
+                    mode="markers",
+                    marker=dict(size=4, color=palette[i], opacity=0.75),
+                    text=_hover_text(sub),
+                    hoverinfo="text",
+                    name=grp,
+                ))
+            fig = go.Figure(traces)
+
+    # ── Scene layout (only properties valid for scene axes in Plotly 3D) ──
+    axis_style = dict(
+        showbackground=True,
+        backgroundcolor="#1a1d27",
+        gridcolor=BORDER,
+        tickfont=dict(color=MUTED, size=10),
+    )
+    fig.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(color=TEXT),
+        margin=dict(l=0, r=0, t=44, b=0),
+        title=dict(text=f"3D · {label}{dim_tag} — {len(plot_df):,} points",
+                   font=dict(size=15, color=TEXT)),
+        legend=dict(bgcolor="rgba(20,22,35,0.85)", bordercolor=BORDER, borderwidth=1,
+                    font=dict(color=TEXT, size=11), itemsizing="constant"),
+        scene=dict(
+            bgcolor="#1a1d27",
+            xaxis=dict(title=dict(text="X  (East →)", font=dict(color=MUTED)), **axis_style),
+            yaxis=dict(title=dict(text="Z  (South ↓)", font=dict(color=MUTED)),
+                       autorange="reversed", **axis_style),
+            zaxis=dict(title=dict(text="Y  (Height)", font=dict(color=MUTED)), **axis_style),
+            camera=_3D_CAMERA_PRESETS["iso"],
+            aspectmode="manual",
+            aspectratio=dict(x=1.6, y=1.6, z=0.6),
+        ),
+        uirevision="map3d",
+    )
+    return fig
+
+
+def _hover_text(df):
+    """Build hover strings safely — columns may have mixed types after JSON round-trip."""
+    cols = set(df.columns)
+    idx = df.index
+
+    def _fmt_num(series):
+        return pd.to_numeric(series, errors="coerce").fillna(0).round(0).astype(int).astype(str)
+
+    lines = pd.Series([""] * len(df), index=idx, dtype=str)
+    if "player" in cols:
+        lines = "<b>" + df["player"].fillna("?").astype(str) + "</b>"
+    if "map_x" in cols and "map_z" in cols:
+        ys = _fmt_num(df["y"]) if "y" in cols else "?"
+        lines = (lines
+                 + "<br>X=" + _fmt_num(df["map_x"])
+                 + "  Y=" + ys
+                 + "  Z=" + _fmt_num(df["map_z"]))
+    if "dimension" in cols:
+        lines = lines + "<br>" + df["dimension"].fillna("").astype(str)
+    if "details" in cols:
+        lines = lines + "<br>" + df["details"].fillna("").astype(str).str[:80]
+    if "timestamp" in cols:
+        lines = lines + "<br>🕐 " + df["timestamp"].fillna("").astype(str)
+    return lines.tolist()
+
+
 # ─── Main tab callback ────────────────────────────────────────────────────────
 
 @app.callback(
@@ -1000,37 +1255,40 @@ def render_map_view(players, start, end):
     Input("main-tabs", "active_tab"),
     Input("auto-refresh", "n_intervals"),
     Input("btn-refresh", "n_clicks"),
+    Input("filter-servers", "value"),
     Input("filter-players", "value"),
     Input("filter-dates", "start_date"),
     Input("filter-dates", "end_date"),
     prevent_initial_call=False,
 )
-def render_tab(tab, _n, _clicks, players, start, end):
+def render_tab(tab, _n, _clicks, servers, players, start, end):
     from dash import ctx
     triggered = ctx.triggered_id
     # Don't re-render investigate/map tabs on auto-refresh or filter changes — they use their own callbacks
-    if tab in ("investigate", "map") and triggered not in ("main-tabs", None):
+    if tab in ("investigate", "map", "map3d") and triggered not in ("main-tabs", None):
         return dash.no_update
     if tab == "overview":
-        return render_overview(players, start, end)
+        return render_overview(players, start, end, servers)
     if tab == "players":
-        return render_players(players, start, end)
+        return render_players(players, start, end, servers)
     if tab == "combat":
-        return render_combat(players, start, end)
+        return render_combat(players, start, end, servers)
     if tab == "deaths":
-        return render_deaths(players, start, end)
+        return render_deaths(players, start, end, servers)
     if tab == "world":
-        return render_world(players, start, end)
+        return render_world(players, start, end, servers)
     if tab == "items":
-        return render_items(players, start, end)
+        return render_items(players, start, end, servers)
     if tab == "chat":
-        return render_chat(players, start, end)
+        return render_chat(players, start, end, servers)
     if tab == "advancements":
-        return render_advancements(players, start, end)
+        return render_advancements(players, start, end, servers)
     if tab == "investigate":
         return render_investigate(players, start, end)
     if tab == "map":
         return render_map_view(players, start, end)
+    if tab == "map3d":
+        return render_map3d_view(players, start, end)
     if tab == "reports":
         return render_reports(players, start, end)
     if tab == "settings":
@@ -1038,7 +1296,17 @@ def render_tab(tab, _n, _clicks, players, start, end):
     return html.Div("Unknown tab.")
 
 
-# ─── Player dropdown population ───────────────────────────────────────────────
+# ─── Server + Player dropdown population ──────────────────────────────────────
+
+@app.callback(
+    Output("filter-servers", "options"),
+    Input("auto-refresh", "n_intervals"),
+    prevent_initial_call=False,
+)
+def populate_servers(_n):
+    ids = db.get_server_ids()
+    return [{"label": s, "value": s} for s in ids]
+
 
 @app.callback(
     Output("filter-players", "options"),
@@ -1108,16 +1376,17 @@ def update_badge(_n, _c):
     Input("btn-load-report", "n_clicks"),
     State("report-table-select", "value"),
     State("report-limit", "value"),
+    State("filter-servers", "value"),
     State("filter-players", "value"),
     State("filter-dates", "start_date"),
     State("filter-dates", "end_date"),
     prevent_initial_call=True,
 )
-def load_report(_n, table, limit, players, start, end):
+def load_report(_n, table, limit, servers, players, start, end):
     if not table:
         return html.Div("Select a table first.", className="text-muted")
     total = db.get_table_row_count(table)
-    df = db.get_table_data(table, players, start, end, limit or 1000)
+    df = db.get_table_data(table, players, start, end, limit or 1000, servers=servers)
     header = html.Div([
         html.Span(f"Table: ", className="text-muted me-1"),
         html.Strong(table, className="text-light me-3"),
@@ -1148,17 +1417,18 @@ _TL_COLORS = {
     Output("inv-timeline-output", "children"),
     Input("inv-load-timeline", "n_clicks"),
     State("inv-player-select", "value"),
+    State("filter-servers", "value"),
     State("filter-dates", "start_date"),
     State("filter-dates", "end_date"),
     prevent_initial_call=True,
 )
-def load_timeline(_n, player, start, end):
+def load_timeline(_n, player, servers, start, end):
     if not player:
         return dbc.Alert("Select a player first.", color="warning", dismissable=True)
     ok, msg = db.test_connection()
     if not ok:
         return dbc.Alert(f"DB connection failed: {msg}", color="danger", dismissable=True)
-    df = db.get_player_timeline(player, start, end)
+    df = db.get_player_timeline(player, start, end, servers=servers)
     if df.empty:
         return dbc.Alert(
             f"No events found for '{player}' in the selected date range. "
@@ -1211,12 +1481,13 @@ def load_timeline(_n, player, start, end):
     Input("pvp-load-btn", "n_clicks"),
     State("pvp-victim-select", "value"),
     State("pvp-killer-select", "value"),
+    State("filter-servers", "value"),
     State("filter-dates", "start_date"),
     State("filter-dates", "end_date"),
     prevent_initial_call=True,
 )
-def load_pvp(_n, victim, killer, start, end):
-    df, err = db.get_pvp_incidents(start=start, end=end, victim=victim, killer=killer)
+def load_pvp(_n, victim, killer, servers, start, end):
+    df, err = db.get_pvp_incidents(start=start, end=end, victim=victim, killer=killer, servers=servers)
     warnings = [dbc.Alert(err, color="warning", dismissable=True)] if err else []
     if df.empty:
         msg = ("No PvP incidents found. " +
@@ -1265,14 +1536,16 @@ def load_pvp(_n, victim, killer, start, end):
     Input("transfer-load-btn", "n_clicks"),
     State("transfer-window", "value"),
     State("transfer-distance", "value"),
+    State("filter-servers", "value"),
     State("filter-dates", "start_date"),
     State("filter-dates", "end_date"),
     prevent_initial_call=True,
 )
-def load_transfers(_n, window, distance, start, end):
+def load_transfers(_n, window, distance, servers, start, end):
     df = db.get_item_transfers(start=start, end=end,
                                time_window_sec=int(window or 300),
-                               max_distance=float(distance or 30))
+                               max_distance=float(distance or 30),
+                               servers=servers)
     if df.empty:
         return html.Div("No potential transfers detected. Try loosening time window or distance.",
                         className="text-muted fst-italic")
@@ -1309,15 +1582,16 @@ def load_transfers(_n, window, distance, start, end):
     State("loc-x", "value"),
     State("loc-z", "value"),
     State("loc-radius", "value"),
+    State("filter-servers", "value"),
     State("filter-dates", "start_date"),
     State("filter-dates", "end_date"),
     prevent_initial_call=True,
 )
-def load_location(_n, cx, cz, radius, start, end):
+def load_location(_n, cx, cz, radius, servers, start, end):
     if cx is None or cz is None:
         return dbc.Alert("Enter both X and Z coordinates.", color="warning", dismissable=True)
     r = float(radius or 50)
-    df = db.get_events_near(cx, cz, r, start, end)
+    df = db.get_events_near(cx, cz, r, start, end, servers=servers)
     if df.empty:
         return html.Div(f"No events within {r:.0f} blocks of ({cx}, {cz}).",
                         className="text-muted fst-italic")
@@ -1362,16 +1636,17 @@ def load_location(_n, cx, cz, radius, start, end):
     State("prox-player-a", "value"),
     State("prox-player-b", "value"),
     State("prox-distance", "value"),
+    State("filter-servers", "value"),
     State("filter-dates", "start_date"),
     State("filter-dates", "end_date"),
     prevent_initial_call=True,
 )
-def load_proximity(_n, player_a, player_b, distance, start, end):
+def load_proximity(_n, player_a, player_b, distance, servers, start, end):
     if not player_a or not player_b:
         return dbc.Alert("Select both players.", color="warning", dismissable=True)
     if player_a == player_b:
         return dbc.Alert("Select two different players.", color="warning", dismissable=True)
-    df = db.get_player_proximity(player_a, player_b, start, end, distance or 50)
+    df = db.get_player_proximity(player_a, player_b, start, end, distance or 50, servers=servers)
     if df.empty:
         return html.Div(
             f"No proximity detected between {player_a} and {player_b} within {distance} blocks.",
@@ -1409,13 +1684,14 @@ def load_proximity(_n, player_a, player_b, distance, start, end):
     Input("map-load-btn", "n_clicks"),
     State("map-event-type", "value"),
     State("map-limit", "value"),
+    State("filter-servers", "value"),
     State("filter-players", "value"),
     State("filter-dates", "start_date"),
     State("filter-dates", "end_date"),
     prevent_initial_call=True,
 )
-def load_map(_n, event_type, limit, players, start, end):
-    df, err = db.get_map_data(event_type, players, start, end, int(limit or 5000))
+def load_map(_n, event_type, limit, servers, players, start, end):
+    df, err = db.get_map_data(event_type, players, start, end, int(limit or 5000), servers=servers)
     label = event_type.replace("_", " ").title()
     hidden = {"display": "none"}
     visible = {"display": "block"}
@@ -1486,6 +1762,113 @@ def render_map_figure(records, dim, event_type):
     )
     fig.update_yaxes(autorange="reversed", title="Z (South ↓)", scaleanchor="x", scaleratio=1)
     fig.update_xaxes(title="X (East →)")
+    return fig
+
+
+# ─── 3D Map callbacks ─────────────────────────────────────────────────────────
+
+# Step 1: load data, populate dim selector
+@app.callback(
+    Output("map3d-data-store", "data"),
+    Output("map3d-dim-filter", "options"),
+    Output("map3d-dim-filter", "value"),
+    Output("map3d-controls-row", "style"),
+    Output("map3d-stats-row", "children"),
+    Input("map3d-load-btn", "n_clicks"),
+    State("map3d-event-type", "value"),
+    State("map3d-limit", "value"),
+    State("filter-servers", "value"),
+    State("filter-players", "value"),
+    State("filter-dates", "start_date"),
+    State("filter-dates", "end_date"),
+    prevent_initial_call=True,
+)
+def load_map3d(_n, event_type, limit, servers, players, start, end):
+    df, err = db.get_map_data(event_type, players, start, end, int(limit or 5000), servers=servers)
+    label = (event_type or "events").replace("_", " ").title()
+    hidden = {"display": "none"}
+    visible = {"display": "block"}
+
+    if df.empty:
+        msg = f"No data for '{label}'."
+        msg += f" DB error: {err}" if err else " Try selecting 'All time' in Quick Range."
+        stats = dbc.Alert(msg, color="danger" if err else "info", dismissable=True)
+        return None, [], "__all__", hidden, stats
+
+    warn = [dbc.Alert(err, color="warning", dismissable=True)] if err else []
+
+    # Dimension options
+    dims = sorted(df["dimension"].dropna().unique().tolist()) if "dimension" in df.columns else []
+    dim_opts = [{"label": "🌐 All dimensions", "value": "__all__"}] + [
+        {"label": _dim_label(d), "value": d} for d in dims
+    ]
+
+    # Quick stats badges
+    has_y = "y" in df.columns and df["y"].notna().any()
+    y_range = ""
+    if has_y:
+        y_min = int(df["y"].min())
+        y_max = int(df["y"].max())
+        y_range = f"  ·  Y {y_min} → {y_max}"
+    stats = html.Div([
+        *warn,
+        dbc.Row([
+            dbc.Col(dbc.Badge(f"{len(df):,} points", color="primary", className="p-2 me-2"), width="auto"),
+            dbc.Col(dbc.Badge(f"{len(dims)} dimension(s)", color="secondary", className="p-2 me-2"), width="auto"),
+            dbc.Col(html.Small(y_range, className="text-muted align-self-center"), width="auto") if y_range else None,
+        ], className="mb-3 g-1"),
+    ])
+
+    return df.to_dict("records"), dim_opts, "__all__", visible, stats
+
+
+# Step 2: render 3D figure when Store, dim, or color-by changes
+@app.callback(
+    Output("map3d-graph", "figure"),
+    Input("map3d-data-store", "data"),
+    Input("map3d-dim-filter", "value"),
+    Input("map3d-color-by", "value"),
+    State("map3d-event-type", "value"),
+    prevent_initial_call=True,
+)
+def render_map3d_figure(records, dim, color_by, event_type):
+    if not records:
+        return _no_data_3d("Click ▶ Load 3D Map to render")
+    try:
+        df = pd.DataFrame(records)
+
+        if dim and dim != "__all__" and "dimension" in df.columns:
+            df = df[df["dimension"] == dim]
+
+        if "map_x" not in df.columns:
+            return _no_data_3d("No coordinate data — schema missing position columns")
+
+        return _build_3d_figure(df, event_type, color_by, dim)
+    except Exception as exc:
+        import traceback
+        traceback.print_exc()
+        return _no_data_3d(f"Render error: {exc}")
+
+
+# Camera preset buttons — update figure camera without reloading data
+@app.callback(
+    Output("map3d-graph", "figure", allow_duplicate=True),
+    Input("map3d-cam-iso",   "n_clicks"),
+    Input("map3d-cam-top",   "n_clicks"),
+    Input("map3d-cam-side",  "n_clicks"),
+    Input("map3d-cam-front", "n_clicks"),
+    State("map3d-graph", "figure"),
+    prevent_initial_call=True,
+)
+def map3d_set_camera(_iso, _top, _side, _front, current_fig):
+    from dash import ctx
+    if not current_fig:
+        return dash.no_update
+    trigger = ctx.triggered_id
+    key = {"map3d-cam-iso": "iso", "map3d-cam-top": "top",
+           "map3d-cam-side": "side", "map3d-cam-front": "front"}.get(trigger, "iso")
+    fig = go.Figure(current_fig)
+    fig.update_layout(scene_camera=_3D_CAMERA_PRESETS[key])
     return fig
 
 

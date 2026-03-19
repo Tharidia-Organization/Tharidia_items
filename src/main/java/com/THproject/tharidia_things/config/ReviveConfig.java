@@ -25,7 +25,7 @@ public class ReviveConfig {
 
     public static void reload() {
         config = load(FMLPaths.CONFIGDIR.get()
-                .resolve(TharidiaThings.MODID + "-revive.json").toFile());
+                .resolve(TharidiaThings.MODID).resolve("revive.json").toFile());
     }
 
     @Expose

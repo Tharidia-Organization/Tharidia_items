@@ -865,7 +865,7 @@ public class TharidiaThings {
 
         // Register our mod's ModConfigSpec so that FML can create and load the config
         // file for us
-        modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
+        modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC, "tharidiathings/config.toml");
 
         if (ModList.get().isLoaded("epicfight")) {
             StaminaHandler.registerEpicFightCompat();
