@@ -14,6 +14,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
+import com.THproject.tharidia_features.events.ReviveTracker;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.common.Tags.DamageTypes;
@@ -50,11 +51,13 @@ public class ReviveLogic {
             if (!Revive.isPlayerFallen(player)) {
                 ReviveAttachments playerAttachments = player.getData(ReviveAttachments.REVIVE_DATA.get());
                 if (playerAttachments.canFall()) {
+                    ReviveTracker.onPlayerFallen(player, event.getSource());
                     Revive.fallPlayer(player, true);
                     event.setCanceled(true);
                     event.getEntity().setHealth(1);
                 }
             } else {
+                ReviveTracker.onPlayerRevive(player, null, "died");
                 Revive.revivePlayer(player);
             }
         }
@@ -65,6 +68,7 @@ public class ReviveLogic {
         if (event.getEntity().level().isClientSide())
             return;
         if (Revive.isPlayerFallen(event.getEntity())) {
+            ReviveTracker.onPlayerRevive(event.getEntity(), null, "logout");
             event.getEntity().kill();
             Revive.revivePlayer(event.getEntity());
         }
@@ -206,6 +210,7 @@ public class ReviveLogic {
                         ReviveSyncPayload.syncSelf(target);
 
                         if (targetAttachments.getResTick() <= 0) {
+                            ReviveTracker.onPlayerRevive(target, player, "revived");
                             Revive.revivePlayer(target, player);
                             targetAttachments.resetResTime();
                             reviverAttachments.setRevivingPlayer(null);

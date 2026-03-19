@@ -917,10 +917,30 @@ def render_investigate(players, start, end):
         html.Div(id="prox-output"),
     ], label="👥 Player Proximity", tab_id="inv-prox")
 
+    revive = dbc.Tab([
+        html.Br(),
+        dbc.Row([
+            dbc.Col([
+                html.Label("Player (optional)", className="text-muted small mb-1"),
+                dcc.Dropdown(id="revive-player-select", options=player_opts, placeholder="Any player…",
+                             style=_dropdown_style(), className="dbc"),
+            ], md=3),
+            dbc.Col([
+                html.Label("\u00a0", className="d-block small mb-1"),
+                dbc.Button("▶ Load Revive Events", id="revive-load-btn", color="warning"),
+            ], md=2),
+        ], className="mb-3 align-items-end"),
+        html.Div([
+            html.Small("Fallen events (player went down) and revive outcomes (revived / died / logout).",
+                       className="text-muted fst-italic"),
+        ], className="mb-2"),
+        html.Div(id="revive-output"),
+    ], label="💫 Fallen / Revive", tab_id="inv-revive")
+
     return html.Div([
         section("🔍 Investigation Tools",
                 "Trace actions, prove or disprove incidents — uses global date filter"),
-        dbc.Tabs([tl, pvp, tr, loc, prox], id="inv-subtabs", active_tab="inv-tl"),
+        dbc.Tabs([tl, pvp, revive, tr, loc, prox], id="inv-subtabs", active_tab="inv-tl"),
     ])
 
 
@@ -946,6 +966,8 @@ def render_map_view(players, start, end):
                     {"label": "📦 Item Drops",                     "value": "drops"},
                     {"label": "🎒 Item Pickups",                   "value": "pickups"},
                     {"label": "🔨 Crafting locations",             "value": "crafts"},
+                    {"label": "💫 Fallen (went down)",             "value": "fallen"},
+                    {"label": "❤️ Revived / Died while fallen",    "value": "revived"},
                 ], value="deaths", clearable=False, style=_dropdown_style(), className="dbc"),
             ], md=4),
             dbc.Col([
@@ -1012,6 +1034,8 @@ _MAP_EVENT_OPTIONS = [
     {"label": "📦 Item Drops",                      "value": "drops"},
     {"label": "🎒 Item Pickups",                    "value": "pickups"},
     {"label": "🔨 Crafting locations",              "value": "crafts"},
+    {"label": "💫 Fallen (went down)",              "value": "fallen"},
+    {"label": "❤️ Revived / Died while fallen",     "value": "revived"},
 ]
 
 _COLOR_BY_OPTIONS = [
@@ -1527,6 +1551,72 @@ def load_pvp(_n, victim, killer, servers, start, end):
         ], className="mb-3"),
         section(f"PvP Incident Log — {len(df)} events"),
         make_table(df, "pvp-tbl", page_size=25),
+    ])
+
+
+# Fallen / Revive
+@app.callback(
+    Output("revive-output", "children"),
+    Input("revive-load-btn", "n_clicks"),
+    State("revive-player-select", "value"),
+    State("filter-servers", "value"),
+    State("filter-dates", "start_date"),
+    State("filter-dates", "end_date"),
+    prevent_initial_call=True,
+)
+def load_revive(_n, player, servers, start, end):
+    players = [player] if player else None
+    df_fallen = db.get_fallen_events(players=players, start=start, end=end, servers=servers)
+    df_revive = db.get_revive_events(players=players, start=start, end=end, servers=servers)
+    df_stats  = db.get_revive_stats(players=players, start=start, end=end, servers=servers)
+
+    if df_fallen.empty and df_revive.empty:
+        return dbc.Alert(
+            "No fallen/revive events found. Try 'All time' from the Quick Range filter.",
+            color="info", dismissable=True)
+
+    # Map of fallen positions
+    fig_map = no_data_fig("No coordinates")
+    if not df_fallen.empty and "x" in df_fallen.columns and df_fallen["x"].notna().any():
+        fig_map = px.scatter(
+            df_fallen.dropna(subset=["x", "z"]),
+            x="x", y="z", color="player_name",
+            hover_data=[c for c in ["cause", "killer_name", "dimension", "timestamp"] if c in df_fallen.columns],
+            labels={"x": "X (East→)", "z": "Z (South↓)", "player_name": "Player"},
+            template=CHART_TEMPLATE, color_discrete_sequence=CHART_COLORS,
+        )
+        fig_map = chart_layout(fig_map)
+        fig_map.update_layout(title=f"Fallen positions — {len(df_fallen)} events", height=380)
+        fig_map.update_yaxes(autorange="reversed", title="Z (South ↓)")
+        fig_map.update_xaxes(title="X (East →)")
+
+    # Outcome breakdown bar
+    fig_outcome = no_data_fig("No revive outcome data")
+    if not df_revive.empty:
+        oc = df_revive.groupby("outcome").size().reset_index(name="count")
+        fig_outcome = px.bar(oc, x="outcome", y="count", color="outcome",
+                             color_discrete_map={"revived": "#2ecc71", "died": "#e74c3c", "logout": "#f39c12"},
+                             template=CHART_TEMPLATE)
+        fig_outcome = chart_layout(fig_outcome)
+        fig_outcome.update_layout(title="Revive outcomes", height=260, showlegend=False)
+
+    rows = []
+    if not df_stats.empty:
+        rows.append(dbc.Row([
+            dbc.Col(html.H6("Per-player stats", className="text-muted mt-3 mb-2"), md=12),
+            dbc.Col(make_table(df_stats, "revive-stats-tbl", page_size=10), md=12),
+        ]))
+
+    return html.Div([
+        dbc.Row([
+            dbc.Col(dcc.Graph(figure=fig_map, config={"scrollZoom": True}), md=8),
+            dbc.Col(dcc.Graph(figure=fig_outcome), md=4),
+        ]),
+        *rows,
+        html.H6("Fallen events", className="text-muted mt-3 mb-1"),
+        make_table(df_fallen, "fallen-tbl", page_size=15),
+        html.H6("Revive / outcome events", className="text-muted mt-3 mb-1"),
+        make_table(df_revive, "revive-tbl", page_size=15),
     ])
 
 

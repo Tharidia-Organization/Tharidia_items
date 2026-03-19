@@ -1209,6 +1209,65 @@ def get_player_proximity(player_a, player_b, start=None, end=None, distance=50, 
 
 # ─── Map Data ─────────────────────────────────────────────────────────────────
 
+def get_fallen_events(players=None, start=None, end=None, limit=500, servers=None):
+    """List of player_fallen_events with full detail."""
+    pf = _player_f("player_name", players)
+    df = _date_f("timestamp", start, end)
+    sf = _server_f("server_id", servers)
+    return query_df(f"""
+        SELECT player_name, cause, killer_name, weapon_used,
+               ROUND(x,1) as x, ROUND(y,1) as y, ROUND(z,1) as z,
+               dimension, player_hp, player_food, player_armor,
+               DATE_FORMAT(timestamp,'%Y-%m-%d %H:%i:%s') as timestamp
+        FROM player_fallen_events
+        WHERE 1=1 {df} {sf} {pf}
+        ORDER BY timestamp DESC LIMIT {limit}
+    """)
+
+
+def get_revive_events(players=None, start=None, end=None, limit=500, servers=None):
+    """List of player_revive_events with full detail."""
+    pf = _player_f("fallen_player_name", players)
+    df = _date_f("timestamp", start, end)
+    sf = _server_f("server_id", servers)
+    return query_df(f"""
+        SELECT fallen_player_name, reviver_name, outcome,
+               ROUND(x,1) as x, ROUND(y,1) as y, ROUND(z,1) as z,
+               dimension, DATE_FORMAT(timestamp,'%Y-%m-%d %H:%i:%s') as timestamp
+        FROM player_revive_events
+        WHERE 1=1 {df} {sf} {pf}
+        ORDER BY timestamp DESC LIMIT {limit}
+    """)
+
+
+def get_revive_stats(players=None, start=None, end=None, servers=None):
+    """Per-player fallen/revived/died counts."""
+    pf = _player_f("player_name", players)
+    df = _date_f("timestamp", start, end)
+    sf = _server_f("server_id", servers)
+    fallen = query_df(f"""
+        SELECT player_name, COUNT(*) as times_fallen
+        FROM player_fallen_events WHERE 1=1 {df} {sf} {pf}
+        GROUP BY player_name ORDER BY times_fallen DESC
+    """)
+    pf2 = _player_f("fallen_player_name", players)
+    sf2 = _server_f("server_id", servers)
+    df2 = _date_f("timestamp", start, end)
+    revived = query_df(f"""
+        SELECT fallen_player_name as player_name,
+               SUM(outcome='revived') as times_revived,
+               SUM(outcome='died') as times_died,
+               SUM(outcome='logout') as times_logout
+        FROM player_revive_events WHERE 1=1 {df2} {sf2} {pf2}
+        GROUP BY fallen_player_name
+    """)
+    if fallen.empty:
+        return fallen
+    if revived.empty:
+        return fallen
+    return fallen.merge(revived, on="player_name", how="left").fillna(0)
+
+
 def get_map_data(event_type, players=None, start=None, end=None, limit=5000, servers=None):
     """Coordinate data for the 2D scatter map. Returns (DataFrame, error_str_or_None)."""
     pf_n = _player_f("player_name", players)
@@ -1332,6 +1391,30 @@ def get_map_data(event_type, players=None, start=None, end=None, limit=5000, ser
                    CONCAT('Crafted ', COALESCE(crafted_item,'?')) as details,
                    NULL as dimension, DATE_FORMAT(timestamp,'%Y-%m-%d %H:%i:%s') as timestamp
             FROM crafting_event WHERE 1=1 {df_ts} {sf_n} {pf_n}""",
+        ),
+        "fallen": (
+            f"""SELECT player_name as player,
+                   ROUND(x,1) as map_x, ROUND(z,1) as map_z, ROUND(y,1) as y,
+                   CONCAT('Fallen: ', COALESCE(cause,'?'),
+                          CASE WHEN killer_name IS NOT NULL
+                               THEN CONCAT(' ← by ', killer_name) ELSE '' END) as details,
+                   COALESCE(dimension,'?') as dimension,
+                   DATE_FORMAT(timestamp,'%Y-%m-%d %H:%i:%s') as timestamp
+            FROM player_fallen_events
+            WHERE x IS NOT NULL {df_ts} {sf_n} {_player_f("player_name", players)}""",
+            None,
+        ),
+        "revived": (
+            f"""SELECT fallen_player_name as player,
+                   ROUND(x,1) as map_x, ROUND(z,1) as map_z, ROUND(y,1) as y,
+                   CONCAT('[', outcome, '] ',
+                          CASE WHEN reviver_name IS NOT NULL
+                               THEN CONCAT('by ', reviver_name) ELSE 'no reviver' END) as details,
+                   COALESCE(dimension,'?') as dimension,
+                   DATE_FORMAT(timestamp,'%Y-%m-%d %H:%i:%s') as timestamp
+            FROM player_revive_events
+            WHERE x IS NOT NULL {df_ts} {sf_n} {_player_f("fallen_player_name", players)}""",
+            None,
         ),
     }
 
