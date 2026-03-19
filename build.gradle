@@ -247,6 +247,8 @@ dependencies {
     // GeckoLib for animated block models (NeoForge 1.21.1)
     // Required dependency - user must install GeckoLib separately
     implementation "software.bernie.geckolib:geckolib-neoforge-1.21.1:4.8.2"
+
+    compileOnly "maven.modrinth:epic-fight:21.15.3-mc1.21.1-neoforge"
     
     
     // SLF4J API is already provided by Minecraft/NeoForge - no need to include it
