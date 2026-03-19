@@ -1,0 +1,634 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Tharidia God Eye Monitor — Dark Theme CSS
+   Palette: bg #1a1d27 · card #22253a · surface #2a2d3e · border #3a3d52
+            text #e0e4f0 · muted #7a8099 · accent #7eb8f7
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Global body ──────────────────────────────────────────────────────────── */
+body {
+    background-color: #1a1d27 !important;
+    color: #e0e4f0 !important;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+}
+
+/* ── KPI Cards ────────────────────────────────────────────────────────────── */
+.card {
+    background-color: #22253a !important;
+    border: 1px solid #3a3d52 !important;
+    border-radius: 8px !important;
+    transition: box-shadow 0.2s ease;
+}
+
+.card:hover {
+    box-shadow: 0 4px 20px rgba(126, 184, 247, 0.08) !important;
+}
+
+/* KPI accent: left-border glow style */
+.kpi-card {
+    border-left: 3px solid #7eb8f7 !important;
+    background: linear-gradient(135deg, #22253a 0%, #1e2233 100%) !important;
+}
+
+.kpi-card .card-body {
+    padding: 14px 16px !important;
+}
+
+.kpi-card h3 {
+    font-size: 1.8rem !important;
+    letter-spacing: -0.5px;
+}
+
+/* ── Section headers ──────────────────────────────────────────────────────── */
+.section-header {
+    border-left: 3px solid #7eb8f7;
+    padding-left: 10px;
+    margin-bottom: 16px;
+    margin-top: 8px;
+}
+
+/* ── Nav tabs ─────────────────────────────────────────────────────────────── */
+.nav-tabs {
+    border-bottom: 1px solid #3a3d52 !important;
+    gap: 2px;
+}
+
+.nav-tabs .nav-link {
+    color: #7a8099 !important;
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    border-radius: 6px 6px 0 0 !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    padding: 7px 14px !important;
+    transition: color 0.15s, background 0.15s;
+}
+
+.nav-tabs .nav-link:hover {
+    color: #c8d4e8 !important;
+    background: rgba(126, 184, 247, 0.06) !important;
+    border-color: #3a3d52 !important;
+}
+
+.nav-tabs .nav-link.active {
+    background-color: #22253a !important;
+    border-color: #3a3d52 #3a3d52 #22253a !important;
+    color: #7eb8f7 !important;
+    font-weight: 600 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   dcc.Dropdown (react-select v1) — FULL dark override
+   Both bare selectors (for non-.dbc dropdowns) and .dbc-prefixed (for
+   dropdowns with className="dbc") are included.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Container */
+.Select-control {
+    background-color: #2a2d3e !important;
+    border: 1px solid #3a3d52 !important;
+    border-radius: 6px !important;
+    color: #e0e4f0 !important;
+    cursor: pointer !important;
+    box-shadow: none !important;
+    min-height: 36px !important;
+}
+
+.Select-control:hover {
+    border-color: #5a5d72 !important;
+    box-shadow: none !important;
+}
+
+.Select.is-focused > .Select-control,
+.Select.is-focused:not(.is-open) > .Select-control {
+    background-color: #2a2d3e !important;
+    border-color: #7eb8f7 !important;
+    box-shadow: 0 0 0 2px rgba(126, 184, 247, 0.18) !important;
+    color: #e0e4f0 !important;
+}
+
+.Select.is-open > .Select-control {
+    background-color: #2a2d3e !important;
+    border-color: #7eb8f7 !important;
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+}
+
+/* Placeholder */
+.Select-placeholder,
+.Select--single > .Select-control .Select-value {
+    color: #7a8099 !important;
+    background-color: transparent !important;
+    line-height: 34px !important;
+    padding: 0 10px !important;
+}
+
+/* Selected value (single) */
+.Select-value-label {
+    color: #e0e4f0 !important;
+}
+
+/* Input field inside the control */
+.Select-input,
+.Select-input input,
+.Select-input > input {
+    background-color: transparent !important;
+    color: #e0e4f0 !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+}
+
+/* Dropdown arrow */
+.Select-arrow-zone {
+    background-color: transparent !important;
+    color: #7a8099 !important;
+}
+
+.Select-arrow {
+    border-top-color: #7a8099 !important;
+}
+
+.Select.is-open .Select-arrow {
+    border-bottom-color: #7eb8f7 !important;
+    border-top-color: transparent !important;
+}
+
+/* Clear button */
+.Select-clear-zone,
+.Select-clear {
+    color: #7a8099 !important;
+    background-color: transparent !important;
+}
+
+.Select-clear-zone:hover {
+    color: #e0e4f0 !important;
+}
+
+/* Dropdown menu panel */
+.Select-menu-outer {
+    background-color: #22253a !important;
+    border: 1px solid #3a3d52 !important;
+    border-top: none !important;
+    border-radius: 0 0 6px 6px !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5) !important;
+    z-index: 9999 !important;
+}
+
+.Select-menu {
+    background-color: #22253a !important;
+    max-height: 260px !important;
+}
+
+/* Individual options */
+.Select-option {
+    background-color: #22253a !important;
+    color: #e0e4f0 !important;
+    padding: 8px 12px !important;
+    font-size: 13px !important;
+    cursor: pointer !important;
+}
+
+.Select-option:hover,
+.Select-option.is-focused {
+    background-color: #2d3050 !important;
+    color: #ffffff !important;
+}
+
+.Select-option.is-selected {
+    background-color: #1e3a5f !important;
+    color: #7eb8f7 !important;
+    font-weight: 600 !important;
+}
+
+.Select-option.is-disabled {
+    color: #4a4d62 !important;
+    background-color: #22253a !important;
+}
+
+/* Virtualized option rows (used in larger dropdowns) */
+.VirtualizedSelectOption {
+    background-color: #22253a !important;
+    color: #e0e4f0 !important;
+}
+
+.VirtualizedSelectFocusedOption {
+    background-color: #2d3050 !important;
+    color: #ffffff !important;
+}
+
+.VirtualizedSelectSelectedOption {
+    background-color: #1e3a5f !important;
+    color: #7eb8f7 !important;
+}
+
+/* No results / loading messages */
+.Select-noresults {
+    color: #7a8099 !important;
+    background-color: #22253a !important;
+    padding: 10px 12px !important;
+    font-size: 13px !important;
+}
+
+/* Multi-select tags */
+.Select--multi .Select-value {
+    background-color: #1e3a5f !important;
+    border: 1px solid #3a6ea0 !important;
+    border-radius: 4px !important;
+    color: #7eb8f7 !important;
+    font-size: 12px !important;
+    margin: 2px !important;
+    padding: 1px 6px !important;
+}
+
+.Select--multi .Select-value-icon {
+    border-right: 1px solid #3a6ea0 !important;
+    color: #7eb8f7 !important;
+    padding: 1px 5px !important;
+}
+
+.Select--multi .Select-value-icon:hover {
+    background-color: #2a5580 !important;
+    color: #ffffff !important;
+}
+
+.Select--multi .Select-value-label {
+    color: #7eb8f7 !important;
+    padding: 1px 6px !important;
+}
+
+/* Loading spinner */
+.Select-loading-zone {
+    background-color: transparent !important;
+    color: #7a8099 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   dbc.Input / HTML input fields
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.form-control,
+input.form-control,
+textarea.form-control,
+select.form-control {
+    background-color: #2a2d3e !important;
+    color: #e0e4f0 !important;
+    border: 1px solid #3a3d52 !important;
+    border-radius: 6px !important;
+}
+
+.form-control:focus,
+input.form-control:focus {
+    background-color: #2a2d3e !important;
+    color: #e0e4f0 !important;
+    border-color: #7eb8f7 !important;
+    box-shadow: 0 0 0 2px rgba(126, 184, 247, 0.18) !important;
+}
+
+.form-control::placeholder {
+    color: #7a8099 !important;
+}
+
+/* Number input spinners */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+    filter: invert(80%) !important;
+    opacity: 0.5;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DateRangePicker (react-dates)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.DateRangePickerInput {
+    background-color: #2a2d3e !important;
+    border: 1px solid #3a3d52 !important;
+    border-radius: 6px !important;
+}
+
+.DateRangePickerInput_arrow {
+    color: #7a8099 !important;
+    background-color: #2a2d3e !important;
+}
+
+.DateInput {
+    background: #2a2d3e !important;
+}
+
+.DateInput_input {
+    background: #2a2d3e !important;
+    color: #e0e4f0 !important;
+    border-bottom: 2px solid transparent !important;
+    font-size: 13px !important;
+    font-weight: 400 !important;
+}
+
+.DateInput_input__focused {
+    border-bottom: 2px solid #7eb8f7 !important;
+    background: #2a2d3e !important;
+    color: #e0e4f0 !important;
+}
+
+.DateInput_input::placeholder {
+    color: #7a8099 !important;
+}
+
+.DateRangePicker_picker {
+    background-color: #22253a !important;
+    border: 1px solid #3a3d52 !important;
+    border-radius: 6px !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6) !important;
+    z-index: 9999 !important;
+}
+
+.DayPicker {
+    background: #22253a !important;
+}
+
+.DayPicker_weekHeader {
+    color: #7a8099 !important;
+}
+
+.CalendarMonthGrid, .CalendarMonth {
+    background: #22253a !important;
+}
+
+.CalendarMonth_caption {
+    color: #e0e4f0 !important;
+    padding-top: 18px !important;
+}
+
+.DayPickerNavigation_button__default {
+    background: #2a2d3e !important;
+    border: 1px solid #3a3d52 !important;
+    color: #e0e4f0 !important;
+    border-radius: 4px !important;
+}
+
+.DayPickerNavigation_button__default:hover {
+    background: #3a3d52 !important;
+    border: 1px solid #5a5d72 !important;
+}
+
+.DayPickerNavigation_svg__horizontal {
+    fill: #e0e4f0 !important;
+}
+
+.CalendarDay__default {
+    background: #2a2d3e !important;
+    color: #e0e4f0 !important;
+    border: 1px solid #3a3d52 !important;
+}
+
+.CalendarDay__default:hover {
+    background: #4a7abf !important;
+    color: #ffffff !important;
+    border: 1px solid #4a7abf !important;
+}
+
+.CalendarDay__selected,
+.CalendarDay__selected:active,
+.CalendarDay__selected:hover {
+    background: #7eb8f7 !important;
+    color: #1a1d27 !important;
+    border: 1px solid #7eb8f7 !important;
+}
+
+.CalendarDay__selected_start,
+.CalendarDay__selected_end {
+    background: #7eb8f7 !important;
+    color: #1a1d27 !important;
+    border: 1px solid #7eb8f7 !important;
+}
+
+.CalendarDay__selected_span {
+    background: #2d5a8e !important;
+    color: #e0e4f0 !important;
+    border: 1px solid #3d6a9e !important;
+}
+
+.CalendarDay__hovered_span,
+.CalendarDay__hovered_span:hover {
+    background: #2d5a8e !important;
+    color: #e0e4f0 !important;
+    border: 1px solid #3d6a9e !important;
+}
+
+.CalendarDay__blocked_out_of_range,
+.CalendarDay__blocked_out_of_range:hover {
+    background: #1a1d27 !important;
+    color: #3a3d52 !important;
+    border: 1px solid #2a2d3e !important;
+}
+
+.DayPickerKeyboardShortcuts_buttonReset {
+    background: transparent !important;
+}
+
+.DayPickerKeyboardShortcuts_show__bottomRight::before {
+    border-right-color: #7eb8f7 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DataTable filter row
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.dash-filter input {
+    background-color: #1a1d27 !important;
+    color: #e0e4f0 !important;
+    border: 1px solid #3a3d52 !important;
+}
+
+.dash-filter input::placeholder {
+    color: #4a4d62 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Scrollbars
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #1a1d27;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #3a3d52;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #5a5d72;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Misc polish
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Ensure modal / popover backgrounds stay dark */
+.modal-content {
+    background-color: #22253a !important;
+    border: 1px solid #3a3d52 !important;
+    color: #e0e4f0 !important;
+}
+
+.modal-header,
+.modal-footer {
+    border-color: #3a3d52 !important;
+}
+
+/* Tooltip dark */
+.bs-tooltip-auto .tooltip-inner,
+.bs-tooltip-top .tooltip-inner {
+    background-color: #2a2d3e !important;
+    color: #e0e4f0 !important;
+    border: 1px solid #3a3d52;
+    font-size: 12px;
+}
+
+/* Dash loading overlay */
+._dash-loading-callback {
+    opacity: 0.6;
+}
+
+/* Thin accent line above active tab content */
+.tab-content {
+    border-top: 2px solid #7eb8f7;
+    padding-top: 16px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   .dbc-prefixed overrides (higher specificity for className="dbc" dropdowns)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.dbc .Select-control,
+.dbc.Select-control {
+    background-color: #2a2d3e !important;
+    border: 1px solid #3a3d52 !important;
+    color: #e0e4f0 !important;
+    box-shadow: none !important;
+}
+
+.dbc .Select-control:hover {
+    border-color: #5a5d72 !important;
+}
+
+.dbc .Select.is-focused > .Select-control,
+.dbc .Select.is-focused:not(.is-open) > .Select-control {
+    background-color: #2a2d3e !important;
+    border-color: #7eb8f7 !important;
+    box-shadow: 0 0 0 2px rgba(126,184,247,0.18) !important;
+}
+
+.dbc .Select.is-open > .Select-control {
+    background-color: #2a2d3e !important;
+    border-color: #7eb8f7 !important;
+}
+
+.dbc .Select-placeholder,
+.dbc .Select--single > .Select-control .Select-value {
+    color: #7a8099 !important;
+    line-height: 34px !important;
+}
+
+.dbc .Select-value-label {
+    color: #e0e4f0 !important;
+}
+
+.dbc .Select-input,
+.dbc .Select-input input,
+.dbc .Select-input > input {
+    background-color: transparent !important;
+    color: #e0e4f0 !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.dbc .Select-arrow { border-top-color: #7a8099 !important; }
+.dbc .Select.is-open .Select-arrow { border-bottom-color: #7eb8f7 !important; border-top-color: transparent !important; }
+
+.dbc .Select-menu-outer {
+    background-color: #1e2133 !important;
+    border: 1px solid #3a3d52 !important;
+    border-top: none !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6) !important;
+    z-index: 9999 !important;
+}
+
+.dbc .Select-menu {
+    background-color: #1e2133 !important;
+}
+
+.dbc .Select-option {
+    background-color: #1e2133 !important;
+    color: #e0e4f0 !important;
+    padding: 8px 12px !important;
+}
+
+.dbc .Select-option:hover,
+.dbc .Select-option.is-focused {
+    background-color: #2d3050 !important;
+    color: #fff !important;
+}
+
+.dbc .Select-option.is-selected {
+    background-color: #1e3a5f !important;
+    color: #7eb8f7 !important;
+    font-weight: 600 !important;
+}
+
+.dbc .Select-noresults {
+    color: #7a8099 !important;
+    background-color: #1e2133 !important;
+}
+
+.dbc .Select--multi .Select-value {
+    background-color: #1e3a5f !important;
+    border: 1px solid #3a6ea0 !important;
+    color: #7eb8f7 !important;
+    border-radius: 4px !important;
+}
+
+.dbc .Select--multi .Select-value-icon {
+    border-right: 1px solid #3a6ea0 !important;
+    color: #7eb8f7 !important;
+}
+
+.dbc .Select--multi .Select-value-icon:hover {
+    background-color: #2a5580 !important;
+    color: #fff !important;
+}
+
+.dbc .Select--multi .Select-value-label {
+    color: #7eb8f7 !important;
+}
+
+/* ─── Also target any dropdown rendered without .dbc that Bootstrap DARKLY overrides ─── */
+
+/* Bootstrap DARKLY overrides the input background via .form-select */
+.form-select {
+    background-color: #2a2d3e !important;
+    color: #e0e4f0 !important;
+    border: 1px solid #3a3d52 !important;
+}
+
+.form-select:focus {
+    background-color: #2a2d3e !important;
+    color: #e0e4f0 !important;
+    border-color: #7eb8f7 !important;
+    box-shadow: 0 0 0 2px rgba(126,184,247,0.18) !important;
+}
+
+/* Catch-all for any remaining white input backgrounds */
+input, textarea, select {
+    background-color: #2a2d3e !important;
+    color: #e0e4f0 !important;
+}
+
+input::placeholder, textarea::placeholder {
+    color: #7a8099 !important;
+}

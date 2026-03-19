@@ -1,0 +1,14 @@
+{
+  "database": {
+    "host": "151.80.18.145",
+    "port": 3306,
+    "database": "god_eye",
+    "user": "pterodactyl",
+    "password": "Chr_Th_2025"
+  },
+  "app": {
+    "host": "127.0.0.1",
+    "port": 8050,
+    "default_refresh_interval": 30000
+  }
+}
