@@ -29,13 +29,17 @@ public class NametagVisibilityHandler {
         Player viewer = mc.player;
         
         if (viewer == null) {
-            // No viewer, hide nametag completely (no background)
             event.setCanRender(TriState.FALSE);
             return;
         }
-        
+
+        // Never render the local player's own nametag (e.g. in third-person)
+        if (viewer.getUUID().equals(event.getEntity().getUUID())) {
+            event.setCanRender(TriState.FALSE);
+            return;
+        }
+
         // Check if the viewer has permission level 4 (op)
-        // In client-side, we check if the player has permission to use commands
         boolean isAdmin = viewer.hasPermissions(4);
         
         if (!isAdmin) {
