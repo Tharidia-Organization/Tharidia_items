@@ -155,8 +155,8 @@ public class BattleLogic {
         Player player = event.getEntity();
 
         BattleGauntleAttachments playerAttachments = player.getData(BattleGauntleAttachments.BATTLE_GAUNTLE.get());
-        playerAttachments.setWinTick(1);
-        playerAttachments.setLoseTick(1);
+        playerAttachments.setWinTick(0);
+        playerAttachments.setLoseTick(0);
     }
 
     public static void startBattle(Player player1, Player player2) {

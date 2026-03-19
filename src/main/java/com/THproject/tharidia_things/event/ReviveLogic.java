@@ -132,6 +132,7 @@ public class ReviveLogic {
                     if (hasItem) {
                         // Start reviving state
                         playerReviveAttachments.setRevivingPlayer(interactedPlayer.getUUID());
+                        interractReviveAttachments.setRevivingPlayer(event.getEntity().getUUID());
 
                         // Sync state to client so overlay appears
                         // We must sync SELF so the reviver sees the bar
@@ -205,7 +206,7 @@ public class ReviveLogic {
                         ReviveSyncPayload.syncSelf(target);
 
                         if (targetAttachments.getResTick() <= 0) {
-                            Revive.revivePlayer(target);
+                            Revive.revivePlayer(target, player);
                             targetAttachments.resetResTime();
                             reviverAttachments.setRevivingPlayer(null);
 
@@ -252,14 +253,19 @@ public class ReviveLogic {
         }
 
         if (Revive.isPlayerFallen(player)) {
-            ReviveAttachments attachments = player.getData(ReviveAttachments.REVIVE_DATA.get());
-            attachments.increaseTimeFallen();
+            ReviveAttachments reviverAttachments = player.getData(ReviveAttachments.REVIVE_DATA.get());
+            UUID revivingUUID = reviverAttachments.getRevivingPlayer();
 
-            if (attachments.getTimeFallen() >= ReviveAttachments.MAX_FALLEN_TICK) {
-                player.kill();
-                Revive.revivePlayer(player);
+            if (revivingUUID != null) {
+                Player target = player.level().getPlayerByUUID(revivingUUID);
+                ReviveAttachments attachments = player.getData(ReviveAttachments.REVIVE_DATA.get());
+                attachments.increaseTimeFallen();
+
+                if (attachments.getTimeFallen() >= ReviveAttachments.MAX_FALLEN_TICK) {
+                    player.kill();
+                    Revive.revivePlayer(player, target);
+                }
             }
         }
     }
-
 }
