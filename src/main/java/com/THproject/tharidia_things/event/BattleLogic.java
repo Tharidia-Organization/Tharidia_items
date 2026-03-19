@@ -94,9 +94,6 @@ public class BattleLogic {
         } else if (playerAttachments.getLoseTick() == 1) {
             playerAttachments.setLoseTick(0);
             Revive.revivePlayer(player);
-            // if (event.getEntity() instanceof ServerPlayer serverPlayer) {
-            // FreezeManager.unfreezePlayer(serverPlayer);
-            // }
         }
     }
 
