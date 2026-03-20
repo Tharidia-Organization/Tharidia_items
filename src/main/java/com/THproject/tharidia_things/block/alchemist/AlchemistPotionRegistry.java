@@ -1,13 +1,15 @@
 package com.THproject.tharidia_things.block.alchemist;
 
+import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.alchemy.Potion;
 import net.minecraft.world.item.alchemy.PotionContents;
 import net.minecraft.world.item.alchemy.Potions;
 import net.minecraft.world.item.component.DyedItemColor;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.function.Supplier;
+import java.util.List;
 
 import static com.THproject.tharidia_things.item.alchemist_potion.AlchemistPotions.BALL_POTION;
 
@@ -19,18 +21,29 @@ import static com.THproject.tharidia_things.item.alchemist_potion.AlchemistPotio
  */
 public class AlchemistPotionRegistry {
 
-    private record Recipe(int v0, int v1, int v2, Supplier<ItemStack> stack) {
+    private record Recipe(int v0, int v1, int v2, int color,List<Holder<Potion>> effects) {
         boolean matches(int[] values) {
             return values[0] == v0 && values[1] == v1 && values[2] == v2;
+        }
+
+        ItemStack getPotion(){
+            ItemStack stack = new ItemStack(BALL_POTION.get());
+            stack.set(DataComponents.DYED_COLOR, new DyedItemColor(color, false));
+            PotionContents contents = PotionContents.EMPTY;
+            for (Holder<Potion> effect : effects) {
+                contents = contents.withPotion(effect);
+            }
+            stack.set(DataComponents.POTION_CONTENTS, contents);
+            return stack;
         }
     }
 
     // TODO add all the recipes of the potion combination here
     private static final Recipe[] RECIPES = {
-        new Recipe(8, 8, 8, AlchemistPotionRegistry::instantHealthStack),
-        new Recipe(6, 6, 6, AlchemistPotionRegistry::speedStack),
-        new Recipe(10, 10, 10, AlchemistPotionRegistry::jumpBoostStack),
-        new Recipe(12, 12, 12, AlchemistPotionRegistry::instantDamageStack),
+        new Recipe(8, 8, 8, 0xFF2222, List.of(Potions.HEALING)),
+        new Recipe(6, 6, 6, 0x55AAFF, List.of(Potions.SWIFTNESS)),
+        new Recipe(10, 10, 10, 0x22CC44, List.of(Potions.LEAPING)),
+        new Recipe(12, 12, 12, 0x9900CC, List.of(Potions.HARMING)),
     };
 
     /** Returns a copy of the output ItemStack for the given triplet, or {@code null} if no match. */
@@ -38,48 +51,8 @@ public class AlchemistPotionRegistry {
     public static ItemStack findPotion(int[] resultJarValues) {
         if (resultJarValues.length < 3) return null;
         for (Recipe r : RECIPES) {
-            if (r.matches(resultJarValues)) return r.stack().get().copy();
+            if (r.matches(resultJarValues)) return r.getPotion();
         }
         return null;
-    }
-
-    // ── Colour constants — edit these to change each potion's overlay tint ──────
-    private static final int COLOR_HEALING        = 0xFF2222; // rosso
-    private static final int COLOR_SPEED          = 0x55AAFF; // azzurro
-    private static final int COLOR_JUMP_BOOST     = 0x22CC44; // verde
-    private static final int COLOR_INSTANT_DAMAGE = 0x9900CC; // viola
-
-    // ── Recipe builders ───────────────────────────────────────────────────────
-
-    private static ItemStack instantHealthStack() {
-        ItemStack stack = new ItemStack(BALL_POTION.get());
-        stack.set(DataComponents.DYED_COLOR, new DyedItemColor(COLOR_HEALING, false));
-        stack.set(DataComponents.POTION_CONTENTS,
-                new PotionContents(Potions.HEALING).withEffectAdded(Potions.HEALING.value().getEffects().get(0)));
-        return stack;
-    }
-
-    private static ItemStack speedStack() {
-        ItemStack stack = new ItemStack(BALL_POTION.get());
-        stack.set(DataComponents.DYED_COLOR, new DyedItemColor(COLOR_SPEED, false));
-        stack.set(DataComponents.POTION_CONTENTS,
-                new PotionContents(Potions.SWIFTNESS).withEffectAdded(Potions.SWIFTNESS.value().getEffects().get(0)));
-        return stack;
-    }
-
-    private static ItemStack jumpBoostStack() {
-        ItemStack stack = new ItemStack(BALL_POTION.get());
-        stack.set(DataComponents.DYED_COLOR, new DyedItemColor(COLOR_JUMP_BOOST, false));
-        stack.set(DataComponents.POTION_CONTENTS,
-                new PotionContents(Potions.LEAPING).withEffectAdded(Potions.LEAPING.value().getEffects().get(0)));
-        return stack;
-    }
-
-    private static ItemStack instantDamageStack() {
-        ItemStack stack = new ItemStack(BALL_POTION.get());
-        stack.set(DataComponents.DYED_COLOR, new DyedItemColor(COLOR_INSTANT_DAMAGE, false));
-        stack.set(DataComponents.POTION_CONTENTS,
-                new PotionContents(Potions.HARMING).withEffectAdded(Potions.HARMING.value().getEffects().get(0)));
-        return stack;
     }
 }
