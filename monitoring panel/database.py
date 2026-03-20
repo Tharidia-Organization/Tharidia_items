@@ -105,6 +105,15 @@ def _server_f(col, servers):
     return ""
 
 
+def _spatial_f(x_col, z_col, cx, cz, radius):
+    """Return a SQL fragment for spatial bounding box. Empty string = no filter."""
+    if cx is None or cz is None or radius is None:
+        return ""
+    cx, cz, r = float(cx), float(cz), float(radius)
+    return (f"AND {x_col} BETWEEN {cx - r} AND {cx + r} "
+            f"AND {z_col} BETWEEN {cz - r} AND {cz + r}")
+
+
 def get_server_ids():
     """Return sorted list of distinct server_id values found across event tables."""
     # Query a fast table that always has server_id data
@@ -1268,14 +1277,29 @@ def get_revive_stats(players=None, start=None, end=None, servers=None):
     return fallen.merge(revived, on="player_name", how="left").fillna(0)
 
 
-def get_map_data(event_type, players=None, start=None, end=None, limit=5000, servers=None):
-    """Coordinate data for the 2D scatter map. Returns (DataFrame, error_str_or_None)."""
+def get_map_data(event_type, players=None, start=None, end=None, servers=None,
+                 cx=None, cz=None, radius=None):
+    """Coordinate data for the 2D/3D scatter map. Returns (DataFrame, error_str_or_None).
+
+    When cx/cz/radius are provided only events inside that bounding box are returned
+    (no row cap).  Without a spatial filter a safety cap of 20 000 rows applies.
+    """
     pf_n = _player_f("player_name", players)
     pf_p = _player_f("p.username", players)
     df_ts = _date_f("timestamp", start, end)
     df_d  = _date_f("d.timestamp", start, end)
     sf_n  = _server_f("server_id", servers)
     sf_d  = _server_f("d.server_id", servers)
+
+    # Spatial filters — native column names differ by table
+    spf_xz  = _spatial_f("player_x", "player_z", cx, cz, radius)
+    spf_blk = _spatial_f("block_x",  "block_z",  cx, cz, radius)
+    spf_d   = _spatial_f("d.x",      "d.z",      cx, cz, radius)
+    spf_raw = _spatial_f("x",        "z",         cx, cz, radius)
+
+    # No hard cap when a spatial filter is active; safety cap otherwise
+    order_limit = "" if (cx is not None and cz is not None and radius is not None) \
+                  else "LIMIT 20000"
 
     # Each entry: (full_sql, fallback_sql_or_None)
     queries = {
@@ -1288,8 +1312,7 @@ def get_map_data(event_type, players=None, start=None, end=None, limit=5000, ser
                    COALESCE(d.dimension,'?') as dimension,
                    DATE_FORMAT(d.timestamp,'%Y-%m-%d %H:%i:%s') as timestamp
             FROM player_deaths d JOIN players p ON d.player_uuid=p.uuid
-            WHERE d.x IS NOT NULL {df_d} {sf_d} {pf_p}""",
-            # fallback: no x/y/z → can't plot but at least returns data
+            WHERE d.x IS NOT NULL {df_d} {sf_d} {pf_p} {spf_d}""",
             None,
         ),
         "pvp": (
@@ -1299,8 +1322,7 @@ def get_map_data(event_type, players=None, start=None, end=None, limit=5000, ser
                    COALESCE(d.dimension,'?') as dimension,
                    DATE_FORMAT(d.timestamp,'%Y-%m-%d %H:%i:%s') as timestamp
             FROM player_deaths d JOIN players p ON d.player_uuid=p.uuid
-            WHERE d.killer_name IS NOT NULL {df_d} {sf_d} {pf_p}""",
-            # fallback without x/y/z
+            WHERE d.killer_name IS NOT NULL {df_d} {sf_d} {pf_p} {spf_d}""",
             f"""SELECT p.username as player,
                    NULL as map_x, NULL as map_z, NULL as y,
                    CONCAT('Killed by ', d.killer_name, '  [', COALESCE(d.weapon_used,'?'), ']') as details,
@@ -1315,7 +1337,7 @@ def get_map_data(event_type, players=None, start=None, end=None, limit=5000, ser
                    CONCAT('Killed ', entity_type, '  [', COALESCE(main_hand_item,'?'), ']') as details,
                    dimension, DATE_FORMAT(timestamp,'%Y-%m-%d %H:%i:%s') as timestamp
             FROM player_kill_events
-            WHERE player_x IS NOT NULL {df_ts} {sf_n} {pf_n}""",
+            WHERE player_x IS NOT NULL {df_ts} {sf_n} {pf_n} {spf_xz}""",
             f"""SELECT player_name as player,
                    NULL as map_x, NULL as map_z, NULL as y,
                    CONCAT('Killed ', entity_type) as details,
@@ -1328,7 +1350,7 @@ def get_map_data(event_type, players=None, start=None, end=None, limit=5000, ser
                    CONCAT('Hit ', entity_type, ' for ', ROUND(actual_damage,1), ' dmg') as details,
                    dimension, DATE_FORMAT(timestamp,'%Y-%m-%d %H:%i:%s') as timestamp
             FROM attack_entity_events
-            WHERE player_x IS NOT NULL {df_ts} {sf_n} {pf_n}""",
+            WHERE player_x IS NOT NULL {df_ts} {sf_n} {pf_n} {spf_xz}""",
             f"""SELECT player_name as player,
                    NULL as map_x, NULL as map_z, NULL as y,
                    CONCAT('Hit ', entity_type, ' for ', ROUND(actual_damage,1), ' dmg') as details,
@@ -1341,7 +1363,7 @@ def get_map_data(event_type, players=None, start=None, end=None, limit=5000, ser
                    CONCAT('Broke ', block_type) as details,
                    dimension, DATE_FORMAT(timestamp,'%Y-%m-%d %H:%i:%s') as timestamp
             FROM block_break_events
-            WHERE block_x IS NOT NULL {df_ts} {sf_n} {pf_n}""",
+            WHERE block_x IS NOT NULL {df_ts} {sf_n} {pf_n} {spf_blk}""",
             None,
         ),
         "block_places": (
@@ -1350,7 +1372,7 @@ def get_map_data(event_type, players=None, start=None, end=None, limit=5000, ser
                    CONCAT('Placed ', block_type) as details,
                    dimension, DATE_FORMAT(timestamp,'%Y-%m-%d %H:%i:%s') as timestamp
             FROM block_place_events
-            WHERE block_x IS NOT NULL {df_ts} {sf_n} {pf_n}""",
+            WHERE block_x IS NOT NULL {df_ts} {sf_n} {pf_n} {spf_blk}""",
             None,
         ),
         "drops": (
@@ -1359,7 +1381,7 @@ def get_map_data(event_type, players=None, start=None, end=None, limit=5000, ser
                    CONCAT('Dropped ', item_count, 'x ', item_type) as details,
                    dimension, DATE_FORMAT(timestamp,'%Y-%m-%d %H:%i:%s') as timestamp
             FROM item_drop_events
-            WHERE player_x IS NOT NULL {df_ts} {sf_n} {pf_n}""",
+            WHERE player_x IS NOT NULL {df_ts} {sf_n} {pf_n} {spf_xz}""",
             f"""SELECT player_name as player,
                    NULL as map_x, NULL as map_z, NULL as y,
                    CONCAT('Dropped ', item_count, 'x ', item_type) as details,
@@ -1372,7 +1394,7 @@ def get_map_data(event_type, players=None, start=None, end=None, limit=5000, ser
                    CONCAT('Picked up ', item_count, 'x ', item_type) as details,
                    dimension, DATE_FORMAT(timestamp,'%Y-%m-%d %H:%i:%s') as timestamp
             FROM item_pickup_events
-            WHERE player_x IS NOT NULL {df_ts} {sf_n} {pf_n}""",
+            WHERE player_x IS NOT NULL {df_ts} {sf_n} {pf_n} {spf_xz}""",
             f"""SELECT player_name as player,
                    NULL as map_x, NULL as map_z, NULL as y,
                    CONCAT('Picked up ', item_count, 'x ', item_type) as details,
@@ -1385,7 +1407,7 @@ def get_map_data(event_type, players=None, start=None, end=None, limit=5000, ser
                    CONCAT('Crafted ', COALESCE(crafted_item,'?')) as details,
                    dimension, DATE_FORMAT(timestamp,'%Y-%m-%d %H:%i:%s') as timestamp
             FROM crafting_event
-            WHERE player_x IS NOT NULL {df_ts} {sf_n} {pf_n}""",
+            WHERE player_x IS NOT NULL {df_ts} {sf_n} {pf_n} {spf_xz}""",
             f"""SELECT player_name as player,
                    NULL as map_x, NULL as map_z, NULL as y,
                    CONCAT('Crafted ', COALESCE(crafted_item,'?')) as details,
@@ -1401,7 +1423,7 @@ def get_map_data(event_type, players=None, start=None, end=None, limit=5000, ser
                    COALESCE(dimension,'?') as dimension,
                    DATE_FORMAT(timestamp,'%Y-%m-%d %H:%i:%s') as timestamp
             FROM player_fallen_events
-            WHERE x IS NOT NULL {df_ts} {sf_n} {_player_f("player_name", players)}""",
+            WHERE x IS NOT NULL {df_ts} {sf_n} {_player_f("player_name", players)} {spf_raw}""",
             None,
         ),
         "revived": (
@@ -1413,7 +1435,7 @@ def get_map_data(event_type, players=None, start=None, end=None, limit=5000, ser
                    COALESCE(dimension,'?') as dimension,
                    DATE_FORMAT(timestamp,'%Y-%m-%d %H:%i:%s') as timestamp
             FROM player_revive_events
-            WHERE x IS NOT NULL {df_ts} {sf_n} {_player_f("fallen_player_name", players)}""",
+            WHERE x IS NOT NULL {df_ts} {sf_n} {_player_f("fallen_player_name", players)} {spf_raw}""",
             None,
         ),
     }
@@ -1423,11 +1445,11 @@ def get_map_data(event_type, players=None, start=None, end=None, limit=5000, ser
         return pd.DataFrame(), f"Unknown event type: {event_type}"
 
     full_sql, fallback_sql = entry
-    df, err = query_df_safe(f"{full_sql} ORDER BY timestamp DESC LIMIT {limit}")
+    df, err = query_df_safe(f"{full_sql} ORDER BY timestamp DESC {order_limit}")
     if err:
         logger.warning("Map full query [%s] failed (%s) — trying fallback", event_type, err)
         if fallback_sql:
-            df, err2 = query_df_safe(f"{fallback_sql} ORDER BY timestamp DESC LIMIT {limit}")
+            df, err2 = query_df_safe(f"{fallback_sql} ORDER BY timestamp DESC {order_limit}")
             if err2:
                 return pd.DataFrame(), f"Full: {err} | Fallback: {err2}"
             return df, f"No coordinates available (schema missing position columns). Error: {err}"

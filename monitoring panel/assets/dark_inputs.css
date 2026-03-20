@@ -1,0 +1,24 @@
+/* ============================================================
+   Override Dash built-in CSS variables that default to white.
+   ============================================================ */
+
+:root {
+  --Dash-Fill-Inverse-Strong:       #2a2d3e;
+  --Dash-Fill-Inverse-Muted:        #22253a;
+  --Dash-Fill-Inverse-Weaker:       #33364d;
+  --Dash-Fill-Inverse-Weakest:      #1a1d27;
+  --Dash-Background-Inverse-Strong: #2a2d3e;
+  --Dash-Background-Inverse-Muted:  #22253a;
+  --Dash-Text-Inverse-Strong:       #e0e4f0;
+  --Dash-Text-Inverse-Muted:        #a0a8c0;
+  --Dash-Text-Inverse-Weaker:       #7a8099;
+  --Dash-Border-Inverse-Strong:     #3a3d52;
+  --Dash-Border-Inverse-Muted:      #3a3d52;
+
+  --Dash-Text-Strong:               #e0e4f0;
+  --Dash-Text-Muted:                #a0a8c0;
+  --Dash-Text-Weaker:               #7a8099;
+  --Dash-Text-Weakest:              #5a6080;
+  --Dash-Text-Disable:              #e0e4f0;
+  --Dash-Text-Disabled:             #7a8099;
+}

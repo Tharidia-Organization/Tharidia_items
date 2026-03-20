@@ -243,7 +243,86 @@ app.layout = dbc.Container([
         dbc.CardBody(html.Div(id="tab-content"), className="p-3"),
         style={"backgroundColor": CARD_BG, "border": f"1px solid {BORDER}", "borderTop": "none"},
     ),
+
+    # One-shot interval to trigger dark styling after DOM is ready
+    dcc.Interval(id="_style-init", interval=300, max_intervals=1, n_intervals=0),
+    html.Div(id="_style-dummy", style={"display": "none"}),
 ], fluid=True, className="px-3 px-md-4", style={"backgroundColor": BG, "minHeight": "100vh"})
+
+
+# ─── Dark input style injection via JavaScript MutationObserver ───────────────
+app.clientside_callback(
+    """
+    function(n) {
+        var BG='#2a2d3e', TEXT='#e0e4f0', BORDER='#3a3d52', HOVER='#33364d', SEL='#3d4060';
+
+        // Inject a <style> tag covering every known selector variant
+        if (!document.getElementById('_ged-dark')) {
+            var s = document.createElement('style');
+            s.id = '_ged-dark';
+            s.textContent = [
+                'input,textarea,select{background-color:'+BG+'!important;color:'+TEXT+'!important;border-color:'+BORDER+'!important}',
+                '.form-control,.form-control:focus,.form-control:disabled{background-color:'+BG+'!important;color:'+TEXT+'!important;border-color:'+BORDER+'!important}',
+                '.input-group-text{background-color:'+HOVER+'!important;color:'+TEXT+'!important;border-color:'+BORDER+'!important}',
+                /* react-select v1 (dash < 2.x) */
+                '.Select-control{background-color:'+BG+'!important;border-color:'+BORDER+'!important}',
+                '.Select-placeholder,.Select-value-label{color:'+TEXT+'!important}',
+                '.Select-input>input{color:'+TEXT+'!important;background:transparent!important}',
+                '.Select-menu-outer{background-color:'+BG+'!important;border:1px solid '+BORDER+'!important;z-index:9999!important}',
+                '.Select-option{background-color:'+BG+'!important;color:'+TEXT+'!important}',
+                '.Select-option.is-focused,.Select-option:hover{background-color:'+HOVER+'!important}',
+                '.Select-option.is-selected{background-color:'+SEL+'!important}',
+                '.Select-arrow{border-top-color:#7a8099!important}',
+                '.is-open>.Select-control{background-color:'+HOVER+'!important}',
+                /* react-select v2+ (dash 2.x, class prefix "Select") */
+                '.Select__control{background-color:'+BG+'!important;border-color:'+BORDER+'!important}',
+                '.Select__single-value,.Select__placeholder{color:'+TEXT+'!important}',
+                '.Select__input-container,.Select__input-container input{color:'+TEXT+'!important;background:transparent!important}',
+                '.Select__menu{background-color:'+BG+'!important;border:1px solid '+BORDER+'!important;z-index:9999!important}',
+                '.Select__option{background-color:'+BG+'!important;color:'+TEXT+'!important}',
+                '.Select__option--is-focused{background-color:'+HOVER+'!important}',
+                '.Select__option--is-selected{background-color:'+SEL+'!important}',
+                '.Select__dropdown-indicator,.Select__clear-indicator{color:#7a8099!important}',
+                '.Select__indicator-separator{background-color:'+BORDER+'!important}',
+                '.Select__multi-value{background-color:'+SEL+'!important}',
+                /* DatePicker */
+                '.DateInput_input,.DateRangePickerInput,.SingleDatePickerInput{background-color:'+BG+'!important;color:'+TEXT+'!important;border-color:'+BORDER+'!important}',
+                '.DayPicker,.CalendarMonthGrid,.CalendarMonth,.DayPicker_transitionContainer{background:'+BG+'!important}',
+                '.CalendarDay__default{background:'+BG+'!important;color:'+TEXT+'!important;border-color:'+BORDER+'!important}',
+                '.CalendarDay__default:hover{background:'+HOVER+'!important}',
+                '.CalendarDay__selected,.CalendarDay__selected:hover{background:'+SEL+'!important}',
+                '.CalendarMonth_caption{color:'+TEXT+'!important}',
+                '.DayPickerNavigation_button__horizontalDefault{background:'+HOVER+'!important;border-color:'+BORDER+'!important}',
+            ].join('');
+            document.head.appendChild(s);
+        }
+
+        // Also force inline styles directly on elements (overrides any inline style="")
+        function sp(el, prop, val) { el.style.setProperty(prop, val, 'important'); }
+        function paint() {
+            var pairs = [
+                ['.Select-control, .Select__control',                          [['background-color',BG],['border-color',BORDER]]],
+                ['.Select-menu-outer, .Select__menu',                          [['background-color',BG],['border-color',BORDER]]],
+                ['.Select-option, .Select__option',                            [['background-color',BG],['color',TEXT]]],
+                ['.Select-placeholder, .Select-value-label, .Select__single-value, .Select__placeholder', [['color',TEXT]]],
+                ['.DateInput_input, .DateRangePickerInput',                    [['background-color',BG],['color',TEXT]]],
+            ];
+            pairs.forEach(function(pair) {
+                document.querySelectorAll(pair[0]).forEach(function(el) {
+                    pair[1].forEach(function(p){ sp(el, p[0], p[1]); });
+                });
+            });
+        }
+
+        paint();
+        new MutationObserver(paint).observe(document.body, {childList:true, subtree:true, attributes:true});
+        return '';
+    }
+    """,
+    Output("_style-dummy", "children"),
+    Input("_style-init", "n_intervals"),
+    prevent_initial_call=False,
+)
 
 
 # ─── Tab renderers ────────────────────────────────────────────────────────────
@@ -1073,14 +1152,20 @@ def render_map3d_view(players, start, end):
                              style=_dropdown_style(), className="dbc"),
             ], md=2),
             dbc.Col([
-                html.Label("Max points", className="text-muted small mb-1"),
-                dcc.Dropdown(id="map3d-limit", options=[
-                    {"label": "2 000",  "value": 2000},
-                    {"label": "5 000",  "value": 5000},
-                    {"label": "10 000", "value": 10000},
-                ], value=5000, clearable=False,
-                style=_dropdown_style(), className="dbc"),
-            ], md=2),
+                html.Label("Zone  X / Z / radius", className="text-muted small mb-1"),
+                dbc.InputGroup([
+                    dbc.Input(id="map3d-cx", placeholder="X", type="number",
+                              style={"maxWidth": "80px"}),
+                    dbc.InputGroupText("/"),
+                    dbc.Input(id="map3d-cz", placeholder="Z", type="number",
+                              style={"maxWidth": "80px"}),
+                    dbc.InputGroupText("±"),
+                    dbc.Input(id="map3d-radius", placeholder="r", type="number", value=500,
+                              style={"maxWidth": "70px"}),
+                ], size="sm"),
+                html.Small("Leave blank to load all (capped at 20 000)",
+                           className="text-muted fst-italic"),
+            ], md=4),
             dbc.Col([
                 html.Label("\u00a0", className="d-block small mb-1"),
                 dbc.Button("▶ Load 3D Map", id="map3d-load-btn", color="primary"),
@@ -1090,7 +1175,8 @@ def render_map3d_view(players, start, end):
         html.Div(
             html.Small(
                 "💡 Drag to rotate · Scroll to zoom · Double-click legend to isolate · "
-                "Hover for details. X = East/West, Y = Height (sea level ≈ 63), Z = North/South.",
+                "Hover for details. X = East/West, Y = Height (sea level ≈ 63), Z = North/South. "
+                "Enter X/Z/radius to jump to a zone — reload to fetch a new area.",
                 className="text-muted fst-italic",
             ),
             className="mb-3",
@@ -1866,15 +1952,18 @@ def render_map_figure(records, dim, event_type):
     Output("map3d-stats-row", "children"),
     Input("map3d-load-btn", "n_clicks"),
     State("map3d-event-type", "value"),
-    State("map3d-limit", "value"),
+    State("map3d-cx", "value"),
+    State("map3d-cz", "value"),
+    State("map3d-radius", "value"),
     State("filter-servers", "value"),
     State("filter-players", "value"),
     State("filter-dates", "start_date"),
     State("filter-dates", "end_date"),
     prevent_initial_call=True,
 )
-def load_map3d(_n, event_type, limit, servers, players, start, end):
-    df, err = db.get_map_data(event_type, players, start, end, int(limit or 5000), servers=servers)
+def load_map3d(_n, event_type, cx, cz, radius, servers, players, start, end):
+    df, err = db.get_map_data(event_type, players, start, end, servers=servers,
+                              cx=cx, cz=cz, radius=radius)
     label = (event_type or "events").replace("_", " ").title()
     hidden = {"display": "none"}
     visible = {"display": "block"}
@@ -1899,13 +1988,15 @@ def load_map3d(_n, event_type, limit, servers, players, start, end):
     if has_y:
         y_min = int(df["y"].min())
         y_max = int(df["y"].max())
-        y_range = f"  ·  Y {y_min} → {y_max}"
+        y_range = f"  Y {y_min} → {y_max}"
+    zone_tag = f"  ·  Zone ({cx}, {cz}) ±{radius}" if (cx is not None and cz is not None) else ""
     stats = html.Div([
         *warn,
         dbc.Row([
             dbc.Col(dbc.Badge(f"{len(df):,} points", color="primary", className="p-2 me-2"), width="auto"),
             dbc.Col(dbc.Badge(f"{len(dims)} dimension(s)", color="secondary", className="p-2 me-2"), width="auto"),
-            dbc.Col(html.Small(y_range, className="text-muted align-self-center"), width="auto") if y_range else None,
+            dbc.Col(html.Small(f"{y_range}{zone_tag}", className="text-muted align-self-center"), width="auto")
+            if (y_range or zone_tag) else None,
         ], className="mb-3 g-1"),
     ])
 
