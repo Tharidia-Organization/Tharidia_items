@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=east":  { "model": "tharidiathings:block/cook_table" },
+    "facing=north": { "model": "tharidiathings:block/cook_table" },
+    "facing=south": { "model": "tharidiathings:block/cook_table" },
+    "facing=west":  { "model": "tharidiathings:block/cook_table" }
+  }
+}

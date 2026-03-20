@@ -1,0 +1,24 @@
+{
+  "variants": {
+    "facing=east,offset_x=0": { "model": "tharidiathings:block/cook_table_dummy" },
+    "facing=east,offset_x=1": { "model": "tharidiathings:block/cook_table_dummy" },
+    "facing=east,offset_x=2": { "model": "tharidiathings:block/cook_table_dummy" },
+    "facing=east,offset_x=3": { "model": "tharidiathings:block/cook_table_dummy" },
+    "facing=east,offset_x=4": { "model": "tharidiathings:block/cook_table_dummy" },
+    "facing=north,offset_x=0": { "model": "tharidiathings:block/cook_table_dummy" },
+    "facing=north,offset_x=1": { "model": "tharidiathings:block/cook_table_dummy" },
+    "facing=north,offset_x=2": { "model": "tharidiathings:block/cook_table_dummy" },
+    "facing=north,offset_x=3": { "model": "tharidiathings:block/cook_table_dummy" },
+    "facing=north,offset_x=4": { "model": "tharidiathings:block/cook_table_dummy" },
+    "facing=south,offset_x=0": { "model": "tharidiathings:block/cook_table_dummy" },
+    "facing=south,offset_x=1": { "model": "tharidiathings:block/cook_table_dummy" },
+    "facing=south,offset_x=2": { "model": "tharidiathings:block/cook_table_dummy" },
+    "facing=south,offset_x=3": { "model": "tharidiathings:block/cook_table_dummy" },
+    "facing=south,offset_x=4": { "model": "tharidiathings:block/cook_table_dummy" },
+    "facing=west,offset_x=0": { "model": "tharidiathings:block/cook_table_dummy" },
+    "facing=west,offset_x=1": { "model": "tharidiathings:block/cook_table_dummy" },
+    "facing=west,offset_x=2": { "model": "tharidiathings:block/cook_table_dummy" },
+    "facing=west,offset_x=3": { "model": "tharidiathings:block/cook_table_dummy" },
+    "facing=west,offset_x=4": { "model": "tharidiathings:block/cook_table_dummy" }
+  }
+}

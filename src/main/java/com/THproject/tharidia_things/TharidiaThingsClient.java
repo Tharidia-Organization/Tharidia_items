@@ -21,6 +21,7 @@ import com.THproject.tharidia_things.client.renderer.HotGoldAnvilRenderer;
 import com.THproject.tharidia_things.client.renderer.HerbalistTreeRenderer;
 import com.THproject.tharidia_things.client.renderer.HotCopperAnvilRenderer;
 import com.THproject.tharidia_things.client.renderer.StableBlockRenderer;
+import com.THproject.tharidia_things.client.renderer.CookTableRenderer;
 import com.THproject.tharidia_things.client.renderer.SmithingFurnaceRenderer;
 import com.THproject.tharidia_things.diet.ClientDietProfileCache;
 import com.THproject.tharidia_things.diet.DietRegistry;
@@ -124,6 +125,7 @@ public class TharidiaThingsClient {
         event.registerBlockEntityRenderer(TharidiaThings.HERBALIST_TREE_BLOCK_ENTITY.get(), context -> new HerbalistTreeRenderer());
         event.registerBlockEntityRenderer(TharidiaThings.POT_BLOCK_ENTITY.get(), context -> new PotRenderer());
         event.registerBlockEntityRenderer(TharidiaThings.SMITHING_FURNACE_BLOCK_ENTITY.get(), SmithingFurnaceRenderer::new);
+        event.registerBlockEntityRenderer(TharidiaThings.COOK_TABLE_BLOCK_ENTITY.get(), CookTableRenderer::new);
         event.registerBlockEntityRenderer(TharidiaThings.PULVERIZER_BLOCK_ENTITY.get(), PulverizerRenderer::new);
     }
 
@@ -148,6 +150,12 @@ public class TharidiaThingsClient {
         // Set render type for Smithing Furnace block (GeckoLib) to support transparency
         net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(
             TharidiaThings.SMITHING_FURNACE.get(),
+            RenderType.cutout()
+        );
+
+        // Cook Table (GeckoLib)
+        net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(
+            TharidiaThings.COOK_TABLE.get(),
             RenderType.cutout()
         );
 

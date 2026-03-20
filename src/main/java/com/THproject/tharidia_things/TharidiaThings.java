@@ -32,10 +32,13 @@ import com.THproject.tharidia_things.block.HotGoldMarkerBlock;
 import com.THproject.tharidia_things.block.HotCopperMarkerBlock;
 import com.THproject.tharidia_things.block.StableBlock;
 import com.THproject.tharidia_things.block.StableDummyBlock;
+import com.THproject.tharidia_things.block.CookTableBlock;
+import com.THproject.tharidia_things.block.CookTableDummyBlock;
 import com.THproject.tharidia_things.block.SmithingFurnaceBlock;
 import com.THproject.tharidia_things.block.SmithingFurnaceDummyBlock;
 import com.THproject.tharidia_things.block.DyeVatsBlock;
 import com.THproject.tharidia_things.block.DyeVatsDummyBlock;
+import com.THproject.tharidia_things.block.entity.CookTableBlockEntity;
 import com.THproject.tharidia_things.block.entity.DyeVatsBlockEntity;
 import com.THproject.tharidia_things.block.entity.PietroBlockEntity;
 import com.THproject.tharidia_things.block.entity.ClaimBlockEntity;
@@ -313,6 +316,16 @@ public class TharidiaThings {
     public static final DeferredBlock<SmithingFurnaceDummyBlock> SMITHING_FURNACE_DUMMY = BLOCKS.register(
             "smithing_furnace_dummy",
             () -> new SmithingFurnaceDummyBlock());
+
+    // Cook Table (5×1×1 GeckoLib multiblock)
+    public static final DeferredBlock<CookTableBlock> COOK_TABLE = BLOCKS.register("cook_table",
+            () -> new CookTableBlock());
+    public static final DeferredItem<BlockItem> COOK_TABLE_ITEM = ITEMS.registerSimpleBlockItem("cook_table", COOK_TABLE);
+    public static final DeferredBlock<CookTableDummyBlock> COOK_TABLE_DUMMY = BLOCKS.register("cook_table_dummy",
+            () -> new CookTableDummyBlock());
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<CookTableBlockEntity>> COOK_TABLE_BLOCK_ENTITY =
+            BLOCK_ENTITIES.register("cook_table",
+                    () -> BlockEntityType.Builder.of(CookTableBlockEntity::new, COOK_TABLE.get()).build(null));
 
     // Smithing Furnace Ash
     public static final DeferredItem<Item> ASH = ITEMS.register("ash",
@@ -694,6 +707,9 @@ public class TharidiaThings {
 
                         // Claim utilities
                         output.accept(TRUST_CONTRACT.get());
+
+                        // Cook Table
+                        output.accept(COOK_TABLE_ITEM.get());
 
                         // Smithing
                         output.accept(SMITHING_FURNACE_ITEM.get());
