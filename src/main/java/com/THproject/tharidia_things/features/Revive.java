@@ -14,7 +14,6 @@ import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
-import net.neoforged.neoforge.common.NeoForge;
 
 public class Revive {
     public static final List<UUID> fallenPlayers = new ArrayList<>();
@@ -77,10 +76,6 @@ public class Revive {
         if (jump != null) {
             jump.removeModifier(FREEZE_JUMP_ID);
         }
-
-        // Event
-        PlayerReviveEvent event = new PlayerReviveEvent(reviver, player);
-        NeoForge.EVENT_BUS.post(event);
     }
 
     public static boolean isPlayerFallen(Player player) {
