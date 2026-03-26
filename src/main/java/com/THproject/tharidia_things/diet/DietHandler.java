@@ -94,7 +94,17 @@ public class DietHandler {
         initializeIfNeeded(serverPlayer, data);
         data.setLastDecayTimeMs(System.currentTimeMillis());
         DietEffectApplier.apply(serverPlayer, data);
+        
+        // Broadcast this player's data to everyone
         syncIfNeeded(serverPlayer, data, true);
+
+        // Send all other online players' diet data to this player
+        for (ServerPlayer other : serverPlayer.server.getPlayerList().getPlayers()) {
+            if (other != serverPlayer) {
+                DietData otherData = other.getData(DietAttachments.DIET_DATA);
+                PacketDistributor.sendToPlayer(serverPlayer, new DietSyncPacket(other.getId(), otherData.copyValues()));
+            }
+        }
         
         // Sync diet profiles from server to client
         syncDietProfilesToClient(serverPlayer);
@@ -118,7 +128,7 @@ public class DietHandler {
         }
 
         float[] values = data.copyValues();
-        PacketDistributor.sendToPlayer(player, new DietSyncPacket(values));
+        PacketDistributor.sendToAllPlayers(new DietSyncPacket(player.getId(), values));
     }
 
     private static void initializeIfNeeded(ServerPlayer player, DietData data) {

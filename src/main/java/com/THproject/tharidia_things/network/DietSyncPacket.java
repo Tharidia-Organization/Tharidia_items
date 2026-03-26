@@ -12,7 +12,7 @@ import net.minecraft.world.entity.player.Player;
 /**
  * Syncs diet values from server to client.
  */
-public record DietSyncPacket(float[] values) implements CustomPacketPayload {
+public record DietSyncPacket(int entityId, float[] values) implements CustomPacketPayload {
     public static final Type<DietSyncPacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, "diet_sync"));
 
@@ -39,8 +39,8 @@ public record DietSyncPacket(float[] values) implements CustomPacketPayload {
 
     public static final StreamCodec<RegistryFriendlyByteBuf, DietSyncPacket> STREAM_CODEC =
             StreamCodec.composite(
-                    FLOAT_ARRAY_CODEC,
-                    DietSyncPacket::values,
+                    net.minecraft.network.codec.ByteBufCodecs.VAR_INT, DietSyncPacket::entityId,
+                    FLOAT_ARRAY_CODEC, DietSyncPacket::values,
                     DietSyncPacket::new
             );
 
@@ -49,8 +49,11 @@ public record DietSyncPacket(float[] values) implements CustomPacketPayload {
         return TYPE;
     }
 
-    public static void handle(DietSyncPacket packet, Player player) {
-        DietData data = player.getData(DietAttachments.DIET_DATA);
-        data.setAll(packet.values());
+    public static void handle(DietSyncPacket packet, Player localPlayer) {
+        net.minecraft.world.entity.Entity entity = localPlayer.level().getEntity(packet.entityId());
+        if (entity instanceof Player targetPlayer) {
+            DietData data = targetPlayer.getData(DietAttachments.DIET_DATA);
+            data.setAll(packet.values());
+        }
     }
 }

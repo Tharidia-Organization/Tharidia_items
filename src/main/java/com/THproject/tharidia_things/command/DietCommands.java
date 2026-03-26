@@ -62,7 +62,7 @@ public class DietCommands {
         dietData.setLastDecayTimeMs(System.currentTimeMillis());
         
         // Sync to client
-        PacketDistributor.sendToPlayer(target, new DietSyncPacket(dietData.copyValues()));
+        PacketDistributor.sendToAllPlayers(new DietSyncPacket(target.getId(), dietData.copyValues()));
         
         // Send feedback
         source.sendSuccess(() -> Component.literal("Reset " + target.getName().getString() + "'s diet to 80%"), true);

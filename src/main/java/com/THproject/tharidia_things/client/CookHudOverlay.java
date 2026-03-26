@@ -4,9 +4,9 @@ import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 
 import com.THproject.tharidia_things.TharidiaThings;
-import com.THproject.tharidia_things.spice.PlayerSpiceData;
-import com.THproject.tharidia_things.spice.SpiceAttachments;
-import com.THproject.tharidia_things.spice.SpiceType;
+import com.THproject.tharidia_things.diet.DietAttachments;
+import com.THproject.tharidia_things.diet.DietCategory;
+import com.THproject.tharidia_things.diet.DietData;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.BufferUploader;
@@ -30,7 +30,7 @@ import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 @EventBusSubscriber(modid = TharidiaThings.MODID, value = Dist.CLIENT)
 public class CookHudOverlay {
     private static final float PANEL_WIDTH = 1.2f; // Increased width
-    private static final float PANEL_HEIGHT = 1.2f; // Increased height
+    private static final float PANEL_HEIGHT = 1.0f; // Increased height
     private static final float OFFSET_Y = 1.0f; // Height above mob
     private static final float MAX_DISTANCE = 15.0f; // Max render distance
 
@@ -237,7 +237,6 @@ public class CookHudOverlay {
 
     private static void renderPlayerInfo(PoseStack poseStack, Player player, float alpha) {
         Minecraft mc = Minecraft.getInstance();
-        PlayerSpiceData playerSpiceData = player.getData(SpiceAttachments.PLAYER_SPICE_DATA.get());
 
         // Calculate text position - centered in panel with proper margins
         float textStartX = -PANEL_WIDTH / 2f + 0.15f; // More margin from left
@@ -255,31 +254,14 @@ public class CookHudOverlay {
 
         int currentLine = 0;
 
-        // Render player name at top
-        String name = player.getName().getString();
-        int nameColor = ((int) (alpha * 255) << 24) | 0xFFFF00;
-        mc.font.drawInBatch(name, (int) (textStartX * 100), (int) ((textStartY + lineHeight * currentLine) * 100),
-                nameColor, false, poseStack.last().pose(),
-                mc.renderBuffers().bufferSource(), Font.DisplayMode.NORMAL, 0, 15728880);
-        currentLine++;
-
-        // Render spice values
-        // int spice_color = ((int) (alpha * 255) << 24) | 0xA5A5A5;
-        // for (float spice_value : playerSpiceData.getAllValue()) {
-        // mc.font.drawInBatch(String.valueOf(spice_value), (int) (textStartX * 100),
-        // (int) ((textStartY + lineHeight * currentLine) * 100),
-        // spice_color, false, poseStack.last().pose(),
-        // mc.renderBuffers().bufferSource(), Font.DisplayMode.NORMAL, 0, 15728880);
-        // currentLine++;
-        // }
-
-        // Render spice values
-        int spice_color = ((int) (alpha * 255) << 24) | 0xA5A5A5;
-        for (SpiceType spice_type : SpiceType.VALUES) {
-            float spice_value = playerSpiceData.get(spice_type);
-            mc.font.drawInBatch(String.format(" - %s: %.2f", spice_type, spice_value),
+        // Render diet values
+        int color = ((int) (alpha * 255) << 24) | 0xA5A5A5;
+        DietData player_diet = player.getData(DietAttachments.DIET_DATA.get());
+        for (DietCategory diet_type : DietCategory.VALUES) {
+            float diet_value = player_diet.get(diet_type);
+            mc.font.drawInBatch(String.format(" - %s: %.2f", diet_type, diet_value),
                     (int) (textStartX * 100), (int) ((textStartY + lineHeight * currentLine) * 100),
-                    spice_color, false, poseStack.last().pose(),
+                    color, false, poseStack.last().pose(),
                     mc.renderBuffers().bufferSource(), Font.DisplayMode.NORMAL, 0, 15728880);
             currentLine++;
         }
