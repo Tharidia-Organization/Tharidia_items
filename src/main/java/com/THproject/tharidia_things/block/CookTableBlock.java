@@ -2,9 +2,16 @@ package com.THproject.tharidia_things.block;
 
 import com.THproject.tharidia_things.TharidiaThings;
 import com.THproject.tharidia_things.block.entity.CookTableBlockEntity;
+import com.THproject.tharidia_things.cook.CookRecipe;
+import com.THproject.tharidia_things.cook.CookRecipeRegistry;
+import com.THproject.tharidia_things.network.OpenCookRecipePacket;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -19,6 +26,7 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.material.MapColor;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
@@ -98,7 +106,17 @@ public class CookTableBlock extends BaseEntityBlock {
     @Override
     public <T extends BlockEntity> net.minecraft.world.level.block.entity.BlockEntityTicker<T> getTicker(
             Level level, BlockState state, BlockEntityType<T> blockEntityType) {
-        return null;
+        if (level.isClientSide) return null;
+        return createTickerHelper(blockEntityType, TharidiaThings.COOK_TABLE_BLOCK_ENTITY.get(),
+                (lvl, pos, st, be) -> be.serverTick());
+    }
+
+    @Override
+    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
+                                               Player player, BlockHitResult hitResult) {
+        // Master block interaction is intentionally passive.
+        // The recipe book opens from the dummy at offset_x=1 (second from left).
+        return InteractionResult.PASS;
     }
 
     @Override

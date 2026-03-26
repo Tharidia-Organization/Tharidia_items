@@ -2,11 +2,13 @@ package com.THproject.tharidia_things.client;
 
 import com.THproject.tharidia_things.Config;
 import com.THproject.tharidia_things.TharidiaThings;
+import com.THproject.tharidia_things.client.gui.CookTableRecipeScreen;
 import com.THproject.tharidia_things.client.screen.RaceSelectionScreen;
 import com.THproject.tharidia_things.client.video.ClientVideoScreenManager;
 import com.THproject.tharidia_things.compoundTag.ReviveAttachments;
 import com.THproject.tharidia_things.client.gui.PreLoginNameScreen;
 import com.THproject.tharidia_things.network.*;
+import com.THproject.tharidia_things.network.OpenCookRecipePacket;
 import com.THproject.tharidia_things.network.SpiceSyncPacket;
 import com.THproject.tharidia_things.network.revive.ReviveSyncPayload;
 import com.mojang.logging.LogUtils;
@@ -404,6 +406,19 @@ public class ClientPacketHandler {
             if (player != null) {
                 SpiceSyncPacket.handle(packet, player);
             }
+        });
+    }
+
+    public static void handleOpenCookRecipe(OpenCookRecipePacket packet, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            Minecraft mc = Minecraft.getInstance();
+            mc.setScreen(new CookTableRecipeScreen(
+                    packet.blockPos(),
+                    packet.recipes(),
+                    packet.activeRecipeId(),
+                    packet.timerTicks(),
+                    packet.totalTimerTicks()
+            ));
         });
     }
 

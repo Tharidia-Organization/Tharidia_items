@@ -337,6 +337,10 @@ public class TharidiaThings {
             BLOCK_ENTITIES.register("cook_table",
                     () -> BlockEntityType.Builder.of(CookTableBlockEntity::new, COOK_TABLE.get()).build(null));
 
+    // Rotten Food – dropped when the cook table timer expires on unfinished ingredients
+    public static final DeferredItem<Item> ROTTEN_FOOD = ITEMS.register("rotten_food",
+            () -> new Item(new Item.Properties().stacksTo(64)));
+
     // Smithing Furnace Ash
     public static final DeferredItem<Item> ASH = ITEMS.register("ash",
             () -> new Item(new Item.Properties().stacksTo(64)));
@@ -850,6 +854,9 @@ public class TharidiaThings {
         NeoForge.EVENT_BUS.register(com.THproject.tharidia_things.realm.RealmRankIndicator.class);
         // Register the realm placement handler
         NeoForge.EVENT_BUS.register(RealmPlacementHandler.class);
+        // Register the cook table placement handler
+        NeoForge.EVENT_BUS.register(CookTablePlacementHandler.class);
+        NeoForge.EVENT_BUS.register(com.THproject.tharidia_things.event.CookingCompletionHandler.class);
         // Register the weight debuff handler
         NeoForge.EVENT_BUS.register(WeightDebuffHandler.class);
         // Register the smithing handler
@@ -1071,6 +1078,12 @@ public class TharidiaThings {
                     WeightConfigSyncPacket.STREAM_CODEC,
                     ClientPacketHandler::handleWeightConfigSync);
 
+            // Cook table: open recipe book screen
+            registrar.playToClient(
+                    com.THproject.tharidia_things.network.OpenCookRecipePacket.TYPE,
+                    com.THproject.tharidia_things.network.OpenCookRecipePacket.STREAM_CODEC,
+                    ClientPacketHandler::handleOpenCookRecipe);
+
             // Register dummy handlers for server-bound packets (client-side only for
             // handshake)
             // Note: All server-bound packets are registered below with actual handlers
@@ -1236,6 +1249,12 @@ public class TharidiaThings {
                     WeightConfigSyncPacket.STREAM_CODEC,
                     (packet, context) -> {
                     });
+            // Cook table open recipe packet (dummy handler server-side)
+            registrar.playToClient(
+                    com.THproject.tharidia_things.network.OpenCookRecipePacket.TYPE,
+                    com.THproject.tharidia_things.network.OpenCookRecipePacket.STREAM_CODEC,
+                    (packet, context) -> {
+                    });
             LOGGER.info("Server-side packet registration completed (dummy handlers)");
         }
 
@@ -1342,6 +1361,12 @@ public class TharidiaThings {
                 EquipListSyncPacket.TYPE,
                 EquipListSyncPacket.STREAM_CODEC,
                 EquipListSyncPacket::handle);
+
+        // Cook table: start cooking (client → server)
+        registrar.playToServer(
+                com.THproject.tharidia_things.network.StartCookingPacket.TYPE,
+                com.THproject.tharidia_things.network.StartCookingPacket.STREAM_CODEC,
+                com.THproject.tharidia_things.network.StartCookingPacket::handle);
     }
 
     private void registerScreens(net.neoforged.neoforge.client.event.RegisterMenuScreensEvent event) {
@@ -1627,6 +1652,7 @@ public class TharidiaThings {
     public void onAddReloadListeners(net.neoforged.neoforge.event.AddReloadListenerEvent event) {
         event.addListener(new WeightDataLoader());
         event.addListener(new DietDataLoader());
+        event.addListener(new com.THproject.tharidia_things.cook.CookRecipeLoader());
         event.addListener(new CropProtectionConfig());
         event.addListener(new FatigueConfig());
         event.addListener(new StaminaConfig());
