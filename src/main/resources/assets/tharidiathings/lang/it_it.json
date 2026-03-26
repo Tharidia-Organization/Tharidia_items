@@ -442,12 +442,12 @@
   "block.tharidiathings.dried_compressed_grass": "Erba Compressa Essiccata",
   "item.tharidiathings.zoccoletta": "Zoccoletta",
   "block.tharidiathings.fertilized_dirt": "Terra Fertilizzata",
-  "block.tharidiathings.abnormal_grass": "Erba Alta Anomala",
 
   "block.tharidiathings.herbalist_tree": "Albero dell'Erborista",
   "block.tharidiathings.pot": "Vaso",
   "item.tharidiathings.petal": "Petalo",
   "item.tharidiathings.petal_2": "Petalo Mistico",
+  "block.tharidiathings.abnormal_grass": "Erba Alta Anomala",
 
   "gui.tharidiathings.herbalist_tree.title": "Albero dell'Erborista",
   "gui.tharidiathings.herbalist_tree.status": "Stato",
@@ -478,7 +478,12 @@
   "gui.tharidiathings.herbalist_tree.hint.dead": "L'albero e' morto.",
   "gui.tharidiathings.herbalist_tree.hint.place_pots": "Piazza 8 vasi per iniziare.",
 
+  "jei.tharidiathings.pulverizer_recipe": "Polverizzatore",
   "jei.tharidiathings.washer_recipe": "Lavaggio",
 
-  "jei.tharidiathings.pulverizer_recipe": "Polverizzatore"
+  "item.tharidiathings.coca": "Coca",
+  "item.tharidiathings.spiru": "Spiru",
+  "spice.tharidiathings.header": "Spezie:",
+  "spice.tharidiathings.coca": "Coca",
+  "spice.tharidiathings.spiru": "Spiru"
 }
