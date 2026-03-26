@@ -1,11 +1,20 @@
 package com.THproject.tharidia_things.block;
 
 import com.THproject.tharidia_things.block.entity.CookTableBlockEntity;
+import com.THproject.tharidia_things.cook.CookRecipe;
+import com.THproject.tharidia_things.cook.CookRecipeRegistry;
+import com.THproject.tharidia_things.network.OpenCookRecipePacket;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.inventory.ChestMenu;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -82,15 +91,54 @@ public class CookTableDummyBlock extends Block {
         return SHAPE;
     }
 
+    // offset_x values:  0=tagliere(paused)  1=ricettario  2=master(vassoio)  3=cassa  4=spezie(paused)
+    private static final int OFFSET_RICETTARIO = 1;
+    private static final int OFFSET_CASSA      = 3;
+
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
-        if (state.getValue(OFFSET_X) == 3 && !level.isClientSide) {
-            BlockPos masterPos = findMaster(level, pos, state);
-            if (masterPos != null && level.getBlockEntity(masterPos) instanceof CookTableBlockEntity be) {
-                be.playRegistryAnimation();
+        if (level.isClientSide) return InteractionResult.SUCCESS;
+
+        int offset = state.getValue(OFFSET_X);
+
+        // Blocks not assigned to any action yet → passive
+        if (offset != OFFSET_RICETTARIO && offset != OFFSET_CASSA) {
+            return InteractionResult.PASS;
+        }
+
+        if (!player.getTags().contains("cook")) {
+            player.sendSystemMessage(Component.literal("§cSolo un cuoco può usare questo blocco."));
+            return InteractionResult.FAIL;
+        }
+
+        BlockPos masterPos = findMaster(level, pos, state);
+        if (masterPos == null) return InteractionResult.PASS;
+
+        // Cassa (offset 3) → open 9-slot dispensa
+        if (offset == OFFSET_CASSA) {
+            if (level.getBlockEntity(masterPos) instanceof CookTableBlockEntity be && player instanceof ServerPlayer sp) {
+                level.playSound(null, pos, SoundEvents.CHEST_OPEN, SoundSource.BLOCKS, 0.5f, 1.0f);
+                sp.openMenu(new SimpleMenuProvider(
+                        (id, inv, p) -> new ChestMenu(net.minecraft.world.inventory.MenuType.GENERIC_9x1,
+                                id, inv, be.getCassaContainer(), 1),
+                        Component.literal("§6Dispensa del cuoco")
+                ));
                 return InteractionResult.SUCCESS;
             }
         }
+
+        // Ricettario (offset 1) → open recipe book GUI
+        if (offset == OFFSET_RICETTARIO) {
+            if (level.getBlockEntity(masterPos) instanceof CookTableBlockEntity be && player instanceof ServerPlayer sp) {
+                level.playSound(null, pos, SoundEvents.BOOK_PAGE_TURN, SoundSource.BLOCKS, 0.6f, 1.0f);
+                java.util.List<CookRecipe> available = CookRecipeRegistry.discover(
+                        level.getServer().getRecipeManager(), level.registryAccess());
+                OpenCookRecipePacket.sendToPlayer(sp, masterPos,
+                        available, be.getActiveRecipeId(), be.getTimerTicks(), be.getTotalTimerTicks());
+                return InteractionResult.SUCCESS;
+            }
+        }
+
         return InteractionResult.PASS;
     }
 
