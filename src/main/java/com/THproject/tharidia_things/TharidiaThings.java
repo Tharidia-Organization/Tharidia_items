@@ -102,6 +102,7 @@ import com.THproject.tharidia_things.registry.BabyMobRegistry;
 import com.THproject.tharidia_things.client.ClientPacketHandler;
 import com.THproject.tharidia_things.entity.ModEntities;
 import com.THproject.tharidia_things.compoundTag.BattleGauntleAttachments;
+import com.THproject.tharidia_things.compoundTag.CookAttachments;
 import com.THproject.tharidia_things.compoundTag.ReviveAttachments;
 import com.THproject.tharidia_things.compoundTag.CustomArmorAttachments;
 import com.THproject.tharidia_things.character.CharacterAttachments;
@@ -129,9 +130,7 @@ import com.THproject.tharidia_things.recipe.PulverizerRecipe;
 import com.THproject.tharidia_things.recipe.WasherRecipe;
 import com.THproject.tharidia_things.spice.SpiceAttachments;
 import com.THproject.tharidia_things.spice.SpiceDataComponents;
-import com.THproject.tharidia_things.spice.SpiceHandler;
 import com.THproject.tharidia_things.spice.SpicedFoodRecipe;
-import com.THproject.tharidia_things.network.SpiceSyncPacket;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.item.crafting.SimpleCraftingRecipeSerializer;
@@ -874,6 +873,8 @@ public class TharidiaThings {
         NeoForge.EVENT_BUS.register(CurrencyProtectionHandler.class);
 
         BattleGauntleAttachments.register(modEventBus);
+
+        CookAttachments.register(modEventBus);
 
         ReviveAttachments.register(modEventBus);
         CustomArmorAttachments.register(modEventBus);
