@@ -7,9 +7,9 @@ import java.util.Map;
 import org.joml.Vector3f;
 
 import com.THproject.tharidia_things.TharidiaThings;
-import com.THproject.tharidia_things.diet.DietAttachments;
-import com.THproject.tharidia_things.diet.DietCategory;
-import com.THproject.tharidia_things.diet.DietData;
+import com.THproject.tharidia_things.spice.PlayerSpiceData;
+import com.THproject.tharidia_things.spice.SpiceAttachments;
+import com.THproject.tharidia_things.spice.SpiceType;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.particles.DustParticleOptions;
@@ -24,14 +24,10 @@ import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
 @EventBusSubscriber(modid = TharidiaThings.MODID)
 public class CookLogic {
-    private static final Map<DietCategory, Integer> DIET_PARTICLES = new HashMap<>() {
+    private static final Map<SpiceType, Integer> SPICE_PARTICLES = new HashMap<>() {
         {
-            put(DietCategory.FRUIT, 0xFA73EF);
-            put(DietCategory.GRAIN, 0xDEC71D);
-            put(DietCategory.PROTEIN, 0x4DE0FA);
-            put(DietCategory.SUGAR, 0xE6FFF9);
-            put(DietCategory.VEGETABLE, 0x62E35F);
-            put(DietCategory.WATER, 0x2C7BF2);
+            put(SpiceType.COCA, 0xFA73EF);
+            put(SpiceType.SPIRU, 0xDEC71D);
         }
     };
 
@@ -57,10 +53,10 @@ public class CookLogic {
         List<Player> nearbyEntities = level.getEntitiesOfClass(Player.class, searchArea);
 
         nearbyEntities.forEach(nearPlayer -> {
-            DietCategory diet_category = getLowDietCategory(nearPlayer);
-            if (diet_category == null) return;
+            SpiceType spice_type = getLowSpiceType(nearPlayer);
+            if (spice_type == null) return;
 
-            int color = DIET_PARTICLES.getOrDefault(diet_category, 0xFFFFFF);
+            int color = SPICE_PARTICLES.getOrDefault(spice_type, 0xFFFFFF);
 
             float red = ((color >> 16) & 0xFF) / 255f;
             float green = ((color >> 8) & 0xFF) / 255f;
@@ -76,18 +72,18 @@ public class CookLogic {
         });
     }
 
-    public static DietCategory getLowDietCategory(Player player) {
-        DietData diet_data = player.getData(DietAttachments.DIET_DATA.get());
+    public static SpiceType getLowSpiceType(Player player) {
+        PlayerSpiceData spice_data = player.getData(SpiceAttachments.PLAYER_SPICE_DATA.get());
 
-        float last_value = 100; // Max value for diet
-        DietCategory low_diet_category = null;
-        for (DietCategory diet_category : DietCategory.VALUES) {
-            if (diet_data.get(diet_category) < last_value) {
-                last_value = diet_data.get(diet_category);
-                low_diet_category = diet_category;
+        float last_value = 100; // Max value for spice
+        SpiceType low_spice_category = null;
+        for (SpiceType spice_type : SpiceType.VALUES) {
+            if (spice_data.get(spice_type) < last_value) {
+                last_value = spice_data.get(spice_type);
+                low_spice_category = spice_type;
             }
         }
 
-        return low_diet_category;
+        return low_spice_category;
     }
 }
