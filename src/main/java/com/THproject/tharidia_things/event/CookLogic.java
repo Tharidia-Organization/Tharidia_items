@@ -11,6 +11,7 @@ import com.THproject.tharidia_things.diet.DietAttachments;
 import com.THproject.tharidia_things.diet.DietCategory;
 import com.THproject.tharidia_things.diet.DietData;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
@@ -40,7 +41,8 @@ public class CookLogic {
         Player player = event.getEntity();
 
         // Works only on ServerSide
-        if(level.isClientSide) return;
+        if(!level.isClientSide) return;
+        if (level instanceof ServerLevel) return;
         
         // Only run every 1 second
         if (player.tickCount % 20 != 0) return;
@@ -48,9 +50,11 @@ public class CookLogic {
         // Check if player has a stick to see particles (placeholder, maybe we use a cook hat)
         if (player.getMainHandItem().getItem() != Items.STICK) return;
 
+        if (player != Minecraft.getInstance().player) return;
+
         double radius = 10.0;
         AABB searchArea = player.getBoundingBox().inflate(radius);
-        List<Player> nearbyEntities = level.getEntitiesOfClass(Player.class, searchArea, p -> p != player);
+        List<Player> nearbyEntities = level.getEntitiesOfClass(Player.class, searchArea);
 
         nearbyEntities.forEach(nearPlayer -> {
             DietCategory diet_category = getLowDietCategory(nearPlayer);
@@ -63,16 +67,12 @@ public class CookLogic {
             float blue = (color & 0xFF) / 255f;
             float scale = 0.5f;
 
-            if (level instanceof ServerLevel serverLevel) {
-                DustParticleOptions particleData = new DustParticleOptions(new Vector3f(red, green, blue), scale);
-                
-                serverLevel.sendParticles(
-                        particleData,
-                        nearPlayer.getX(), nearPlayer.getY() + 2.0, nearPlayer.getZ(),
-                        5,
-                        0.2, 0.2, 0.2,
-                        1.0);
-            }
+            DustParticleOptions particleData = new DustParticleOptions(new Vector3f(red, green, blue), scale);
+
+            level.addParticle(
+                    particleData,
+                    nearPlayer.getX(), nearPlayer.getY() + 2.0, nearPlayer.getZ(),
+                    0.2, 0.2, 0.2);
         });
     }
 
