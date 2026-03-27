@@ -50,7 +50,7 @@ public class CookLogic {
 
         double radius = 10.0;
         AABB searchArea = player.getBoundingBox().inflate(radius);
-        List<Player> nearbyEntities = level.getEntitiesOfClass(Player.class, searchArea);
+        List<Player> nearbyEntities = level.getEntitiesOfClass(Player.class, searchArea, p -> p != player);
 
         nearbyEntities.forEach(nearPlayer -> {
             SpiceType spice_type = getLowSpiceType(nearPlayer);

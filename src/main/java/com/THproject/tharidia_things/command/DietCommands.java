@@ -1,5 +1,8 @@
 package com.THproject.tharidia_things.command;
 
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+
 import com.THproject.tharidia_things.diet.DietAttachments;
 import com.THproject.tharidia_things.diet.DietCategory;
 import com.THproject.tharidia_things.diet.DietData;
@@ -8,8 +11,13 @@ import com.THproject.tharidia_things.diet.DietProfileCache;
 import com.THproject.tharidia_things.diet.DietRegistry;
 import com.THproject.tharidia_things.network.DietSyncPacket;
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.suggestion.SuggestionsBuilder;
+import com.mojang.brigadier.suggestion.Suggestions;
+
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
@@ -24,22 +32,57 @@ public class DietCommands {
     
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("tharidia")
-            .then(Commands.literal("diet")
-                .then(Commands.literal("reset")
-                    .executes(DietCommands::resetDietSelf)
-                    .then(Commands.argument("player", EntityArgument.player())
-                        .requires(source -> source.hasPermission(4))
-                        .executes(DietCommands::resetDiet)))
-                .then(Commands.literal("check")
-                    .requires(source -> source.hasPermission(4))
-                    .then(Commands.argument("player", EntityArgument.player())
-                        .executes(DietCommands::checkDiet)))
-                .then(Commands.literal("recalculate")
-                    .requires(source -> source.hasPermission(4))
-                    .executes(DietCommands::recalculateCache))
-                .then(Commands.literal("version")
-                    .requires(source -> source.hasPermission(4))
-                    .executes(DietCommands::showVersion))));
+                .then(Commands.literal("diet")
+                        .then(Commands.literal("reset")
+                                .executes(DietCommands::resetDietSelf)
+                                .then(Commands.argument("player", EntityArgument.player())
+                                        .requires(source -> source.hasPermission(4))
+                                        .executes(DietCommands::resetDiet)))
+                        .then(Commands.literal("check")
+                                .requires(source -> source.hasPermission(4))
+                                .then(Commands.argument("player", EntityArgument.player())
+                                        .executes(DietCommands::checkDiet)))
+                        .then(Commands.literal("recalculate")
+                                .requires(source -> source.hasPermission(4))
+                                .executes(DietCommands::recalculateCache))
+                        .then(Commands.literal("version")
+                                .requires(source -> source.hasPermission(4))
+                                .executes(DietCommands::showVersion))
+                        .then(Commands.literal("set")
+                                .requires(source -> source.hasPermission(4))
+                                .then(Commands.argument("player", EntityArgument.player())
+                                        .then(Commands.argument("diet_type", StringArgumentType.string())
+                                                .suggests(DietCommands::suggestDiet)
+                                                .then(Commands.argument("value", IntegerArgumentType.integer(0, 100))
+                                                        .executes(DietCommands::setDietValue)))))));
+    }
+
+    private static CompletableFuture<Suggestions> suggestDiet(CommandContext<CommandSourceStack> context, SuggestionsBuilder builder) {
+        for (DietCategory category : DietCategory.VALUES) {
+            builder.suggest(category.name().toLowerCase());
+        }
+        return builder.buildFuture();
+    };
+    
+    private static int setDietValue(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer target = EntityArgument.getPlayer(context, "player");
+        String dietTypeStr = StringArgumentType.getString(context, "diet_type").toLowerCase();
+        int value = IntegerArgumentType.getInteger(context, "value");
+        
+        Optional<DietCategory> categoryOpt = java.util.Arrays.stream(DietCategory.VALUES)
+                .filter(c -> c.name().equalsIgnoreCase(dietTypeStr))
+                .findFirst();
+
+        if(categoryOpt.isPresent()){
+            DietCategory dietCategory = categoryOpt.get();
+            DietData dietData = target.getData(DietAttachments.DIET_DATA.get());
+            dietData.set(dietCategory, value, 100);
+            PacketDistributor.sendToAllPlayers(new DietSyncPacket(target.getId(), dietData.copyValues()));
+            context.getSource().sendSuccess(() -> Component.literal(String.format("Set %s's %s to %d", target.getName().getString(), dietCategory, value)), true);
+        }else{
+            context.getSource().sendFailure(Component.literal("Invalid diet type: " + dietTypeStr));
+        }
+        return 1;
     }
     
     private static int resetDietSelf(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {

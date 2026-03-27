@@ -100,28 +100,33 @@ public class CookHudOverlay {
     }
 
     private static Player getTargetedPlayer(Minecraft mc, LocalPlayer player) {
-        // Ray trace to find the entity the player is looking at
+        // Ray trace to find the entity the player is looking at (any part of bounding
+        // box)
         double reach = 3.0D;
         Vec3 eyePos = player.getEyePosition(1.0F);
         Vec3 lookVec = player.getViewVector(1.0F);
         Player closest = null;
         double closestDist = reach;
-        double angleThreshold = Math.cos(Math.toRadians(5)); // Accept up to 5 degrees off center
         for (Player other : mc.level.players()) {
             if (other == player)
                 continue;
-            Vec3 otherPos = other.getEyePosition(1.0F);
-            Vec3 toOther = otherPos.subtract(eyePos);
-            double dist = toOther.length();
-            if (dist > reach)
-                continue;
-            Vec3 toOtherNorm = toOther.normalize();
-            double dot = lookVec.dot(toOtherNorm);
-            if (dot < angleThreshold)
-                continue;
-            if (dist < closestDist) {
-                closest = other;
-                closestDist = dist;
+            // Check intersection with bounding box along look vector
+            var box = other.getBoundingBox();
+            double minX = box.minX, minY = box.minY, minZ = box.minZ;
+            double maxX = box.maxX, maxY = box.maxY, maxZ = box.maxZ;
+            // Step along the look vector in small increments up to reach distance
+            double step = 0.1;
+            for (double d = 0; d <= reach; d += step) {
+                Vec3 point = eyePos.add(lookVec.scale(d));
+                if (point.x >= minX && point.x <= maxX &&
+                        point.y >= minY && point.y <= maxY &&
+                        point.z >= minZ && point.z <= maxZ) {
+                    if (d < closestDist) {
+                        closest = other;
+                        closestDist = d;
+                    }
+                    break;
+                }
             }
         }
         return closest;
@@ -255,11 +260,18 @@ public class CookHudOverlay {
         int currentLine = 0;
 
         // Render diet values
-        int color = ((int) (alpha * 255) << 24) | 0xA5A5A5;
         DietData player_diet = player.getData(DietAttachments.DIET_DATA.get());
         for (DietCategory diet_type : DietCategory.VALUES) {
+            int color;
             float diet_value = player_diet.get(diet_type);
-            mc.font.drawInBatch(String.format(" - %s: %.2f", diet_type, diet_value),
+            if ((diet_value / 100) < 0.25f) {
+                color = ((int) (alpha * 255) << 24) | 0xFF5555; // Red for low values
+            } else if ((diet_value / 100) < 0.5f) {
+                color = ((int) (alpha * 255) << 24) | 0xFFAA00; // Orange for medium values
+            }else{
+                color = ((int) (alpha * 255) << 24) | 0x55FF55; // Green for good values
+            }
+            mc.font.drawInBatch(String.format("- %s: %.2f", diet_type, diet_value),
                     (int) (textStartX * 100), (int) ((textStartY + lineHeight * currentLine) * 100),
                     color, false, poseStack.last().pose(),
                     mc.renderBuffers().bufferSource(), Font.DisplayMode.NORMAL, 0, 15728880);
