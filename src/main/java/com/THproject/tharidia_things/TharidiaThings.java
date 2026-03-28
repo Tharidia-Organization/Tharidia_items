@@ -827,6 +827,10 @@ public class TharidiaThings {
         NeoForge.EVENT_BUS.register(TradeInventoryBlocker.class);
         // Register the currency protection handler
         NeoForge.EVENT_BUS.register(CurrencyProtectionHandler.class);
+        // Register the alchemist jar interaction handler
+        NeoForge.EVENT_BUS.register(AlchemistJarInteractionHandler.class);
+        NeoForge.EVENT_BUS.register(com.THproject.tharidia_things.block.alchemist.AlchemistTemperatureConfigLoader.class);
+        NeoForge.EVENT_BUS.register(com.THproject.tharidia_things.jei.JeiFilterReloadListener.class);
 
         BattleGauntleAttachments.register(modEventBus);
 
@@ -855,6 +859,11 @@ public class TharidiaThings {
 
             // Video tools check disabled for CurseForge compliance
             // (No automatic tool installation or process execution allowed)
+
+            // JEI tag filter tick handler (only when JEI is present)
+            if (ModList.get().isLoaded("jei")) {
+                NeoForge.EVENT_BUS.register(com.THproject.tharidia_things.jei.JeiClientEventHandler.class);
+            }
         }
 
         // Log version for debugging
@@ -1027,10 +1036,20 @@ public class TharidiaThings {
                     WeightConfigSyncPacket.STREAM_CODEC,
                     ClientPacketHandler::handleWeightConfigSync);
 
-            // Register dummy handlers for server-bound packets (client-side only for
-            // handshake)
-            // Note: All server-bound packets are registered below with actual handlers
-            // No dummy handlers needed here as they're registered with real handlers
+            // JEI tag filter sync (client handler guards itself with a ModList check)
+            registrar.playToClient(
+                    com.THproject.tharidia_things.network.JeiFilterSyncPacket.TYPE,
+                    com.THproject.tharidia_things.network.JeiFilterSyncPacket.STREAM_CODEC,
+                    (packet, context) -> {
+                        if (!ModList.get().isLoaded("jei")) return;
+                        context.enqueueWork(() -> {
+                            java.util.List<net.minecraft.resources.ResourceLocation> items =
+                                    packet.allowedItemIds().stream()
+                                            .map(net.minecraft.resources.ResourceLocation::parse)
+                                            .toList();
+                            com.THproject.tharidia_things.jei.JeiTagFilterManager.setAllowedItems(items);
+                        });
+                    });
 
             LOGGER.info("Client packet handlers registered");
         } else {
@@ -1186,6 +1205,14 @@ public class TharidiaThings {
                     WeightConfigSyncPacket.STREAM_CODEC,
                     (packet, context) -> {
                     });
+
+            // JEI tag filter sync (dummy handler – server only sends, never receives)
+            registrar.playToClient(
+                    com.THproject.tharidia_things.network.JeiFilterSyncPacket.TYPE,
+                    com.THproject.tharidia_things.network.JeiFilterSyncPacket.STREAM_CODEC,
+                    (packet, context) -> {
+                    });
+
             LOGGER.info("Server-side packet registration completed (dummy handlers)");
         }
 

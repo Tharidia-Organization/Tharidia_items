@@ -1,0 +1,14 @@
+{
+  "cook": [
+    "minecraft:cooked_beef",
+    "minecraft:cooked_chicken",
+    "minecraft:cooked_porkchop",
+    "minecraft:cooked_mutton",
+    "minecraft:cooked_rabbit",
+    "minecraft:cooked_salmon",
+    "minecraft:cooked_cod",
+    "minecraft:bread",
+    "minecraft:cake",
+    "minecraft:pumpkin_pie"
+  ]
+}
