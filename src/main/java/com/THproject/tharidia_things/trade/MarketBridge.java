@@ -23,13 +23,43 @@ public class MarketBridge {
     private static final String TRANSACTION_QUEUE_FILE = "tharidia_market_transactions.dat";
 
     /**
-     * Send a transaction to Tharidia Features for market processing
+     * Send a transaction to Tharidia Features for market processing.
+     * Uses an in-memory queue when Features is loaded (same JVM, no I/O races).
+     * Falls back to the legacy file queue when Features is not loaded.
      */
-    public static void sendTransaction(MinecraftServer server, 
-                                      UUID seller, UUID buyer,
-                                      String sellerName, String buyerName,
-                                      List<ItemStack> sellerItems, List<ItemStack> buyerItems,
-                                      boolean isFictional) {
+    public static void sendTransaction(MinecraftServer server,
+                                       UUID seller, UUID buyer,
+                                       String sellerName, String buyerName,
+                                       List<ItemStack> sellerItems, List<ItemStack> buyerItems,
+                                       boolean isFictional) {
+        initializeFeatures();
+
+        // Primary path: in-memory queue — no file I/O, no race conditions
+        if (featuresAvailable && queueTransactionMethod != null) {
+            try {
+                queueTransactionMethod.invoke(null,
+                    seller, buyer, sellerName, buyerName,
+                    sellerItems, buyerItems, isFictional, System.currentTimeMillis());
+                TharidiaThings.LOGGER.info("Transaction queued in-memory: {} <-> {}", sellerName, buyerName);
+                return;
+            } catch (Exception e) {
+                TharidiaThings.LOGGER.error("In-memory queue failed, falling back to file: {}", e.getMessage(), e);
+            }
+        }
+
+        // Fallback: file queue (used when Features mod is not loaded)
+        sendTransactionToFile(server, seller, buyer, sellerName, buyerName, sellerItems, buyerItems, isFictional);
+    }
+
+    /**
+     * Legacy file-based queue. Used only when Tharidia Features is not loaded.
+     * TransactionProcessor reads this file and processes it on the next cycle.
+     */
+    private static void sendTransactionToFile(MinecraftServer server,
+                                               UUID seller, UUID buyer,
+                                               String sellerName, String buyerName,
+                                               List<ItemStack> sellerItems, List<ItemStack> buyerItems,
+                                               boolean isFictional) {
         try {
             File worldDir = server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT).toFile();
             File transactionFile = new File(worldDir, TRANSACTION_QUEUE_FILE);
@@ -70,17 +100,15 @@ public class MarketBridge {
             }
             transactionTag.put("BuyerItems", buyerList);
 
-            // Add to queue
+            // Add to queue and save
             ListTag transactions = queueTag.getList("Transactions", Tag.TAG_COMPOUND);
             transactions.add(transactionTag);
             queueTag.put("Transactions", transactions);
-
-            // Save queue
             NbtIo.writeCompressed(queueTag, transactionFile.toPath());
 
-            TharidiaThings.LOGGER.info("Transaction queued for market processing: {} <-> {}", sellerName, buyerName);
+            TharidiaThings.LOGGER.info("Transaction written to file queue: {} <-> {}", sellerName, buyerName);
         } catch (IOException e) {
-            TharidiaThings.LOGGER.error("Failed to queue transaction for market", e);
+            TharidiaThings.LOGGER.error("Failed to write transaction to file queue", e);
         }
     }
 
@@ -92,6 +120,7 @@ public class MarketBridge {
     private static Method recordCompletedTradeMethod = null;
     private static Method getPlayerTotalTradesMethod = null;
     private static Method getPlayerDiscountTierMethod = null;
+    private static Method queueTransactionMethod = null;
     private static boolean featuresAvailable = false;
     private static boolean initialized = false;
 
@@ -116,6 +145,9 @@ public class MarketBridge {
                 int.class, int.class, double.class, double.class, int.class);
             getPlayerTotalTradesMethod = integrationClass.getMethod("getPlayerTotalTrades", UUID.class);
             getPlayerDiscountTierMethod = integrationClass.getMethod("getPlayerDiscountTier", UUID.class);
+            queueTransactionMethod = integrationClass.getMethod("queueTransaction",
+                UUID.class, UUID.class, String.class, String.class,
+                List.class, List.class, boolean.class, long.class);
 
             featuresAvailable = true;
             TharidiaThings.LOGGER.info("Tharidia Features integration initialized - Dynamic tax rates enabled");

@@ -75,7 +75,7 @@ public final class CurrencyHelper {
      * Get the set of currency ResourceLocations from config.
      * Results are cached for performance.
      */
-    private static Set<ResourceLocation> getConfigCurrencies() {
+    private static synchronized Set<ResourceLocation> getConfigCurrencies() {
         long now = System.currentTimeMillis();
 
         // Return cached value if still valid
@@ -109,7 +109,7 @@ public final class CurrencyHelper {
      * Invalidate the currency cache.
      * Call this when config is reloaded.
      */
-    public static void invalidateCache() {
+    public static synchronized void invalidateCache() {
         cachedConfigCurrencies = null;
         cacheTimestamp = 0;
     }

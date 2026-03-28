@@ -241,17 +241,17 @@ public class TradePacketHandler {
             return;
         }
 
-        // Mark trade as completed FIRST to prevent item duplication from menu close
+        // Create deep copies for rollback BEFORE marking completed or removing anything
+        List<ItemStack> player1ItemsBackup = deepCopyItems(player1Items);
+        List<ItemStack> player2ItemsBackup = deepCopyItems(player2Items);
+
+        // Mark trade as completed to prevent items being auto-returned on menu close
         if (player1.containerMenu instanceof TradeMenu tradeMenu1) {
             tradeMenu1.setTradeCompleted(true);
         }
         if (player2.containerMenu instanceof TradeMenu tradeMenu2) {
             tradeMenu2.setTradeCompleted(true);
         }
-
-        // Create deep copies for rollback before any modification
-        List<ItemStack> player1ItemsBackup = deepCopyItems(player1Items);
-        List<ItemStack> player2ItemsBackup = deepCopyItems(player2Items);
 
         // Calculate currency amounts and dynamic tax rates
         // Player 1 receives player2Items, Player 2 receives player1Items
@@ -266,12 +266,32 @@ public class TradePacketHandler {
         double player1TaxRate = getDynamicTaxRate(player1.getUUID(), player1CurrencyReceiving, player2TradedItems);
         double player2TaxRate = getDynamicTaxRate(player2.getUUID(), player2CurrencyReceiving, player1TradedItems);
 
+        // Phase 1: Remove items — sequential so rollback is clean on failure
+        boolean p1Removed = removeItemsFromPlayer(player1, player1Items);
+        if (!p1Removed) {
+            TharidiaThings.LOGGER.warn("Trade cancelled: {} missing promised items", player1.getName().getString());
+            player1.sendSystemMessage(Component.translatable("message.tharidiathings.trade.items_unavailable"));
+            player2.sendSystemMessage(Component.translatable("message.tharidiathings.trade.items_unavailable"));
+            TradeManager.cancelSession(session.getSessionId());
+            player1.closeContainer();
+            player2.closeContainer();
+            return;
+        }
+
+        boolean p2Removed = removeItemsFromPlayer(player2, player2Items);
+        if (!p2Removed) {
+            TharidiaThings.LOGGER.warn("Trade cancelled: {} missing promised items, restoring p1 items", player2.getName().getString());
+            giveItemsToPlayer(player1, player1ItemsBackup);
+            player1.sendSystemMessage(Component.translatable("message.tharidiathings.trade.items_unavailable"));
+            player2.sendSystemMessage(Component.translatable("message.tharidiathings.trade.items_unavailable"));
+            TradeManager.cancelSession(session.getSessionId());
+            player1.closeContainer();
+            player2.closeContainer();
+            return;
+        }
+
         boolean transactionSuccess = false;
         try {
-            // Phase 1: Remove items from both players
-            removeItemsFromPlayer(player1, player1Items);
-            removeItemsFromPlayer(player2, player2Items);
-
             // Phase 2: Apply tax to currency items with dynamic rates
             List<ItemStack> player1ItemsAfterTax = applyTax(player1Items, player2TaxRate); // P2 receives these
             List<ItemStack> player2ItemsAfterTax = applyTax(player2Items, player1TaxRate); // P1 receives these
@@ -282,9 +302,9 @@ public class TradePacketHandler {
 
             transactionSuccess = true;
         } catch (Exception e) {
-            TharidiaThings.LOGGER.error("Trade transaction failed, attempting rollback: {}", e.getMessage(), e);
+            TharidiaThings.LOGGER.error("Trade failed during tax/give phase, attempting rollback: {}", e.getMessage(), e);
 
-            // Rollback: give back original items to their owners
+            // Items already removed — give back originals
             try {
                 giveItemsToPlayer(player1, player1ItemsBackup);
                 giveItemsToPlayer(player2, player2ItemsBackup);
@@ -428,11 +448,18 @@ public class TradePacketHandler {
         return true;
     }
 
-    private static void removeItemsFromPlayer(ServerPlayer player, List<ItemStack> items) {
+    /**
+     * Removes items from player inventory and trade menu slots.
+     * Checks trade menu slots too because items placed in trade are moved out of inventory.
+     * @return true if all items were fully removed, false if any item was missing
+     */
+    private static boolean removeItemsFromPlayer(ServerPlayer player, List<ItemStack> items) {
         for (ItemStack stack : items) {
             if (stack.isEmpty()) continue;
-            
+
             int toRemove = stack.getCount();
+
+            // First: search main inventory (36 slots)
             for (int i = 0; i < player.getInventory().items.size() && toRemove > 0; i++) {
                 ItemStack invStack = player.getInventory().items.get(i);
                 if (ItemStack.isSameItemSameComponents(invStack, stack)) {
@@ -441,7 +468,26 @@ public class TradePacketHandler {
                     toRemove -= removeCount;
                 }
             }
+
+            // Second: search trade menu slots (items placed in trade are here, not in inventory)
+            if (toRemove > 0 && player.containerMenu instanceof TradeMenu tradeMenu) {
+                for (int i = 0; i < 6 && toRemove > 0; i++) {
+                    ItemStack tradeStack = tradeMenu.getPlayerOffer().getItem(i);
+                    if (ItemStack.isSameItemSameComponents(tradeStack, stack)) {
+                        int removeCount = Math.min(toRemove, tradeStack.getCount());
+                        tradeStack.shrink(removeCount);
+                        toRemove -= removeCount;
+                    }
+                }
+            }
+
+            if (toRemove > 0) {
+                TharidiaThings.LOGGER.warn("Could not fully remove {} x{} from player {} (missing: {})",
+                    stack.getItem(), stack.getCount(), player.getName().getString(), toRemove);
+                return false;
+            }
         }
+        return true;
     }
 
     private static void giveItemsToPlayer(ServerPlayer player, List<ItemStack> items) {
