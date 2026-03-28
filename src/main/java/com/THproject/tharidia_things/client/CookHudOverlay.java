@@ -7,6 +7,7 @@ import com.THproject.tharidia_things.TharidiaThings;
 import com.THproject.tharidia_things.diet.DietAttachments;
 import com.THproject.tharidia_things.diet.DietCategory;
 import com.THproject.tharidia_things.diet.DietData;
+import com.THproject.tharidia_things.util.CookHelper;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.BufferUploader;
@@ -52,6 +53,11 @@ public class CookHudOverlay {
         if (mc.screen != null)
             return;
 
+        System.out.println("1");
+        if (!CookHelper.hasCookHat(player))
+            return;
+        System.out.println("2");
+        
         // Find player being looked at within 3 blocks and within 5 degrees of center
         Player targetedPlayer = getTargetedPlayer(mc, player);
 

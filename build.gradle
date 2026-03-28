@@ -152,6 +152,13 @@ tasks.register('copyLatestJars', Copy) {
         exclude '*-sources.jar', '*-javadoc.jar'
         rename { 'tharidiatweaks-latest.jar' }
     }
+
+    // Copy Tharidia Armor JAR
+    from('../armor_builder_epicFight/build/libs') {
+        include '*.jar'
+        exclude '*-sources.jar', '*-javadoc.jar'
+        rename { 'age_of_fight-latest.jar' }
+    }
     
     into 'libs'
 }

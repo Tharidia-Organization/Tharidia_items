@@ -10,12 +10,12 @@ import com.THproject.tharidia_things.TharidiaThings;
 import com.THproject.tharidia_things.spice.PlayerSpiceData;
 import com.THproject.tharidia_things.spice.SpiceAttachments;
 import com.THproject.tharidia_things.spice.SpiceType;
+import com.THproject.tharidia_things.util.CookHelper;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -43,8 +43,8 @@ public class CookLogic {
         // Only run every 1 second
         if (player.tickCount % 20 != 0) return;
 
-        // Check if player has a stick to see particles (placeholder, maybe we use a cook hat)
-        if (player.getMainHandItem().getItem() != Items.STICK) return;
+        // Check if player has a cook hat to see particles
+        if (!CookHelper.hasCookHat(player)) return;
 
         if (player != Minecraft.getInstance().player) return;
 
