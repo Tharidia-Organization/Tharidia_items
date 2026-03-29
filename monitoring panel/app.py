@@ -8,12 +8,16 @@ import threading
 import webbrowser
 from datetime import date, timedelta
 
+import math
+
+import numpy as np
 import pandas as pd
 import dash
 import dash_bootstrap_components as dbc
 import plotly.express as px
 import plotly.graph_objects as go
 from dash import Input, Output, State, dash_table, dcc, html
+from dash.exceptions import PreventUpdate
 
 import database as db
 from config import load_config, save_config
@@ -78,6 +82,107 @@ def make_table(df, tid, page_size=20, height="520px", cols=None):
         style_header=_HEADER,
         style_filter=_FILTER,
         style_data_conditional=[{"if": {"row_index": "odd"}, "backgroundColor": "#1e2130"}],
+        tooltip_delay=0,
+        tooltip_duration=None,
+    )
+
+
+def _deaths_table(df, tid, page_size=20, height="520px"):
+    """Deaths DataTable with PvP rows highlighted and a prominent killed_by column."""
+    if df is None or df.empty:
+        return html.Div("No deaths for selected filters.", className="text-muted p-3 fst-italic")
+
+    df = df.copy()
+
+    # Build killed_by column — "⚔️ Name" for PvP, "—" otherwise
+    def _kb(row):
+        k = str(row.get("killer_name", "") or "").strip()
+        return f"⚔️ {k}" if k not in ("", "None", "nan", "—", "null") else "—"
+
+    df.insert(df.columns.get_loc("cause") + 1 if "cause" in df.columns else 1,
+              "killed_by", df.apply(_kb, axis=1))
+
+    # Drop the raw killer_name (absorbed into killed_by)
+    if "killer_name" in df.columns:
+        df = df.drop(columns=["killer_name"])
+
+    pvp_style = [
+        {"if": {"filter_query": '{killed_by} != "—"'},
+         "backgroundColor": "#3d1515", "color": "#ff9999"},
+        {"if": {"row_index": "odd", "filter_query": '{killed_by} = "—"'},
+         "backgroundColor": "#1e2130"},
+    ]
+
+    return dash_table.DataTable(
+        id=f"tbl-{tid}",
+        data=df.to_dict("records"),
+        columns=[{"name": c.replace("_", " ").title(), "id": c} for c in df.columns],
+        page_size=page_size,
+        sort_action="native",
+        filter_action="native",
+        export_format="csv",
+        style_table={"overflowX": "auto", "maxHeight": height, "overflowY": "auto"},
+        style_cell=_CELL,
+        style_header=_HEADER,
+        style_filter=_FILTER,
+        style_data_conditional=pvp_style,
+        tooltip_delay=0,
+        tooltip_duration=None,
+    )
+
+
+def _with_pvp_highlight(df, event_col="event_type", detail_col="details"):
+    """Add a 'killed_by' column to any events DataFrame and return (df, pvp_style).
+    Works when detail_col contains '← by <name>' for death/kill rows."""
+    df = df.copy()
+
+    def _kb(row):
+        if str(row.get(event_col, "")).lower() not in ("death", "kill", "pvp"):
+            return ""
+        d = str(row.get(detail_col, "") or "")
+        if "← by" in d:
+            try:
+                return "⚔️ " + d.split("← by")[1].split("  ")[0].strip()
+            except Exception:
+                return "⚔️ PvP"
+        return ""
+
+    df["killed_by"] = df.apply(_kb, axis=1)
+
+    pvp_style = [
+        {"if": {"filter_query": '{killed_by} != ""'},
+         "backgroundColor": "#3d1515", "color": "#ff9999"},
+        {"if": {"row_index": "odd", "filter_query": '{killed_by} = ""'},
+         "backgroundColor": "#1e2130"},
+    ]
+    return df, pvp_style
+
+
+def _events_table(df, tid, page_size=25, height="520px"):
+    """Generic events table with PvP death rows highlighted."""
+    if df is None or df.empty:
+        return html.Div("No events found.", className="text-muted p-3 fst-italic")
+
+    # Try both column name variants used across different event DataFrames
+    event_col  = "event_type" if "event_type" in df.columns else "type"
+    detail_col = "details"    if "details"    in df.columns else "detail"
+
+    df, pvp_style = _with_pvp_highlight(df, event_col, detail_col)
+
+    return dash_table.DataTable(
+        id=f"tbl-{tid}",
+        data=df.to_dict("records"),
+        columns=[{"name": "Killed by" if c == "killed_by" else c.replace("_", " ").title(), "id": c}
+                 for c in df.columns],
+        page_size=page_size,
+        sort_action="native",
+        filter_action="native",
+        export_format="csv",
+        style_table={"overflowX": "auto", "maxHeight": height, "overflowY": "auto"},
+        style_cell=_CELL,
+        style_header=_HEADER,
+        style_filter=_FILTER,
+        style_data_conditional=pvp_style,
         tooltip_delay=0,
         tooltip_duration=None,
     )
@@ -165,7 +270,8 @@ def _filter_bar():
                             {"label": "This month", "value": "month"},
                             {"label": "All time", "value": "all"},
                         ],
-                        value="7d", clearable=False,
+                        value="7d", clearable=True,
+                        placeholder="Custom range…",
                         style={"backgroundColor": CARD_BG2},
                         className="dbc",
                     ),
@@ -231,9 +337,22 @@ app.layout = dbc.Container([
         dbc.Tab(label="🎒 Items",           tab_id="items"),
         dbc.Tab(label="💬 Chat",            tab_id="chat"),
         dbc.Tab(label="🏆 Advancements",    tab_id="advancements"),
+        dbc.Tab(label="💰 Economy",         tab_id="economy"),
+        dbc.Tab(label="🕵️ Market Intel",    tab_id="market_intel"),
+        dbc.Tab(label="🔗 Correlations",    tab_id="market_corr"),
+        dbc.Tab(label="🛡️ Moderation",      tab_id="moderation"),
+        dbc.Tab(label="🕸️ Relations",       tab_id="relations"),
+        dbc.Tab(label="👤 Profiles",        tab_id="profiles"),
+        dbc.Tab(label="🏅 Rankings",        tab_id="rankings"),
         dbc.Tab(label="🔍 Investigate",     tab_id="investigate"),
-        dbc.Tab(label="🗺️ Map",             tab_id="map"),
+        dbc.Tab(label="📍 Area Query",      tab_id="area_query"),
+        dbc.Tab(label="🗺️ Surface Map",      tab_id="map"),
         dbc.Tab(label="🌐 3D Map",          tab_id="map3d"),
+        dbc.Tab(label="🧭 Positions",       tab_id="positions"),
+        dbc.Tab(label="📰 Chronicle",       tab_id="chronicle"),
+        dbc.Tab(label="⚔️ Kill Matrix",     tab_id="killmatrix"),
+        dbc.Tab(label="⏱️ Activity Clock",  tab_id="activity"),
+        dbc.Tab(label="🚚 Trade Routes",    tab_id="traderoutes"),
         dbc.Tab(label="📋 Reports",         tab_id="reports"),
         dbc.Tab(label="⚙️ Settings",        tab_id="settings"),
     ], id="main-tabs", active_tab="overview", className="mb-0"),
@@ -395,20 +514,24 @@ def render_overview(players, start, end, servers=None):
 
 
 def render_players(players, start, end, servers=None):
-    players_df = db.get_all_players()
-    sessions_df = db.get_session_stats(players, start, end, servers=servers)
-    logins_df = db.get_login_sessions(players, start, end, servers=servers)
-    logins_per_day = db.get_logins_per_day(players, start, end, servers=servers)
+    players_df   = db.get_all_players()
+    sessions_df  = db.get_session_stats(players, start, end, servers=servers)
+    logins_df    = db.get_login_sessions(players, start, end, servers=servers)
+    lpd_df       = db.get_logins_per_day(players, start, end, servers=servers)
+    heatmap_df   = db.get_hourly_heatmap(players, start, end, servers=servers)
+    anomaly_df   = db.get_session_anomalies(players, start, end, servers=servers)
 
+    # ── Daily logins bar ──────────────────────────────────────────────────────
     fig_lpd = no_data_fig("No login data")
-    if not logins_per_day.empty:
-        fig_lpd = px.bar(logins_per_day, x="day", y="logins",
+    if not lpd_df.empty:
+        fig_lpd = px.bar(lpd_df, x="day", y="logins",
                          labels={"day": "", "logins": "Logins"},
                          color_discrete_sequence=CHART_COLORS[:1],
                          template=CHART_TEMPLATE)
         fig_lpd = chart_layout(fig_lpd)
         fig_lpd.update_layout(title="Daily Logins", height=250)
 
+    # ── Playtime per player bar ───────────────────────────────────────────────
     fig_hours = no_data_fig("No session data")
     if not sessions_df.empty:
         fig_hours = px.bar(sessions_df.head(15), x="player", y="total_hours",
@@ -419,11 +542,102 @@ def render_players(players, start, end, servers=None):
         fig_hours.update_layout(title="Total Playtime per Player (hours)", height=250,
                                 showlegend=False, coloraxis_showscale=False)
 
+    # ── 7×24 login heatmap ────────────────────────────────────────────────────
+    _DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    fig_heatmap = no_data_fig("No login data for heatmap")
+    if not heatmap_df.empty:
+        # Build 7×24 matrix (rows = days, cols = hours)
+        matrix = [[0] * 24 for _ in range(7)]
+        for _, row in heatmap_df.iterrows():
+            d = int(row["dow"]) - 1          # DAYOFWEEK 1=Sun → index 0
+            h = int(row["hour"])
+            matrix[d][h] = int(row["logins"])
+
+        fig_heatmap = go.Figure(go.Heatmap(
+            z=matrix,
+            x=[f"{h:02d}:00" for h in range(24)],
+            y=_DAY_LABELS,
+            colorscale="YlOrRd",
+            hoverongaps=False,
+            hovertemplate="<b>%{y}  %{x}</b><br>Logins: %{z}<extra></extra>",
+        ))
+        fig_heatmap.update_layout(
+            title="Login Activity Heatmap — Day of Week × Hour of Day",
+            xaxis=dict(title="Hour", tickangle=-45),
+            yaxis=dict(title=""),
+            height=300, template=CHART_TEMPLATE,
+            margin=dict(l=60, r=20, t=45, b=60),
+        )
+        fig_heatmap = chart_layout(fig_heatmap)
+
+    # ── Session duration distribution ─────────────────────────────────────────
+    fig_dist = no_data_fig("No session data")
+    if not logins_df.empty and "duration_min" in logins_df.columns:
+        dur = logins_df["duration_min"].dropna()
+        dur = dur[(dur > 0) & (dur < 600)]          # cap at 10 h for readability
+        if not dur.empty:
+            fig_dist = go.Figure(go.Histogram(
+                x=dur, nbinsx=40,
+                marker_color="#7eb8f7", opacity=0.8,
+                hovertemplate="Duration: %{x} min<br>Sessions: %{y}<extra></extra>",
+            ))
+            fig_dist = chart_layout(fig_dist)
+            fig_dist.update_layout(
+                title="Session Duration Distribution (minutes, capped at 600)",
+                xaxis_title="Minutes", yaxis_title="Sessions",
+                height=250, template=CHART_TEMPLATE,
+            )
+
+    # ── Anomalous sessions section ────────────────────────────────────────────
+    anomaly_section = html.Div()
+    if not anomaly_df.empty:
+        # Color rows by anomaly type
+        anom_cond = [
+            {"if": {"filter_query": '{anomaly_type} = "very short"'},
+             "backgroundColor": "#3d1a1a", "color": "#ff9999"},
+            {"if": {"filter_query": '{anomaly_type} = "very long"'},
+             "backgroundColor": "#1a2d3d", "color": "#99ccff"},
+        ]
+        anomaly_section = html.Div([
+            html.Br(),
+            section("⚠️ Anomalous Sessions",
+                    "sessions shorter than 25% or longer than 3× the player's average"),
+            dbc.Row([
+                dbc.Col([
+                    dbc.Badge(f"{(anomaly_df['anomaly_type']=='very short').sum()} very short",
+                              color="danger",  className="me-2 p-2"),
+                    dbc.Badge(f"{(anomaly_df['anomaly_type']=='very long').sum()} very long",
+                              color="primary", className="p-2"),
+                ], className="mb-2"),
+            ]),
+            dash_table.DataTable(
+                id="tbl-anomalies",
+                data=anomaly_df.to_dict("records"),
+                columns=[{"name": c.replace("_", " ").title(), "id": c}
+                         for c in anomaly_df.columns],
+                page_size=20, sort_action="native", filter_action="native",
+                export_format="csv",
+                style_table={"overflowX": "auto", "maxHeight": "420px", "overflowY": "auto"},
+                style_cell=_CELL, style_header=_HEADER, style_filter=_FILTER,
+                style_data_conditional=anom_cond,
+            ),
+        ])
+
     return html.Div([
+        # Row 1 — daily logins + playtime
         dbc.Row([
-            dbc.Col(dcc.Graph(figure=fig_lpd, config={"displayModeBar": False}), md=6),
+            dbc.Col(dcc.Graph(figure=fig_lpd,   config={"displayModeBar": False}), md=6),
             dbc.Col(dcc.Graph(figure=fig_hours, config={"displayModeBar": False}), md=6),
         ], className="mb-3"),
+
+        # Row 2 — 7×24 heatmap (full width) + session distribution
+        section("🕐 Session Patterns"),
+        dbc.Row([
+            dbc.Col(dcc.Graph(figure=fig_heatmap, config={"displayModeBar": False}), md=8),
+            dbc.Col(dcc.Graph(figure=fig_dist,    config={"displayModeBar": False}), md=4),
+        ], className="mb-3"),
+
+        # Player table + session stats
         section("All Registered Players"),
         make_table(players_df, "players-all", page_size=20),
         html.Br(),
@@ -432,6 +646,9 @@ def render_players(players, start, end, servers=None):
         html.Br(),
         section("Login History", "last 2000 sessions"),
         make_table(logins_df, "logins", page_size=20),
+
+        # Anomalies (only shown if data exists)
+        anomaly_section,
     ])
 
 
@@ -564,7 +781,7 @@ def render_deaths(players, start, end, servers=None):
             dbc.Col(dcc.Graph(figure=fig_players, config={"displayModeBar": False}), md=3),
         ], className="mb-3"),
         section("Death Log", "last 1000 deaths"),
-        make_table(deaths_df, "deaths", page_size=20),
+        _deaths_table(deaths_df, "deaths"),
     ])
 
 
@@ -1016,10 +1233,40 @@ def render_investigate(players, start, end):
         html.Div(id="revive-output"),
     ], label="💫 Fallen / Revive", tab_id="inv-revive")
 
+    # ── Post-mortem ──
+    pm = dbc.Tab([
+        html.Br(),
+        dbc.Row([
+            dbc.Col([
+                html.Label("Player", className="text-muted small mb-1"),
+                dcc.Dropdown(id="pm-player-select", options=player_opts,
+                             placeholder="Select a player…", style=_dropdown_style(), className="dbc"),
+            ], md=4),
+            dbc.Col([
+                html.Label("Radius (blocks)", className="text-muted small mb-1"),
+                dbc.Input(id="pm-radius", type="number", value=100, min=10, max=500, style=_input_style()),
+            ], md=2),
+            dbc.Col([
+                html.Label("Minutes before", className="text-muted small mb-1"),
+                dbc.Input(id="pm-before-min", type="number", value=5, min=1, max=30, style=_input_style()),
+            ], md=2),
+            dbc.Col([
+                html.Label("Minutes after", className="text-muted small mb-1"),
+                dbc.Input(id="pm-after-min", type="number", value=10, min=1, max=30, style=_input_style()),
+            ], md=2),
+            dbc.Col([
+                html.Label("\u00a0", className="d-block small mb-1"),
+                dbc.Button("▶ Load Deaths", id="pm-load-btn", color="primary", className="w-100"),
+            ], md=2, className="d-flex align-items-end"),
+        ], className="mb-3 align-items-end"),
+        html.Div(id="pm-death-picker", className="mb-3"),
+        html.Div(id="pm-output"),
+    ], label="🔬 Post-mortem", tab_id="inv-pm")
+
     return html.Div([
         section("🔍 Investigation Tools",
                 "Trace actions, prove or disprove incidents — uses global date filter"),
-        dbc.Tabs([tl, pvp, revive, tr, loc, prox], id="inv-subtabs", active_tab="inv-tl"),
+        dbc.Tabs([tl, pvp, revive, tr, loc, prox, pm], id="inv-subtabs", active_tab="inv-tl"),
     ])
 
 
@@ -1028,8 +1275,8 @@ def render_investigate(players, start, end):
 def render_map_view(players, start, end):
     return html.Div([
         dcc.Store(id="map-data-store"),
-        section("🗺️ Coordinate Map",
-                "Top-down view: X = East/West axis, Z = North/South axis (South positive)"),
+        section("🗺️ Surface Density Map",
+                "3D heatmap: X/Z world coordinates, surface height = event density per cell"),
 
         # ── Load controls ──
         dbc.Row([
@@ -1048,15 +1295,44 @@ def render_map_view(players, start, end):
                     {"label": "💫 Fallen (went down)",             "value": "fallen"},
                     {"label": "❤️ Revived / Died while fallen",    "value": "revived"},
                 ], value="deaths", clearable=False, style=_dropdown_style(), className="dbc"),
-            ], md=4),
+            ], md=3),
             dbc.Col([
-                html.Label("Max points", className="text-muted small mb-1"),
-                dcc.Dropdown(id="map-limit", options=[
-                    {"label": "1 000",  "value": 1000},
-                    {"label": "5 000",  "value": 5000},
-                    {"label": "10 000", "value": 10000},
-                ], value=5000, clearable=False, style=_dropdown_style(), className="dbc"),
+                html.Label("Cell size (blocks)", className="text-muted small mb-1"),
+                dcc.Dropdown(id="map-cell-size", options=[
+                    {"label": "1 block",    "value": 1},
+                    {"label": "2 blocks",   "value": 2},
+                    {"label": "4 blocks",   "value": 4},
+                    {"label": "8 blocks",   "value": 8},
+                    {"label": "16 blocks",  "value": 16},
+                    {"label": "32 blocks",  "value": 32},
+                    {"label": "64 blocks",  "value": 64},
+                    {"label": "128 blocks", "value": 128},
+                    {"label": "256 blocks", "value": 256},
+                    {"label": "512 blocks", "value": 512},
+                ], value=64, clearable=False, style=_dropdown_style(), className="dbc"),
             ], md=2),
+            dbc.Col([
+                html.Label("Color scale", className="text-muted small mb-1"),
+                dcc.Dropdown(id="map-colorscale", options=[
+                    {"label": "Plasma",  "value": "Plasma"},
+                    {"label": "Viridis", "value": "Viridis"},
+                    {"label": "Hot",     "value": "Hot"},
+                    {"label": "Inferno", "value": "Inferno"},
+                    {"label": "YlOrRd",  "value": "YlOrRd"},
+                    {"label": "Turbo",   "value": "Turbo"},
+                ], value="Plasma", clearable=False, style=_dropdown_style(), className="dbc"),
+            ], md=2),
+            dbc.Col([
+                html.Label("Zone  X / Z / radius", className="text-muted small mb-1"),
+                dbc.InputGroup([
+                    dbc.Input(id="map-cx", placeholder="X", type="number", style={"maxWidth": "80px"}),
+                    dbc.InputGroupText("/"),
+                    dbc.Input(id="map-cz", placeholder="Z", type="number", style={"maxWidth": "80px"}),
+                    dbc.InputGroupText("±"),
+                    dbc.Input(id="map-radius", placeholder="r", type="number", style={"maxWidth": "70px"}),
+                ], size="sm"),
+                html.Small("Blank = load all (capped at 100 000)", className="text-muted fst-italic"),
+            ], md=3),
             dbc.Col([
                 html.Label("\u00a0", className="d-block small mb-1"),
                 dbc.Button("▶ Load Map", id="map-load-btn", color="primary"),
@@ -1065,9 +1341,8 @@ def render_map_view(players, start, end):
 
         html.Div(
             html.Small(
-                "💡 Tip: use the player filter above to isolate one player. "
-                "Scroll to zoom, drag to pan, hover for details. "
-                "Block events may have millions of rows — keep limit low or filter by player.",
+                "💡 Drag to rotate · Scroll to zoom · Surface height = events per cell. "
+                "Use Zone to focus on a specific area. Cell size controls grid resolution.",
                 className="text-muted fst-italic",
             ),
             className="mb-3",
@@ -1092,13 +1367,111 @@ def render_map_view(players, start, end):
 
         dcc.Graph(
             id="map-graph",
-            figure=no_data_fig("Click ▶ Load Map to render"),
-            config={"displayModeBar": True, "scrollZoom": True},
-            style={"height": "620px"},
+            figure=_no_data_surface("Click ▶ Load Map to render"),
+            config={"displayModeBar": True, "scrollZoom": True,
+                    "toImageButtonOptions": {"format": "png", "scale": 2}},
+            style={"height": "680px"},
         ),
-        html.Br(),
         html.Div(id="map-table-output"),
     ])
+
+
+def _no_data_surface(msg="No data"):
+    fig = go.Figure()
+    fig.add_annotation(text=msg, xref="paper", yref="paper", x=0.5, y=0.5,
+                       showarrow=False, font=dict(color="#7a8099", size=14))
+    fig.update_layout(
+        template="plotly_dark",
+        paper_bgcolor="#1e2130",
+        margin=dict(l=0, r=0, t=30, b=0),
+    )
+    return fig
+
+
+def _build_surface_figure(df, event_type, dim, cell_size, colorscale):
+    """Build a go.Surface density heatmap from raw event coordinates."""
+    label = (event_type or "events").replace("_", " ").title()
+    dim_tag = f" · {_dim_label(dim)}" if dim and dim != "__all__" else ""
+
+    df = df.copy()
+    df["map_x"] = _to_num(df["map_x"])
+    df["map_z"] = _to_num(df["map_z"])
+    plot_df = df.dropna(subset=["map_x", "map_z"])
+    if plot_df.empty:
+        return _no_data_3d("No coordinate data for this selection")
+
+    cell = int(cell_size or 64)
+
+    x_min_r = math.floor(plot_df["map_x"].min() / cell) * cell
+    x_max_r = math.ceil(plot_df["map_x"].max() / cell) * cell + cell
+    z_min_r = math.floor(plot_df["map_z"].min() / cell) * cell
+    z_max_r = math.ceil(plot_df["map_z"].max() / cell) * cell + cell
+
+    # Cap grid: max 400 bins per axis to keep the surface renderable
+    MAX_BINS = 400
+    x_span = x_max_r - x_min_r
+    z_span = z_max_r - z_min_r
+    cell = max(cell, math.ceil(x_span / MAX_BINS), math.ceil(z_span / MAX_BINS))
+    # Recompute edges with possibly enlarged cell
+    x_min_r = math.floor(plot_df["map_x"].min() / cell) * cell
+    x_max_r = math.ceil(plot_df["map_x"].max() / cell) * cell + cell
+    z_min_r = math.floor(plot_df["map_z"].min() / cell) * cell
+    z_max_r = math.ceil(plot_df["map_z"].max() / cell) * cell + cell
+
+    x_edges = np.arange(x_min_r, x_max_r + cell, cell)
+    z_edges = np.arange(z_min_r, z_max_r + cell, cell)
+
+    counts, _, _ = np.histogram2d(
+        plot_df["map_x"].values,
+        plot_df["map_z"].values,
+        bins=[x_edges, z_edges],
+    )
+    # counts[i, j] = events at x_edges[i..i+1], z_edges[j..j+1]
+    # go.Surface: x=columns (Z axis), y=rows (X axis)
+    x_mids = (x_edges[:-1] + x_edges[1:]) / 2
+    z_mids = (z_edges[:-1] + z_edges[1:]) / 2
+
+    cs = colorscale or "Plasma"
+    axis_style = dict(
+        showbackground=True,
+        backgroundcolor="#1a1d27",
+        gridcolor=BORDER,
+        tickfont=dict(color=MUTED, size=10),
+    )
+
+    fig = go.Figure(go.Surface(
+        x=z_mids.tolist(),       # scene X axis = world Z
+        y=x_mids.tolist(),       # scene Y axis = world X
+        z=counts.tolist(),       # shape (len(x_mids), len(z_mids))
+        colorscale=cs,
+        colorbar=dict(title="Events", thickness=14, len=0.65, tickfont=dict(color=TEXT)),
+        hovertemplate="X: %{y:.0f}<br>Z: %{x:.0f}<br>Events: %{z}<extra></extra>",
+        opacity=0.92,
+    ))
+
+    fig.update_layout(
+        template="plotly_dark",
+        paper_bgcolor="#1e2130",
+        font=dict(color=TEXT),
+        margin=dict(l=0, r=0, t=50, b=0),
+        title=dict(
+            text=(f"Surface Density · {label}{dim_tag} — "
+                  f"{len(plot_df):,} events · {cell}b cells · "
+                  f"{len(x_mids)}×{len(z_mids)} grid"),
+            font=dict(size=14, color=TEXT),
+        ),
+        scene=dict(
+            bgcolor="#1a1d27",
+            xaxis=dict(title=dict(text="Z  (South ↓)", font=dict(color=MUTED)), **axis_style),
+            yaxis=dict(title=dict(text="X  (East →)",  font=dict(color=MUTED)), **axis_style),
+            zaxis=dict(title=dict(text="Events",        font=dict(color=MUTED)), **axis_style),
+            camera=_3D_CAMERA_PRESETS["iso"],
+            aspectmode="manual",
+            aspectratio=dict(x=1.6, y=1.6, z=0.55),
+        ),
+        uirevision="map-surface",
+    )
+    return fig
 
 
 # ─── 3D Map View ──────────────────────────────────────────────────────────────
@@ -1269,7 +1642,11 @@ def _build_3d_figure(df, event_type, color_by, dim):
             name="Events",
         ))
     else:
-        group_col = "player" if color_by != "event_type" or "event_type" not in plot_df.columns else "event_type"
+        # For kills: prefer entity_type grouping so player kills are visually distinct
+        if "entity_type" in plot_df.columns and color_by == "player":
+            group_col = "entity_type"
+        else:
+            group_col = "player" if color_by != "event_type" or "event_type" not in plot_df.columns else "event_type"
         if group_col not in plot_df.columns:
             # fallback: single trace, no grouping
             fig = go.Figure(go.Scatter3d(
@@ -1351,11 +1728,1422 @@ def _hover_text(df):
                  + "  Z=" + _fmt_num(df["map_z"]))
     if "dimension" in cols:
         lines = lines + "<br>" + df["dimension"].fillna("").astype(str)
-    if "details" in cols:
+    if "entity_type" in cols:
+        et = df["entity_type"].fillna("").astype(str)
+        is_player_kill = et.str.lower().str.contains("player")
+        label = et.where(~is_player_kill, "⚔️ " + et + " (PLAYER KILL)")
+        lines = lines + "<br>Killed: " + label
+    elif "details" in cols:
         lines = lines + "<br>" + df["details"].fillna("").astype(str).str[:80]
     if "timestamp" in cols:
         lines = lines + "<br>🕐 " + df["timestamp"].fillna("").astype(str)
     return lines.tolist()
+
+
+# ─── Profiles ────────────────────────────────────────────────────────────────
+
+_PROFILE_DIMS = ["Aggression", "Builder", "Miner", "Economy", "Survival", "Social", "Playtime"]
+
+_ARCHETYPE_MAP = {
+    "Aggression": "⚔️ Predator",
+    "Builder":    "🏗️ Builder",
+    "Miner":      "⛏️ Miner",
+    "Economy":    "💰 Merchant",
+    "Survival":   "🛡️ Survivor",
+    "Social":     "💬 Socialite",
+    "Playtime":   "🕹️ Grinder",
+}
+
+
+def _compute_scores(profile_df, market_df):
+    """Return profile_df with sc_* columns (0–100) and archetype label per player."""
+    df = profile_df.copy()
+
+    # Market merge
+    if not market_df.empty and "player" in market_df.columns:
+        mkt = market_df[["player", "total_sales", "total_buys", "currency_traded"]].copy()
+        df = df.merge(mkt, on="player", how="left")
+    for col in ["total_sales", "total_buys", "currency_traded"]:
+        if col not in df.columns:
+            df[col] = 0.0
+    df = df.fillna(0)
+
+    # Raw dimension computations
+    df["_aggression_raw"] = df.get("kills", 0)  * 3 + df.get("attacks", 0)
+    df["_builder_raw"]    = df.get("blocks_placed", 0)
+    df["_miner_raw"]      = df.get("blocks_broken", 0)
+    df["_economy_raw"]    = df.get("currency_traded", 0) + df.get("total_sales", 0) + df.get("total_buys", 0)
+    df["_survival_raw"]   = df.get("sessions", 1) / (df.get("deaths", 0) + 1)
+    df["_social_raw"]     = df.get("chat_messages", 0)
+    df["_playtime_raw"]   = df.get("session_hours", 0)
+
+    raw_cols = {
+        "Aggression": "_aggression_raw",
+        "Builder":    "_builder_raw",
+        "Miner":      "_miner_raw",
+        "Economy":    "_economy_raw",
+        "Survival":   "_survival_raw",
+        "Social":     "_social_raw",
+        "Playtime":   "_playtime_raw",
+    }
+
+    # Normalize 0–100 against server maximum
+    for dim, col in raw_cols.items():
+        max_val = df[col].max()
+        if max_val > 0:
+            df[f"sc_{dim}"] = (df[col] / max_val * 100).round(1)
+        else:
+            df[f"sc_{dim}"] = 0.0
+
+    sc_cols = [f"sc_{d}" for d in _PROFILE_DIMS]
+    df["archetype"] = df[sc_cols].idxmax(axis=1).str.replace("sc_", "", regex=False).map(_ARCHETYPE_MAP)
+
+    return df
+
+
+def render_profiles(players, start, end, servers=None):
+    # Player list from the proven source (same as global filter dropdown)
+    player_names = db.get_player_names()
+    opts = [{"label": p, "value": p} for p in player_names]
+
+    # Load profile stats for archetype table
+    try:
+        profile_df = db.get_profile_all_players(start, end, servers)
+        market_df  = db.get_player_market_profile(start, end)
+    except Exception as exc:
+        profile_df = pd.DataFrame()
+        market_df  = pd.DataFrame()
+
+    if profile_df.empty:
+        arch_content = dbc.Alert(
+            "No behavioral stats found for this period. "
+            "Check that player_logins / player_deaths tables have data.",
+            color="info", dismissable=True,
+        )
+    else:
+        scored = _compute_scores(profile_df, market_df)
+        arch_cols = ["player", "archetype"] + [f"sc_{d}" for d in _PROFILE_DIMS]
+        arch_cols = [c for c in arch_cols if c in scored.columns]
+        arch_df = scored[arch_cols].sort_values(f"sc_{_PROFILE_DIMS[0]}", ascending=False)
+        arch_df = arch_df.rename(columns={f"sc_{d}": d for d in _PROFILE_DIMS})
+        arch_content = make_table(arch_df, "prof-arch-tbl", page_size=15, height="420px")
+
+    return html.Div([
+        section("👤 Behavioral Profiles",
+                "Radar charts · Archetype detection · Player comparison"),
+        dbc.Card(dbc.CardBody(
+            dbc.Row([
+                dbc.Col([
+                    html.Label("Primary player", className="text-muted small mb-1"),
+                    dcc.Dropdown(
+                        id="prof-player-a", options=opts, placeholder="Select player…",
+                        className="dash-dropdown-dark",
+                    ),
+                ], md=4),
+                dbc.Col([
+                    html.Label("Compare with (optional)", className="text-muted small mb-1"),
+                    dcc.Dropdown(
+                        id="prof-player-b", options=opts, placeholder="None — single view",
+                        className="dash-dropdown-dark",
+                    ),
+                ], md=4),
+                dbc.Col([
+                    html.Label("\u00a0", className="d-block small mb-1"),
+                    dbc.Button("▶ Build Profile", id="prof-build-btn",
+                               color="primary", className="w-100"),
+                ], md=2, className="d-flex align-items-end"),
+            ], align="end", className="g-2"),
+        ), style={"backgroundColor": CARD_BG2, "border": f"1px solid {BORDER}"},
+           className="mb-3"),
+
+        dbc.Row([
+            dbc.Col([
+                section("🏷️ Server Archetypes"),
+                arch_content,
+            ], md=5),
+            dbc.Col([
+                section("📡 Radar Chart"),
+                html.Div(
+                    id="prof-radar-output",
+                    children=html.Div("Select a player and click ▶ Build Profile.",
+                                      className="text-muted fst-italic p-3"),
+                ),
+            ], md=7),
+        ]),
+    ])
+
+
+@app.callback(
+    Output("prof-radar-output", "children"),
+    Input("prof-build-btn", "n_clicks"),
+    State("prof-player-a", "value"),
+    State("prof-player-b", "value"),
+    State("filter-servers", "value"),
+    State("filter-dates", "start_date"),
+    State("filter-dates", "end_date"),
+    prevent_initial_call=True,
+)
+def build_player_profile(_n, player_a, player_b, servers, start, end):
+    if not player_a:
+        return dbc.Alert("Select at least one player.", color="warning", dismissable=True)
+
+    profile_df = db.get_profile_all_players(start, end, servers)
+    market_df  = db.get_player_market_profile(start, end)
+
+    if profile_df.empty:
+        return dbc.Alert("No profile data available.", color="info", dismissable=True)
+
+    scored = _compute_scores(profile_df, market_df)
+
+    players_sel = [p for p in [player_a, player_b] if p]
+    sel = scored[scored["player"].isin(players_sel)]
+    if sel.empty:
+        return dbc.Alert("Selected player(s) not found in data.", color="warning", dismissable=True)
+
+    fig = go.Figure()
+    colors = ["#5bc0eb", "#f7931e"]
+    for i, (_, row) in enumerate(sel.iterrows()):
+        scores = [row.get(f"sc_{d}", 0) for d in _PROFILE_DIMS]
+        arch   = row.get("archetype", "—")
+        fig.add_trace(go.Scatterpolar(
+            r=scores + [scores[0]],
+            theta=_PROFILE_DIMS + [_PROFILE_DIMS[0]],
+            fill="toself",
+            name=f"{row['player']}  {arch}",
+            line_color=colors[i % len(colors)],
+            opacity=0.85,
+        ))
+
+    fig.update_layout(
+        polar=dict(
+            radialaxis=dict(range=[0, 100], showticklabels=True,
+                            tickfont_color="#aaa", gridcolor="#444"),
+            angularaxis=dict(tickfont_color="#ddd", gridcolor="#444"),
+            bgcolor=CARD_BG,
+        ),
+        paper_bgcolor=CARD_BG,
+        plot_bgcolor=CARD_BG,
+        font_color="#ddd",
+        legend=dict(orientation="h", yanchor="bottom", y=-0.25,
+                    font_color="#ddd", bgcolor="rgba(0,0,0,0)"),
+        margin=dict(l=60, r=60, t=40, b=80),
+    )
+
+    # Stats card per player
+    stat_cards = []
+    for _, row in sel.iterrows():
+        p = row["player"]
+        kv = [
+            ("Archetype",    row.get("archetype", "—")),
+            ("Kills",        int(row.get("kills", 0))),
+            ("Deaths",       int(row.get("deaths", 0))),
+            ("K/D",          f"{row.get('kills', 0) / max(row.get('deaths', 1), 1):.2f}"),
+            ("Blocks placed",f"{int(row.get('blocks_placed', 0)):,}"),
+            ("Blocks broken",f"{int(row.get('blocks_broken', 0)):,}"),
+            ("Sessions",     int(row.get("sessions", 0))),
+            ("Playtime (h)", f"{row.get('session_hours', 0):.1f}"),
+            ("Chat msgs",    int(row.get("chat_messages", 0))),
+            ("Trades",       int(row.get("total_sales", 0) + row.get("total_buys", 0))),
+        ]
+        rows = [html.Tr([html.Td(k, className="text-muted small pe-3"),
+                         html.Td(html.Strong(str(v)))]) for k, v in kv]
+        stat_cards.append(dbc.Col(
+            dbc.Card(dbc.CardBody([
+                html.H6(p, className="text-info mb-2"),
+                html.Table(rows, className="table table-sm table-dark mb-0"),
+            ]), style={"backgroundColor": CARD_BG2, "border": f"1px solid {BORDER}"}),
+            md=6,
+        ))
+
+    return html.Div([
+        dcc.Graph(figure=fig, config={"displayModeBar": False}),
+        dbc.Row(stat_cards, className="mt-3"),
+    ])
+
+
+# ─── Relations ───────────────────────────────────────────────────────────────
+
+def _build_relation_graph(kill_df, market_df, session_df, min_weight):
+    try:
+        import networkx as nx
+    except ImportError:
+        return no_data_fig("networkx not installed — run: pip install networkx")
+
+    # Build weighted edge dicts — always undirected (sorted pair as key)
+    kill_edges    = {}
+    market_edges  = {}
+    session_edges = {}
+
+    for _, r in (kill_df.iterrows() if not kill_df.empty else iter([])):
+        pair = tuple(sorted([str(r["killer"]), str(r["victim"])]))
+        kill_edges[pair] = kill_edges.get(pair, 0) + int(r["kills"])
+
+    for _, r in (market_df.iterrows() if not market_df.empty else iter([])):
+        pair = tuple(sorted([str(r["player_a"]), str(r["player_b"])]))
+        market_edges[pair] = market_edges.get(pair, 0) + int(r["trade_count"])
+
+    for _, r in (session_df.iterrows() if not session_df.empty else iter([])):
+        pair = tuple(sorted([str(r["player_a"]), str(r["player_b"])]))
+        session_edges[pair] = session_edges.get(pair, 0) + int(r["sessions_together"])
+
+    # Apply minimum weight filter
+    mw = int(min_weight or 1)
+    kill_edges    = {k: v for k, v in kill_edges.items()    if v >= mw}
+    market_edges  = {k: v for k, v in market_edges.items()  if v >= mw}
+    session_edges = {k: v for k, v in session_edges.items() if v >= mw}
+
+    all_pairs = set(list(kill_edges) + list(market_edges) + list(session_edges))
+    if not all_pairs:
+        return no_data_fig("No relationships found — try lowering Min interactions or selecting All time")
+
+    # Build networkx graph for layout
+    G = nx.Graph()
+    for pair in all_pairs:
+        G.add_nodes_from(pair)
+        w = kill_edges.get(pair, 0) * 1.5 + market_edges.get(pair, 0) + session_edges.get(pair, 0) * 0.5
+        if G.has_edge(*pair):
+            G[pair[0]][pair[1]]["weight"] += w
+        else:
+            G.add_edge(pair[0], pair[1], weight=max(w, 0.1))
+
+    k_val = max(1.0, 2.0 / max(len(G.nodes) ** 0.5, 1))
+    pos   = nx.spring_layout(G, weight="weight", seed=42, k=k_val, iterations=80)
+
+    traces = []
+
+    def _edge_trace(edges_dict, color, name, dash):
+        ex, ey = [], []
+        for (a, b) in edges_dict:
+            if a in pos and b in pos:
+                ex += [pos[a][0], pos[b][0], None]
+                ey += [pos[a][1], pos[b][1], None]
+        if ex:
+            traces.append(go.Scatter(
+                x=ex, y=ey, mode="lines", name=name,
+                line=dict(width=1.8, color=color, dash=dash),
+                hoverinfo="skip", opacity=0.65,
+            ))
+
+    _edge_trace(session_edges, "#4a9eff", "Online together", "dot")
+    _edge_trace(market_edges,  "#2ecc71", "Market trades",   "solid")
+    _edge_trace(kill_edges,    "#e74c3c", "PvP kills",       "solid")
+
+    # Node attributes
+    nx_list    = list(G.nodes)
+    node_x     = [pos[n][0] for n in nx_list]
+    node_y     = [pos[n][1] for n in nx_list]
+    node_size  = [12 + G.degree(n) * 5 for n in nx_list]
+    node_color = []
+    node_hover = []
+
+    for n in nx_list:
+        nb = list(G.neighbors(n))
+        k_w = sum(kill_edges.get(tuple(sorted([n, x])), 0)    for x in nb)
+        m_w = sum(market_edges.get(tuple(sorted([n, x])), 0)  for x in nb)
+        s_w = sum(session_edges.get(tuple(sorted([n, x])), 0) for x in nb)
+        node_color.append(
+            "#e74c3c" if k_w > m_w and k_w > s_w else
+            "#2ecc71" if m_w >= s_w else
+            "#4a9eff"
+        )
+        tip = [f"<b>{n}</b>  (connections: {G.degree(n)})"]
+        if k_w: tip.append(f"PvP kill weight: {k_w}")
+        if m_w: tip.append(f"Market trades: {m_w}")
+        if s_w: tip.append(f"Sessions together: {s_w}")
+        node_hover.append("<br>".join(tip))
+
+    traces.append(go.Scatter(
+        x=node_x, y=node_y, mode="markers+text",
+        text=nx_list, textposition="top center",
+        textfont=dict(size=10, color=TEXT),
+        name="Players",
+        marker=dict(size=node_size, color=node_color,
+                    line=dict(width=1.5, color=BORDER)),
+        hovertext=node_hover, hoverinfo="text",
+    ))
+
+    n_n = len(G.nodes)
+    n_e = len(kill_edges) + len(market_edges) + len(session_edges)
+    xs  = [p[0] for p in pos.values()]
+    ys  = [p[1] for p in pos.values()]
+    fig = go.Figure(traces)
+    fig.update_layout(
+        title=f"Player Relationship Graph — {n_n} nodes · {n_e} relationship pairs",
+        height=650, template=CHART_TEMPLATE, showlegend=True,
+        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False,
+                   range=[min(xs) - 0.25, max(xs) + 0.25]),
+        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False,
+                   range=[min(ys) - 0.35, max(ys) + 0.35]),
+        hovermode="closest",
+        legend=dict(x=0.01, y=0.99, bgcolor="rgba(0,0,0,0.35)"),
+        margin=dict(l=10, r=10, t=50, b=10),
+    )
+    return chart_layout(fig)
+
+
+def render_relations(players, start, end, servers=None):
+    return html.Div([
+        section("🕸️ Player Relationship Graph",
+                "PvP rivalries · market partnerships · co-play sessions"),
+        html.Small(
+            "🔴 Red node = fighter dominant  ·  🟢 Green = trader dominant  ·  "
+            "🔵 Blue = social dominant  ·  Node size ∝ connections",
+            className="text-muted fst-italic d-block mb-3",
+        ),
+        dbc.Card(dbc.CardBody(
+            dbc.Row([
+                dbc.Col([
+                    html.Label("Edge types", className="text-muted small mb-1"),
+                    dbc.Checklist(
+                        id="rel-edge-types",
+                        options=[
+                            {"label": "  🔴 PvP Kills",        "value": "kills"},
+                            {"label": "  🟢 Market Trades",     "value": "market"},
+                            {"label": "  🔵 Online Together",   "value": "sessions"},
+                        ],
+                        value=["kills", "market", "sessions"],
+                        inline=True, className="text-light small",
+                    ),
+                ], md=5),
+                dbc.Col([
+                    html.Label("Min interactions per pair", className="text-muted small mb-1"),
+                    dcc.Slider(
+                        id="rel-min-weight", min=1, max=15, step=1, value=1,
+                        marks={1: "1", 3: "3", 5: "5", 10: "10", 15: "15"},
+                        tooltip={"placement": "bottom", "always_visible": False},
+                    ),
+                ], md=4),
+                dbc.Col([
+                    html.Label("\u00a0", className="d-block small mb-1"),
+                    dbc.Button("▶ Build Graph", id="rel-build-btn",
+                               color="primary", className="w-100"),
+                ], md=2, className="d-flex align-items-end"),
+            ], align="end", className="g-2"),
+        ), style={"backgroundColor": CARD_BG2, "border": f"1px solid {BORDER}"},
+           className="mb-3"),
+        html.Div(
+            id="rel-graph-output",
+            children=html.Div("Select options and click ▶ Build Graph.",
+                              className="text-muted fst-italic p-3"),
+        ),
+    ])
+
+
+@app.callback(
+    Output("rel-graph-output", "children"),
+    Input("rel-build-btn", "n_clicks"),
+    State("rel-edge-types", "value"),
+    State("rel-min-weight", "value"),
+    State("filter-servers", "value"),
+    State("filter-dates", "start_date"),
+    State("filter-dates", "end_date"),
+    prevent_initial_call=True,
+)
+def build_relation_graph(_n, edge_types, min_weight, servers, start, end):
+    if not edge_types:
+        return dbc.Alert("Select at least one edge type.", color="warning", dismissable=True)
+
+    show_kills    = "kills"    in edge_types
+    show_market   = "market"   in edge_types
+    show_sessions = "sessions" in edge_types
+
+    kill_df    = db.get_kill_pairs(start, end, servers)       if show_kills    else pd.DataFrame()
+    market_df  = db.get_market_trade_pairs(start, end)        if show_market   else pd.DataFrame()
+    session_df = db.get_session_overlaps(start, end, servers) if show_sessions else pd.DataFrame()
+
+    if kill_df.empty and market_df.empty and session_df.empty:
+        return dbc.Alert(
+            "No relationship data for this period. Try selecting All time.",
+            color="info", dismissable=True,
+        )
+
+    fig = _build_relation_graph(kill_df, market_df, session_df, min_weight or 1)
+
+    # Summary tables
+    cols = []
+    if show_kills and not kill_df.empty:
+        cols.append(dbc.Col([
+            section("⚔️ Top PvP Pairs"),
+            make_table(kill_df.head(15), "rel-pvp", page_size=10, height="320px"),
+        ], md=4))
+    if show_market and not market_df.empty:
+        mkt = market_df.sort_values("trade_count", ascending=False).head(15)
+        cols.append(dbc.Col([
+            section("💰 Top Trade Pairs"),
+            make_table(mkt, "rel-mkt", page_size=10, height="320px"),
+        ], md=4))
+    if show_sessions and not session_df.empty:
+        cols.append(dbc.Col([
+            section("🎮 Top Co-play Pairs"),
+            make_table(session_df.head(15), "rel-ses", page_size=10, height="320px"),
+        ], md=4))
+
+    return html.Div([
+        dcc.Graph(figure=fig, config={"displayModeBar": True, "scrollZoom": True}),
+        html.Br(),
+        dbc.Row(cols) if cols else html.Div(),
+    ])
+
+
+# ─── Economy ─────────────────────────────────────────────────────────────────
+
+def _gini(values):
+    """Compute Gini coefficient for a sorted list of non-negative values."""
+    values = sorted(v for v in values if v > 0)
+    n = len(values)
+    if n < 2 or sum(values) == 0:
+        return None
+    total = sum(values)
+    cumsum = sum(v * (2 * (i + 1) - n - 1) for i, v in enumerate(values))
+    return round(cumsum / (n * total), 3)
+
+
+# ─── Market Correlation View ──────────────────────────────────────────────────
+
+_GAME_METRIC_OPTS = [
+    {"label": "Session Hours",   "value": "session_hours"},
+    {"label": "Kills",           "value": "kills"},
+    {"label": "Deaths",          "value": "deaths"},
+    {"label": "K/D Ratio",       "value": "kd_ratio"},
+    {"label": "Blocks Broken",   "value": "blocks_broken"},
+    {"label": "Blocks Placed",   "value": "blocks_placed"},
+    {"label": "Attacks",         "value": "attacks"},
+    {"label": "Chat Messages",   "value": "chat_messages"},
+]
+_MARKET_METRIC_OPTS = [
+    {"label": "Currency Traded (total)", "value": "currency_traded"},
+    {"label": "Total Sales",             "value": "total_sales"},
+    {"label": "Total Buys",              "value": "total_buys"},
+]
+
+
+def _build_corr_scatter(df, x_col, y_col, size_col):
+    if df is None or df.empty:
+        return no_data_fig("No data — reload the tab to refresh")
+    for c in [x_col, y_col]:
+        if c not in df.columns:
+            return no_data_fig(f"Column '{c}' not found")
+
+    plot_df = df.copy()
+    # Convert to numeric safely (handles post-JSON-roundtrip strings)
+    for c in [x_col, y_col]:
+        plot_df[c] = pd.to_numeric(plot_df[c], errors="coerce").fillna(0)
+
+    if plot_df.empty:
+        return no_data_fig("No player data for this period")
+
+    size_col_actual = None
+    size_label = "uniform"
+    if size_col and size_col != "none" and size_col in plot_df.columns:
+        # px.scatter requires strictly positive sizes — add 1 as offset
+        plot_df = plot_df.copy()
+        plot_df["_size"] = pd.to_numeric(plot_df[size_col], errors="coerce").fillna(0) + 1
+        size_col_actual = "_size"
+        size_label = size_col
+
+    hover_cols = [c for c in ["kills", "deaths", "session_hours", "total_sales",
+                               "total_buys", "currency_traded", "kd_ratio"]
+                  if c in plot_df.columns and c not in (x_col, y_col, "_size")]
+    labels = {
+        "session_hours": "Hours", "kills": "Kills", "deaths": "Deaths",
+        "kd_ratio": "K/D", "blocks_broken": "Blocks Broken",
+        "blocks_placed": "Blocks Placed", "attacks": "Attacks",
+        "chat_messages": "Chat", "currency_traded": "Currency",
+        "total_sales": "Sales", "total_buys": "Buys",
+        "_size": size_label,
+    }
+    try:
+        fig = px.scatter(
+            plot_df, x=x_col, y=y_col,
+            size=size_col_actual,
+            size_max=40,
+            text="player",
+            hover_name="player",
+            hover_data={c: True for c in hover_cols},
+            color="player",
+            color_discrete_sequence=CHART_COLORS,
+            template=CHART_TEMPLATE,
+            labels=labels,
+        )
+    except Exception as e:
+        return no_data_fig(f"Chart error: {e}")
+
+    fig.update_traces(textposition="top center", textfont_size=9,
+                      marker=dict(line=dict(width=0.5, color="#222")))
+    fig = chart_layout(fig)
+    fig.update_layout(
+        showlegend=False,
+        title=dict(text=f"Game Activity × Market Wealth  (bubble size = {size_label})",
+                   font=dict(size=13)),
+        margin=dict(l=50, r=20, t=50, b=50),
+    )
+    return fig
+
+
+def _build_corr_timeline(player, game_df, mkt_df):
+    if game_df.empty and mkt_df.empty:
+        return no_data_fig(f"No data for {player} in this period")
+
+    fig = go.Figure()
+
+    if not game_df.empty:
+        if "kills" in game_df.columns:
+            fig.add_trace(go.Bar(
+                x=game_df["day"], y=game_df["kills"].fillna(0),
+                name="Kills", marker_color="#e05c5c", opacity=0.75, yaxis="y1",
+            ))
+        if "deaths" in game_df.columns:
+            fig.add_trace(go.Bar(
+                x=game_df["day"], y=game_df["deaths"].fillna(0),
+                name="Deaths", marker_color="#888", opacity=0.55, yaxis="y1",
+            ))
+        if "blocks_broken" in game_df.columns:
+            fig.add_trace(go.Scatter(
+                x=game_df["day"], y=game_df["blocks_broken"].fillna(0),
+                name="Blocks Mined", mode="lines",
+                line=dict(color="#5cb85c", width=1.5, dash="dot"), yaxis="y1",
+            ))
+
+    if not mkt_df.empty:
+        fig.add_trace(go.Scatter(
+            x=mkt_df["day"], y=mkt_df["sell_vol"].fillna(0),
+            name="Market Sales (vol)", mode="lines+markers",
+            line=dict(color="#f5c518", width=2.5), marker=dict(size=5), yaxis="y2",
+        ))
+        fig.add_trace(go.Scatter(
+            x=mkt_df["day"], y=mkt_df["buy_vol"].fillna(0),
+            name="Market Buys (vol)", mode="lines+markers",
+            line=dict(color="#69b3e7", width=1.5, dash="dash"), marker=dict(size=4), yaxis="y2",
+        ))
+
+    axis_style = dict(
+        showgrid=False,
+        tickfont=dict(color=MUTED, size=10),
+        title=dict(font=dict(color=MUTED)),
+    )
+    fig.update_layout(
+        template=CHART_TEMPLATE,
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(color=TEXT),
+        margin=dict(l=55, r=65, t=44, b=50),
+        barmode="stack",
+        title=dict(text=f"{player}  —  game events (left axis)  ×  market volume (right axis)",
+                   font=dict(size=13, color=TEXT)),
+        xaxis=dict(showgrid=True, gridcolor=BORDER, tickfont=dict(color=MUTED, size=9)),
+        yaxis=dict(title=dict(text="Events", font=dict(color=MUTED)),
+                   tickfont=dict(color=MUTED, size=10), showgrid=False),
+        yaxis2=dict(title=dict(text="Market Volume", font=dict(color="#f5c518")),
+                    tickfont=dict(color="#f5c518", size=10),
+                    overlaying="y", side="right", showgrid=False),
+        legend=dict(bgcolor="rgba(0,0,0,0.3)", font=dict(color=TEXT, size=10)),
+    )
+    return fig
+
+
+def render_market_corr_view(players, start, end, servers):
+    combo_df = db.get_game_vs_market(start, end, servers)
+    player_opts = [{"label": n, "value": n} for n in (db.get_player_names() or [])]
+    scatter_fig = _build_corr_scatter(combo_df, "session_hours", "currency_traded", "kills")
+
+    return html.Div([
+        dcc.Store(id="corr-combo-store",
+                  data=combo_df.to_dict("records") if not combo_df.empty else None),
+
+        # ── Section 1: Scatter ────────────────────────────────────────────────
+        section("🔍 Game Activity × Market Wealth",
+                "Each dot = one player. Change axes to explore correlations. "
+                "Only players with at least 1 market transaction appear on Y."),
+        dbc.Row([
+            dbc.Col([
+                html.Label("X axis (game stat)", className="text-muted small mb-1"),
+                dcc.Dropdown(id="corr-x", options=_GAME_METRIC_OPTS,
+                             value="session_hours", clearable=False,
+                             style=_dropdown_style(), className="dbc"),
+            ], md=3),
+            dbc.Col([
+                html.Label("Y axis (market stat)", className="text-muted small mb-1"),
+                dcc.Dropdown(id="corr-y", options=_MARKET_METRIC_OPTS,
+                             value="currency_traded", clearable=False,
+                             style=_dropdown_style(), className="dbc"),
+            ], md=3),
+            dbc.Col([
+                html.Label("Bubble size", className="text-muted small mb-1"),
+                dcc.Dropdown(
+                    id="corr-size",
+                    options=[{"label": "None (equal)", "value": "none"}] + _GAME_METRIC_OPTS,
+                    value="kills", clearable=False,
+                    style=_dropdown_style(), className="dbc",
+                ),
+            ], md=3),
+        ], className="mb-3 align-items-end"),
+        dcc.Graph(id="corr-scatter", figure=scatter_fig,
+                  config={"displayModeBar": False}, style={"height": "440px"},
+                  className="mb-2"),
+
+        html.Hr(style={"borderColor": BORDER, "marginTop": "8px"}),
+
+        # ── Section 2: Player timeline ────────────────────────────────────────
+        section("📅 Player Activity Timeline",
+                "Daily game events (bars, left axis) vs daily market volume (lines, right axis)."),
+        dbc.Row([
+            dbc.Col([
+                html.Label("Player", className="text-muted small mb-1"),
+                dcc.Dropdown(id="corr-player", options=player_opts,
+                             placeholder="Select a player…",
+                             clearable=True, style=_dropdown_style(), className="dbc"),
+            ], md=4),
+            dbc.Col([
+                html.Label("\u00a0", className="d-block small mb-1"),
+                dbc.Button("▶ Load Timeline", id="corr-timeline-btn", color="primary"),
+            ], md=2),
+        ], className="mb-3 align-items-end"),
+        dcc.Graph(id="corr-timeline",
+                  figure=no_data_fig("Select a player and click ▶ Load Timeline"),
+                  config={"displayModeBar": False}, style={"height": "380px"},
+                  className="mb-2"),
+
+        html.Hr(style={"borderColor": BORDER, "marginTop": "8px"}),
+
+        # ── Section 3: PvP → Market pipeline ─────────────────────────────────
+        section("⚔️ → 💰 PvP × Market Wealth",
+                "Top PvP killers ranked alongside their market activity — "
+                "reveals who turns combat loot into market profit."),
+        dbc.Row([
+            dbc.Col([
+                html.Label("\u00a0", className="d-block small mb-1"),
+                dbc.Button("▶ Load PvP Pipeline", id="corr-pvp-btn", color="secondary"),
+            ], md=3),
+        ], className="mb-3"),
+        html.Div(id="corr-pvp-output"),
+    ])
+
+
+# ─── Moderation View ──────────────────────────────────────────────────────────
+
+def render_moderation_view(players, start, end, servers):
+    return html.Div([
+        section("🛡️ Moderation Dashboard",
+                "Automatic rule-based flag detection + post-death loot analysis."),
+
+        # ── Controls ──────────────────────────────────────────────────────────
+        dbc.Row([
+            dbc.Col([
+                html.Label("Loot window (min after death)", className="text-muted small mb-1"),
+                dcc.Dropdown(id="mod-loot-window", options=[
+                    {"label": "1 min",  "value": 1},
+                    {"label": "2 min",  "value": 2},
+                    {"label": "5 min",  "value": 5},
+                    {"label": "10 min", "value": 10},
+                    {"label": "30 min", "value": 30},
+                ], value=5, clearable=False, style=_dropdown_style(), className="dbc"),
+            ], md=2),
+            dbc.Col([
+                html.Label("Loot radius (blocks)", className="text-muted small mb-1"),
+                dcc.Dropdown(id="mod-loot-radius", options=[
+                    {"label": "10 blocks",  "value": 10},
+                    {"label": "20 blocks",  "value": 20},
+                    {"label": "50 blocks",  "value": 50},
+                    {"label": "100 blocks", "value": 100},
+                ], value=20, clearable=False, style=_dropdown_style(), className="dbc"),
+            ], md=2),
+            dbc.Col([
+                html.Label("\u00a0", className="d-block small mb-1"),
+                dbc.Button("▶ Run All Checks", id="mod-run-btn", color="danger"),
+            ], md=2),
+        ], className="mb-4 align-items-end"),
+
+        html.Div(id="mod-output"),
+    ])
+
+
+# ─── P8 Market Intel ─────────────────────────────────────────────────────────
+
+def render_market_intel_view(players, start, end, servers):
+    vol_df      = db.get_price_volatility(start, end, limit=15)
+    monopoly_df = db.get_item_supply_monopoly(start, end, limit=20)
+    gini_val    = db.get_economy_gini()
+    _item_opts_df = db.get_market_item_options()
+    item_opts = (
+        [{"label": r["label"], "value": r["item_id"]} for _, r in _item_opts_df.iterrows()]
+        if _item_opts_df is not None and not _item_opts_df.empty else []
+    )
+
+    def _small_table(df, tid):
+        if df is None or df.empty:
+            return dbc.Alert("No data for this period.", color="info", className="py-2")
+        return dash_table.DataTable(
+            id=tid, data=df.to_dict("records"),
+            columns=[{"name": c.replace("_", " ").title(), "id": c} for c in df.columns],
+            page_size=15, sort_action="native",
+            style_table={"overflowX": "auto"},
+            style_header={"backgroundColor": "#1a1d27", "color": TEXT,
+                          "fontWeight": "bold", "border": f"1px solid {BORDER}"},
+            style_cell={"backgroundColor": "#181b28", "color": TEXT,
+                        "border": f"1px solid {BORDER}", "fontSize": "12px",
+                        "padding": "5px 8px", "fontFamily": "monospace"},
+            style_data_conditional=[
+                {"if": {"row_index": "odd"}, "backgroundColor": "#1e2130"}],
+        )
+
+    gini_card = dbc.Card(dbc.CardBody([
+        html.H6("Gini Coefficient", className="text-muted small mb-1"),
+        html.H3(f"{gini_val:.3f}" if isinstance(gini_val, float) else "—",
+                className="text-warning mb-0"),
+        html.Small("0 = perfect equality · 1 = total monopoly", className="text-muted"),
+    ]), className="mb-3", style={"backgroundColor": "#1a1d27", "border": f"1px solid {BORDER}"})
+
+    return html.Div([
+        section("🕵️ Market Intelligence",
+                "Price volatility, supply monopolies and market Gini index."),
+
+        dbc.Row([
+            # Left: Gini + monopoly
+            dbc.Col([
+                gini_card,
+                html.H6("Supply Monopoly", className="text-muted small mb-2"),
+                html.Small("Top seller's share of total sales per item. "
+                           "≥80% = near-monopoly.", className="text-muted fst-italic d-block mb-2"),
+                _small_table(monopoly_df, "mi-monopoly-tbl"),
+            ], md=5),
+            # Right: volatility
+            dbc.Col([
+                html.H6("Price Volatility", className="text-muted small mb-2"),
+                html.Small("Items with highest price swing (range ÷ avg).",
+                           className="text-muted fst-italic d-block mb-2"),
+                _small_table(vol_df, "mi-vol-tbl"),
+            ], md=7),
+        ], className="mb-4"),
+
+        html.Hr(style={"borderColor": BORDER}),
+        section("📈 Item Price History", "Select an item to view its full price timeline."),
+        dbc.Row([
+            dbc.Col([
+                html.Label("Item", className="text-muted small mb-1"),
+                dcc.Dropdown(id="mi-item-select", options=item_opts,
+                             placeholder="Select an item…",
+                             clearable=True, style=_dropdown_style(), className="dbc"),
+            ], md=5),
+        ], className="mb-3"),
+        dcc.Graph(id="mi-price-chart",
+                  figure=no_data_fig("Select an item above"),
+                  config={"displayModeBar": False}, style={"height": "340px"}),
+    ])
+
+
+# ─── P9 Area Query ────────────────────────────────────────────────────────────
+
+def render_area_query_view(players, start, end, servers):
+    return html.Div([
+        section("📍 Area Query — What happened here?",
+                "Enter world coordinates and a radius to see every recorded event "
+                "in that location during the selected time period."),
+        dbc.Row([
+            dbc.Col([
+                html.Label("X coordinate", className="text-muted small mb-1"),
+                dbc.Input(id="aq-x", type="number", placeholder="e.g. 87",
+                          style={"backgroundColor": "#181b28", "color": TEXT,
+                                 "border": f"1px solid {BORDER}"}),
+            ], md=2),
+            dbc.Col([
+                html.Label("Z coordinate", className="text-muted small mb-1"),
+                dbc.Input(id="aq-z", type="number", placeholder="e.g. 124",
+                          style={"backgroundColor": "#181b28", "color": TEXT,
+                                 "border": f"1px solid {BORDER}"}),
+            ], md=2),
+            dbc.Col([
+                html.Label("Radius (blocks)", className="text-muted small mb-1"),
+                dcc.Dropdown(id="aq-radius", options=[
+                    {"label": "10 blocks",  "value": 10},
+                    {"label": "25 blocks",  "value": 25},
+                    {"label": "50 blocks",  "value": 50},
+                    {"label": "100 blocks", "value": 100},
+                    {"label": "200 blocks", "value": 200},
+                    {"label": "500 blocks", "value": 500},
+                ], value=50, clearable=False, style=_dropdown_style(), className="dbc"),
+            ], md=2),
+            dbc.Col([
+                html.Label("Max events", className="text-muted small mb-1"),
+                dcc.Dropdown(id="aq-limit", options=[
+                    {"label": "500",   "value": 500},
+                    {"label": "1 000", "value": 1000},
+                    {"label": "2 000", "value": 2000},
+                    {"label": "5 000", "value": 5000},
+                ], value=1000, clearable=False, style=_dropdown_style(), className="dbc"),
+            ], md=2),
+            dbc.Col([
+                html.Label("\u00a0", className="d-block small mb-1"),
+                dbc.Button("▶ Query Area", id="aq-load-btn", color="primary"),
+            ], md=2),
+        ], className="mb-4 align-items-end"),
+        html.Div(id="aq-output"),
+    ])
+
+
+# ─── P10 Rankings ─────────────────────────────────────────────────────────────
+
+def _rank_card(title, df, col_player, col_value, value_label, color="#e0e4f0"):
+    if df is None or df.empty:
+        return dbc.Card(dbc.CardBody([
+            html.H6(title, className="text-muted small mb-2"),
+            html.Small("No data", className="text-muted"),
+        ]), style={"backgroundColor": "#1a1d27", "border": f"1px solid {BORDER}",
+                   "height": "100%"})
+    rows = []
+    for i, (_, r) in enumerate(df.head(10).iterrows(), 1):
+        medal = {1: "🥇", 2: "🥈", 3: "🥉"}.get(i, f"{i}.")
+        val = r.get(col_value, 0)
+        val_str = f"{int(val):,}" if isinstance(val, (int, float)) and val == int(val) else f"{val:,.1f}" if isinstance(val, float) else str(val)
+        rows.append(dbc.ListGroupItem(
+            [html.Span(f"{medal} ", style={"minWidth": "28px", "display": "inline-block"}),
+             html.Span(str(r.get(col_player, "?")), className="fw-bold me-auto"),
+             html.Span(f"{val_str} {value_label}",
+                       style={"color": color, "fontSize": "12px", "marginLeft": "8px"})],
+            style={"backgroundColor": "#181b28", "border": f"1px solid {BORDER}",
+                   "padding": "5px 10px", "display": "flex", "alignItems": "center"},
+        ))
+    return dbc.Card([
+        dbc.CardHeader(html.H6(title, className="mb-0 small text-muted"),
+                       style={"backgroundColor": "#1a1d27", "border": f"1px solid {BORDER}"}),
+        dbc.ListGroup(rows, flush=True),
+    ], style={"backgroundColor": "#1a1d27", "border": f"1px solid {BORDER}", "height": "100%"})
+
+
+def render_rankings_view(players, start, end, servers):
+    kills_df   = db.get_kills_per_player(None, start, end, servers)
+    active_df  = db.get_top_active_players(start, end, limit=10, servers=servers)
+    miner_df   = db.get_block_break_by_player(None, start, end, servers)
+    market_df  = db.get_player_market_profile(start, end)
+
+    try:
+        dead_df = db.get_deadliest_players(None, start, end, servers)
+    except Exception:
+        dead_df = pd.DataFrame()
+
+    try:
+        builder_df = db.get_block_place_by_player(None, start, end, servers)
+    except Exception:
+        builder_df = pd.DataFrame()
+
+    # kills col name (player_kill_events uses player_name)
+    k_player = "player_name" if kills_df is not None and not kills_df.empty and "player_name" in kills_df.columns else "player"
+    k_kills  = "kills"
+
+    return html.Div([
+        section("🏅 Rankings", "Top 10 per category for the selected period."),
+        dbc.Row([
+            dbc.Col(_rank_card("⚔️ Top Killers",    kills_df,   k_player,      k_kills,         "kills",   "#e05c5c"), md=4, className="mb-3"),
+            dbc.Col(_rank_card("💀 Most Deaths",     dead_df,    "player",      "deaths",        "deaths",  "#aaa"),    md=4, className="mb-3"),
+            dbc.Col(_rank_card("🕐 Most Online",     active_df,  "player_name", "events",        "events",  "#5cb85c"), md=4, className="mb-3"),
+        ]),
+        dbc.Row([
+            dbc.Col(_rank_card("⛏️ Top Miners",      miner_df,   "player_name", "blocks_broken", "blocks",  "#f5c518"), md=4, className="mb-3"),
+            dbc.Col(_rank_card("🧱 Top Builders",    builder_df, "player_name", "blocks_placed", "blocks",  "#69b3e7"), md=4, className="mb-3"),
+            dbc.Col(_rank_card("💰 Top Traders",     market_df,  "player",      "currency_traded","coins",  "#c084fc"), md=4, className="mb-3"),
+        ]),
+    ])
+
+
+# ─── P11 Chronicle ────────────────────────────────────────────────────────────
+
+def render_chronicle_view(players, start, end, servers):
+    return html.Div([
+        section("📰 Server Chronicle",
+                "Auto-generated narrative summary of the selected period."),
+        dbc.Row([
+            dbc.Col([
+                html.Label("\u00a0", className="d-block small mb-1"),
+                dbc.Button("📰 Generate Chronicle", id="chr-run-btn", color="primary"),
+            ], md=3),
+        ], className="mb-4"),
+        html.Div(id="chr-output"),
+    ])
+
+
+# ─── P12 Position Trails ──────────────────────────────────────────────────────
+
+def render_positions_view(players, start, end, servers):
+    player_opts = [{"label": n, "value": n} for n in (db.get_player_names() or [])]
+    return html.Div([
+        section("🧭 Player Position Trail",
+                "3D scatter of all recorded event coordinates for a player — "
+                "approximates movement from kills, attacks, deaths, mining and drops."),
+        dbc.Row([
+            dbc.Col([
+                html.Label("Player", className="text-muted small mb-1"),
+                dcc.Dropdown(id="pos-player", options=player_opts,
+                             placeholder="Select a player…",
+                             clearable=True, style=_dropdown_style(), className="dbc"),
+            ], md=4),
+            dbc.Col([
+                html.Label("Max points", className="text-muted small mb-1"),
+                dcc.Dropdown(id="pos-limit", options=[
+                    {"label": "200",   "value": 200},
+                    {"label": "500",   "value": 500},
+                    {"label": "1 000", "value": 1000},
+                    {"label": "2 000", "value": 2000},
+                ], value=500, clearable=False, style=_dropdown_style(), className="dbc"),
+            ], md=2),
+            dbc.Col([
+                html.Label("\u00a0", className="d-block small mb-1"),
+                dbc.Button("▶ Load Trail", id="pos-load-btn", color="primary"),
+            ], md=2),
+        ], className="mb-3 align-items-end"),
+        dcc.Graph(id="pos-graph",
+                  figure=_no_data_3d("Select a player and click ▶ Load Trail"),
+                  config={"displayModeBar": True},
+                  style={"height": "620px"}),
+        html.Div(id="pos-table-output"),
+    ])
+
+
+def render_economy(players, start, end):
+    kpis        = db.get_market_kpis(start, end)
+    use_all     = kpis.get("transactions", 0) == 0 and kpis.get("transactions_all", 0) > 0
+    balance_df  = db.get_sell_buy_balance_all(start, end) if use_all else db.get_sell_buy_balance(start, end)
+    items_df    = db.get_top_traded_items_all(start, end) if use_all else db.get_top_traded_items(start, end)
+    vol_df      = db.get_price_volatility(start, end)
+    tax_df      = db.get_tax_over_time(start, end)
+    acc_df      = db.get_suspicious_accumulators(start, end)
+    tx_df       = db.get_recent_transactions(start, end, players)
+    item_opts_df = db.get_market_item_options()
+
+    # ── KPI row ──────────────────────────────────────────────────────────────
+    tx_real  = kpis.get("transactions", 0)
+    tx_all   = kpis.get("transactions_all", 0)
+    tx_label = "Transactions" if tx_real == tx_all else f"Transactions (real / {tx_all} tot)"
+    row_kpi = dbc.Row([
+        dbc.Col(kpi(tx_label,         tx_real,                        "info",     "🔄"), md=2, sm=4, xs=6, className="mb-3"),
+        dbc.Col(kpi("Active Traders", kpis.get("active_traders", 0),  "primary",  "👥"), md=2, sm=4, xs=6, className="mb-3"),
+        dbc.Col(kpi("Items on Market",kpis.get("active_items", 0),    "secondary","📦"), md=2, sm=4, xs=6, className="mb-3"),
+        dbc.Col(kpi("Tax (period)",   kpis.get("tax_collected", 0),   "warning",  "🪙"), md=2, sm=4, xs=6, className="mb-3"),
+        dbc.Col(kpi("Total Tax Ever", kpis.get("total_tax_ever", 0),  "success",  "🏛️"), md=2, sm=4, xs=6, className="mb-3"),
+    ], className="mb-2")
+
+    # ── Alert if all transactions are fictional ───────────────────────────────
+    fictional_alert = html.Div()
+    if kpis.get("transactions_all", 0) > 0 and kpis.get("transactions", 0) == 0:
+        fictional_alert = dbc.Alert(
+            "⚠️  All transactions in this period are marked as fictional (admin/command-generated). "
+            "The charts below show fictional transactions as fallback.",
+            color="warning", dismissable=True, className="mb-3",
+        )
+
+    # ── Gini coefficient ─────────────────────────────────────────────────────
+    gini_section = html.Div()
+    gini_df = db.get_economy_gini()
+    if not gini_df.empty:
+        g = _gini(gini_df["wealth"].tolist())
+        if g is not None:
+            color = "success" if g < 0.4 else ("warning" if g < 0.65 else "danger")
+            gini_section = dbc.Row([
+                dbc.Col(dbc.Alert([
+                    html.Strong("Gini Coefficient: "),
+                    dbc.Badge(str(g), color=color, className="me-2 fs-6"),
+                    html.Span("0 = perfectly equal wealth · 1 = one player owns everything",
+                              className="text-muted small ms-1"),
+                ], color="dark", className="py-2 mb-3"), md=9),
+            ])
+
+    # ── Sales vs Purchases per player ────────────────────────────────────────
+    fig_balance = no_data_fig("No trade data for this period")
+    if not balance_df.empty:
+        top = balance_df.head(15)
+        fig_balance = go.Figure([
+            go.Bar(name="Sales",     x=top["player"], y=top["sales"],
+                   marker_color="#2ecc71"),
+            go.Bar(name="Purchases", x=top["player"], y=top["purchases"],
+                   marker_color="#e74c3c"),
+        ])
+        fig_balance.update_layout(barmode="group", title="Sales vs Purchases per Player",
+                                   height=300, template=CHART_TEMPLATE)
+        fig_balance = chart_layout(fig_balance)
+
+    # ── Top traded items ─────────────────────────────────────────────────────
+    fig_items = no_data_fig("No item trade data")
+    if not items_df.empty:
+        fig_items = px.bar(
+            items_df, x="tx_count", y="item", orientation="h",
+            color="tx_count", color_continuous_scale="Viridis",
+            labels={"tx_count": "Transactions", "item": ""},
+            hover_data=["total_units", "current_price"],
+            template=CHART_TEMPLATE,
+        )
+        fig_items = chart_layout(fig_items)
+        fig_items.update_layout(title="Most Traded Items", height=300,
+                                 showlegend=False, coloraxis_showscale=False)
+
+    # ── Tax revenue timeline ──────────────────────────────────────────────────
+    fig_tax = no_data_fig("No tax data for this period")
+    if not tax_df.empty:
+        fig_tax = go.Figure([
+            go.Bar(x=tax_df["day"], y=tax_df["tax_total"],
+                   name="Tax collected", marker_color="#f39c12", yaxis="y"),
+            go.Scatter(x=tax_df["day"], y=tax_df["tax_events"],
+                       name="Transactions", line=dict(color="#7eb8f7", width=2),
+                       yaxis="y2"),
+        ])
+        fig_tax.update_layout(
+            title="Tax Revenue & Transaction Volume Over Time",
+            yaxis=dict(title="Tax Amount"),
+            yaxis2=dict(title="Transactions", overlaying="y", side="right",
+                        showgrid=False),
+            height=280, template=CHART_TEMPLATE, hovermode="x unified",
+        )
+        fig_tax = chart_layout(fig_tax)
+
+    # ── Price history section (button-triggered) ──────────────────────────────
+    item_opts = []
+    if not item_opts_df.empty:
+        item_opts = [
+            {"label": f"{r['label']}  (vol: {r['total_volume']})", "value": r["item_id"]}
+            for _, r in item_opts_df.iterrows()
+        ]
+
+    price_section = html.Div([
+        section("📈 Price History", "select an item and click Load"),
+        dbc.Row([
+            dbc.Col([
+                html.Label("Item", className="text-muted small mb-1"),
+                dcc.Dropdown(id="eco-item-select", options=item_opts,
+                             placeholder="Select item…",
+                             style={"backgroundColor": CARD_BG2},
+                             className="dbc"),
+            ], md=5),
+            dbc.Col([
+                html.Label("\u00a0", className="d-block small mb-1"),
+                dbc.Button("▶ Load Price Chart", id="eco-price-btn", color="info"),
+            ], md=2),
+        ], className="mb-3 align-items-end"),
+        html.Div(id="eco-price-output",
+                 children=html.Small("Select an item and click Load.",
+                                     className="text-muted fst-italic")),
+    ])
+
+    return html.Div([
+        row_kpi,
+        fictional_alert,
+        gini_section,
+        dbc.Row([
+            dbc.Col(dcc.Graph(figure=fig_balance, config={"displayModeBar": False}), md=7),
+            dbc.Col(dcc.Graph(figure=fig_items,   config={"displayModeBar": False}), md=5),
+        ], className="mb-3"),
+        dbc.Row([
+            dbc.Col(dcc.Graph(figure=fig_tax, config={"displayModeBar": False}), md=12),
+        ], className="mb-3"),
+        dbc.Row([
+            dbc.Col([
+                section("⚠️ Suspicious Accumulators",
+                        "players buying in ≥70% of their trades"),
+                make_table(acc_df, "eco-acc", page_size=10, height="320px")
+                if not acc_df.empty
+                else html.Div("No suspicious patterns detected.",
+                              className="text-muted fst-italic"),
+            ], md=5),
+            dbc.Col([
+                section("📊 Price Volatility",
+                        "most volatile items by price range %"),
+                make_table(vol_df, "eco-vol", page_size=10, height="320px")
+                if not vol_df.empty
+                else html.Div("No price history data.",
+                              className="text-muted fst-italic"),
+            ], md=7),
+        ], className="mb-3"),
+        price_section,
+        html.Br(),
+        section("📋 Recent Transactions",
+                f"last 200 · {'filtered by selected players' if players else 'all players'}"),
+        make_table(tx_df, "eco-tx", page_size=20),
+    ])
+
+
+@app.callback(
+    Output("eco-price-output", "children"),
+    Input("eco-price-btn", "n_clicks"),
+    State("eco-item-select", "value"),
+    State("filter-dates", "start_date"),
+    State("filter-dates", "end_date"),
+    prevent_initial_call=True,
+)
+def load_price_history(_n, item_id, start, end):
+    if not item_id:
+        return dbc.Alert("Select an item first.", color="warning", dismissable=True)
+    df = db.get_price_history_for_item(item_id, start, end)
+    if df.empty:
+        return html.Div(f"No price history for {item_id}.",
+                        className="text-muted fst-italic")
+
+    item_label = item_id.split(":")[-1]
+
+    fig = go.Figure([
+        go.Scatter(x=df["ts"], y=df["price"], mode="lines+markers",
+                   name="Price", line=dict(color="#7eb8f7", width=2),
+                   marker=dict(size=4)),
+    ])
+    if "volume" in df.columns and df["volume"].notna().any():
+        fig.add_trace(go.Bar(
+            x=df["ts"], y=df["volume"], name="Volume", yaxis="y2",
+            marker_color="rgba(126,184,247,0.15)",
+        ))
+    fig.update_layout(
+        title=f"{item_label} — price history",
+        yaxis=dict(title="Price"),
+        yaxis2=dict(title="Volume", overlaying="y", side="right",
+                    showgrid=False),
+        height=360, template=CHART_TEMPLATE, hovermode="x unified",
+    )
+    fig = chart_layout(fig)
+
+    stats = df["price"].describe()
+    return html.Div([
+        dbc.Row([dbc.Col([
+            dbc.Badge(f"Min: {stats['min']:.2f}",  color="success",   className="me-1 p-2"),
+            dbc.Badge(f"Max: {stats['max']:.2f}",  color="danger",    className="me-1 p-2"),
+            dbc.Badge(f"Avg: {stats['mean']:.2f}", color="info",      className="me-1 p-2"),
+            dbc.Badge(f"σ: {stats['std']:.2f}",    color="secondary", className="me-1 p-2"),
+            dbc.Badge(f"Points: {int(stats['count'])}", color="dark", className="p-2"),
+        ], className="mb-2")]),
+        dcc.Graph(figure=fig, config={"displayModeBar": False}),
+    ])
+
+
+# ─── Kill Matrix ──────────────────────────────────────────────────────────────
+
+def render_kill_matrix_view(players, start, end, servers):
+    km_df = db.get_kill_matrix(start, end, servers)
+    if km_df is None or km_df.empty:
+        return html.Div([
+            section("⚔️ Kill Matrix", "Who kills whom — PvP interaction heatmap."),
+            dbc.Alert("No PvP deaths recorded in this period.", color="info"),
+        ])
+
+    pivot = km_df.pivot_table(index="killer", columns="victim", values="kills", fill_value=0)
+    z = pivot.values.tolist()
+    fig = go.Figure(go.Heatmap(
+        z=z,
+        x=list(pivot.columns),
+        y=list(pivot.index),
+        colorscale="Reds",
+        colorbar=dict(title="Kills", tickfont=dict(color=TEXT), thickness=14),
+        text=z,
+        texttemplate="%{text}",
+        hovertemplate="Killer: <b>%{y}</b><br>Victim: <b>%{x}</b><br>Kills: %{z}<extra></extra>",
+    ))
+    fig.update_layout(
+        paper_bgcolor="#1e2130", plot_bgcolor="#1e2130",
+        font=dict(color=TEXT, size=11),
+        xaxis=dict(title="Victim", tickfont=dict(color=TEXT, size=10),
+                   gridcolor=BORDER, side="bottom"),
+        yaxis=dict(title="Killer", tickfont=dict(color=TEXT, size=10),
+                   gridcolor=BORDER, autorange="reversed"),
+        margin=dict(l=100, r=20, t=40, b=100),
+        height=max(400, 30 * len(pivot) + 120),
+    )
+    return html.Div([
+        section("⚔️ Kill Matrix",
+                f"Kill counts between {len(pivot)} killers and {len(pivot.columns)} victims. "
+                "Rows = killer, columns = victim."),
+        dcc.Graph(figure=fig, config={"displayModeBar": True}),
+    ])
+
+
+# ─── Activity Clock ───────────────────────────────────────────────────────────
+
+def render_activity_view(players, start, end, servers):
+    act_df = db.get_hourly_activity(start, end, servers)
+    if act_df is None or act_df.empty:
+        return html.Div([
+            section("⏱️ Activity Clock", "Events by hour × day of week."),
+            dbc.Alert("No activity data in this period.", color="info"),
+        ])
+
+    DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    grid = [[0] * 24 for _ in range(7)]
+    for _, row in act_df.iterrows():
+        d = int(row["dow"]) - 1   # DAYOFWEEK: 1=Sun → index 0
+        h = int(row["hour"])
+        grid[d][h] = int(row["events"])
+
+    fig = go.Figure(go.Heatmap(
+        z=grid,
+        x=list(range(24)),
+        y=DOW,
+        colorscale="Viridis",
+        colorbar=dict(title="Events", tickfont=dict(color=TEXT), thickness=14),
+        hovertemplate="Day: <b>%{y}</b><br>Hour: %{x}:00<br>Events: <b>%{z}</b><extra></extra>",
+    ))
+    fig.update_layout(
+        paper_bgcolor="#1e2130", plot_bgcolor="#1e2130",
+        font=dict(color=TEXT),
+        xaxis=dict(
+            title="Hour of Day",
+            tickvals=list(range(24)),
+            ticktext=[f"{h:02d}:00" for h in range(24)],
+            tickfont=dict(color=TEXT, size=9),
+            gridcolor=BORDER,
+        ),
+        yaxis=dict(title="Day of Week", tickfont=dict(color=TEXT), gridcolor=BORDER),
+        margin=dict(l=60, r=20, t=40, b=70),
+        height=320,
+    )
+    total = sum(sum(row) for row in grid)
+    peak_d, peak_h = max(
+        ((d, h) for d in range(7) for h in range(24)),
+        key=lambda dh: grid[dh[0]][dh[1]]
+    )
+    return html.Div([
+        section("⏱️ Activity Clock",
+                f"Total {total:,} events. Peak: {DOW[peak_d]} at {peak_h:02d}:00 "
+                f"({grid[peak_d][peak_h]:,} events)."),
+        dcc.Graph(figure=fig, config={"displayModeBar": False}),
+    ])
+
+
+# ─── Trade Routes ─────────────────────────────────────────────────────────────
+
+def render_trade_routes_view(players, start, end, servers):
+    return html.Div([
+        section("🚚 Trade Routes",
+                "Point-to-point estimated trade flow. Barter = physical drop→pickup. "
+                "Market = formal transaction, endpoints are player home claims."),
+        dbc.Row([
+            dbc.Col([
+                html.Label("Barter time window (sec)", className="text-muted small mb-1"),
+                dcc.Input(id="tr-time-window", type="number", value=120,
+                          min=30, max=600, step=30,
+                          style={"width": "100%", "backgroundColor": CARD_BG2,
+                                 "color": TEXT, "border": f"1px solid {BORDER}"}),
+            ], md=2),
+            dbc.Col([
+                html.Label("Max barter distance (blocks)", className="text-muted small mb-1"),
+                dcc.Input(id="tr-max-dist", type="number", value=50,
+                          min=10, max=300, step=10,
+                          style={"width": "100%", "backgroundColor": CARD_BG2,
+                                 "color": TEXT, "border": f"1px solid {BORDER}"}),
+            ], md=2),
+            dbc.Col([
+                html.Label("\u00a0", className="d-block small mb-1"),
+                dbc.Button("🚚 Load Routes", id="tr-load-btn", color="primary"),
+            ], md=2),
+        ], className="mb-3 align-items-end"),
+        html.Div(id="tr-stats", className="mb-2"),
+        dcc.Graph(id="tr-map", style={"height": "680px"},
+                  config={"displayModeBar": True, "scrollZoom": True}),
+    ])
+
+
+@app.callback(
+    Output("tr-map",   "figure"),
+    Output("tr-stats", "children"),
+    Input("tr-load-btn", "n_clicks"),
+    State("tr-time-window",    "value"),
+    State("tr-max-dist",       "value"),
+    State("filter-players",    "value"),
+    State("filter-dates",      "start_date"),
+    State("filter-dates",      "end_date"),
+    State("filter-servers",    "value"),
+    prevent_initial_call=True,
+)
+def load_trade_routes(n_clicks, time_window, max_dist, players, start, end, servers):
+    if not n_clicks:
+        raise PreventUpdate
+
+    tw  = int(time_window or 120)
+    md  = float(max_dist  or 50)
+    df  = db.get_trade_routes(start, end, time_window_sec=tw, max_distance=md, servers=servers)
+
+    empty_fig = go.Figure()
+    empty_fig.update_layout(
+        paper_bgcolor="#1e2130", plot_bgcolor="#1a1d27",
+        font=dict(color=TEXT),
+        xaxis=dict(gridcolor=BORDER, zeroline=False),
+        yaxis=dict(gridcolor=BORDER, zeroline=False),
+    )
+
+    if df is None or df.empty:
+        empty_fig.add_annotation(
+            text="No routes found for this period / parameters.",
+            xref="paper", yref="paper", x=0.5, y=0.5,
+            font=dict(color=MUTED, size=14), showarrow=False,
+        )
+        return empty_fig, dbc.Alert("No trade routes found.", color="info", className="py-2")
+
+    barter = df[df["route_type"] == "barter"]
+    market = df[df["route_type"] == "market"]
+
+    BARTER_COL = "#69b3e7"
+    MARKET_COL = "#f5c518"
+
+    traces = []
+
+    # Lines using None-separator trick
+    for sub, color, name in [(barter, BARTER_COL, "Barter"), (market, MARKET_COL, "Market")]:
+        if sub.empty:
+            continue
+        lx, lz = [], []
+        for _, r in sub.iterrows():
+            lx += [float(r["from_x"]), float(r["to_x"]), None]
+            lz += [float(r["from_z"]), float(r["to_z"]), None]
+        traces.append(go.Scattergl(
+            x=lz, y=lx, mode="lines", name=name,
+            line=dict(color=color, width=1.5),
+            hoverinfo="skip", opacity=0.55,
+        ))
+
+    # Destination markers (triangle = arrow tip)
+    for sub, color, name in [(barter, BARTER_COL, "Barter dest"), (market, MARKET_COL, "Market dest")]:
+        if sub.empty:
+            continue
+        def _hover(r):
+            time_str = r.get("first_trade") or "?"
+            if r.get("last_trade") and r.get("last_trade") != time_str:
+                time_str = f"{r['first_trade']} … {r['last_trade']}"
+            return (
+                f"<b>{r['from_player']}</b> → <b>{r['to_player']}</b><br>"
+                f"Item: {r['item_type']}  ×{int(r['count'])}<br>"
+                f"From: X {r['from_x']:.0f} / Z {r['from_z']:.0f}<br>"
+                f"To: X {r['to_x']:.0f} / Z {r['to_z']:.0f}<br>"
+                f"Time: {time_str}"
+            )
+        hover = sub.apply(_hover, axis=1)
+        traces.append(go.Scattergl(
+            x=sub["to_z"].tolist(), y=sub["to_x"].tolist(),
+            mode="markers", name=name, showlegend=False,
+            marker=dict(color=color, size=7, symbol="triangle-up"),
+            text=hover.tolist(),
+            hovertemplate="%{text}<extra></extra>",
+        ))
+
+    # Origin markers (circle)
+    for sub, color in [(barter, BARTER_COL), (market, MARKET_COL)]:
+        if sub.empty:
+            continue
+        traces.append(go.Scattergl(
+            x=sub["from_z"].tolist(), y=sub["from_x"].tolist(),
+            mode="markers", showlegend=False,
+            marker=dict(color=color, size=5, symbol="circle", opacity=0.4),
+            hoverinfo="skip",
+        ))
+
+    fig = go.Figure(traces)
+    fig.update_layout(
+        paper_bgcolor="#1e2130", plot_bgcolor="#1a1d27",
+        font=dict(color=TEXT),
+        xaxis=dict(title="Z", gridcolor=BORDER, zeroline=False, tickfont=dict(color=TEXT)),
+        yaxis=dict(title="X", gridcolor=BORDER, zeroline=False, tickfont=dict(color=TEXT),
+                   scaleanchor="x", scaleratio=1),
+        legend=dict(bgcolor="#1a1d27", bordercolor=BORDER, font=dict(color=TEXT)),
+        margin=dict(l=60, r=20, t=20, b=60),
+        height=680,
+    )
+
+    stats = dbc.Row([
+        dbc.Col(dbc.Badge(f"🔵 Barter routes: {len(barter)}", color="primary", className="me-2 p-2")),
+        dbc.Col(dbc.Badge(f"🟡 Market routes: {len(market)}", color="warning",  className="me-2 p-2")),
+        dbc.Col(dbc.Badge(f"Total: {len(df)}", color="secondary", className="p-2")),
+    ], className="g-2 mb-1")
+
+    return fig, stats
 
 
 # ─── Main tab callback ────────────────────────────────────────────────────────
@@ -1375,7 +3163,10 @@ def render_tab(tab, _n, _clicks, servers, players, start, end):
     from dash import ctx
     triggered = ctx.triggered_id
     # Don't re-render investigate/map tabs on auto-refresh or filter changes — they use their own callbacks
-    if tab in ("investigate", "map", "map3d") and triggered not in ("main-tabs", None):
+    if tab in ("investigate", "map", "map3d", "relations", "profiles",
+               "market_corr", "moderation", "market_intel", "area_query",
+               "positions", "chronicle", "rankings",
+               "traderoutes") and triggered not in ("main-tabs", None):
         return dash.no_update
     if tab == "overview":
         return render_overview(players, start, end, servers)
@@ -1393,17 +3184,503 @@ def render_tab(tab, _n, _clicks, servers, players, start, end):
         return render_chat(players, start, end, servers)
     if tab == "advancements":
         return render_advancements(players, start, end, servers)
+    if tab == "economy":
+        return render_economy(players, start, end)
+    if tab == "market_intel":
+        return render_market_intel_view(players, start, end, servers)
+    if tab == "market_corr":
+        return render_market_corr_view(players, start, end, servers)
+    if tab == "moderation":
+        return render_moderation_view(players, start, end, servers)
+    if tab == "relations":
+        return render_relations(players, start, end, servers)
+    if tab == "profiles":
+        return render_profiles(players, start, end, servers)
+    if tab == "rankings":
+        return render_rankings_view(players, start, end, servers)
     if tab == "investigate":
         return render_investigate(players, start, end)
+    if tab == "area_query":
+        return render_area_query_view(players, start, end, servers)
     if tab == "map":
         return render_map_view(players, start, end)
     if tab == "map3d":
         return render_map3d_view(players, start, end)
+    if tab == "positions":
+        return render_positions_view(players, start, end, servers)
+    if tab == "chronicle":
+        return render_chronicle_view(players, start, end, servers)
     if tab == "reports":
         return render_reports(players, start, end)
     if tab == "settings":
         return render_settings()
+    if tab == "killmatrix":
+        return render_kill_matrix_view(players, start, end, servers)
+    if tab == "activity":
+        return render_activity_view(players, start, end, servers)
+    if tab == "traderoutes":
+        return render_trade_routes_view(players, start, end, servers)
     return html.Div("Unknown tab.")
+
+
+# ─── Market Correlation callbacks ────────────────────────────────────────────
+
+@app.callback(
+    Output("corr-scatter", "figure"),
+    Input("corr-x", "value"),
+    Input("corr-y", "value"),
+    Input("corr-size", "value"),
+    State("corr-combo-store", "data"),
+    prevent_initial_call=True,
+)
+def update_corr_scatter(x_col, y_col, size_col, records):
+    if not records:
+        return no_data_fig("No data — reload the tab")
+    return _build_corr_scatter(pd.DataFrame(records), x_col, y_col, size_col)
+
+
+@app.callback(
+    Output("corr-timeline", "figure"),
+    Input("corr-timeline-btn", "n_clicks"),
+    State("corr-player", "value"),
+    State("filter-dates", "start_date"),
+    State("filter-dates", "end_date"),
+    State("filter-servers", "value"),
+    prevent_initial_call=True,
+)
+def load_corr_timeline(_n, player, start, end, servers):
+    if not player:
+        return no_data_fig("Select a player first")
+    try:
+        game_df = db.get_player_events_per_day(player, start, end, servers)
+        mkt_df  = db.get_player_daily_market(player, start, end)
+    except Exception as e:
+        return no_data_fig(f"DB error: {e}")
+    return _build_corr_timeline(player, game_df, mkt_df)
+
+
+@app.callback(
+    Output("corr-pvp-output", "children"),
+    Input("corr-pvp-btn", "n_clicks"),
+    State("filter-dates", "start_date"),
+    State("filter-dates", "end_date"),
+    State("filter-servers", "value"),
+    prevent_initial_call=True,
+)
+def load_pvp_pipeline(_n, start, end, servers):
+    kills_df = db.get_kills_per_player(start, end, servers)
+    mkt_df = db.get_player_market_profile(start, end)
+
+    if kills_df.empty:
+        return dbc.Alert("No kill data for this period.", color="info")
+
+    kills_df = kills_df.rename(columns={"player_name": "player"})
+
+    if not mkt_df.empty:
+        df = kills_df.merge(
+            mkt_df[["player", "total_sales", "currency_traded"]],
+            on="player", how="left",
+        )
+    else:
+        df = kills_df.copy()
+        df["total_sales"] = 0
+        df["currency_traded"] = 0
+
+    df["total_sales"] = df["total_sales"].fillna(0).astype(int)
+    df["currency_traded"] = df["currency_traded"].fillna(0).round(0).astype(int)
+    df = df.sort_values("kills", ascending=False).head(30)
+
+    # Flag potential looters: top-third killers who are also top-third traders
+    kill_thresh = df["kills"].quantile(0.66)
+    trade_thresh = df["currency_traded"].quantile(0.66)
+    df["note"] = df.apply(
+        lambda r: "⚔️💰 Possible looter"
+        if r["kills"] >= kill_thresh and r["currency_traded"] >= trade_thresh and r["kills"] > 0
+        else "",
+        axis=1,
+    )
+
+    tbl = dash_table.DataTable(
+        data=df.to_dict("records"),
+        columns=[
+            {"name": "Player",            "id": "player"},
+            {"name": "Kills",             "id": "kills"},
+            {"name": "Market Sales",      "id": "total_sales"},
+            {"name": "Currency Traded",   "id": "currency_traded"},
+            {"name": "Note",              "id": "note"},
+        ],
+        page_size=20,
+        style_table={"overflowX": "auto", "maxHeight": "480px", "overflowY": "auto"},
+        style_header={"backgroundColor": "#1a1d27", "color": TEXT,
+                      "fontWeight": "bold", "border": f"1px solid {BORDER}"},
+        style_cell={"backgroundColor": "#181b28", "color": TEXT,
+                    "border": f"1px solid {BORDER}", "fontSize": "13px",
+                    "padding": "6px 10px", "fontFamily": "monospace"},
+        style_data_conditional=[
+            {"if": {"filter_query": '{note} contains "looter"'},
+             "backgroundColor": "#2d1a0e", "color": "#ffb347"},
+            {"if": {"row_index": "odd"},
+             "backgroundColor": "#1e2130"},
+        ],
+        sort_action="native",
+    )
+    return html.Div([
+        html.Small(
+            f"⚔️💰 Possible looter = top-third by kills AND top-third by currency traded "
+            f"(kill threshold: {int(kill_thresh)}, trade threshold: {int(trade_thresh):,})",
+            className="text-muted fst-italic mb-2 d-block",
+        ),
+        tbl,
+    ])
+
+
+# ─── Moderation callbacks ─────────────────────────────────────────────────────
+
+@app.callback(
+    Output("mod-output", "children"),
+    Input("mod-run-btn", "n_clicks"),
+    State("mod-loot-window", "value"),
+    State("mod-loot-radius", "value"),
+    State("filter-servers", "value"),
+    State("filter-players", "value"),
+    State("filter-dates", "start_date"),
+    State("filter-dates", "end_date"),
+    prevent_initial_call=True,
+)
+def run_mod_checks(_n, loot_window, loot_radius, servers, players, start, end):
+    # ── Section 1: Auto-flags ──────────────────────────────────────────────
+    flags_df = db.get_mod_flags(start, end, servers)
+
+    if flags_df.empty:
+        flags_section = dbc.Alert("✅ No flags detected for this period.", color="success")
+    else:
+        sev_order  = {"🔴 High": 0, "🟡 Medium": 1, "🔵 Info": 2}
+        flags_df["_ord"] = flags_df["severity"].map(lambda s: sev_order.get(s, 9))
+        flags_df = flags_df.sort_values(["_ord", "player"]).drop(columns=["_ord"])
+
+        flags_table = dash_table.DataTable(
+            data=flags_df.to_dict("records"),
+            columns=[
+                {"name": "Sev.",    "id": "severity"},
+                {"name": "Player",  "id": "player"},
+                {"name": "Flag",    "id": "flag"},
+                {"name": "Detail",  "id": "detail"},
+            ],
+            page_size=30,
+            style_table={"overflowX": "auto"},
+            style_header={"backgroundColor": "#1a1d27", "color": "#e0e4f0",
+                          "fontWeight": "bold", "border": "1px solid #3a3d52"},
+            style_cell={"backgroundColor": "#181b28", "color": "#e0e4f0",
+                        "border": "1px solid #3a3d52", "fontSize": "13px",
+                        "padding": "6px 10px", "fontFamily": "monospace",
+                        "whiteSpace": "normal", "textAlign": "left"},
+            style_data_conditional=[
+                {"if": {"filter_query": '{severity} contains "High"'},
+                 "backgroundColor": "#2d0f0f", "color": "#ff8080"},
+                {"if": {"filter_query": '{severity} contains "Medium"'},
+                 "backgroundColor": "#2a2000", "color": "#ffd966"},
+                {"if": {"filter_query": '{severity} contains "Info"'},
+                 "backgroundColor": "#0d1a2a", "color": "#80c8ff"},
+            ],
+            sort_action="native",
+        )
+        high_n   = (flags_df["severity"].str.contains("High",   na=False)).sum()
+        medium_n = (flags_df["severity"].str.contains("Medium", na=False)).sum()
+        info_n   = (flags_df["severity"].str.contains("Info",   na=False)).sum()
+        flags_section = html.Div([
+            html.Small(
+                [html.Span(f"🔴 {high_n} high  ", style={"color": "#ff8080"}),
+                 html.Span(f"🟡 {medium_n} medium  ", style={"color": "#ffd966"}),
+                 html.Span(f"🔵 {info_n} info", style={"color": "#80c8ff"})],
+                className="mb-2 d-block",
+            ),
+            flags_table,
+        ])
+
+    # ── Section 2: Chi beneficia? ──────────────────────────────────────────
+    loot_df = db.get_death_loot(start, end, servers,
+                                time_window_min=int(loot_window or 5),
+                                radius=int(loot_radius or 20))
+
+    if loot_df.empty:
+        loot_section = dbc.Alert(
+            f"No item pickups found within {loot_window} min / {loot_radius} blocks of any death.",
+            color="info",
+        )
+    else:
+        # Aggregate: per (victim, looter) → total items looted
+        agg = (loot_df.groupby(["victim", "looter", "killer"])
+               .agg(items_looted=("item_count", "sum"),
+                    pickups=("item_count", "count"),
+                    avg_sec=("seconds_after", "mean"))
+               .reset_index()
+               .sort_values("items_looted", ascending=False))
+        agg["avg_sec"] = agg["avg_sec"].round(0).astype(int)
+        agg["is_killer_looter"] = agg.apply(
+            lambda r: "⚔️ Yes" if str(r["looter"]) == str(r["killer"]) else "", axis=1
+        )
+
+        loot_table = dash_table.DataTable(
+            data=agg.to_dict("records"),
+            columns=[
+                {"name": "Victim",        "id": "victim"},
+                {"name": "Looter",        "id": "looter"},
+                {"name": "Killer",        "id": "killer"},
+                {"name": "Items Looted",  "id": "items_looted"},
+                {"name": "Pickups",       "id": "pickups"},
+                {"name": "Avg sec after", "id": "avg_sec"},
+                {"name": "Killer=Looter", "id": "is_killer_looter"},
+            ],
+            page_size=25,
+            style_table={"overflowX": "auto", "maxHeight": "480px", "overflowY": "auto"},
+            style_header={"backgroundColor": "#1a1d27", "color": "#e0e4f0",
+                          "fontWeight": "bold", "border": "1px solid #3a3d52"},
+            style_cell={"backgroundColor": "#181b28", "color": "#e0e4f0",
+                        "border": "1px solid #3a3d52", "fontSize": "13px",
+                        "padding": "6px 10px", "fontFamily": "monospace"},
+            style_data_conditional=[
+                {"if": {"filter_query": '{is_killer_looter} = "⚔️ Yes"'},
+                 "backgroundColor": "#2d1a0e", "color": "#ffb347"},
+                {"if": {"row_index": "odd", "filter_query": '{is_killer_looter} = ""'},
+                 "backgroundColor": "#1e2130"},
+            ],
+            sort_action="native",
+        )
+        loot_note = html.Small(
+            f"Orange rows = killer looted their own victim within {loot_window} min. "
+            f"Showing {len(loot_df):,} raw pickups → {len(agg):,} (victim, looter) pairs.",
+            className="text-muted fst-italic mb-2 d-block",
+        )
+        loot_section = html.Div([loot_note, loot_table])
+
+    return html.Div([
+        html.H6("🚩 Automatic Flags", className="text-warning mb-2 mt-1"),
+        flags_section,
+        html.Hr(style={"borderColor": "#3a3d52", "marginTop": "16px"}),
+        html.H6("💰 Chi beneficia? — Loot dopo le morti", className="text-info mb-2 mt-3"),
+        loot_section,
+    ])
+
+
+# ─── P8 Market Intel callbacks ───────────────────────────────────────────────
+
+@app.callback(
+    Output("mi-price-chart", "figure"),
+    Input("mi-item-select", "value"),
+    State("filter-dates", "start_date"),
+    State("filter-dates", "end_date"),
+    prevent_initial_call=True,
+)
+def load_mi_price_chart(item_id, start, end):
+    if not item_id:
+        return no_data_fig("Select an item above")
+    df = db.get_price_history_for_item(item_id, start, end)
+    if df.empty:
+        return no_data_fig(f"No price history for '{item_id}' in this period")
+    fig = px.line(df, x="ts", y="price", template=CHART_TEMPLATE,
+                  labels={"ts": "Date", "price": "Price"},
+                  title=f"Price history · {item_id.split(':')[-1]}")
+    if "volume" in df.columns:
+        fig.add_bar(x=df["ts"], y=df["volume"], name="Volume",
+                    marker_color="rgba(100,160,255,0.3)", yaxis="y2")
+        fig.update_layout(
+            yaxis2=dict(title=dict(text="Volume", font=dict(color=MUTED)),
+                        overlaying="y", side="right",
+                        tickfont=dict(color=MUTED, size=9), showgrid=False),
+        )
+    fig = chart_layout(fig)
+    fig.update_layout(margin=dict(l=50, r=60, t=44, b=44))
+    return fig
+
+
+# ─── P9 Area Query callbacks ──────────────────────────────────────────────────
+
+@app.callback(
+    Output("aq-output", "children"),
+    Input("aq-load-btn", "n_clicks"),
+    State("aq-x", "value"),
+    State("aq-z", "value"),
+    State("aq-radius", "value"),
+    State("aq-limit", "value"),
+    State("filter-servers", "value"),
+    State("filter-dates", "start_date"),
+    State("filter-dates", "end_date"),
+    prevent_initial_call=True,
+)
+def load_area_query(_n, cx, cz, radius, limit, servers, start, end):
+    if cx is None or cz is None:
+        return dbc.Alert("Enter both X and Z coordinates.", color="warning")
+    df = db.get_events_near(cx, cz, radius or 50, start, end,
+                            limit=int(limit or 1000), servers=servers)
+    if df.empty:
+        return dbc.Alert(f"No events found within {radius} blocks of ({cx}, {cz}).", color="info")
+
+    # Type breakdown bar
+    type_counts = df["event_type"].value_counts().reset_index()
+    type_counts.columns = ["type", "count"]
+    bar = px.bar(type_counts, x="type", y="count", template=CHART_TEMPLATE,
+                 color="type", color_discrete_sequence=CHART_COLORS,
+                 labels={"type": "Event Type", "count": "Count"},
+                 title=f"Event breakdown · {len(df):,} events within {radius}b of ({int(cx)}, {int(cz)})")
+    bar = chart_layout(bar)
+    bar.update_layout(showlegend=False, height=280, margin=dict(l=40, r=20, t=44, b=40))
+
+    tbl = _events_table(df, "aq-tbl", page_size=25, height="460px")
+
+    return html.Div([
+        dcc.Graph(figure=bar, config={"displayModeBar": False}, className="mb-3"),
+        tbl,
+    ])
+
+
+# ─── P11 Chronicle callbacks ──────────────────────────────────────────────────
+
+@app.callback(
+    Output("chr-output", "children"),
+    Input("chr-run-btn", "n_clicks"),
+    State("filter-servers", "value"),
+    State("filter-dates", "start_date"),
+    State("filter-dates", "end_date"),
+    prevent_initial_call=True,
+)
+def generate_chronicle(_n, servers, start, end):
+    d = db.get_chronicle_data(start, end, servers)
+    if not d:
+        return dbc.Alert("No data for this period.", color="info")
+
+    period = f"{start or '?'} → {end or '?'}"
+
+    def _stat(icon, label, value, color="#e0e4f0"):
+        return dbc.Col(dbc.Card(dbc.CardBody([
+            html.Div(f"{icon} {label}", className="text-muted small mb-1"),
+            html.H4(value, style={"color": color, "marginBottom": 0}),
+        ]), style={"backgroundColor": "#1a1d27", "border": f"1px solid {BORDER}"}), md=3, className="mb-3")
+
+    stats_row = dbc.Row([
+        _stat("👥", "Active Players",   f"{d.get('active_players','—'):,}" if isinstance(d.get('active_players'), int) else "—", "#80c8ff"),
+        _stat("💀", "Total Deaths",     f"{d.get('deaths','—'):,}"         if isinstance(d.get('deaths'), int) else "—",        "#ff8080"),
+        _stat("⚔️", "Kills",            f"{d.get('kills','—'):,}"          if isinstance(d.get('kills'), int) else "—",         "#e05c5c"),
+        _stat("⛏️", "Blocks Broken",    f"{d.get('blocks_broken','—'):,}"  if isinstance(d.get('blocks_broken'), int) else "—", "#f5c518"),
+        _stat("💬", "Chat Messages",    f"{d.get('chat_messages','—'):,}"  if isinstance(d.get('chat_messages'), int) else "—", "#a8d8a8"),
+        _stat("💰", "Market Txs",       f"{d.get('market_transactions','—'):,}" if isinstance(d.get('market_transactions'), int) else "—", "#c084fc"),
+        _stat("💸", "Market Volume",    f"{d.get('market_volume',0):,.0f}" if 'market_volume' in d else "—", "#ffd966"),
+    ])
+
+    # Narrative text
+    lines = [html.H5(f"📰 Chronicle  ·  {period}", className="text-warning mb-3")]
+
+    p = d.get("active_players", 0)
+    s = d.get("sessions", 0)
+    if p:
+        lines.append(html.P(f"During this period, {p} player{'s' if p!=1 else ''} "
+                            f"were active across {s:,} session{'s' if s!=1 else ''}."))
+
+    k = d.get("kills", 0)
+    dth = d.get("deaths", 0)
+    if k or dth:
+        lines.append(html.P(f"Combat was {"fierce" if k > 50 else "moderate" if k > 10 else "light"}: "
+                            f"{k:,} kills and {dth:,} deaths were recorded."))
+
+    if d.get("top_killers"):
+        top = d["top_killers"]
+        names = ", ".join(f"{n} ({v} kills)" for n, v in top)
+        lines.append(html.P(f"The most dangerous players were: {names}."))
+
+    if d.get("top_pvp_killer"):
+        lines.append(html.P(f"In PvP, {d['top_pvp_killer']} dominated with "
+                            f"{d['top_pvp_killer_n']} player kills."))
+
+    bb = d.get("blocks_broken", 0)
+    if bb:
+        lines.append(html.P(f"Miners and builders were hard at work: "
+                            f"{bb:,} blocks were broken across the world."))
+
+    mt = d.get("market_transactions", 0)
+    mv = d.get("market_volume", 0)
+    if mt:
+        lines.append(html.P(f"The market saw {mt:,} transactions worth "
+                            f"{mv:,.0f} coins in total."))
+        if d.get("top_traders"):
+            names = ", ".join(f"{n} ({v:,} coins)" for n, v in d["top_traders"])
+            lines.append(html.P(f"Top traders: {names}."))
+
+    if d.get("top_death_cause"):
+        lines.append(html.P(f"The leading cause of death was "
+                            f"'{d['top_death_cause']}' ({d['top_death_cause_n']} times)."))
+
+    narrative = dbc.Card(dbc.CardBody(lines),
+                         style={"backgroundColor": "#1a1d27", "border": f"1px solid {BORDER}",
+                                "lineHeight": "1.8", "fontSize": "15px", "color": TEXT})
+
+    return html.Div([stats_row, html.Hr(style={"borderColor": BORDER}), narrative])
+
+
+# ─── P12 Position Trail callbacks ─────────────────────────────────────────────
+
+@app.callback(
+    Output("pos-graph", "figure"),
+    Output("pos-table-output", "children"),
+    Input("pos-load-btn", "n_clicks"),
+    State("pos-player", "value"),
+    State("pos-limit", "value"),
+    State("filter-servers", "value"),
+    State("filter-dates", "start_date"),
+    State("filter-dates", "end_date"),
+    prevent_initial_call=True,
+)
+def load_position_trail(_n, player, limit, servers, start, end):
+    no_fig = _no_data_3d("Select a player and click ▶ Load Trail")
+    if not player:
+        return no_fig, None
+    df = db.get_player_position_trail(player, start, end, servers, limit=int(limit or 500))
+    if df.empty:
+        return _no_data_3d(f"No position data for {player} in this period"), \
+               dbc.Alert("No data found.", color="info")
+
+    for c in ["x", "y", "z"]:
+        df[c] = pd.to_numeric(df[c], errors="coerce")
+    df = df.dropna(subset=["x", "y", "z"])
+
+    color_map = {"Kill": "#e05c5c", "Attack": "#f5a623", "Death": "#aaaaaa",
+                 "Block Break": "#f5c518", "Item Drop": "#69b3e7"}
+
+    fig = go.Figure()
+    for etype, grp in df.groupby("event_type"):
+        fig.add_trace(go.Scatter3d(
+            x=grp["z"].tolist(), y=grp["x"].tolist(), z=grp["y"].tolist(),
+            mode="markers",
+            name=etype,
+            marker=dict(size=3, color=color_map.get(etype, "#cccccc"), opacity=0.75),
+            hovertemplate=f"<b>{etype}</b><br>X: %{{y}}<br>Z: %{{x}}<br>Y: %{{z}}<extra></extra>",
+        ))
+
+    axis_style = dict(showbackground=True, backgroundcolor="#1a1d27",
+                      gridcolor=BORDER, tickfont=dict(color=MUTED, size=9))
+    fig.update_layout(
+        template="plotly_dark",
+        paper_bgcolor="#1e2130",
+        font=dict(color=TEXT),
+        margin=dict(l=0, r=0, t=44, b=0),
+        title=dict(text=f"{player}  ·  {len(df):,} event positions",
+                   font=dict(size=14, color=TEXT)),
+        scene=dict(
+            bgcolor="#1a1d27",
+            xaxis=dict(title=dict(text="Z", font=dict(color=MUTED)), **axis_style),
+            yaxis=dict(title=dict(text="X", font=dict(color=MUTED)), **axis_style),
+            zaxis=dict(title=dict(text="Y (height)", font=dict(color=MUTED)), **axis_style),
+            camera=_3D_CAMERA_PRESETS["iso"],
+            aspectmode="data",
+        ),
+        legend=dict(bgcolor="rgba(0,0,0,0.4)", font=dict(color=TEXT, size=10)),
+        uirevision="pos-trail",
+    )
+
+    tbl = make_table(df.head(200), "pos-tbl", page_size=20)
+    return fig, html.Div([
+        html.Small(f"Showing first 200 of {len(df):,} events in table.",
+                   className="text-muted fst-italic mb-2 d-block"),
+        tbl,
+    ])
 
 
 # ─── Server + Player dropdown population ──────────────────────────────────────
@@ -1449,6 +3726,18 @@ def apply_quick_range(val):
     if val == "all":
         return None, None
     return dash.no_update, dash.no_update
+
+
+@app.callback(
+    Output("quick-range", "value", allow_duplicate=True),
+    Input("filter-dates", "start_date"),
+    Input("filter-dates", "end_date"),
+    prevent_initial_call=True,
+)
+def clear_quick_range_on_manual_date(_start, _end):
+    """When the date picker changes (manually or after a preset), clear the quick-range label
+    so the user sees they are in 'custom range' mode and it won't fire again unexpectedly."""
+    return None
 
 
 # ─── Auto-refresh interval ────────────────────────────────────────────────────
@@ -1546,10 +3835,27 @@ def load_timeline(_n, player, servers, start, end):
             color="info", dismissable=True,
         )
 
+    # Add pvp indicator column — "⚔️ Name" when death was by a player
+    def _pvp_label(row):
+        if row.get("type") != "Death":
+            return ""
+        details = str(row.get("details", ""))
+        if "← by" in details:
+            try:
+                return "⚔️ " + details.split("← by")[1].split("  ")[0].strip()
+            except Exception:
+                return "⚔️ PvP"
+        return ""
+    df["pvp"] = df.apply(_pvp_label, axis=1)
+
     cond = [
         {"if": {"filter_query": f'{{type}} = "{t}"'}, "backgroundColor": c, "color": TEXT}
         for t, c in _TL_COLORS.items()
-    ] + [{"if": {"filter_query": '{type} = "Death"'}, "fontWeight": "bold"}]
+    ] + [
+        {"if": {"filter_query": '{type} = "Death"'}, "fontWeight": "bold"},
+        {"if": {"filter_query": '{pvp} != ""'},
+         "backgroundColor": "#3d1515", "color": "#ff9999", "fontWeight": "bold"},
+    ]
 
     counts = df["type"].value_counts().reset_index()
     counts.columns = ["type", "count"]
@@ -1574,7 +3880,8 @@ def load_timeline(_n, player, servers, start, end):
             dbc.Col(dash_table.DataTable(
                 id="tbl-timeline",
                 data=df.to_dict("records"),
-                columns=[{"name": c.replace("_", " ").title(), "id": c} for c in df.columns],
+                columns=[{"name": "Killed by" if c == "pvp" else c.replace("_", " ").title(), "id": c}
+                         for c in df.columns],
                 page_size=50, sort_action="native", filter_action="native", export_format="csv",
                 style_table={"overflowX": "auto", "maxHeight": "600px", "overflowY": "auto"},
                 style_cell={**_CELL, "maxWidth": "500px"},
@@ -1801,7 +4108,7 @@ def load_location(_n, cx, cz, radius, servers, start, end):
             ], md=4),
         ], className="mb-3"),
         section(f"All events near ({cx}, {cz}) — {len(df)} total"),
-        make_table(df, "loc-tbl", page_size=25),
+        _events_table(df, "loc-tbl", page_size=25),
     ])
 
 
@@ -1850,7 +4157,7 @@ def load_proximity(_n, player_a, player_b, distance, servers, start, end):
     ])
 
 
-# Map — step 1: load data into Store, populate dimension selector
+# Surface Map — step 1: load raw data into Store, populate dimension selector
 @app.callback(
     Output("map-data-store", "data"),
     Output("map-dim-filter", "options"),
@@ -1859,16 +4166,19 @@ def load_proximity(_n, player_a, player_b, distance, servers, start, end):
     Output("map-table-output", "children"),
     Input("map-load-btn", "n_clicks"),
     State("map-event-type", "value"),
-    State("map-limit", "value"),
+    State("map-cx", "value"),
+    State("map-cz", "value"),
+    State("map-radius", "value"),
     State("filter-servers", "value"),
     State("filter-players", "value"),
     State("filter-dates", "start_date"),
     State("filter-dates", "end_date"),
     prevent_initial_call=True,
 )
-def load_map(_n, event_type, limit, servers, players, start, end):
-    df, err = db.get_map_data(event_type, players, start, end, int(limit or 5000), servers=servers)
-    label = event_type.replace("_", " ").title()
+def load_map(_n, event_type, cx, cz, radius, servers, players, start, end):
+    df, err = db.get_map_data(event_type, players, start, end, servers=servers,
+                              cx=cx, cz=cz, radius=radius, limit=100_000)
+    label = (event_type or "events").replace("_", " ").title()
     hidden = {"display": "none"}
     visible = {"display": "block"}
 
@@ -1880,7 +4190,6 @@ def load_map(_n, event_type, limit, servers, players, start, end):
 
     warn = [dbc.Alert(err, color="warning", dismissable=True)] if err else []
 
-    # Build dimension options
     dims = []
     if "dimension" in df.columns:
         dims = sorted(df["dimension"].dropna().unique().tolist())
@@ -1891,54 +4200,34 @@ def load_map(_n, event_type, limit, servers, players, start, end):
 
     tbl = html.Div([
         *warn,
-        section(f"Map Data — {len(df):,} rows  ({len(dims)} dimension(s))"),
-        make_table(df, "map-tbl", page_size=20),
+        html.Small(
+            f"Loaded {len(df):,} events across {len(dims)} dimension(s). "
+            "Adjust Cell size or Color scale and the surface updates instantly.",
+            className="text-muted fst-italic",
+        ),
     ])
     return df.to_dict("records"), dim_opts, "__all__", dim_style, tbl
 
 
-# Map — step 2: re-render figure when dimension selection changes
+# Surface Map — step 2: rebuild surface when dim/cell-size/colorscale changes
 @app.callback(
     Output("map-graph", "figure"),
     Input("map-data-store", "data"),
     Input("map-dim-filter", "value"),
+    Input("map-cell-size", "value"),
+    Input("map-colorscale", "value"),
     State("map-event-type", "value"),
     prevent_initial_call=True,
 )
-def render_map_figure(records, dim, event_type):
+def render_map_figure(records, dim, cell_size, colorscale, event_type):
     if not records:
-        return no_data_fig("Click ▶ Load Map to render")
+        return _no_data_surface("Click ▶ Load Map to render")
 
     df = pd.DataFrame(records)
-    label = (event_type or "events").replace("_", " ").title()
-
-    # Filter by dimension
     if dim and dim != "__all__" and "dimension" in df.columns:
         df = df[df["dimension"] == dim]
-        dim_tag = f" · {_dim_label(dim)}"
-    else:
-        dim_tag = ""
 
-    has_coords = "map_x" in df.columns and df["map_x"].notna().any()
-    if not has_coords:
-        return no_data_fig(f"No coordinate data for '{label}' — schema missing position columns")
-
-    plot_df = df.dropna(subset=["map_x", "map_z"])
-    fig = px.scatter(
-        plot_df, x="map_x", y="map_z", color="player",
-        hover_data=[c for c in ["details", "y", "dimension", "timestamp"] if c in df.columns],
-        labels={"map_x": "X (East →)", "map_z": "Z (South ↓)", "player": "Player"},
-        color_discrete_sequence=CHART_COLORS, template=CHART_TEMPLATE,
-    )
-    fig = chart_layout(fig)
-    fig.update_layout(
-        title=f"{label}{dim_tag} — {len(plot_df):,} points  (scroll to zoom, drag to pan)",
-        height=620,
-        legend=dict(itemsizing="constant", bgcolor="rgba(0,0,0,0.3)"),
-    )
-    fig.update_yaxes(autorange="reversed", title="Z (South ↓)", scaleanchor="x", scaleratio=1)
-    fig.update_xaxes(title="X (East →)")
-    return fig
+    return _build_surface_figure(df, event_type, dim, cell_size, colorscale)
 
 
 # ─── 3D Map callbacks ─────────────────────────────────────────────────────────
@@ -2051,6 +4340,237 @@ def map3d_set_camera(_iso, _top, _side, _front, current_fig):
     fig = go.Figure(current_fig)
     fig.update_layout(scene_camera=_3D_CAMERA_PRESETS[key])
     return fig
+
+
+# ─── Post-mortem callbacks ───────────────────────────────────────────────────
+
+@app.callback(
+    Output("pm-death-picker", "children"),
+    Input("pm-load-btn", "n_clicks"),
+    State("pm-player-select", "value"),
+    State("filter-servers", "value"),
+    State("filter-dates", "start_date"),
+    State("filter-dates", "end_date"),
+    prevent_initial_call=True,
+)
+def pm_load_deaths(_n, player, servers, start, end):
+    if not player:
+        return dbc.Alert("Select a player first.", color="warning", dismissable=True)
+
+    df = db.get_death_list(player, start, end, servers, limit=100)
+    if df.empty:
+        return dbc.Alert("No deaths found for this player in the selected period.", color="info", dismissable=True)
+
+    opts = []
+    for _, row in df.iterrows():
+        label = (f"[{row['ts']}]  {row['cause']}"
+                 + (f"  ← {row['killer']}" if row['killer'] != '—' else '')
+                 + f"  HP:{row['hp']}  @({row['x']}, {row['z']})  {row['dimension']}")
+        opts.append({"label": label, "value": row["ts"]})
+
+    return dbc.Row([
+        dbc.Col([
+            html.Label("Select death event", className="text-muted small mb-1"),
+            dcc.Dropdown(
+                id="pm-death-select", options=opts, placeholder="Choose a death…",
+                style=_dropdown_style(), className="dbc",
+            ),
+        ], md=9),
+        dbc.Col([
+            html.Label("\u00a0", className="d-block small mb-1"),
+            dbc.Button("🔬 Run Post-mortem", id="pm-run-btn", color="danger", className="w-100"),
+        ], md=3, className="d-flex align-items-end"),
+    ], className="mb-2")
+
+
+@app.callback(
+    Output("pm-output", "children"),
+    Input("pm-run-btn", "n_clicks"),
+    State("pm-player-select", "value"),
+    State("pm-death-select", "value"),
+    State("pm-radius", "value"),
+    State("pm-before-min", "value"),
+    State("pm-after-min", "value"),
+    State("filter-servers", "value"),
+    State("filter-dates", "start_date"),
+    State("filter-dates", "end_date"),
+    prevent_initial_call=True,
+)
+def pm_run(_n, player, death_ts, radius, before_min, after_min, servers, start, end):
+    if not player or not death_ts:
+        return dbc.Alert("Select a player and a death event first.", color="warning", dismissable=True)
+
+    radius     = int(radius     or 100)
+    before_min = int(before_min or 5)
+    after_min  = int(after_min  or 10)
+
+    # Reload death details by matching timestamp
+    death_df = db.get_death_list(player, start, end, servers, limit=100)
+    row = death_df[death_df["ts"] == death_ts]
+    if row.empty:
+        return dbc.Alert("Could not retrieve death details.", color="danger", dismissable=True)
+    row = row.iloc[0]
+
+    death_x   = row["x"]
+    death_z   = row["z"]
+    death_dim = row["dimension"]
+
+    from datetime import datetime, timedelta
+    try:
+        dt = datetime.strptime(death_ts, "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        return dbc.Alert("Invalid death timestamp.", color="danger", dismissable=True)
+    t_before = (dt - timedelta(minutes=before_min)).strftime("%Y-%m-%d %H:%M:%S")
+
+    # ── Queries ──────────────────────────────────────────────────────────────
+    timeline_df = db.get_postmortem_before(player, t_before, death_ts, servers)
+
+    # Nearby / loot require valid coordinates
+    import math
+    coords_ok = (death_x is not None and death_z is not None
+                 and not (isinstance(death_x, float) and math.isnan(death_x))
+                 and not (isinstance(death_z, float) and math.isnan(death_z)))
+
+    if coords_ok:
+        nearby_df = db.get_postmortem_nearby(player, death_ts, death_x, death_z, death_dim,
+                                             radius, before_min, after_min, servers)
+        loot_df   = db.get_postmortem_loot(player, death_ts, death_x, death_z, radius, after_min, servers)
+    else:
+        nearby_df = pd.DataFrame()
+        loot_df   = pd.DataFrame()
+
+    # ── Death card ────────────────────────────────────────────────────────────
+    killer_val  = str(row.get("killer", "") or "").strip()
+    weapon_val  = str(row.get("weapon", "") or "").strip()
+    cause_val   = str(row.get("cause",  "") or "unknown").strip()
+    is_pvp      = killer_val not in ("", "—", "None", "null")
+
+    # If killer not stored but cause contains a player name hint, use cause as fallback
+    killer_display = killer_val if is_pvp else "—"
+
+    def _fmt(v):
+        sv = str(v) if v is not None else "—"
+        return sv if sv not in ("None", "nan", "", "null") else "—"
+
+    cause_badge = dbc.Badge(
+        f"⚔️ PvP — killed by {killer_display}" if is_pvp else "🌍 PvE / Environment",
+        color="danger" if is_pvp else "warning",
+        className="me-2 fs-6",
+    )
+    death_card = dbc.Card(dbc.CardBody([
+        dbc.Row([
+            dbc.Col([
+                html.H5([cause_badge], className="mb-2"),
+                html.P([html.Strong("Player: "), player], className="mb-1 small text-light"),
+                html.P([html.Strong("Time: "), death_ts], className="mb-1 small"),
+                html.P([html.Strong("Cause: "), cause_val], className="mb-1 small"),
+                *([html.P([html.Strong("Killed by: "),
+                           dbc.Badge(killer_display, color="danger", className="ms-1")],
+                          className="mb-1 small")] if is_pvp else []),
+                *([html.P([html.Strong("Weapon: "), weapon_val],
+                          className="mb-1 small")] if is_pvp and weapon_val not in ("—", "") else []),
+            ], md=5),
+            dbc.Col([
+                html.P([html.Strong("HP at death: "), f"{_fmt(row.get('hp'))}/20"], className="mb-1 small"),
+                html.P([html.Strong("Armor: "),       _fmt(row.get("armor"))],      className="mb-1 small"),
+                html.P([html.Strong("Food: "),        _fmt(row.get("food"))],        className="mb-1 small"),
+            ], md=3),
+            dbc.Col([
+                html.P([html.Strong("Position: "), f"X={_fmt(row.get('x'))}  Y={_fmt(row.get('y'))}  Z={_fmt(row.get('z'))}"], className="mb-1 small"),
+                html.P([html.Strong("Dimension: "), death_dim], className="mb-1 small"),
+                html.P(html.Small(f"Nearby radius: {radius} blocks  ·  "
+                                  f"Timeline: −{before_min} min  ·  Loot window: +{after_min} min",
+                                  className="text-muted fst-italic")),
+            ], md=4),
+        ]),
+    ]), style={"backgroundColor": "#3a1a1a", "border": "1px solid #cc4444"}, className="mb-4")
+
+    # ── Timeline before death ────────────────────────────────────────────────
+    _TYPE_COLOR = {
+        "Attack": "danger", "Kill": "danger", "Death": "dark",
+        "Block Break": "secondary", "Block Place": "success",
+        "Item Drop": "warning", "Item Pickup": "info",
+        "Chat": "primary", "Command": "light",
+    }
+    if not timeline_df.empty:
+        tl_rows = []
+        for _, r in timeline_df.sort_values("ts").iterrows():
+            color = _TYPE_COLOR.get(r.get("type", ""), "secondary")
+            tl_rows.append(html.Tr([
+                html.Td(str(r.get("ts", ""))[-8:], className="text-muted small pe-3", style={"whiteSpace": "nowrap"}),
+                html.Td(dbc.Badge(str(r.get("type", "")), color=color, className="me-1"), style={"whiteSpace": "nowrap"}),
+                html.Td(str(r.get("details", "")), className="small"),
+                html.Td(f"({r.get('x','?')}, {r.get('z','?')})" if r.get("x") else "—",
+                        className="text-muted small", style={"whiteSpace": "nowrap"}),
+            ]))
+        timeline_block = dbc.Card(dbc.CardBody([
+            html.H6(f"📜 {player}'s actions in the {before_min} minutes before death ({len(timeline_df)} events)",
+                    className="text-info mb-3"),
+            html.Div(
+                html.Table([html.Tbody(tl_rows)],
+                           className="table table-sm table-dark table-hover mb-0"),
+                style={"maxHeight": "320px", "overflowY": "auto"},
+            ),
+        ]), style={"backgroundColor": CARD_BG2, "border": f"1px solid {BORDER}"}, className="mb-3")
+    else:
+        timeline_block = dbc.Alert(f"No events recorded for {player} in the {before_min} min before death.",
+                                   color="secondary", className="mb-3")
+
+    # ── Who was nearby ───────────────────────────────────────────────────────
+    if not nearby_df.empty:
+        # Suspect summary: count events per player
+        suspect_counts = (nearby_df.groupby("player_name")
+                          .agg(events=("event_type", "count"),
+                               first_seen=("timestamp", "min"),
+                               last_seen=("timestamp", "max"))
+                          .sort_values("events", ascending=False)
+                          .reset_index())
+        suspect_badges = [
+            dbc.Badge(f"{r['player_name']} ({r['events']} events)",
+                      color="warning" if i == 0 else "secondary",
+                      className="me-2 mb-2 p-2")
+            for i, (_, r) in enumerate(suspect_counts.iterrows())
+        ]
+        nearby_block = dbc.Card(dbc.CardBody([
+            html.H6(f"👁️ Who was nearby (±{radius} blocks, ±{before_min}/{after_min} min) — "
+                    f"{nearby_df['player_name'].nunique()} player(s)",
+                    className="text-warning mb-2"),
+            html.Div(suspect_badges, className="mb-3"),
+            _events_table(nearby_df, "pm-nearby-tbl", page_size=15, height="280px"),
+        ]), style={"backgroundColor": CARD_BG2, "border": f"1px solid {BORDER}"}, className="mb-3")
+    elif not coords_ok:
+        nearby_block = dbc.Alert("Death has no recorded coordinates — cannot query nearby events.",
+                                 color="secondary", className="mb-3")
+    else:
+        nearby_block = dbc.Alert(f"No other players recorded within {radius} blocks around the death time.",
+                                 color="secondary", className="mb-3")
+
+    # ── Loot picked up after ─────────────────────────────────────────────────
+    if not loot_df.empty:
+        looters = loot_df["player_name"].unique().tolist()
+        loot_block = dbc.Card(dbc.CardBody([
+            html.H6(f"📦 Items picked up near death in +{after_min} min by: "
+                    f"{', '.join(looters)}",
+                    className="text-success mb-2"),
+            make_table(loot_df, "pm-loot-tbl", page_size=10, height="220px"),
+        ]), style={"backgroundColor": CARD_BG2, "border": f"1px solid {BORDER}"}, className="mb-3")
+    elif not coords_ok:
+        loot_block = dbc.Alert("Death has no recorded coordinates — cannot query loot.",
+                               color="secondary", className="mb-3")
+    else:
+        loot_block = dbc.Alert(f"No item pickups by others within {radius} blocks in the {after_min} min after death.",
+                               color="secondary", className="mb-3")
+
+    return html.Div([
+        death_card,
+        dbc.Row([
+            dbc.Col(timeline_block, md=12),
+        ]),
+        dbc.Row([
+            dbc.Col(nearby_block, md=7),
+            dbc.Col(loot_block, md=5),
+        ]),
+    ])
 
 
 # ─── Settings callbacks ───────────────────────────────────────────────────────

@@ -3,3 +3,4 @@ dash-bootstrap-components>=1.5.0
 plotly>=5.18.0
 pandas>=2.0.0
 pymysql>=1.1.0
+networkx>=3.0

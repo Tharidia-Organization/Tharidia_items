@@ -568,6 +568,18 @@ def get_top_blocks_placed(players=None, start=None, end=None, servers=None):
     """)
 
 
+def get_block_place_by_player(players=None, start=None, end=None, servers=None):
+    pf = _player_f("player_name", players)
+    df = _date_f("timestamp", start, end)
+    sf = _server_f("server_id", servers)
+    return query_df(f"""
+        SELECT player_name, COUNT(*) AS blocks_placed
+        FROM block_place_events
+        WHERE 1=1 {pf} {df} {sf}
+        GROUP BY player_name ORDER BY blocks_placed DESC
+    """)
+
+
 def get_block_interact(players=None, start=None, end=None, limit=500, servers=None):
     pf = _player_f("player_name", players)
     df = _date_f("timestamp", start, end)
@@ -1278,11 +1290,11 @@ def get_revive_stats(players=None, start=None, end=None, servers=None):
 
 
 def get_map_data(event_type, players=None, start=None, end=None, servers=None,
-                 cx=None, cz=None, radius=None):
+                 cx=None, cz=None, radius=None, limit=20000):
     """Coordinate data for the 2D/3D scatter map. Returns (DataFrame, error_str_or_None).
 
     When cx/cz/radius are provided only events inside that bounding box are returned
-    (no row cap).  Without a spatial filter a safety cap of 20 000 rows applies.
+    (no row cap).  Without a spatial filter a safety cap of `limit` rows applies.
     """
     pf_n = _player_f("player_name", players)
     pf_p = _player_f("p.username", players)
@@ -1299,7 +1311,7 @@ def get_map_data(event_type, players=None, start=None, end=None, servers=None,
 
     # No hard cap when a spatial filter is active; safety cap otherwise
     order_limit = "" if (cx is not None and cz is not None and radius is not None) \
-                  else "LIMIT 20000"
+                  else f"LIMIT {int(limit)}"
 
     # Each entry: (full_sql, fallback_sql_or_None)
     queries = {
@@ -1334,12 +1346,14 @@ def get_map_data(event_type, players=None, start=None, end=None, servers=None,
         "kills": (
             f"""SELECT player_name as player,
                    ROUND(player_x,1) as map_x, ROUND(player_z,1) as map_z, ROUND(player_y,1) as y,
+                   entity_type,
                    CONCAT('Killed ', entity_type, '  [', COALESCE(main_hand_item,'?'), ']') as details,
                    dimension, DATE_FORMAT(timestamp,'%Y-%m-%d %H:%i:%s') as timestamp
             FROM player_kill_events
             WHERE player_x IS NOT NULL {df_ts} {sf_n} {pf_n} {spf_xz}""",
             f"""SELECT player_name as player,
                    NULL as map_x, NULL as map_z, NULL as y,
+                   entity_type,
                    CONCAT('Killed ', entity_type) as details,
                    NULL as dimension, DATE_FORMAT(timestamp,'%Y-%m-%d %H:%i:%s') as timestamp
             FROM player_kill_events WHERE 1=1 {df_ts} {sf_n} {pf_n}""",
@@ -1455,3 +1469,1307 @@ def get_map_data(event_type, players=None, start=None, end=None, servers=None,
             return df, f"No coordinates available (schema missing position columns). Error: {err}"
         return pd.DataFrame(), err
     return df, None
+
+
+# ─── Market ───────────────────────────────────────────────────────────────────
+# Tables live in the `market` schema (same server/credentials).
+# Timestamps are BIGINT milliseconds (Java System.currentTimeMillis()).
+
+def _mdate_f(col, start, end):
+    """AND-prefixed date filter for BIGINT millisecond timestamp columns."""
+    if start and end:
+        return (f"AND {col} BETWEEN UNIX_TIMESTAMP('{start} 00:00:00') * 1000 "
+                f"AND UNIX_TIMESTAMP('{end} 23:59:59') * 1000")
+    if start:
+        return f"AND {col} >= UNIX_TIMESTAMP('{start} 00:00:00') * 1000"
+    if end:
+        return f"AND {col} <= UNIX_TIMESTAMP('{end} 23:59:59') * 1000"
+    return ""
+
+
+def get_market_kpis(start=None, end=None):
+    # No _default_dates() fallback — None/None means "all time" for market data.
+    mdf = _mdate_f("timestamp", start, end)
+    result = {k: 0 for k in ["transactions", "transactions_all", "tax_collected",
+                               "active_items", "active_traders", "total_tax_ever"]}
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                # All transactions (includes fictional) — for diagnosis
+                cur.execute(f"""
+                    SELECT COUNT(*) as v FROM market.transactions WHERE 1=1 {mdf}
+                """)
+                row = cur.fetchone()
+                result["transactions_all"] = int(row["v"]) if row else 0
+
+                # Real transactions only
+                cur.execute(f"""
+                    SELECT COUNT(*) as v FROM market.transactions
+                    WHERE is_fictional = FALSE {mdf}
+                """)
+                row = cur.fetchone()
+                result["transactions"] = int(row["v"]) if row else 0
+
+                cur.execute(f"""
+                    SELECT COALESCE(SUM(tax_amount), 0) as v
+                    FROM market.tax_records WHERE 1=1 {mdf}
+                """)
+                row = cur.fetchone()
+                result["tax_collected"] = int(row["v"]) if row else 0
+
+                cur.execute("SELECT COUNT(DISTINCT item_id) as v FROM market.markets")
+                row = cur.fetchone()
+                result["active_items"] = int(row["v"]) if row else 0
+
+                cur.execute(f"""
+                    SELECT COUNT(DISTINCT player_uuid) as v FROM (
+                        SELECT seller_uuid as player_uuid
+                        FROM market.transactions WHERE is_fictional = FALSE {mdf}
+                        UNION
+                        SELECT buyer_uuid
+                        FROM market.transactions WHERE is_fictional = FALSE {mdf}
+                    ) u
+                """)
+                row = cur.fetchone()
+                result["active_traders"] = int(row["v"]) if row else 0
+
+                cur.execute("""
+                    SELECT COALESCE(total_tax_collected, 0) as v
+                    FROM market.treasury WHERE id = 1
+                """)
+                row = cur.fetchone()
+                result["total_tax_ever"] = int(row["v"]) if row else 0
+        finally:
+            conn.close()
+    except Exception as e:
+        logger.error("Market KPI error: %s", e)
+    return result
+
+
+def get_sell_buy_balance(start=None, end=None, limit=20):
+    """Per player: trade count split as seller vs buyer."""
+    mdf = _mdate_f("timestamp", start, end)
+    return query_df(f"""
+        SELECT
+            player,
+            SUM(as_seller)  AS sales,
+            SUM(as_buyer)   AS purchases,
+            SUM(as_seller) + SUM(as_buyer) AS total_trades,
+            ROUND(SUM(as_seller) * 100.0 /
+                  NULLIF(SUM(as_seller) + SUM(as_buyer), 0), 1) AS seller_pct
+        FROM (
+            SELECT seller_name AS player, 1 AS as_seller, 0 AS as_buyer
+            FROM market.transactions WHERE is_fictional = FALSE {mdf}
+            UNION ALL
+            SELECT buyer_name, 0, 1
+            FROM market.transactions WHERE is_fictional = FALSE {mdf}
+        ) r
+        GROUP BY player
+        ORDER BY total_trades DESC LIMIT {limit}
+    """)
+
+
+def get_top_traded_items(start=None, end=None, limit=20):
+    """Most traded items (goods side of transaction) by transaction count."""
+    mdf = _mdate_f("t.timestamp", start, end)
+    return query_df(f"""
+        SELECT
+            SUBSTRING_INDEX(ti.item_id, ':', -1)    AS item,
+            ti.item_id                               AS item_id_full,
+            COUNT(DISTINCT ti.transaction_id)        AS tx_count,
+            SUM(ti.item_count)                       AS total_units,
+            ROUND(m.current_price, 2)                AS current_price
+        FROM market.transaction_items ti
+        JOIN market.transactions t ON ti.transaction_id = t.transaction_id
+        LEFT JOIN market.markets m ON ti.item_id = m.item_id
+        WHERE t.is_fictional = FALSE AND ti.is_seller_item = TRUE {mdf}
+        GROUP BY ti.item_id, m.current_price
+        ORDER BY tx_count DESC LIMIT {limit}
+    """)
+
+
+def get_price_history_for_item(item_id, start=None, end=None):
+    """Price history rows for a single item_id."""
+    mdf = _mdate_f("timestamp", start, end)
+    safe_id = item_id.replace("'", "''")
+    return query_df(f"""
+        SELECT
+            FROM_UNIXTIME(timestamp / 1000) AS ts,
+            ROUND(price, 2)                 AS price,
+            volume
+        FROM market.price_history
+        WHERE item_id = '{safe_id}' {mdf}
+        ORDER BY timestamp ASC LIMIT 2000
+    """)
+
+
+def get_price_volatility(start=None, end=None, limit=15):
+    """Items ranked by price range % — most volatile first."""
+    mdf = _mdate_f("timestamp", start, end)
+    return query_df(f"""
+        SELECT
+            SUBSTRING_INDEX(item_id, ':', -1) AS item,
+            item_id                           AS item_id_full,
+            COUNT(*)                          AS price_points,
+            ROUND(AVG(price),    2)           AS avg_price,
+            ROUND(MIN(price),    2)           AS min_price,
+            ROUND(MAX(price),    2)           AS max_price,
+            ROUND(STDDEV(price), 2)           AS stddev,
+            ROUND((MAX(price) - MIN(price)) /
+                  NULLIF(AVG(price), 0) * 100, 1) AS range_pct
+        FROM market.price_history
+        WHERE 1=1 {mdf}
+        GROUP BY item_id HAVING price_points >= 3
+        ORDER BY range_pct DESC LIMIT {limit}
+    """)
+
+
+def get_tax_over_time(start=None, end=None):
+    """Daily tax revenue and transaction count for timeline chart."""
+    mdf = _mdate_f("timestamp", start, end)
+    return query_df(f"""
+        SELECT
+            DATE(FROM_UNIXTIME(timestamp / 1000)) AS day,
+            SUM(tax_amount)                       AS tax_total,
+            COUNT(*)                              AS tax_events,
+            ROUND(AVG(tax_rate) * 100, 2)         AS avg_rate_pct
+        FROM market.tax_records
+        WHERE 1=1 {mdf}
+        GROUP BY day ORDER BY day
+    """)
+
+
+def get_suspicious_accumulators(start=None, end=None, limit=15):
+    """Players who buy in ≥70% of their trades (potential hoarders)."""
+    mdf = _mdate_f("timestamp", start, end)
+    return query_df(f"""
+        SELECT
+            player,
+            SUM(as_seller)  AS sales,
+            SUM(as_buyer)   AS purchases,
+            SUM(as_buyer) - SUM(as_seller) AS net_purchases,
+            ROUND(SUM(as_buyer) * 100.0 /
+                  NULLIF(SUM(as_seller) + SUM(as_buyer), 0), 1) AS buyer_pct
+        FROM (
+            SELECT seller_name AS player, 1 AS as_seller, 0 AS as_buyer
+            FROM market.transactions WHERE is_fictional = FALSE {mdf}
+            UNION ALL
+            SELECT buyer_name, 0, 1
+            FROM market.transactions WHERE is_fictional = FALSE {mdf}
+        ) r
+        GROUP BY player
+        HAVING (SUM(as_seller) + SUM(as_buyer)) >= 5
+           AND ROUND(SUM(as_buyer) * 100.0 /
+                     NULLIF(SUM(as_seller) + SUM(as_buyer), 0), 1) >= 70
+        ORDER BY buyer_pct DESC LIMIT {limit}
+    """)
+
+
+def get_recent_transactions(start=None, end=None, players=None, limit=200):
+    """Recent transaction log with seller/buyer names and goods summary."""
+    mdf = _mdate_f("t.timestamp", start, end)
+    pf = ""
+    if players:
+        joined = ",".join(f"'{p}'" for p in players)
+        pf = f"AND (t.seller_name IN ({joined}) OR t.buyer_name IN ({joined}))"
+    return query_df(f"""
+        SELECT
+            t.seller_name  AS seller,
+            t.buyer_name   AS buyer,
+            DATE_FORMAT(FROM_UNIXTIME(t.timestamp / 1000),
+                        '%Y-%m-%d %H:%i:%s')  AS timestamp,
+            GROUP_CONCAT(
+                CASE WHEN ti.is_seller_item = TRUE
+                     THEN CONCAT(ti.item_count, 'x ',
+                                 SUBSTRING_INDEX(ti.item_id, ':', -1))
+                END ORDER BY ti.item_count DESC SEPARATOR ', '
+            ) AS items_sold,
+            SUM(CASE WHEN ti.is_seller_item = FALSE
+                     THEN ti.item_count ELSE 0 END) AS currency_paid,
+            t.is_fictional
+        FROM market.transactions t
+        LEFT JOIN market.transaction_items ti ON t.transaction_id = ti.transaction_id
+        WHERE 1=1 {mdf} {pf}
+        GROUP BY t.transaction_id, t.seller_name, t.buyer_name, t.timestamp, t.is_fictional
+        ORDER BY t.timestamp DESC LIMIT {limit}
+    """)
+
+
+def get_sell_buy_balance_all(start=None, end=None, limit=20):
+    """Same as get_sell_buy_balance but includes fictional transactions."""
+    mdf = _mdate_f("timestamp", start, end)
+    return query_df(f"""
+        SELECT
+            player,
+            SUM(as_seller)  AS sales,
+            SUM(as_buyer)   AS purchases,
+            SUM(as_seller) + SUM(as_buyer) AS total_trades,
+            ROUND(SUM(as_seller) * 100.0 /
+                  NULLIF(SUM(as_seller) + SUM(as_buyer), 0), 1) AS seller_pct
+        FROM (
+            SELECT seller_name AS player, 1 AS as_seller, 0 AS as_buyer
+            FROM market.transactions WHERE 1=1 {mdf}
+            UNION ALL
+            SELECT buyer_name, 0, 1
+            FROM market.transactions WHERE 1=1 {mdf}
+        ) r
+        GROUP BY player
+        ORDER BY total_trades DESC LIMIT {limit}
+    """)
+
+
+def get_top_traded_items_all(start=None, end=None, limit=20):
+    """Same as get_top_traded_items but includes fictional transactions."""
+    mdf = _mdate_f("t.timestamp", start, end)
+    return query_df(f"""
+        SELECT
+            SUBSTRING_INDEX(ti.item_id, ':', -1)    AS item,
+            ti.item_id                               AS item_id_full,
+            COUNT(DISTINCT ti.transaction_id)        AS tx_count,
+            SUM(ti.item_count)                       AS total_units,
+            ROUND(m.current_price, 2)                AS current_price
+        FROM market.transaction_items ti
+        JOIN market.transactions t ON ti.transaction_id = t.transaction_id
+        LEFT JOIN market.markets m ON ti.item_id = m.item_id
+        WHERE ti.is_seller_item = TRUE {mdf}
+        GROUP BY ti.item_id, m.current_price
+        ORDER BY tx_count DESC LIMIT {limit}
+    """)
+
+
+def get_market_item_options():
+    """All item IDs sorted by volume — for price history dropdown."""
+    return query_df("""
+        SELECT item_id,
+               SUBSTRING_INDEX(item_id, ':', -1) AS label,
+               total_volume
+        FROM market.markets
+        ORDER BY total_volume DESC
+    """)
+
+
+def get_economy_gini():
+    """Wealth distribution proxy — total_currency_traded per player."""
+    return query_df("""
+        SELECT total_currency_traded AS wealth
+        FROM market.player_trade_stats
+        WHERE total_currency_traded > 0
+        ORDER BY total_currency_traded ASC
+    """)
+
+
+# ─── Relations ────────────────────────────────────────────────────────────────
+
+def get_kill_pairs(start=None, end=None, servers=None):
+    """PvP kill counts per (killer, victim) pair — from player_deaths."""
+    df = _date_f("d.timestamp", start, end)
+    sf = _server_f("d.server_id", servers)
+    return query_df(f"""
+        SELECT d.killer_name AS killer, p.username AS victim, COUNT(*) AS kills
+        FROM player_deaths d
+        JOIN players p ON d.player_uuid = p.uuid
+        WHERE d.killer_name IS NOT NULL AND d.killer_name != '' {df} {sf}
+        GROUP BY d.killer_name, p.username
+        ORDER BY kills DESC LIMIT 500
+    """)
+
+
+def get_market_trade_pairs(start=None, end=None):
+    """Trade count per (seller, buyer) pair from market schema."""
+    mdf = _mdate_f("timestamp", start, end)
+    return query_df(f"""
+        SELECT seller_name AS player_a, buyer_name AS player_b,
+               COUNT(*) AS trade_count
+        FROM market.transactions
+        WHERE 1=1 {mdf}
+        GROUP BY seller_name, buyer_name
+        ORDER BY trade_count DESC LIMIT 500
+    """)
+
+
+def get_hourly_heatmap(players=None, start=None, end=None, servers=None):
+    """Login count bucketed by day-of-week (1=Sun…7=Sat) × hour (0–23)."""
+    pf = _player_f("p.username", players)
+    df = _date_f("pl.login_time", start, end)
+    sf = _server_f("pl.server_id", servers)
+    return query_df(f"""
+        SELECT
+            DAYOFWEEK(pl.login_time)          AS dow,
+            HOUR(pl.login_time)               AS hour,
+            COUNT(*)                          AS logins,
+            COUNT(DISTINCT pl.player_uuid)    AS unique_players
+        FROM player_logins pl
+        JOIN players p ON pl.player_uuid = p.uuid
+        WHERE pl.login_time IS NOT NULL {pf} {df} {sf}
+        GROUP BY dow, hour
+        ORDER BY dow, hour
+    """)
+
+
+def get_session_anomalies(players=None, start=None, end=None, servers=None):
+    """Sessions that are unusually short (<25% of player avg) or long (>3× avg)."""
+    pf = _player_f("p.username", players)
+    df = _date_f("pl.login_time", start, end)
+    sf = _server_f("pl.server_id", servers)
+    return query_df(f"""
+        SELECT
+            p.username AS player,
+            DATE_FORMAT(pl.login_time,  '%Y-%m-%d %H:%i') AS login,
+            DATE_FORMAT(pl.logout_time, '%Y-%m-%d %H:%i') AS logout,
+            TIMESTAMPDIFF(MINUTE, pl.login_time, pl.logout_time) AS duration_min,
+            ROUND(stats.avg_min, 0) AS player_avg_min,
+            CASE
+                WHEN TIMESTAMPDIFF(MINUTE, pl.login_time, pl.logout_time)
+                     < stats.avg_min * 0.25 THEN 'very short'
+                ELSE 'very long'
+            END AS anomaly_type
+        FROM player_logins pl
+        JOIN players p ON pl.player_uuid = p.uuid
+        JOIN (
+            SELECT player_uuid,
+                   AVG(TIMESTAMPDIFF(MINUTE, login_time, logout_time)) AS avg_min
+            FROM player_logins
+            WHERE logout_time IS NOT NULL
+            GROUP BY player_uuid HAVING COUNT(*) >= 5
+        ) stats ON pl.player_uuid = stats.player_uuid
+        WHERE pl.logout_time IS NOT NULL {pf} {df} {sf}
+          AND (
+            TIMESTAMPDIFF(MINUTE, pl.login_time, pl.logout_time) < stats.avg_min * 0.25
+            OR TIMESTAMPDIFF(MINUTE, pl.login_time, pl.logout_time) > stats.avg_min * 3.0
+          )
+        ORDER BY pl.login_time DESC LIMIT 300
+    """)
+
+
+# ─── Post-mortem ─────────────────────────────────────────────────────────────
+
+def _ts_between(col, t0, t1):
+    """Direct datetime BETWEEN filter — does NOT wrap in DATE(), preserves time."""
+    return f"AND {col} BETWEEN '{t0}' AND '{t1}'"
+
+
+def get_postmortem_before(player, t_before_str, t_death_str, servers=None):
+    """Player's key events in the window before death — uses direct timestamp BETWEEN."""
+    if not player:
+        return pd.DataFrame()
+    p  = _esc(player)
+    tb = _ts_between
+    sf = _server_f("server_id", servers)
+    tw = _ts_between("timestamp", t_before_str, t_death_str)
+
+    queries = [
+        f"""SELECT DATE_FORMAT(timestamp,'%Y-%m-%d %H:%i:%s') AS ts, 'Attack' AS type,
+                   CONCAT('Hit ', entity_type, ' for ', ROUND(actual_damage,1), ' dmg',
+                          CASE WHEN main_hand_item IS NOT NULL THEN CONCAT('  [', main_hand_item, ']') ELSE '' END) AS details,
+                   dimension, player_x AS x, player_y AS y, player_z AS z
+            FROM attack_entity_events WHERE player_name='{p}' {tw} {sf}""",
+
+        f"""SELECT DATE_FORMAT(timestamp,'%Y-%m-%d %H:%i:%s'), 'Kill',
+                   CONCAT('Killed ', entity_type,
+                          CASE WHEN main_hand_item IS NOT NULL THEN CONCAT('  [', main_hand_item, ']') ELSE '' END),
+                   dimension, player_x, player_y, player_z
+            FROM player_kill_events WHERE player_name='{p}' {tw} {sf}""",
+
+        f"""SELECT DATE_FORMAT(d.timestamp,'%Y-%m-%d %H:%i:%s'), 'Death',
+                   CONCAT('Died: ', COALESCE(d.cause,'?'),
+                          CASE WHEN d.killer_name IS NOT NULL
+                               THEN CONCAT('  ← by ', d.killer_name) ELSE '' END,
+                          '  HP:', ROUND(d.player_hp,1)),
+                   d.dimension, d.x, d.y, d.z
+            FROM player_deaths d JOIN players p2 ON d.player_uuid=p2.uuid
+            WHERE p2.username='{p}' {_ts_between('d.timestamp', t_before_str, t_death_str)}""",
+
+        f"""SELECT DATE_FORMAT(timestamp,'%Y-%m-%d %H:%i:%s'), 'Block Break',
+                   CONCAT('Broke ', block_type,
+                          CASE WHEN tool_used IS NOT NULL THEN CONCAT('  [', tool_used, ']') ELSE '' END),
+                   dimension, CAST(block_x AS DOUBLE), CAST(block_y AS DOUBLE), CAST(block_z AS DOUBLE)
+            FROM block_break_events WHERE player_name='{p}' {tw} {sf}""",
+
+        f"""SELECT DATE_FORMAT(timestamp,'%Y-%m-%d %H:%i:%s'), 'Block Place',
+                   CONCAT('Placed ', block_type),
+                   dimension, CAST(block_x AS DOUBLE), CAST(block_y AS DOUBLE), CAST(block_z AS DOUBLE)
+            FROM block_place_events WHERE player_name='{p}' {tw} {sf}""",
+
+        f"""SELECT DATE_FORMAT(timestamp,'%Y-%m-%d %H:%i:%s'), 'Item Drop',
+                   CONCAT('Dropped ', item_count, 'x ', item_type),
+                   dimension, player_x, player_y, player_z
+            FROM item_drop_events WHERE player_name='{p}' {tw} {sf}""",
+
+        f"""SELECT DATE_FORMAT(timestamp,'%Y-%m-%d %H:%i:%s'), 'Item Pickup',
+                   CONCAT('Picked up ', item_count, 'x ', item_type),
+                   dimension, player_x, player_y, player_z
+            FROM item_pickup_events WHERE player_name='{p}' {tw} {sf}""",
+
+        f"""SELECT DATE_FORMAT(timestamp,'%Y-%m-%d %H:%i:%s'), 'Chat',
+                   CONCAT('"', message, '"'),
+                   NULL, NULL, NULL, NULL
+            FROM player_chat WHERE player_name='{p}' {_ts_between('timestamp', t_before_str, t_death_str)}""",
+
+        f"""SELECT DATE_FORMAT(timestamp,'%Y-%m-%d %H:%i:%s'), 'Command',
+                   CONCAT('/ ', command),
+                   NULL, NULL, NULL, NULL
+            FROM player_command_events WHERE player_name='{p}' {tw} {sf}""",
+
+        f"""SELECT DATE_FORMAT(timestamp,'%Y-%m-%d %H:%i:%s'), 'Consumed',
+                   CONCAT('Used ', item_type, '  HP:', ROUND(player_hp_before,1), '→', ROUND(player_hp_after,1)),
+                   NULL, NULL, NULL, NULL
+            FROM item_consume_events WHERE player_name='{p}' {tw} {sf}""",
+    ]
+
+    parts = []
+    conn = get_connection()
+    for sql in queries:
+        try:
+            with conn.cursor() as cur:
+                cur.execute(f"SELECT * FROM ({sql}) t LIMIT 500")
+                rows = cur.fetchall()
+                if rows:
+                    parts.append(pd.DataFrame(rows,
+                        columns=["ts", "type", "details", "dimension", "x", "y", "z"]))
+        except Exception:
+            pass
+    conn.close()
+
+    if not parts:
+        return pd.DataFrame()
+    return pd.concat(parts, ignore_index=True).sort_values("ts")
+
+
+def get_death_list(player, start=None, end=None, servers=None, limit=100):
+    """All deaths for a player, with position and context, for post-mortem selection."""
+    if not player:
+        return pd.DataFrame()
+    p   = _esc(player)
+    df  = _date_f("d.timestamp", start, end)
+    sf  = _server_f("d.server_id", servers)
+    return query_df(f"""
+        SELECT
+            DATE_FORMAT(d.timestamp, '%Y-%m-%d %H:%i:%s')          AS ts,
+            COALESCE(d.cause, 'unknown')                            AS cause,
+            COALESCE(d.killer_name, '—')                            AS killer,
+            COALESCE(d.weapon_used, '—')                            AS weapon,
+            COALESCE(ROUND(d.player_hp, 1), '—')                   AS hp,
+            COALESCE(CAST(ROUND(d.player_armor, 1) AS CHAR), '—')  AS armor,
+            COALESCE(CAST(d.player_food AS CHAR), '—')             AS food,
+            ROUND(d.x, 1) AS x, ROUND(d.y, 1) AS y, ROUND(d.z, 1) AS z,
+            COALESCE(d.dimension, '?')                              AS dimension
+        FROM player_deaths d
+        JOIN players p2 ON d.player_uuid = p2.uuid
+        WHERE p2.username = '{p}' {df} {sf}
+        ORDER BY d.timestamp DESC
+        LIMIT {int(limit)}
+    """)
+
+
+def get_postmortem_nearby(player, death_ts_str, death_x, death_z, death_dim,
+                          radius=100, before_min=5, after_min=10, servers=None):
+    """Other players' events within radius of death location around death time.
+    Runs each table as a separate query so one failure doesn't silence all results."""
+    from datetime import datetime, timedelta
+    p  = _esc(player)
+    sf = _server_f("server_id", servers)
+    try:
+        dt = datetime.strptime(str(death_ts_str), "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        return pd.DataFrame()
+    t0 = (dt - timedelta(minutes=before_min)).strftime("%Y-%m-%d %H:%M:%S")
+    t1 = (dt + timedelta(minutes=after_min)).strftime("%Y-%m-%d %H:%M:%S")
+    dx, dz, r = float(death_x), float(death_z), float(radius)
+
+    queries = [
+        ("Attack", f"""
+            SELECT player_name,
+                   DATE_FORMAT(timestamp,'%Y-%m-%d %H:%i:%s') AS timestamp,
+                   'Attack' AS event_type,
+                   CONCAT('Hit ', entity_type, ' for ', ROUND(actual_damage,1), ' dmg') AS detail,
+                   ROUND(player_x,1) AS x, ROUND(player_z,1) AS z
+            FROM attack_entity_events
+            WHERE player_name != '{p}'
+              AND ABS(player_x - {dx}) <= {r} AND ABS(player_z - {dz}) <= {r}
+              AND timestamp BETWEEN '{t0}' AND '{t1}' {sf}
+        """),
+        ("Kill", f"""
+            SELECT player_name,
+                   DATE_FORMAT(timestamp,'%Y-%m-%d %H:%i:%s'),
+                   'Kill',
+                   CONCAT('Killed ', entity_type),
+                   ROUND(player_x,1), ROUND(player_z,1)
+            FROM player_kill_events
+            WHERE player_name != '{p}'
+              AND ABS(player_x - {dx}) <= {r} AND ABS(player_z - {dz}) <= {r}
+              AND timestamp BETWEEN '{t0}' AND '{t1}' {sf}
+        """),
+        ("Death", f"""
+            SELECT px.username,
+                   DATE_FORMAT(d2.timestamp,'%Y-%m-%d %H:%i:%s'),
+                   'Death',
+                   CONCAT('Died: ', COALESCE(d2.cause,'?'),
+                          CASE WHEN d2.killer_name IS NOT NULL
+                               THEN CONCAT(' ← by ', d2.killer_name) ELSE '' END),
+                   ROUND(d2.x,1), ROUND(d2.z,1)
+            FROM player_deaths d2
+            JOIN players px ON d2.player_uuid = px.uuid
+            WHERE px.username != '{p}'
+              AND d2.x IS NOT NULL AND d2.z IS NOT NULL
+              AND ABS(d2.x - {dx}) <= {r} AND ABS(d2.z - {dz}) <= {r}
+              AND d2.timestamp BETWEEN '{t0}' AND '{t1}'
+        """),
+        ("Drop", f"""
+            SELECT player_name,
+                   DATE_FORMAT(timestamp,'%Y-%m-%d %H:%i:%s'),
+                   'Item Drop',
+                   CONCAT('Dropped ', item_count, 'x ', item_type),
+                   ROUND(player_x,1), ROUND(player_z,1)
+            FROM item_drop_events
+            WHERE player_name != '{p}'
+              AND ABS(player_x - {dx}) <= {r} AND ABS(player_z - {dz}) <= {r}
+              AND timestamp BETWEEN '{t0}' AND '{t1}' {sf}
+        """),
+        ("Pickup", f"""
+            SELECT player_name,
+                   DATE_FORMAT(timestamp,'%Y-%m-%d %H:%i:%s'),
+                   'Item Pickup',
+                   CONCAT('Picked up ', item_count, 'x ', item_type),
+                   ROUND(player_x,1), ROUND(player_z,1)
+            FROM item_pickup_events
+            WHERE player_name != '{p}'
+              AND ABS(player_x - {dx}) <= {r} AND ABS(player_z - {dz}) <= {r}
+              AND timestamp BETWEEN '{t0}' AND '{t1}' {sf}
+        """),
+    ]
+
+    parts = []
+    conn = get_connection()
+    for _name, sql in queries:
+        try:
+            with conn.cursor() as cur:
+                cur.execute(sql + " LIMIT 300")
+                rows = cur.fetchall()
+                if rows:
+                    parts.append(pd.DataFrame(rows,
+                        columns=["player_name", "timestamp", "event_type", "detail", "x", "z"]))
+        except Exception:
+            pass
+    conn.close()
+
+    if not parts:
+        return pd.DataFrame()
+
+    result = pd.concat(parts, ignore_index=True)
+    result["dist_blocks"] = (
+        (result["x"].astype(float) - dx).abs() + (result["z"].astype(float) - dz).abs()
+    ).round(0)
+    return result.sort_values(["timestamp", "dist_blocks"]).head(500)
+
+
+def get_postmortem_loot(player, death_ts_str, death_x, death_z,
+                        radius=50, after_min=10, servers=None):
+    """Item pickups by OTHER players near death location AFTER the death."""
+    from datetime import datetime, timedelta
+    sf  = _server_f("server_id", servers)
+    p   = _esc(player)
+    try:
+        dt  = datetime.strptime(str(death_ts_str), "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        return pd.DataFrame()
+    ts0 = dt.strftime("%Y-%m-%d %H:%M:%S")
+    t1  = (dt + timedelta(minutes=after_min)).strftime("%Y-%m-%d %H:%M:%S")
+    dx, dz, r = float(death_x), float(death_z), float(radius)
+
+    sql = f"""
+        SELECT player_name,
+               DATE_FORMAT(timestamp,'%Y-%m-%d %H:%i:%s') AS timestamp,
+               item_type, item_count,
+               ROUND(player_x,1) AS x, ROUND(player_z,1) AS z,
+               ROUND(ABS(player_x - {dx}) + ABS(player_z - {dz}), 0) AS dist_blocks,
+               TIMESTAMPDIFF(SECOND, '{ts0}', timestamp) AS secs_after_death
+        FROM item_pickup_events
+        WHERE player_name != '{p}'
+          AND ABS(player_x - {dx}) <= {r} AND ABS(player_z - {dz}) <= {r}
+          AND timestamp BETWEEN '{ts0}' AND '{t1}' {sf}
+        ORDER BY timestamp
+        LIMIT 200
+    """
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute(sql)
+            rows = cur.fetchall()
+        conn.close()
+        if not rows:
+            return pd.DataFrame()
+        return pd.DataFrame(rows, columns=[
+            "player_name", "timestamp", "item_type", "item_count",
+            "x", "z", "dist_blocks", "secs_after_death"
+        ])
+    except Exception:
+        return pd.DataFrame()
+
+
+# ─── Behavioral Profiles ─────────────────────────────────────────────────────
+
+def get_profile_all_players(start=None, end=None, servers=None):
+    """Aggregate combat/build/social stats per player for radar-chart profiling."""
+    sdf_ts = _date_f("pl.login_time", start, end)
+    ssf    = _server_f("pl.server_id", servers)
+    # Sessions is the base — use all players who ever logged in
+    result = query_df(f"""
+        SELECT p.username AS player,
+               COUNT(*) AS sessions,
+               COALESCE(SUM(TIMESTAMPDIFF(MINUTE, pl.login_time,
+                   COALESCE(pl.logout_time, NOW())) / 60.0), 0) AS session_hours
+        FROM player_logins pl
+        JOIN players p ON pl.player_uuid = p.uuid
+        WHERE pl.login_time IS NOT NULL {sdf_ts} {ssf}
+        GROUP BY p.username
+    """)
+
+    if result.empty:
+        return result
+
+    def _left_merge(base, extra_df, cols):
+        if extra_df.empty:
+            for c in cols:
+                base[c] = 0
+            return base
+        return base.merge(extra_df[["player"] + cols], on="player", how="left")
+
+    df_ts = _date_f("timestamp", start, end)
+    sf    = _server_f("server_id", servers)
+
+    # Total kills (PvP + PvE) — player_kill_events uses player_name directly
+    kills_df = query_df(f"""
+        SELECT player_name AS player, COUNT(*) AS kills
+        FROM player_kill_events
+        WHERE 1=1 {df_ts} {sf}
+        GROUP BY player_name
+    """)
+    result = _left_merge(result, kills_df, ["kills"])
+
+    # Deaths — requires JOIN with players table
+    ddf_ts = _date_f("d.timestamp", start, end)
+    dsf    = _server_f("d.server_id", servers)
+    deaths_df = query_df(f"""
+        SELECT p.username AS player, COUNT(*) AS deaths
+        FROM player_deaths d
+        JOIN players p ON d.player_uuid = p.uuid
+        WHERE 1=1 {ddf_ts} {dsf}
+        GROUP BY p.username
+    """)
+    result = _left_merge(result, deaths_df, ["deaths"])
+
+    # Blocks broken
+    broken_df = query_df(f"""
+        SELECT player_name AS player, COUNT(*) AS blocks_broken
+        FROM block_break_events
+        WHERE 1=1 {df_ts} {sf}
+        GROUP BY player_name
+    """)
+    result = _left_merge(result, broken_df, ["blocks_broken"])
+
+    # Blocks placed
+    placed_df = query_df(f"""
+        SELECT player_name AS player, COUNT(*) AS blocks_placed
+        FROM block_place_events
+        WHERE 1=1 {df_ts} {sf}
+        GROUP BY player_name
+    """)
+    result = _left_merge(result, placed_df, ["blocks_placed"])
+
+    # Attacks (entity attacks)
+    attacks_df = query_df(f"""
+        SELECT player_name AS player, COUNT(*) AS attacks
+        FROM attack_entity_events
+        WHERE 1=1 {df_ts} {sf}
+        GROUP BY player_name
+    """)
+    result = _left_merge(result, attacks_df, ["attacks"])
+
+    # Chat messages
+    chat_df = query_df(f"""
+        SELECT player_name AS player, COUNT(*) AS chat_messages
+        FROM player_chat
+        WHERE 1=1 {df_ts} {sf}
+        GROUP BY player_name
+    """)
+    result = _left_merge(result, chat_df, ["chat_messages"])
+
+    return result.fillna(0)
+
+
+def get_player_market_profile(start=None, end=None):
+    """Per-player trade counts and currency totals from market.transactions."""
+    mdf = _mdate_f("t.timestamp", start, end)
+    return query_df(f"""
+        SELECT player, SUM(total_sales) AS total_sales, SUM(total_buys) AS total_buys,
+               SUM(currency_traded) AS currency_traded
+        FROM (
+            SELECT t.seller_name AS player,
+                   COUNT(DISTINCT t.transaction_id) AS total_sales, 0 AS total_buys,
+                   COALESCE(SUM(tc.item_count), 0) AS currency_traded
+            FROM market.transactions t
+            LEFT JOIN market.transaction_items tc
+                ON tc.transaction_id = t.transaction_id AND tc.is_seller_item = FALSE
+            WHERE t.seller_name IS NOT NULL AND t.seller_name != '' {mdf}
+            GROUP BY t.seller_name
+            UNION ALL
+            SELECT t.buyer_name AS player,
+                   0 AS total_sales, COUNT(DISTINCT t.transaction_id) AS total_buys,
+                   COALESCE(SUM(tc.item_count), 0) AS currency_traded
+            FROM market.transactions t
+            LEFT JOIN market.transaction_items tc
+                ON tc.transaction_id = t.transaction_id AND tc.is_seller_item = FALSE
+            WHERE t.buyer_name IS NOT NULL AND t.buyer_name != '' {mdf}
+            GROUP BY t.buyer_name
+        ) t
+        GROUP BY player
+        ORDER BY currency_traded DESC LIMIT 500
+    """)
+
+
+def get_game_vs_market(start=None, end=None, servers=None):
+    """Per-player merged game + market stats for correlation scatter."""
+    game_df = get_profile_all_players(start, end, servers)
+    market_df = get_player_market_profile(start, end)
+    if game_df.empty:
+        return pd.DataFrame()
+    if not market_df.empty:
+        df = game_df.merge(
+            market_df[["player", "total_sales", "total_buys", "currency_traded"]],
+            on="player", how="left",
+        )
+    else:
+        df = game_df.copy()
+        df["total_sales"] = 0
+        df["total_buys"] = 0
+        df["currency_traded"] = 0
+    for col in ["total_sales", "total_buys", "currency_traded"]:
+        df[col] = df[col].fillna(0)
+    df["kd_ratio"] = (df["kills"] / df["deaths"].replace(0, 1)).round(2)
+    return df
+
+
+def get_player_daily_market(player, start=None, end=None):
+    """Daily sell/buy count and volume for a specific player."""
+    p = _esc(player)
+    mdf = _mdate_f("t.timestamp", start, end)
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute(f"""
+                SELECT DATE(FROM_UNIXTIME(t.timestamp / 1000)) AS day,
+                       SUM(CASE WHEN t.seller_name = '{p}' THEN 1 ELSE 0 END) AS sales,
+                       SUM(CASE WHEN t.buyer_name  = '{p}' THEN 1 ELSE 0 END) AS buys,
+                       COALESCE(SUM(CASE WHEN t.seller_name = '{p}'
+                                        THEN tc.item_count ELSE 0 END), 0)    AS sell_vol,
+                       COALESCE(SUM(CASE WHEN t.buyer_name  = '{p}'
+                                        THEN tc.item_count ELSE 0 END), 0)    AS buy_vol
+                FROM market.transactions t
+                LEFT JOIN market.transaction_items tc
+                    ON tc.transaction_id = t.transaction_id AND tc.is_seller_item = FALSE
+                WHERE (t.seller_name = '{p}' OR t.buyer_name = '{p}')
+                  AND t.is_fictional = FALSE
+                  {mdf}
+                GROUP BY day ORDER BY day
+            """)
+            rows = cur.fetchall()
+        conn.close()
+        if not rows:
+            return pd.DataFrame()
+        df = pd.DataFrame(rows)
+        df["day"] = pd.to_datetime(df["day"])
+        return df
+    except Exception as e:
+        logger.warning("get_player_daily_market failed: %s", e)
+        return pd.DataFrame()
+
+
+def get_player_events_per_day(player, start=None, end=None, servers=None):
+    """Daily kills + deaths + blocks_broken for a single player."""
+    p = _esc(player)
+    df_ts = _date_f("timestamp", start, end)
+    df_d = _date_f("d.timestamp", start, end)
+    sf = _server_f("server_id", servers)
+    sf_d = _server_f("d.server_id", servers)
+
+    kills_df = query_df(f"""
+        SELECT DATE(timestamp) AS day, COUNT(*) AS kills
+        FROM player_kill_events
+        WHERE player_name = '{p}' {df_ts} {sf}
+        GROUP BY day
+    """)
+    deaths_df = query_df(f"""
+        SELECT DATE(d.timestamp) AS day, COUNT(*) AS deaths
+        FROM player_deaths d
+        JOIN players p2 ON d.player_uuid = p2.uuid
+        WHERE p2.username = '{p}' {df_d} {sf_d}
+        GROUP BY day
+    """)
+    blocks_df = query_df(f"""
+        SELECT DATE(timestamp) AS day, COUNT(*) AS blocks_broken
+        FROM block_break_events
+        WHERE player_name = '{p}' {df_ts} {sf}
+        GROUP BY day
+    """)
+
+    dfs = [d for d in [kills_df, deaths_df, blocks_df] if not d.empty]
+    if not dfs:
+        return pd.DataFrame()
+    base = dfs[0]
+    for d in dfs[1:]:
+        base = base.merge(d, on="day", how="outer")
+    base["day"] = pd.to_datetime(base["day"])
+    return base.fillna(0).sort_values("day").reset_index(drop=True)
+
+
+def get_mod_flags(start=None, end=None, servers=None):
+    """Run rule-based flag checks across all players. Returns unified alert DataFrame."""
+    flags = []
+
+    # ── 1. Combat anomalies from profile data ──────────────────────────────
+    try:
+        profile_df = get_profile_all_players(start, end, servers)
+        if not profile_df.empty:
+            for _, r in profile_df.iterrows():
+                kills  = float(r.get("kills",  0) or 0)
+                deaths = float(r.get("deaths", 0) or 0)
+                hours  = float(r.get("session_hours", 0) or 0)
+                broken = float(r.get("blocks_broken", 0) or 0)
+                player = str(r.get("player", "?"))
+
+                if kills >= 5 and deaths == 0:
+                    flags.append({"severity": "🔴 High", "player": player,
+                                  "flag": "Immortal fighter",
+                                  "detail": f"{int(kills)} kills · 0 deaths"})
+                elif kills >= 10 and deaths > 0 and kills / deaths > 15:
+                    flags.append({"severity": "🟡 Medium", "player": player,
+                                  "flag": "Extreme K/D ratio",
+                                  "detail": f"K/D = {kills/deaths:.1f}  ({int(kills)} kills / {int(deaths)} deaths)"})
+
+                if hours > 0 and broken >= 500 and broken / hours > 5000:
+                    flags.append({"severity": "🟡 Medium", "player": player,
+                                  "flag": "Rapid mining",
+                                  "detail": f"{int(broken/hours):,} blocks/hr  ({int(broken):,} total)"})
+    except Exception as e:
+        logger.warning("mod_flags profile check failed: %s", e)
+
+    # ── 2. Market hoarders ─────────────────────────────────────────────────
+    try:
+        hoard_df = get_suspicious_accumulators(start, end)
+        for _, r in hoard_df.iterrows():
+            flags.append({"severity": "🟡 Medium", "player": str(r["player"]),
+                          "flag": "Market hoarder",
+                          "detail": (f"{float(r['buyer_pct']):.0f}% buys · "
+                                     f"{int(r['purchases'])} purchases · "
+                                     f"+{int(r['net_purchases'])} net")})
+    except Exception as e:
+        logger.warning("mod_flags hoard check failed: %s", e)
+
+    # ── 3. Unusually long sessions (possible AFK/auto-clicker) ────────────
+    try:
+        sess_df = get_session_anomalies(None, start, end, servers)
+        if not sess_df.empty:
+            long_df = sess_df[sess_df["anomaly_type"] == "very long"]
+            for _, r in long_df.iterrows():
+                flags.append({"severity": "🔵 Info", "player": str(r["player"]),
+                              "flag": "Unusually long session",
+                              "detail": (f"{int(r['duration_min'])} min  "
+                                         f"(player avg {int(r['player_avg_min'])} min) · "
+                                         f"login {r['login']}")})
+    except Exception as e:
+        logger.warning("mod_flags session check failed: %s", e)
+
+    if not flags:
+        return pd.DataFrame(columns=["severity", "player", "flag", "detail"])
+    return pd.DataFrame(flags)
+
+
+def get_death_loot(start=None, end=None, servers=None, time_window_min=5, radius=20):
+    """Item pickups by other players within time_window_min and radius blocks of each death."""
+    df_d = _date_f("d.timestamp", start, end)
+    sf_d = _server_f("d.server_id", servers)
+    r    = float(radius)
+    tw   = int(time_window_min)
+    return query_df(f"""
+        SELECT
+            p2.username                                         AS victim,
+            DATE_FORMAT(d.timestamp, '%Y-%m-%d %H:%i:%s')      AS death_time,
+            d.killer_name                                       AS killer,
+            pu.player_name                                      AS looter,
+            pu.item_type,
+            pu.item_count,
+            TIMESTAMPDIFF(SECOND, d.timestamp, pu.timestamp)   AS seconds_after,
+            ROUND(SQRT(POW(d.x - pu.player_x, 2)
+                     + POW(d.z - pu.player_z, 2)), 1)          AS blocks_away
+        FROM player_deaths d
+        JOIN players p2 ON d.player_uuid = p2.uuid
+        JOIN item_pickup_events pu
+            ON  pu.timestamp BETWEEN d.timestamp
+                             AND DATE_ADD(d.timestamp, INTERVAL {tw} MINUTE)
+            AND SQRT(POW(d.x - pu.player_x, 2)
+                   + POW(d.z - pu.player_z, 2)) <= {r}
+            AND pu.player_name != p2.username
+        WHERE d.x IS NOT NULL
+          {df_d} {sf_d}
+        ORDER BY d.timestamp DESC
+        LIMIT 500
+    """)
+
+
+def get_item_supply_monopoly(start=None, end=None, limit=20):
+    """Per-item: % of sales from the single top seller (monopoly indicator)."""
+    mdf = _mdate_f("t.timestamp", start, end)
+    return query_df(f"""
+        SELECT inner_t.item_id,
+               SUBSTRING_INDEX(inner_t.item_id, ':', -1) AS item,
+               top_seller,
+               seller_sales,
+               total_sales,
+               ROUND(seller_sales * 100.0 / total_sales, 1) AS monopoly_pct,
+               ROUND(COALESCE(m.current_price, 0), 2)       AS avg_price
+        FROM (
+            SELECT ti.item_id,
+                   t.seller_name                                                         AS top_seller,
+                   COUNT(*)                                                              AS seller_sales,
+                   SUM(COUNT(*)) OVER (PARTITION BY ti.item_id)                         AS total_sales,
+                   RANK() OVER (PARTITION BY ti.item_id ORDER BY COUNT(*) DESC)         AS rnk
+            FROM market.transaction_items ti
+            JOIN market.transactions t ON ti.transaction_id = t.transaction_id
+            WHERE t.seller_name IS NOT NULL AND t.is_fictional = FALSE
+              AND ti.is_seller_item = TRUE {mdf}
+            GROUP BY ti.item_id, t.seller_name
+        ) inner_t
+        LEFT JOIN market.markets m ON m.item_id = inner_t.item_id
+        WHERE rnk = 1 AND total_sales >= 5
+        ORDER BY monopoly_pct DESC, total_sales DESC
+        LIMIT {limit}
+    """)
+
+
+def get_chronicle_data(start=None, end=None, servers=None):
+    """Aggregate key stats for a text-narrative chronicle. Returns a plain dict."""
+    sf   = _server_f("server_id", servers)
+    sf_d = _server_f("d.server_id", servers)
+    df   = _date_f("timestamp", start, end)
+    df_d = _date_f("d.timestamp", start, end)
+    mdf  = _mdate_f("timestamp", start, end)
+    data = {}
+
+    def _one(sql):
+        try:
+            r = query_df(sql)
+            return r if not r.empty else None
+        except Exception:
+            return None
+
+    r = _one(f"SELECT COUNT(DISTINCT player_uuid) AS active, COUNT(*) AS sessions FROM player_logins WHERE 1=1 {df} {sf}")
+    if r is not None:
+        data["active_players"] = int(r.iloc[0]["active"])
+        data["sessions"]       = int(r.iloc[0]["sessions"])
+
+    r = _one(f"SELECT COUNT(*) AS n FROM player_deaths WHERE 1=1 {df_d} {sf_d}")
+    if r is not None: data["deaths"] = int(r.iloc[0]["n"])
+
+    r = _one(f"SELECT COUNT(*) AS n FROM player_kill_events WHERE 1=1 {df} {sf}")
+    if r is not None: data["kills"] = int(r.iloc[0]["n"])
+
+    r = _one(f"SELECT COUNT(*) AS n FROM block_break_events WHERE 1=1 {df} {sf}")
+    if r is not None: data["blocks_broken"] = int(r.iloc[0]["n"])
+
+    r = _one(f"SELECT COUNT(*) AS n FROM player_chat WHERE 1=1 {df} {sf}")
+    if r is not None: data["chat_messages"] = int(r.iloc[0]["n"])
+
+    r = _one(f"""SELECT COUNT(DISTINCT t.transaction_id) AS n,
+                        COALESCE(SUM(tc.item_count), 0) AS vol
+                 FROM market.transactions t
+                 LEFT JOIN market.transaction_items tc
+                     ON tc.transaction_id = t.transaction_id AND tc.is_seller_item = FALSE
+                 WHERE t.is_fictional=FALSE {mdf}""")
+    if r is not None:
+        data["market_transactions"] = int(r.iloc[0]["n"])
+        data["market_volume"]       = float(r.iloc[0]["vol"])
+
+    try:
+        tk = get_kills_per_player(None, start, end, servers)
+        if not tk.empty:
+            col_p = "player_name" if "player_name" in tk.columns else tk.columns[0]
+            col_k = [c for c in tk.columns if c != col_p][0]
+            data["top_killers"] = [(str(row[col_p]), int(row[col_k])) for _, row in tk.head(3).iterrows()]
+    except Exception: pass
+
+    try:
+        tm = get_player_market_profile(start, end)
+        if not tm.empty:
+            data["top_traders"] = [(str(row["player"]), int(row.get("currency_traded", 0))) for _, row in tm.head(3).iterrows()]
+    except Exception: pass
+
+    try:
+        dc = get_death_causes(None, start, end, servers)
+        if not dc.empty:
+            col_c = "cause" if "cause" in dc.columns else dc.columns[0]
+            col_n = [c for c in dc.columns if c != col_c][0]
+            data["top_death_cause"]   = str(dc.iloc[0][col_c])
+            data["top_death_cause_n"] = int(dc.iloc[0][col_n])
+    except Exception: pass
+
+    try:
+        pvp = query_df(f"""
+            SELECT COUNT(*) AS n, killer_name AS k
+            FROM player_deaths
+            WHERE killer_name IS NOT NULL {df_d} {sf_d}
+            GROUP BY killer_name ORDER BY n DESC LIMIT 1
+        """)
+        if not pvp.empty:
+            data["top_pvp_killer"]   = str(pvp.iloc[0]["k"])
+            data["top_pvp_killer_n"] = int(pvp.iloc[0]["n"])
+    except Exception: pass
+
+    return data
+
+
+def get_player_position_trail(player, start=None, end=None, servers=None, limit=500):
+    """Recent event coordinates for a player — approximates movement trail."""
+    p    = _esc(player)
+    df_ts = _date_f("timestamp", start, end)
+    df_d  = _date_f("d.timestamp", start, end)
+    sf    = _server_f("server_id", servers)
+    sf_d  = _server_f("d.server_id", servers)
+    return query_df(f"""
+        SELECT ts, event_type,
+               ROUND(x, 1) AS x, ROUND(y, 1) AS y, ROUND(z, 1) AS z, dimension
+        FROM (
+            SELECT timestamp AS ts, 'Kill'        AS event_type,
+                   player_x  AS x, player_y AS y, player_z AS z, dimension
+            FROM player_kill_events
+            WHERE player_name = '{p}' {df_ts} {sf}
+
+            UNION ALL
+            SELECT timestamp, 'Attack',
+                   player_x, player_y, player_z, dimension
+            FROM attack_entity_events
+            WHERE player_name = '{p}' {df_ts} {sf}
+
+            UNION ALL
+            SELECT d.timestamp, 'Death',
+                   d.x, d.y, d.z, d.dimension
+            FROM player_deaths d JOIN players p2 ON d.player_uuid = p2.uuid
+            WHERE p2.username = '{p}' AND d.x IS NOT NULL {df_d} {sf_d}
+
+            UNION ALL
+            SELECT timestamp, 'Block Break',
+                   CAST(block_x AS DOUBLE), CAST(block_y AS DOUBLE), CAST(block_z AS DOUBLE), dimension
+            FROM block_break_events
+            WHERE player_name = '{p}' {df_ts} {sf}
+
+            UNION ALL
+            SELECT timestamp, 'Item Drop',
+                   player_x, player_y, player_z, dimension
+            FROM item_drop_events
+            WHERE player_name = '{p}' {df_ts} {sf}
+        ) ev
+        ORDER BY ts DESC
+        LIMIT {limit}
+    """)
+
+
+def get_session_overlaps(start=None, end=None, servers=None, min_sessions=2):
+    """Pairs of players who were online at the same time in N+ sessions."""
+    df = _date_f("al.login_time", start, end)
+    sf = _server_f("al.server_id", servers)
+    return query_df(f"""
+        SELECT pa.username AS player_a, pb.username AS player_b,
+               COUNT(*) AS sessions_together
+        FROM player_logins al
+        JOIN players pa ON al.player_uuid = pa.uuid
+        JOIN player_logins bl
+            ON al.player_uuid < bl.player_uuid
+           AND al.login_time  < COALESCE(bl.logout_time, NOW())
+           AND bl.login_time  < COALESCE(al.logout_time, NOW())
+        JOIN players pb ON bl.player_uuid = pb.uuid
+        WHERE al.login_time IS NOT NULL {df} {sf}
+        GROUP BY pa.username, pb.username
+        HAVING COUNT(*) >= {int(min_sessions)}
+        ORDER BY sessions_together DESC LIMIT 300
+    """)
+
+
+# ─── Kill Matrix ──────────────────────────────────────────────────────────────
+
+def get_kill_matrix(start=None, end=None, servers=None, max_players=25):
+    """PvP kill counts by (killer, victim) — for a heatmap. Long-form DataFrame."""
+    df = _date_f("d.timestamp", start, end)
+    sf = _server_f("d.server_id", servers)
+    return query_df(f"""
+        SELECT d.killer_name                     AS killer,
+               p.username                        AS victim,
+               COUNT(*)                          AS kills
+        FROM player_deaths d
+        JOIN players p ON d.player_uuid = p.uuid
+        WHERE d.killer_name IS NOT NULL
+          AND d.killer_name != p.username
+          {df} {sf}
+        GROUP BY d.killer_name, p.username
+        ORDER BY kills DESC
+        LIMIT {int(max_players) * int(max_players)}
+    """)
+
+
+# ─── Hourly Activity ──────────────────────────────────────────────────────────
+
+def get_hourly_activity(start=None, end=None, servers=None):
+    """Event count by hour-of-day (0–23) × day-of-week (1=Sun…7=Sat)."""
+    if start and end:
+        cond = f"DATE(timestamp) BETWEEN '{start}' AND '{end}'"
+    else:
+        cond = "1=1"
+    sf = _server_f("server_id", servers)
+    return query_df(f"""
+        SELECT HOUR(timestamp)    AS hour,
+               DAYOFWEEK(timestamp) AS dow,
+               COUNT(*)           AS events
+        FROM (
+            SELECT timestamp FROM attack_entity_events  WHERE {cond} {sf}
+            UNION ALL SELECT timestamp FROM block_break_events  WHERE {cond} {sf}
+            UNION ALL SELECT timestamp FROM block_place_events  WHERE {cond} {sf}
+            UNION ALL SELECT timestamp FROM item_drop_events    WHERE {cond} {sf}
+            UNION ALL SELECT timestamp FROM item_pickup_events  WHERE {cond} {sf}
+            UNION ALL SELECT timestamp FROM player_kill_events  WHERE {cond} {sf}
+        ) all_events
+        GROUP BY hour, dow
+        ORDER BY dow, hour
+    """)
+
+
+# ─── Player Homes (from claim_positions JSON) ─────────────────────────────────
+
+def get_player_homes():
+    """
+    Home position per player = first claim in players.claim_positions JSON.
+    Falls back to last_x/last_z if no claims exist.
+    """
+    return query_df("""
+        SELECT username AS player_name,
+               CASE
+                   WHEN claim_positions IS NOT NULL
+                    AND claim_positions NOT IN ('null', '[]', '')
+                    AND JSON_LENGTH(claim_positions) > 0
+                   THEN CAST(JSON_UNQUOTE(JSON_EXTRACT(claim_positions, '$[0].x')) AS DECIMAL(10,1))
+                   ELSE ROUND(last_x, 1)
+               END AS home_x,
+               CASE
+                   WHEN claim_positions IS NOT NULL
+                    AND claim_positions NOT IN ('null', '[]', '')
+                    AND JSON_LENGTH(claim_positions) > 0
+                   THEN CAST(JSON_UNQUOTE(JSON_EXTRACT(claim_positions, '$[0].z')) AS DECIMAL(10,1))
+                   ELSE ROUND(last_z, 1)
+               END AS home_z,
+               CASE
+                   WHEN claim_positions IS NOT NULL
+                    AND claim_positions NOT IN ('null', '[]', '')
+                    AND JSON_LENGTH(claim_positions) > 0
+                   THEN JSON_UNQUOTE(JSON_EXTRACT(claim_positions, '$[0].name'))
+                   ELSE NULL
+               END AS home_label,
+               CASE
+                   WHEN claim_positions IS NOT NULL
+                    AND claim_positions NOT IN ('null', '[]', '')
+                    AND JSON_LENGTH(claim_positions) > 0
+                   THEN 'claim' ELSE 'last_pos'
+               END AS source
+        FROM players
+        WHERE last_x IS NOT NULL OR (
+            claim_positions IS NOT NULL
+            AND claim_positions NOT IN ('null', '[]', '')
+        )
+    """)
+
+
+# ─── Trade Routes ─────────────────────────────────────────────────────────────
+
+def get_trade_routes(start=None, end=None, time_window_sec=120, max_distance=50, servers=None):
+    """
+    Estimated inter-player trade routes.
+    Returns DataFrame: from_player, to_player, item_type, count,
+                       from_x, from_z, to_x, to_z, route_type ('barter'|'market')
+    Barter = physical drop→pickup match (direct coords).
+    Market = formal transaction, endpoints are player homes.
+    """
+    df_f  = _date_f("d.timestamp", start, end)
+    mdf   = _mdate_f("t.timestamp", start, end)
+    sf    = _server_f("d.server_id", servers)
+
+    # ── Barter routes: drop→pickup with actual coordinates ────────────────────
+    barter_df = query_df(f"""
+        SELECT d.player_name                                                   AS from_player,
+               p.player_name                                                   AS to_player,
+               d.item_type,
+               COUNT(*)                                                        AS count,
+               ROUND(AVG(d.player_x), 1)                                      AS from_x,
+               ROUND(AVG(d.player_z), 1)                                      AS from_z,
+               ROUND(AVG(p.player_x), 1)                                      AS to_x,
+               ROUND(AVG(p.player_z), 1)                                      AS to_z,
+               DATE_FORMAT(MIN(d.timestamp), '%Y-%m-%d %H:%i')                AS first_trade,
+               DATE_FORMAT(MAX(d.timestamp), '%Y-%m-%d %H:%i')                AS last_trade,
+               'barter'                                                        AS route_type
+        FROM item_drop_events d
+        JOIN item_pickup_events p
+            ON  d.item_type    = p.item_type
+            AND d.player_name != p.player_name
+            AND p.timestamp BETWEEN d.timestamp
+                            AND DATE_ADD(d.timestamp, INTERVAL {int(time_window_sec)} SECOND)
+            AND SQRT(POW(d.player_x - p.player_x,2) + POW(d.player_z - p.player_z,2))
+                    <= {float(max_distance)}
+        WHERE 1=1 {df_f} {sf}
+        GROUP BY d.player_name, p.player_name, d.item_type
+        ORDER BY count DESC
+        LIMIT 1000
+    """)
+
+    # ── Market routes: formal transactions, home coords as endpoints ──────────
+    homes_df = get_player_homes()
+    market_routes = pd.DataFrame()
+
+    if homes_df is not None and not homes_df.empty:
+        homes = homes_df.set_index("player_name")[["home_x", "home_z"]]
+
+        market_df = query_df(f"""
+            SELECT t.seller_name AS from_player,
+                   t.buyer_name  AS to_player,
+                   COALESCE(SUBSTRING_INDEX(MAX(ti.item_id), ':', -1), '?') AS item_type,
+                   COUNT(DISTINCT t.transaction_id)                          AS count,
+                   DATE_FORMAT(FROM_UNIXTIME(MIN(t.timestamp)/1000),
+                               '%Y-%m-%d %H:%i')                             AS first_trade,
+                   DATE_FORMAT(FROM_UNIXTIME(MAX(t.timestamp)/1000),
+                               '%Y-%m-%d %H:%i')                             AS last_trade
+            FROM market.transactions t
+            LEFT JOIN market.transaction_items ti
+                ON ti.transaction_id = t.transaction_id
+               AND ti.is_seller_item = TRUE
+            WHERE t.seller_name IS NOT NULL AND t.buyer_name IS NOT NULL
+              AND t.is_fictional = FALSE {mdf}
+            GROUP BY t.seller_name, t.buyer_name
+            ORDER BY count DESC
+            LIMIT 500
+        """)
+
+        if market_df is not None and not market_df.empty:
+            market_df["from_x"] = market_df["from_player"].map(
+                lambda p: homes.at[p, "home_x"] if p in homes.index else None)
+            market_df["from_z"] = market_df["from_player"].map(
+                lambda p: homes.at[p, "home_z"] if p in homes.index else None)
+            market_df["to_x"]   = market_df["to_player"].map(
+                lambda p: homes.at[p, "home_x"] if p in homes.index else None)
+            market_df["to_z"]   = market_df["to_player"].map(
+                lambda p: homes.at[p, "home_z"] if p in homes.index else None)
+            market_df["route_type"] = "market"
+            market_routes = market_df.dropna(subset=["from_x", "from_z", "to_x", "to_z"]).copy()
+
+    # ── Combine ───────────────────────────────────────────────────────────────
+    parts = [d for d in [barter_df, market_routes] if d is not None and not d.empty]
+    if not parts:
+        return pd.DataFrame()
+    combined = pd.concat(parts, ignore_index=True)
+    for col in ["from_x", "from_z", "to_x", "to_z", "count"]:
+        combined[col] = pd.to_numeric(combined[col], errors="coerce")
+    return combined.dropna(subset=["from_x", "from_z", "to_x", "to_z"])
