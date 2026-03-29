@@ -12,7 +12,8 @@
     "ArmorEquipMixin",
     "EpicFightArmorLayerMixin",
     "HumanoidArmorLayerAccessor",
-    "MouseHandlerMixin"
+    "MouseHandlerMixin",
+    "MinecraftFallenMixin"
   ],
   "injectors": {
     "defaultRequire": 0
