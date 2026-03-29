@@ -11,7 +11,8 @@
     "MapwrightRenderingMixin",
     "ArmorEquipMixin",
     "EpicFightArmorLayerMixin",
-    "HumanoidArmorLayerAccessor"
+    "HumanoidArmorLayerAccessor",
+    "MouseHandlerMixin"
   ],
   "injectors": {
     "defaultRequire": 0
