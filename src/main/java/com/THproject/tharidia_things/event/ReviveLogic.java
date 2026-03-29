@@ -79,23 +79,6 @@ public class ReviveLogic {
     }
 
     @SubscribeEvent
-    public static void preventFallenMove(MovementInputUpdateEvent event) {
-        if (event.getEntity() instanceof LocalPlayer player) {
-            if (Revive.isPlayerFallen(player)) {
-                event.getInput().forwardImpulse = 0;
-                event.getInput().leftImpulse = 0;
-
-                event.getInput().jumping = false;
-                event.getInput().shiftKeyDown = false;
-                event.getInput().up = false;
-                event.getInput().down = false;
-                event.getInput().left = false;
-                event.getInput().right = false;
-            }
-        }
-    }
-
-    @SubscribeEvent
     public static void resizePlayerHitbox(EntityEvent.Size event) {
         if (event.getEntity() instanceof Player player) {
 
