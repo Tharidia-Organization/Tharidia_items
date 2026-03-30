@@ -44,7 +44,10 @@ public class Revive {
     }
 
     public static boolean isPlayerFallen(Player player) {
-        return fallenPlayers.contains(player.getUUID());
+        if (player.level().isClientSide)
+            return player.getData(ReviveAttachments.REVIVE_DATA.get()).isFallen();
+        else
+            return fallenPlayers.contains(player.getUUID());
     }
 
     public static List<UUID> getFallenPlayers() {
