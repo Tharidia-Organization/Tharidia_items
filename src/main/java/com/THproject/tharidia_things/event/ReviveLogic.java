@@ -73,6 +73,25 @@ public class ReviveLogic {
         }
     }
 
+    /**
+     * This method set dimensions only if player is fallen.
+     * If player is not fallen, set default player dimensions.
+     * In any case, we need to adjust the size of the fallen player
+     * based on the player's race
+     * Remember to call player.refreshDimensions() (both on client and server)
+     * to refresh the player dimension.
+     * N.B: The method Revive.fallPlayer() is called only on server, so maybe a packet
+     * is necessary to don't use PlayerTickEvent
+     */
+    // @SubscribeEvent
+    // public static void changeFallenHitbox(EntityEvent.Size event) {
+    //     if (event.getEntity() instanceof LocalPlayer player) {
+    //         if (Revive.isPlayerFallen(player)) {
+    //             event.setNewSize(EntityDimensions.scalable(1, 1));
+    //         }
+    //     }
+    // }
+
     @SubscribeEvent
     public static void onFallenBeingAttacked(LivingIncomingDamageEvent event) {
         if (event.getEntity().level().isClientSide())
