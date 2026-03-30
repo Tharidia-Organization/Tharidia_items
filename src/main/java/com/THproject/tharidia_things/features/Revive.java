@@ -22,8 +22,8 @@ public class Revive {
         reviveAttachments.setCanRevive(can_revive);
         reviveAttachments.setIsFallen(true);
 
-        ModAnimations.startAnimation(player, ModAnimations.FALLEN_ANIMATION);
-        
+        ModAnimations.startFallenAnimation(player);
+
         ReviveSyncPayload.sync(player);
     }
 
@@ -38,7 +38,7 @@ public class Revive {
         reviveAttachments.setCanRevive(false);
         reviveAttachments.setIsFallen(false);
 
-        ModAnimations.stopAnimation(player, ModAnimations.FALLEN_ANIMATION);
+        ModAnimations.stopFallenAnimation(player);
 
         ReviveSyncPayload.sync(player);
     }
