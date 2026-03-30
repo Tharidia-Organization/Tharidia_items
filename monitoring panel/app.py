@@ -448,7 +448,7 @@ app.clientside_callback(
 
 def render_overview(players, start, end, servers=None):
     kpis = db.get_overview_kpis(start, end, servers=servers)
-    activity_df = db.get_hourly_activity(start, end, servers=servers)
+    activity_df = db.get_activity_by_type(start, end, servers=servers)
     top_players_df = db.get_top_active_players(start, end, servers=servers)
     online_df = db.get_online_players()
 
@@ -2462,7 +2462,8 @@ def render_moderation_view(players, start, end, servers):
 def render_market_intel_view(players, start, end, servers):
     vol_df      = db.get_price_volatility(start, end, limit=15)
     monopoly_df = db.get_item_supply_monopoly(start, end, limit=20)
-    gini_val    = db.get_economy_gini()
+    _gini_df    = db.get_economy_gini()
+    gini_val    = _gini(_gini_df["wealth"].tolist()) if not _gini_df.empty else None
     _item_opts_df = db.get_market_item_options()
     item_opts = (
         [{"label": r["label"], "value": r["item_id"]} for _, r in _item_opts_df.iterrows()]
@@ -2488,7 +2489,7 @@ def render_market_intel_view(players, start, end, servers):
 
     gini_card = dbc.Card(dbc.CardBody([
         html.H6("Gini Coefficient", className="text-muted small mb-1"),
-        html.H3(f"{gini_val:.3f}" if isinstance(gini_val, float) else "—",
+        html.H3(f"{gini_val:.3f}" if gini_val is not None else "—",
                 className="text-warning mb-0"),
         html.Small("0 = perfect equality · 1 = total monopoly", className="text-muted"),
     ]), className="mb-3", style={"backgroundColor": "#1a1d27", "border": f"1px solid {BORDER}"})
@@ -2706,7 +2707,6 @@ def render_economy(players, start, end):
     tax_df      = db.get_tax_over_time(start, end)
     acc_df      = db.get_suspicious_accumulators(start, end)
     tx_df       = db.get_recent_transactions(start, end, players)
-    item_opts_df = db.get_market_item_options()
 
     # ── KPI row ──────────────────────────────────────────────────────────────
     tx_real  = kpis.get("transactions", 0)
@@ -2792,34 +2792,6 @@ def render_economy(players, start, end):
         )
         fig_tax = chart_layout(fig_tax)
 
-    # ── Price history section (button-triggered) ──────────────────────────────
-    item_opts = []
-    if not item_opts_df.empty:
-        item_opts = [
-            {"label": f"{r['label']}  (vol: {r['total_volume']})", "value": r["item_id"]}
-            for _, r in item_opts_df.iterrows()
-        ]
-
-    price_section = html.Div([
-        section("📈 Price History", "select an item and click Load"),
-        dbc.Row([
-            dbc.Col([
-                html.Label("Item", className="text-muted small mb-1"),
-                dcc.Dropdown(id="eco-item-select", options=item_opts,
-                             placeholder="Select item…",
-                             style={"backgroundColor": CARD_BG2},
-                             className="dbc"),
-            ], md=5),
-            dbc.Col([
-                html.Label("\u00a0", className="d-block small mb-1"),
-                dbc.Button("▶ Load Price Chart", id="eco-price-btn", color="info"),
-            ], md=2),
-        ], className="mb-3 align-items-end"),
-        html.Div(id="eco-price-output",
-                 children=html.Small("Select an item and click Load.",
-                                     className="text-muted fst-italic")),
-    ])
-
     return html.Div([
         row_kpi,
         fictional_alert,
@@ -2849,61 +2821,10 @@ def render_economy(players, start, end):
                               className="text-muted fst-italic"),
             ], md=7),
         ], className="mb-3"),
-        price_section,
         html.Br(),
         section("📋 Recent Transactions",
                 f"last 200 · {'filtered by selected players' if players else 'all players'}"),
         make_table(tx_df, "eco-tx", page_size=20),
-    ])
-
-
-@app.callback(
-    Output("eco-price-output", "children"),
-    Input("eco-price-btn", "n_clicks"),
-    State("eco-item-select", "value"),
-    State("filter-dates", "start_date"),
-    State("filter-dates", "end_date"),
-    prevent_initial_call=True,
-)
-def load_price_history(_n, item_id, start, end):
-    if not item_id:
-        return dbc.Alert("Select an item first.", color="warning", dismissable=True)
-    df = db.get_price_history_for_item(item_id, start, end)
-    if df.empty:
-        return html.Div(f"No price history for {item_id}.",
-                        className="text-muted fst-italic")
-
-    item_label = item_id.split(":")[-1]
-
-    fig = go.Figure([
-        go.Scatter(x=df["ts"], y=df["price"], mode="lines+markers",
-                   name="Price", line=dict(color="#7eb8f7", width=2),
-                   marker=dict(size=4)),
-    ])
-    if "volume" in df.columns and df["volume"].notna().any():
-        fig.add_trace(go.Bar(
-            x=df["ts"], y=df["volume"], name="Volume", yaxis="y2",
-            marker_color="rgba(126,184,247,0.15)",
-        ))
-    fig.update_layout(
-        title=f"{item_label} — price history",
-        yaxis=dict(title="Price"),
-        yaxis2=dict(title="Volume", overlaying="y", side="right",
-                    showgrid=False),
-        height=360, template=CHART_TEMPLATE, hovermode="x unified",
-    )
-    fig = chart_layout(fig)
-
-    stats = df["price"].describe()
-    return html.Div([
-        dbc.Row([dbc.Col([
-            dbc.Badge(f"Min: {stats['min']:.2f}",  color="success",   className="me-1 p-2"),
-            dbc.Badge(f"Max: {stats['max']:.2f}",  color="danger",    className="me-1 p-2"),
-            dbc.Badge(f"Avg: {stats['mean']:.2f}", color="info",      className="me-1 p-2"),
-            dbc.Badge(f"σ: {stats['std']:.2f}",    color="secondary", className="me-1 p-2"),
-            dbc.Badge(f"Points: {int(stats['count'])}", color="dark", className="p-2"),
-        ], className="mb-2")]),
-        dcc.Graph(figure=fig, config={"displayModeBar": False}),
     ])
 
 

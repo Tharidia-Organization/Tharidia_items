@@ -548,7 +548,7 @@ public class TradePacketHandler {
         int total = 0;
         for (ItemStack stack : items) {
             if (!stack.isEmpty() && isCurrencyItem(stack)) {
-                total += stack.getCount();
+                total += stack.getCount() * CurrencyHelper.getCoinValue(stack);
             }
         }
         return total;

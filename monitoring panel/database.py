@@ -200,11 +200,16 @@ def get_overview_kpis(start=None, end=None, servers=None):
     return result
 
 
-def get_hourly_activity(start=None, end=None, servers=None):
-    if not start and not end:
-        cond = "timestamp >= DATE_SUB(NOW(), INTERVAL 24 HOUR)"
-    else:
+def get_activity_by_type(start=None, end=None, servers=None):
+    """Event count per hour grouped by event type — for the overview line chart."""
+    if start and end:
         cond = f"DATE(timestamp) BETWEEN '{start}' AND '{end}'"
+    elif start:
+        cond = f"DATE(timestamp) >= '{start}'"
+    elif end:
+        cond = f"DATE(timestamp) <= '{end}'"
+    else:
+        cond = "1=1"
 
     sf = _server_f("server_id", servers)
     parts = [
@@ -231,11 +236,11 @@ def get_hourly_activity(start=None, end=None, servers=None):
                             df["type"] = label
                             dfs.append(df)
                     except Exception as e:
-                        logger.warning("Hourly activity [%s]: %s", tbl, e)
+                        logger.warning("Activity by type [%s]: %s", tbl, e)
         finally:
             conn.close()
     except Exception as e:
-        logger.error("Hourly activity: %s", e)
+        logger.error("Activity by type: %s", e)
     return pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame(columns=["hour", "cnt", "type"])
 
 
@@ -1475,6 +1480,24 @@ def get_map_data(event_type, players=None, start=None, end=None, servers=None,
 # Tables live in the `market` schema (same server/credentials).
 # Timestamps are BIGINT milliseconds (Java System.currentTimeMillis()).
 
+# Coin item IDs and their bronze-equivalent values.
+# The Java code stores raw item counts in transaction_items; these multipliers
+# convert them to a unified "bronze coin" value for price/tax calculations.
+_COIN_VALUES = {
+    "numismaticoverhaul:bronze_coin": 1,
+    "numismaticoverhaul:silver_coin": 100,
+    "numismaticoverhaul:gold_coin":   10000,
+}
+
+def _coin_value_sql(col: str) -> str:
+    """SQL CASE expression that converts a currency item_id column to bronze value."""
+    cases = "\n            ".join(
+        f"WHEN {col} = '{item_id}' THEN {val}"
+        for item_id, val in _COIN_VALUES.items()
+    )
+    return f"CASE {cases} ELSE 0 END"
+
+
 def _mdate_f(col, start, end):
     """AND-prefixed date filter for BIGINT millisecond timestamp columns."""
     if start and end:
@@ -1517,6 +1540,30 @@ def get_market_kpis(start=None, end=None):
                 """)
                 row = cur.fetchone()
                 result["tax_collected"] = int(row["v"]) if row else 0
+                # If tax_records empty, estimate from transaction currency values
+                if result["tax_collected"] == 0:
+                    coin_val = _coin_value_sql("ti.item_id")
+                    cur.execute(f"""
+                        SELECT COALESCE(SUM(CASE
+                            WHEN cv <= 100   THEN FLOOR(cv * 0.05)
+                            WHEN cv <= 500   THEN FLOOR(cv * 0.08)
+                            WHEN cv <= 1000  THEN FLOOR(cv * 0.10)
+                            WHEN cv <= 5000  THEN FLOOR(cv * 0.12)
+                            ELSE                  FLOOR(cv * 0.15)
+                        END), 0) AS v
+                        FROM (
+                            SELECT SUM({coin_val} * ti.item_count) AS cv
+                            FROM market.transactions t
+                            JOIN market.transaction_items ti
+                                ON t.transaction_id = ti.transaction_id
+                               AND ti.is_seller_item = FALSE
+                            WHERE t.is_fictional = FALSE {mdf}
+                            GROUP BY t.transaction_id
+                            HAVING cv > 0
+                        ) sub
+                    """)
+                    row = cur.fetchone()
+                    result["tax_collected"] = int(row["v"]) if row else 0
 
                 cur.execute("SELECT COUNT(DISTINCT item_id) as v FROM market.markets")
                 row = cur.fetchone()
@@ -1590,10 +1637,13 @@ def get_top_traded_items(start=None, end=None, limit=20):
 
 
 def get_price_history_for_item(item_id, start=None, end=None):
-    """Price history rows for a single item_id."""
+    """Price history rows for a single item_id.
+    Reads from price_history if populated; falls back to deriving from transaction_items
+    using correct coin values (bronze=1, silver=100, gold=10000).
+    """
     mdf = _mdate_f("timestamp", start, end)
     safe_id = item_id.replace("'", "''")
-    return query_df(f"""
+    df = query_df(f"""
         SELECT
             FROM_UNIXTIME(timestamp / 1000) AS ts,
             ROUND(price, 2)                 AS price,
@@ -1602,12 +1652,38 @@ def get_price_history_for_item(item_id, start=None, end=None):
         WHERE item_id = '{safe_id}' {mdf}
         ORDER BY timestamp ASC LIMIT 2000
     """)
+    if not df.empty:
+        return df
+    # Fallback: derive from transaction_items with coin value conversion
+    mdf_t = _mdate_f("t.timestamp", start, end)
+    coin_val = _coin_value_sql("ti_c.item_id")
+    return query_df(f"""
+        SELECT
+            FROM_UNIXTIME(t.timestamp / 1000) AS ts,
+            ROUND(SUM({coin_val} * ti_c.item_count) * 1.0 / ti_s.item_count, 2) AS price,
+            ti_s.item_count AS volume
+        FROM market.transactions t
+        JOIN market.transaction_items ti_s
+            ON t.transaction_id = ti_s.transaction_id
+           AND ti_s.item_id = '{safe_id}'
+           AND ti_s.is_seller_item = TRUE
+        JOIN market.transaction_items ti_c
+            ON t.transaction_id = ti_c.transaction_id
+           AND ti_c.is_seller_item = FALSE
+        WHERE t.is_fictional = FALSE {mdf_t}
+        GROUP BY t.transaction_id, t.timestamp, ti_s.item_count
+        HAVING price > 0
+        ORDER BY t.timestamp ASC
+        LIMIT 2000
+    """)
 
 
 def get_price_volatility(start=None, end=None, limit=15):
-    """Items ranked by price range % — most volatile first."""
+    """Items ranked by price range % — most volatile first.
+    Reads from price_history if populated; falls back to deriving from transaction_items.
+    """
     mdf = _mdate_f("timestamp", start, end)
-    return query_df(f"""
+    df = query_df(f"""
         SELECT
             SUBSTRING_INDEX(item_id, ':', -1) AS item,
             item_id                           AS item_id_full,
@@ -1623,12 +1699,53 @@ def get_price_volatility(start=None, end=None, limit=15):
         GROUP BY item_id HAVING price_points >= 3
         ORDER BY range_pct DESC LIMIT {limit}
     """)
+    if not df.empty:
+        return df
+    # Fallback: derive from transaction_items with coin value conversion
+    mdf_t = _mdate_f("t.timestamp", start, end)
+    coin_val = _coin_value_sql("ti_c.item_id")
+    coin_ids = ", ".join(f"'{k}'" for k in _COIN_VALUES)
+    return query_df(f"""
+        SELECT
+            SUBSTRING_INDEX(item_id, ':', -1)       AS item,
+            item_id                                  AS item_id_full,
+            COUNT(*)                                 AS price_points,
+            ROUND(AVG(price_per_unit), 2)            AS avg_price,
+            ROUND(MIN(price_per_unit), 2)            AS min_price,
+            ROUND(MAX(price_per_unit), 2)            AS max_price,
+            ROUND(STDDEV(price_per_unit), 2)         AS stddev,
+            ROUND((MAX(price_per_unit) - MIN(price_per_unit)) /
+                  NULLIF(AVG(price_per_unit), 0) * 100, 1) AS range_pct
+        FROM (
+            SELECT
+                ti_s.item_id,
+                ROUND(SUM({coin_val} * ti_c.item_count) * 1.0 / ti_s.item_count, 2) AS price_per_unit
+            FROM market.transactions t
+            JOIN market.transaction_items ti_s
+                ON t.transaction_id = ti_s.transaction_id
+               AND ti_s.is_seller_item = TRUE
+               AND ti_s.item_id NOT IN ({coin_ids})
+            JOIN market.transaction_items ti_c
+                ON t.transaction_id = ti_c.transaction_id
+               AND ti_c.is_seller_item = FALSE
+            WHERE t.is_fictional = FALSE {mdf_t}
+            GROUP BY t.transaction_id, ti_s.item_id, ti_s.item_count
+            HAVING price_per_unit > 0
+        ) prices
+        GROUP BY item_id
+        HAVING price_points >= 1
+        ORDER BY range_pct DESC
+        LIMIT {limit}
+    """)
 
 
 def get_tax_over_time(start=None, end=None):
-    """Daily tax revenue and transaction count for timeline chart."""
+    """Daily tax revenue and transaction count for timeline chart.
+    Reads from tax_records if populated; falls back to estimating from transactions
+    using correct coin values and progressive tax brackets.
+    """
     mdf = _mdate_f("timestamp", start, end)
-    return query_df(f"""
+    df = query_df(f"""
         SELECT
             DATE(FROM_UNIXTIME(timestamp / 1000)) AS day,
             SUM(tax_amount)                       AS tax_total,
@@ -1637,6 +1754,44 @@ def get_tax_over_time(start=None, end=None):
         FROM market.tax_records
         WHERE 1=1 {mdf}
         GROUP BY day ORDER BY day
+    """)
+    if not df.empty:
+        return df
+    # Fallback: estimate tax from transaction currency values
+    mdf_t = _mdate_f("t.timestamp", start, end)
+    coin_val = _coin_value_sql("ti.item_id")
+    return query_df(f"""
+        SELECT
+            DATE(FROM_UNIXTIME(vals.ts / 1000)) AS day,
+            COUNT(DISTINCT vals.transaction_id)  AS tax_events,
+            SUM(CASE
+                WHEN cv <= 100   THEN FLOOR(cv * 0.05)
+                WHEN cv <= 500   THEN FLOOR(cv * 0.08)
+                WHEN cv <= 1000  THEN FLOOR(cv * 0.10)
+                WHEN cv <= 5000  THEN FLOOR(cv * 0.12)
+                ELSE                  FLOOR(cv * 0.15)
+            END)                                 AS tax_total,
+            ROUND(AVG(CASE
+                WHEN cv <= 100   THEN 5.0
+                WHEN cv <= 500   THEN 8.0
+                WHEN cv <= 1000  THEN 10.0
+                WHEN cv <= 5000  THEN 12.0
+                ELSE 15.0
+            END), 2)                             AS avg_rate_pct
+        FROM (
+            SELECT t.transaction_id,
+                   t.timestamp          AS ts,
+                   SUM({coin_val} * ti.item_count) AS cv
+            FROM market.transactions t
+            JOIN market.transaction_items ti
+                ON t.transaction_id = ti.transaction_id
+               AND ti.is_seller_item = FALSE
+            WHERE t.is_fictional = FALSE {mdf_t}
+            GROUP BY t.transaction_id, t.timestamp
+            HAVING cv > 0
+        ) vals
+        GROUP BY day
+        ORDER BY day
     """)
 
 
@@ -1750,12 +1905,32 @@ def get_market_item_options():
 
 
 def get_economy_gini():
-    """Wealth distribution proxy — total_currency_traded per player."""
-    return query_df("""
+    """Wealth distribution proxy — total currency received per player (as seller).
+    Reads from player_trade_stats if populated; falls back to deriving from
+    transaction_items using correct coin values.
+    """
+    df = query_df("""
         SELECT total_currency_traded AS wealth
         FROM market.player_trade_stats
         WHERE total_currency_traded > 0
         ORDER BY total_currency_traded ASC
+    """)
+    if not df.empty:
+        return df
+    # Fallback: sum currency received per seller from transaction_items
+    coin_val = _coin_value_sql("ti_c.item_id")
+    return query_df(f"""
+        SELECT
+            SUM({coin_val} * ti_c.item_count) AS wealth
+        FROM market.transactions t
+        JOIN market.transaction_items ti_c
+            ON t.transaction_id = ti_c.transaction_id
+           AND ti_c.is_seller_item = FALSE
+        WHERE t.is_fictional = FALSE
+          AND t.seller_name IS NOT NULL
+        GROUP BY t.seller_name
+        HAVING wealth > 0
+        ORDER BY wealth ASC
     """)
 
 
@@ -2646,42 +2821,19 @@ def get_hourly_activity(start=None, end=None, servers=None):
 def get_player_homes():
     """
     Home position per player = first claim in players.claim_positions JSON.
-    Falls back to last_x/last_z if no claims exist.
+    Only returns players who have at least one real claim set.
+    Players without claims are excluded entirely (no last_pos fallback)
+    to avoid false-positive market route endpoints.
     """
     return query_df("""
         SELECT username AS player_name,
-               CASE
-                   WHEN claim_positions IS NOT NULL
-                    AND claim_positions NOT IN ('null', '[]', '')
-                    AND JSON_LENGTH(claim_positions) > 0
-                   THEN CAST(JSON_UNQUOTE(JSON_EXTRACT(claim_positions, '$[0].x')) AS DECIMAL(10,1))
-                   ELSE ROUND(last_x, 1)
-               END AS home_x,
-               CASE
-                   WHEN claim_positions IS NOT NULL
-                    AND claim_positions NOT IN ('null', '[]', '')
-                    AND JSON_LENGTH(claim_positions) > 0
-                   THEN CAST(JSON_UNQUOTE(JSON_EXTRACT(claim_positions, '$[0].z')) AS DECIMAL(10,1))
-                   ELSE ROUND(last_z, 1)
-               END AS home_z,
-               CASE
-                   WHEN claim_positions IS NOT NULL
-                    AND claim_positions NOT IN ('null', '[]', '')
-                    AND JSON_LENGTH(claim_positions) > 0
-                   THEN JSON_UNQUOTE(JSON_EXTRACT(claim_positions, '$[0].name'))
-                   ELSE NULL
-               END AS home_label,
-               CASE
-                   WHEN claim_positions IS NOT NULL
-                    AND claim_positions NOT IN ('null', '[]', '')
-                    AND JSON_LENGTH(claim_positions) > 0
-                   THEN 'claim' ELSE 'last_pos'
-               END AS source
+               CAST(JSON_UNQUOTE(JSON_EXTRACT(claim_positions, '$[0].x')) AS DOUBLE) AS home_x,
+               CAST(JSON_UNQUOTE(JSON_EXTRACT(claim_positions, '$[0].z')) AS DOUBLE) AS home_z,
+               JSON_UNQUOTE(JSON_EXTRACT(claim_positions, '$[0].name'))               AS home_label
         FROM players
-        WHERE last_x IS NOT NULL OR (
-            claim_positions IS NOT NULL
-            AND claim_positions NOT IN ('null', '[]', '')
-        )
+        WHERE claim_positions IS NOT NULL
+          AND claim_positions NOT IN ('null', '[]', '')
+          AND JSON_LENGTH(claim_positions) > 0
     """)
 
 
@@ -2693,40 +2845,60 @@ def get_trade_routes(start=None, end=None, time_window_sec=120, max_distance=50,
     Returns DataFrame: from_player, to_player, item_type, count,
                        from_x, from_z, to_x, to_z, route_type ('barter'|'market')
     Barter = physical drop→pickup match (direct coords).
-    Market = formal transaction, endpoints are player homes.
+    Market = formal transaction, endpoints are player claim positions only.
     """
-    df_f  = _date_f("d.timestamp", start, end)
-    mdf   = _mdate_f("t.timestamp", start, end)
-    sf    = _server_f("d.server_id", servers)
+    tw  = int(time_window_sec)
+    md  = float(max_distance)
+    mdf = _mdate_f("t.timestamp", start, end)
+    sf  = _server_f("d.server_id", servers)
 
-    # ── Barter routes: drop→pickup with actual coordinates ────────────────────
+    # Date filter for drop events (DATETIME column)
+    df_d = _date_f("timestamp", start, end)
+
+    # ── Barter routes ─────────────────────────────────────────────────────────
+    # Pre-aggregate drop events into time-buckets to avoid Cartesian explosion.
+    # Each (dropper, item, bucket) becomes one synthetic drop row.
+    # Then join once against pickup events → SUM(p.item_count) gives real quantity.
     barter_df = query_df(f"""
-        SELECT d.player_name                                                   AS from_player,
-               p.player_name                                                   AS to_player,
-               d.item_type,
-               COUNT(*)                                                        AS count,
-               ROUND(AVG(d.player_x), 1)                                      AS from_x,
-               ROUND(AVG(d.player_z), 1)                                      AS from_z,
-               ROUND(AVG(p.player_x), 1)                                      AS to_x,
-               ROUND(AVG(p.player_z), 1)                                      AS to_z,
-               DATE_FORMAT(MIN(d.timestamp), '%Y-%m-%d %H:%i')                AS first_trade,
-               DATE_FORMAT(MAX(d.timestamp), '%Y-%m-%d %H:%i')                AS last_trade,
-               'barter'                                                        AS route_type
-        FROM item_drop_events d
+        SELECT
+            d.player_name                                                AS from_player,
+            p.player_name                                                AS to_player,
+            d.item_type,
+            SUM(p.item_count)                                           AS count,
+            ROUND(AVG(d.drop_x), 1)                                     AS from_x,
+            ROUND(AVG(d.drop_z), 1)                                     AS from_z,
+            ROUND(AVG(p.player_x), 1)                                   AS to_x,
+            ROUND(AVG(p.player_z), 1)                                   AS to_z,
+            DATE_FORMAT(MIN(d.bucket_ts), '%Y-%m-%d %H:%i')             AS first_trade,
+            DATE_FORMAT(MAX(d.bucket_ts), '%Y-%m-%d %H:%i')             AS last_trade,
+            'barter'                                                     AS route_type
+        FROM (
+            SELECT player_name,
+                   item_type,
+                   AVG(player_x)                                         AS drop_x,
+                   AVG(player_z)                                         AS drop_z,
+                   MIN(timestamp)                                        AS bucket_ts,
+                   FLOOR(UNIX_TIMESTAMP(timestamp) / {tw})              AS bucket
+            FROM item_drop_events
+            WHERE 1=1 {df_d} {sf}
+            GROUP BY player_name, item_type, bucket
+        ) d
         JOIN item_pickup_events p
-            ON  d.item_type    = p.item_type
-            AND d.player_name != p.player_name
-            AND p.timestamp BETWEEN d.timestamp
-                            AND DATE_ADD(d.timestamp, INTERVAL {int(time_window_sec)} SECOND)
-            AND SQRT(POW(d.player_x - p.player_x,2) + POW(d.player_z - p.player_z,2))
-                    <= {float(max_distance)}
-        WHERE 1=1 {df_f} {sf}
+            ON  p.item_type    = d.item_type
+            AND p.player_name != d.player_name
+            AND p.timestamp BETWEEN d.bucket_ts
+                            AND DATE_ADD(d.bucket_ts, INTERVAL {tw} SECOND)
+            AND SQRT(POW(d.drop_x - p.player_x, 2) + POW(d.drop_z - p.player_z, 2))
+                    <= {md}
         GROUP BY d.player_name, p.player_name, d.item_type
+        HAVING count > 0
         ORDER BY count DESC
-        LIMIT 1000
+        LIMIT 500
     """)
 
-    # ── Market routes: formal transactions, home coords as endpoints ──────────
+    # ── Market routes ─────────────────────────────────────────────────────────
+    # Only show routes when BOTH players have a real claim set.
+    # get_player_homes() returns only claim-based positions (no last_pos fallback).
     homes_df = get_player_homes()
     market_routes = pd.DataFrame()
 
@@ -2734,19 +2906,20 @@ def get_trade_routes(start=None, end=None, time_window_sec=120, max_distance=50,
         homes = homes_df.set_index("player_name")[["home_x", "home_z"]]
 
         market_df = query_df(f"""
-            SELECT t.seller_name AS from_player,
-                   t.buyer_name  AS to_player,
-                   COALESCE(SUBSTRING_INDEX(MAX(ti.item_id), ':', -1), '?') AS item_type,
-                   COUNT(DISTINCT t.transaction_id)                          AS count,
-                   DATE_FORMAT(FROM_UNIXTIME(MIN(t.timestamp)/1000),
-                               '%Y-%m-%d %H:%i')                             AS first_trade,
-                   DATE_FORMAT(FROM_UNIXTIME(MAX(t.timestamp)/1000),
-                               '%Y-%m-%d %H:%i')                             AS last_trade
+            SELECT t.seller_name                                              AS from_player,
+                   t.buyer_name                                               AS to_player,
+                   COALESCE(SUBSTRING_INDEX(MAX(ti.item_id), ':', -1), '?')  AS item_type,
+                   COUNT(DISTINCT t.transaction_id)                           AS count,
+                   DATE_FORMAT(FROM_UNIXTIME(MIN(t.timestamp) / 1000),
+                               '%Y-%m-%d %H:%i')                              AS first_trade,
+                   DATE_FORMAT(FROM_UNIXTIME(MAX(t.timestamp) / 1000),
+                               '%Y-%m-%d %H:%i')                              AS last_trade
             FROM market.transactions t
             LEFT JOIN market.transaction_items ti
-                ON ti.transaction_id = t.transaction_id
-               AND ti.is_seller_item = TRUE
-            WHERE t.seller_name IS NOT NULL AND t.buyer_name IS NOT NULL
+                ON  ti.transaction_id = t.transaction_id
+                AND ti.is_seller_item = TRUE
+            WHERE t.seller_name IS NOT NULL
+              AND t.buyer_name  IS NOT NULL
               AND t.is_fictional = FALSE {mdf}
             GROUP BY t.seller_name, t.buyer_name
             ORDER BY count DESC
@@ -2763,7 +2936,9 @@ def get_trade_routes(start=None, end=None, time_window_sec=120, max_distance=50,
             market_df["to_z"]   = market_df["to_player"].map(
                 lambda p: homes.at[p, "home_z"] if p in homes.index else None)
             market_df["route_type"] = "market"
-            market_routes = market_df.dropna(subset=["from_x", "from_z", "to_x", "to_z"]).copy()
+            # dropna keeps only routes where BOTH endpoints are real claims
+            market_routes = market_df.dropna(
+                subset=["from_x", "from_z", "to_x", "to_z"]).copy()
 
     # ── Combine ───────────────────────────────────────────────────────────────
     parts = [d for d in [barter_df, market_routes] if d is not None and not d.empty]

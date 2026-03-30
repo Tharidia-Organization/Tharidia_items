@@ -106,6 +106,21 @@ public final class CurrencyHelper {
     }
 
     /**
+     * Get the bronze-equivalent value of a single coin item.
+     * bronze_coin=1, silver_coin=100, gold_coin=10000.
+     * Config-defined currencies default to 1 (bronze equivalent).
+     */
+    public static int getCoinValue(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return 0;
+        String id = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+        return switch (id) {
+            case "numismaticoverhaul:gold_coin"   -> 10000;
+            case "numismaticoverhaul:silver_coin" -> 100;
+            default                               -> 1;
+        };
+    }
+
+    /**
      * Invalidate the currency cache.
      * Call this when config is reloaded.
      */
