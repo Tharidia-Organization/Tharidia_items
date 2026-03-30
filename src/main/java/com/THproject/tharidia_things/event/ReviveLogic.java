@@ -8,21 +8,16 @@ import com.THproject.tharidia_things.features.Revive;
 import com.THproject.tharidia_things.network.RightClickReleasePayload;
 import com.THproject.tharidia_things.network.revive.ReviveSyncPayload;
 
-import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityDimensions;
-import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 
 import com.THproject.tharidia_features.events.ReviveTracker;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;
 import net.neoforged.neoforge.common.Tags.DamageTypes;
-import net.neoforged.neoforge.event.entity.EntityEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
@@ -75,23 +70,6 @@ public class ReviveLogic {
                 ReviveTracker.onPlayerRevive(player, null, "died");
                 Revive.revivePlayer(player);
             }
-        }
-    }
-
-    @SubscribeEvent
-    public static void resizePlayerHitbox(EntityEvent.Size event) {
-        if (event.getEntity() instanceof Player player) {
-
-            EntityDimensions originalDimensions = player.getDefaultDimensions(Pose.STANDING);
-            float width = originalDimensions.width();
-            float height = originalDimensions.height();
-
-            if (player.getData(ReviveAttachments.REVIVE_DATA.get()).isFallen()) {
-                width = 2.4f;
-                height = 0.6f;
-            }
-
-            event.setNewSize(EntityDimensions.scalable(width, height));
         }
     }
 
@@ -288,7 +266,6 @@ public class ReviveLogic {
     @SubscribeEvent
     public static void onFallenTick(PlayerTickEvent.Post event) {
         Player player = event.getEntity();
-        player.refreshDimensions();
 
         if (player.level().isClientSide) return;
 
