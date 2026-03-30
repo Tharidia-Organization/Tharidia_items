@@ -12,6 +12,7 @@
     "MapwrightRenderingMixin",
     "ArmorEquipMixin",
     "EpicFightArmorLayerMixin",
+    "EpicFightFirstPersonScaleMixin",
     "HumanoidArmorLayerAccessor",
     "MouseHandlerMixin",
     "MinecraftFallenMixin"

@@ -21,8 +21,19 @@ public class EpicFightCompatMixinPlugin implements IMixinConfigPlugin {
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
         if (mixinClassName.contains("EpicFightArmorLayerMixin")) {
             try {
-                // ADDED '.patched.' to the package path!
                 Class.forName("yesman.epicfight.client.renderer.patched.layer.WearableItemLayer", false,
+                        this.getClass().getClassLoader());
+                return true;
+            } catch (ClassNotFoundException e) {
+                return false;
+            }
+        }
+        if (mixinClassName.contains("EpicFightFirstPersonScaleMixin")) {
+            try {
+                Class.forName("yesman.epicfight.client.renderer.FirstPersonRenderer", false,
+                        this.getClass().getClassLoader());
+                // Note: 'capabilites' is an intentional typo in Epic Fight's source
+                Class.forName("virtuoel.pehkui.api.ScaleTypes", false,
                         this.getClass().getClassLoader());
                 return true;
             } catch (ClassNotFoundException e) {

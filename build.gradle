@@ -249,6 +249,7 @@ dependencies {
     implementation "software.bernie.geckolib:geckolib-neoforge-1.21.1:4.8.2"
 
     compileOnly "maven.modrinth:epic-fight:21.16.1-mc1.21.1-neoforge"
+    compileOnly "maven.modrinth:pehkui:3.8.3+1.21-neoforge"
     
     
     // SLF4J API is already provided by Minecraft/NeoForge - no need to include it
