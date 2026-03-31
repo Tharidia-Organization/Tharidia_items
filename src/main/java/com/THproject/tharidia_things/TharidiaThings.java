@@ -150,6 +150,7 @@ import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.ModList;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.neoforged.neoforge.attachment.AttachmentType;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
@@ -163,6 +164,7 @@ import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
+import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -188,6 +190,10 @@ public class TharidiaThings {
     // registered under the "tharidiathings" namespace
     public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS = DeferredRegister
             .create(Registries.CREATIVE_MODE_TAB, MODID);
+
+    public static final DeferredRegister<AttachmentType<?>> ATTACHMENT_TYPES = DeferredRegister
+            .create(NeoForgeRegistries.ATTACHMENT_TYPES, MODID);
+
     // Create a Deferred Register to hold MenuTypes which will all be registered
     // under the "tharidiathings" namespace
     public static final DeferredRegister<net.minecraft.world.inventory.MenuType<?>> MENU_TYPES = DeferredRegister
@@ -830,8 +836,9 @@ public class TharidiaThings {
         // Register jei handler
         NeoForge.EVENT_BUS.register(com.THproject.tharidia_things.jei.JeiFilterReloadListener.class);
 
-        BattleGauntleAttachments.register(modEventBus);
+        ATTACHMENT_TYPES.register(modEventBus);
 
+        BattleGauntleAttachments.register(modEventBus);
         ReviveAttachments.register(modEventBus);
         CustomArmorAttachments.register(modEventBus);
 
@@ -1039,12 +1046,13 @@ public class TharidiaThings {
                     com.THproject.tharidia_things.network.JeiFilterSyncPacket.TYPE,
                     com.THproject.tharidia_things.network.JeiFilterSyncPacket.STREAM_CODEC,
                     (packet, context) -> {
-                        if (!ModList.get().isLoaded("jei")) return;
+                        if (!ModList.get().isLoaded("jei"))
+                            return;
                         context.enqueueWork(() -> {
-                            java.util.List<net.minecraft.resources.ResourceLocation> items =
-                                    packet.allowedItemIds().stream()
-                                            .map(net.minecraft.resources.ResourceLocation::parse)
-                                            .toList();
+                            java.util.List<net.minecraft.resources.ResourceLocation> items = packet.allowedItemIds()
+                                    .stream()
+                                    .map(net.minecraft.resources.ResourceLocation::parse)
+                                    .toList();
                             com.THproject.tharidia_things.jei.JeiTagFilterManager.setAllowedItems(items);
                         });
                     });

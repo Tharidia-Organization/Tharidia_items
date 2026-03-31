@@ -17,6 +17,7 @@ public class ModSounds {
     public static final Supplier<SoundEvent> CHUNK_BREAK = registerSoundEvent("chunk_break");
     public static final Supplier<SoundEvent> DUNGEON_START = registerSoundEvent("dungeon_start");
     public static final Supplier<SoundEvent> PULVERIZER_WORKING = registerSoundEvent("pulverizer_working");
+    public static final Supplier<SoundEvent> WEAPON_PARRY = registerSoundEvent("weapon_parry");
 
     public static Supplier<SoundEvent> registerSoundEvent(String name) {
         ResourceLocation id = ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, name);

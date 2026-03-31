@@ -25,5 +25,10 @@
         "sounds": [
             "tharidiathings:pulverizer/pulverizer_working"
         ]
+    },
+    "weapon_parry": {
+        "sounds": [
+            "tharidiathings:weapon_parry"
+        ]
     }
 }
