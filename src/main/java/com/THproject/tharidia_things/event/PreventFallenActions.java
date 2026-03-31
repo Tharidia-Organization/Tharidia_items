@@ -8,8 +8,10 @@ import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;
 import net.neoforged.neoforge.client.event.ScreenEvent;
@@ -37,16 +39,14 @@ public class PreventFallenActions {
         }
     }
 
-    @SubscribeEvent
-    public static void onItemSwap(InputEvent.InteractionKeyMappingTriggered event) {
+    /**
+     * Prevent Client fallen item swap
+     */
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    public static void onClientTick(ClientTickEvent.Pre event) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null)
-            return;
-
-        // keySwapOffhand is the 'F' key by default
-        if (event.getKeyMapping() == mc.options.keySwapOffhand && Revive.isPlayerFallen(mc.player)) {
-            event.setCanceled(true);
-            event.setSwingHand(false); // Prevents the hand-swing animation
+        if (mc.player != null && Revive.isPlayerFallen(mc.player)) {
+            mc.options.keySwapOffhand.consumeClick();
         }
     }
 
