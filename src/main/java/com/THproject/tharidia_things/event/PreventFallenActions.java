@@ -37,6 +37,19 @@ public class PreventFallenActions {
         }
     }
 
+    @SubscribeEvent
+    public static void onItemSwap(InputEvent.InteractionKeyMappingTriggered event) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null)
+            return;
+
+        // keySwapOffhand is the 'F' key by default
+        if (event.getKeyMapping() == mc.options.keySwapOffhand && Revive.isPlayerFallen(mc.player)) {
+            event.setCanceled(true);
+            event.setSwingHand(false); // Prevents the hand-swing animation
+        }
+    }
+
     /**
      * Prevents mouse wheel scrolling when player is fallen.
      */
