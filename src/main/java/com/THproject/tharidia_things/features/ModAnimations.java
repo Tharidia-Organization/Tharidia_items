@@ -36,7 +36,7 @@ public class ModAnimations {
                         if (entitypatch.getOriginal() instanceof Player player) {
                             startAnimation(player, FALLEN_LOOP_ANIMATION);
                         }
-                    }, AnimationEvent.Side.CLIENT));
+                    }, AnimationEvent.Side.BOTH));
                     return animation;
                 });
     }
@@ -46,7 +46,8 @@ public class ModAnimations {
             PlayerPatch<?> playerPatch = EpicFightCapabilities.getEntityPatch(player, PlayerPatch.class);
             if (playerPatch != null) {
                 try {
-                    playerPatch.playAnimationSynchronized(animation, 0.0f);
+                    if (!playerPatch.getAnimator().isPlaying(animation))
+                        playerPatch.playAnimationSynchronized(animation, 0.0f);
                 } catch (Exception e) {
                     TharidiaThings.LOGGER.error("[EPIC FIGHT ANIMATION] failed to start player animation %s",
                             animation.toString());
@@ -85,7 +86,6 @@ public class ModAnimations {
 
     public static void startFallenAnimation(Player player) {
         startAnimation(player, FALLEN_ANIMATION);
-        // reserveAnimation(player, FALLEN_LOOP_ANIMATION);
     }
 
     public static void stopFallenAnimation(Player player) {
