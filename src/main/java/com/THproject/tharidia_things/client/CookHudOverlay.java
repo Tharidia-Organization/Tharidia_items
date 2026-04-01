@@ -53,11 +53,9 @@ public class CookHudOverlay {
         if (mc.screen != null)
             return;
 
-        System.out.println("1");
         if (!CookHelper.hasCookHat(player))
             return;
-        System.out.println("2");
-        
+
         // Find player being looked at within 3 blocks and within 5 degrees of center
         Player targetedPlayer = getTargetedPlayer(mc, player);
 
@@ -274,7 +272,7 @@ public class CookHudOverlay {
                 color = ((int) (alpha * 255) << 24) | 0xFF5555; // Red for low values
             } else if ((diet_value / 100) < 0.5f) {
                 color = ((int) (alpha * 255) << 24) | 0xFFAA00; // Orange for medium values
-            }else{
+            } else {
                 color = ((int) (alpha * 255) << 24) | 0x55FF55; // Green for good values
             }
             mc.font.drawInBatch(String.format("- %s: %.2f", diet_type, diet_value),

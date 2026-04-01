@@ -25,6 +25,8 @@ import com.THproject.tharidia_things.client.renderer.CookTableRenderer;
 import com.THproject.tharidia_things.client.renderer.SmithingFurnaceRenderer;
 import com.THproject.tharidia_things.diet.ClientDietProfileCache;
 import com.THproject.tharidia_things.diet.DietRegistry;
+import com.THproject.tharidia_things.poison.RenderPoisonScreen;
+
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.resources.ResourceLocation;
@@ -206,6 +208,10 @@ public class TharidiaThingsClient {
 
     @SubscribeEvent
     static void onRegisterGuiLayers(RegisterGuiLayersEvent event) {
+        event.registerAboveAll(
+                ResourceLocation.fromNamespaceAndPath(TharidiaThings.MODID, "poison_black_screen"),
+                new RenderPoisonScreen());
+
         event.registerAbove(
                 VanillaGuiLayers.HOTBAR,
                 TharidiaThings.modLoc("realm_overlay"),

@@ -113,6 +113,8 @@ import com.THproject.tharidia_things.houseboundry.AnimalWellnessAttachments;
 import com.THproject.tharidia_things.houseboundry.config.AnimalConfigLoader;
 import com.THproject.tharidia_things.stable.StableConfigLoader;
 import com.THproject.tharidia_things.network.revive.ReviveSyncPayload;
+import com.THproject.tharidia_things.poison.PoisonAttachments;
+import com.THproject.tharidia_things.poison.PoisonSyncPacket;
 import com.THproject.tharidia_things.network.revive.ReviveGiveUpPacket;
 import com.THproject.tharidia_things.realm.RealmManager;
 import com.THproject.tharidia_things.registry.ModAttributes;
@@ -158,6 +160,7 @@ import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.ModList;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.neoforged.neoforge.attachment.AttachmentType;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
@@ -171,6 +174,7 @@ import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
+import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -200,6 +204,11 @@ public class TharidiaThings {
     // under the "tharidiathings" namespace
     public static final DeferredRegister<net.minecraft.world.inventory.MenuType<?>> MENU_TYPES = DeferredRegister
             .create(BuiltInRegistries.MENU, MODID);
+
+    // Create a Deferred Register to hold AttachmentTypes which will all be registered
+    // under the "tharidiathings" namespace
+    public static final DeferredRegister<AttachmentType<?>> ATTACHMENT_TYPES = DeferredRegister
+            .create(NeoForgeRegistries.ATTACHMENT_TYPES, TharidiaThings.MODID);
 
     // Recipes
     public static final DeferredRegister<RecipeType<?>> RECIPE_TYPES = DeferredRegister.create(Registries.RECIPE_TYPE,
@@ -824,6 +833,7 @@ public class TharidiaThings {
         RECIPE_SERIALIZERS.register(modEventBus);
         // Register the Deferred Register to the mod event bus so attachment types get
         // registered
+        ATTACHMENT_TYPES.register(modEventBus);
         FatigueAttachments.ATTACHMENT_TYPES.register(modEventBus);
         DietAttachments.ATTACHMENT_TYPES.register(modEventBus);
         CharacterAttachments.ATTACHMENT_TYPES.register(modEventBus);
@@ -875,7 +885,7 @@ public class TharidiaThings {
         BattleGauntleAttachments.register(modEventBus);
 
         CookAttachments.register(modEventBus);
-
+        PoisonAttachments.register();
         ReviveAttachments.register(modEventBus);
         CustomArmorAttachments.register(modEventBus);
 
@@ -1038,6 +1048,11 @@ public class TharidiaThings {
                     (packet, context) -> {
                     } // Dummy handler - we don't process bungeecord messages
             );
+
+            registrar.playToClient(
+                    PoisonSyncPacket.TYPE,
+                    PoisonSyncPacket.STREAM_CODEC,
+                    PoisonSyncPacket::handle);
 
             registrar.playToClient(
                     SyncCustomArmorPacket.TYPE,
