@@ -4,8 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import javax.annotation.Nullable;
-
 import com.THproject.tharidia_things.compoundTag.ReviveAttachments;
 import com.THproject.tharidia_things.network.revive.ReviveSyncPayload;
 import com.THproject.tharidia_things.poison.PoisonHelper;
@@ -18,7 +16,7 @@ public class Revive {
     public enum FallState {
         NONE(false),
         /** Fallen from death **/
-        DEATH(true, Items.STICK),
+        DEATH(true),
         /** Fallen from battle with battle gauntlet **/
         BATTLE(false),
         /** Fallen from poison food effect **/
@@ -28,10 +26,10 @@ public class Revive {
         public final Item itemToRevive;
 
         FallState(boolean canRevive) {
-            this(canRevive, null);
+            this(canRevive, Items.AIR);
         }
 
-        FallState(boolean canRevive, @Nullable Item itemToRevive) {
+        FallState(boolean canRevive, Item itemToRevive) {
             this.canRevive = canRevive;
             this.itemToRevive = itemToRevive;
         }
@@ -62,10 +60,10 @@ public class Revive {
         fallenPlayers.remove(player.getUUID());
 
         ReviveAttachments reviveAttachments = player.getData(ReviveAttachments.REVIVE_DATA.get());
-        if(reviveAttachments.getFallState() == FallState.POISON){
+        if (reviveAttachments.getFallState() == FallState.POISON) {
             PoisonHelper.cure(player);
         }
-        
+
         reviveAttachments.setFallState(FallState.NONE);
         reviveAttachments.setIsFallen(false);
 

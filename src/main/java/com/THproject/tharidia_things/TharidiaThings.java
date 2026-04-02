@@ -1050,11 +1050,6 @@ public class TharidiaThings {
             );
 
             registrar.playToClient(
-                    PoisonSyncPacket.TYPE,
-                    PoisonSyncPacket.STREAM_CODEC,
-                    PoisonSyncPacket::handle);
-
-            registrar.playToClient(
                     SyncCustomArmorPacket.TYPE,
                     SyncCustomArmorPacket.STREAM_CODEC,
                     SyncCustomArmorPacket::handle);
@@ -1377,6 +1372,11 @@ public class TharidiaThings {
                 EquipListSyncPacket.TYPE,
                 EquipListSyncPacket.STREAM_CODEC,
                 EquipListSyncPacket::handle);
+
+        registrar.playToClient(
+                PoisonSyncPacket.TYPE,
+                PoisonSyncPacket.STREAM_CODEC,
+                PoisonSyncPacket::handle);
 
         // Cook table: start cooking (client → server)
         registrar.playToServer(
