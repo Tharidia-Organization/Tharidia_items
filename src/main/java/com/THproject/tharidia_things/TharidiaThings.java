@@ -205,7 +205,8 @@ public class TharidiaThings {
     public static final DeferredRegister<net.minecraft.world.inventory.MenuType<?>> MENU_TYPES = DeferredRegister
             .create(BuiltInRegistries.MENU, MODID);
 
-    // Create a Deferred Register to hold AttachmentTypes which will all be registered
+    // Create a Deferred Register to hold AttachmentTypes which will all be
+    // registered
     // under the "tharidiathings" namespace
     public static final DeferredRegister<AttachmentType<?>> ATTACHMENT_TYPES = DeferredRegister
             .create(NeoForgeRegistries.ATTACHMENT_TYPES, TharidiaThings.MODID);
@@ -338,14 +339,16 @@ public class TharidiaThings {
     // Cook Table (5×1×1 GeckoLib multiblock)
     public static final DeferredBlock<CookTableBlock> COOK_TABLE = BLOCKS.register("cook_table",
             () -> new CookTableBlock());
-    public static final DeferredItem<BlockItem> COOK_TABLE_ITEM = ITEMS.registerSimpleBlockItem("cook_table", COOK_TABLE);
+    public static final DeferredItem<BlockItem> COOK_TABLE_ITEM = ITEMS.registerSimpleBlockItem("cook_table",
+            COOK_TABLE);
     public static final DeferredBlock<CookTableDummyBlock> COOK_TABLE_DUMMY = BLOCKS.register("cook_table_dummy",
             () -> new CookTableDummyBlock());
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<CookTableBlockEntity>> COOK_TABLE_BLOCK_ENTITY =
-            BLOCK_ENTITIES.register("cook_table",
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<CookTableBlockEntity>> COOK_TABLE_BLOCK_ENTITY = BLOCK_ENTITIES
+            .register("cook_table",
                     () -> BlockEntityType.Builder.of(CookTableBlockEntity::new, COOK_TABLE.get()).build(null));
 
-    // Rotten Food – dropped when the cook table timer expires on unfinished ingredients
+    // Rotten Food – dropped when the cook table timer expires on unfinished
+    // ingredients
     public static final DeferredItem<Item> ROTTEN_FOOD = ITEMS.register("rotten_food",
             () -> new Item(new Item.Properties().stacksTo(64)));
 
@@ -1700,6 +1703,7 @@ public class TharidiaThings {
         ReviveCommands.register(event.getDispatcher());
         StableDebugCommand.register(event.getDispatcher());
         EquipCommand.register(event.getDispatcher());
+        PoisonCommand.register(event.getDispatcher());
     }
 
     /**
