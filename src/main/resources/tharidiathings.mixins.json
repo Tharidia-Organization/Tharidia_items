@@ -5,13 +5,16 @@
   "compatibilityLevel": "JAVA_21",
   "priority": 500,
   "mixins": [
+    "FallenChatMixin"
   ],
   "client": [
     "ClientSuggestionsMixin",
     "MapwrightRenderingMixin",
     "ArmorEquipMixin",
     "EpicFightArmorLayerMixin",
-    "HumanoidArmorLayerAccessor"
+    "HumanoidArmorLayerAccessor",
+    "MouseHandlerMixin",
+    "PreventEpicFightAttackFallenMixin"
   ],
   "injectors": {
     "defaultRequire": 0

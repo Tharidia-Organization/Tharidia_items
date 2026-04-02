@@ -11,9 +11,9 @@ import com.THproject.tharidia_things.network.revive.ReviveSyncPayload;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
+
 import com.THproject.tharidia_features.events.ReviveTracker;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -22,7 +22,6 @@ import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
@@ -38,6 +37,17 @@ public class ReviveLogic {
                     ReviveSyncPayload.sync(otherPlayer, joinedPlayer);
                 }
             }
+        }
+    }
+
+    @SubscribeEvent
+    public static void onFallenLogout(PlayerEvent.PlayerLoggedOutEvent event) {
+        if (event.getEntity().level().isClientSide())
+            return;
+        if (Revive.isPlayerFallen(event.getEntity())) {
+            ReviveTracker.onPlayerRevive(event.getEntity(), null, "logout");
+            event.getEntity().kill();
+            Revive.revivePlayer(event.getEntity());
         }
     }
 
@@ -63,16 +73,24 @@ public class ReviveLogic {
         }
     }
 
-    @SubscribeEvent
-    public static void onFallenLogout(PlayerLoggedOutEvent event) {
-        if (event.getEntity().level().isClientSide())
-            return;
-        if (Revive.isPlayerFallen(event.getEntity())) {
-            ReviveTracker.onPlayerRevive(event.getEntity(), null, "logout");
-            event.getEntity().kill();
-            Revive.revivePlayer(event.getEntity());
-        }
-    }
+    /**
+     * This method set dimensions only if player is fallen.
+     * If player is not fallen, set default player dimensions.
+     * In any case, we need to adjust the size of the fallen player
+     * based on the player's race
+     * Remember to call player.refreshDimensions() (both on client and server)
+     * to refresh the player dimension.
+     * N.B: The method Revive.fallPlayer() is called only on server, so maybe a packet
+     * is necessary to don't use PlayerTickEvent
+     */
+    // @SubscribeEvent
+    // public static void changeFallenHitbox(EntityEvent.Size event) {
+    //     if (event.getEntity() instanceof LocalPlayer player) {
+    //         if (Revive.isPlayerFallen(player)) {
+    //             event.setNewSize(EntityDimensions.scalable(1, 1));
+    //         }
+    //     }
+    // }
 
     @SubscribeEvent
     public static void onFallenBeingAttacked(LivingIncomingDamageEvent event) {
@@ -242,34 +260,39 @@ public class ReviveLogic {
             }
         }
 
-        if (player.level().isClientSide()) {
-            if (player.getData(ReviveAttachments.REVIVE_DATA.get()).isFallen()) {
-                player.setForcedPose(Pose.SWIMMING);
-                player.setSwimming(true);
-            } else {
-                player.setForcedPose(null);
-                player.setSwimming(false);
-            }
-
-            ReviveAttachments clientAttachments = player.getData(ReviveAttachments.REVIVE_DATA.get());
-            if (clientAttachments.isFallen())
-                clientAttachments.increaseTimeFallen();
-            return;
+        ReviveAttachments clientAttachments = player.getData(ReviveAttachments.REVIVE_DATA.get());
+        if (clientAttachments.isFallen() && clientAttachments.canRevive()) {
+            clientAttachments.increaseTimeFallen();
         }
 
-        if (Revive.isPlayerFallen(player)) {
-            ReviveAttachments reviverAttachments = player.getData(ReviveAttachments.REVIVE_DATA.get());
-            UUID revivingUUID = reviverAttachments.getRevivingPlayer();
+        // if (Revive.isPlayerFallen(player)) {
+        //     ReviveAttachments reviverAttachments = player.getData(ReviveAttachments.REVIVE_DATA.get());
+        //     UUID revivingUUID = reviverAttachments.getRevivingPlayer();
 
-            if (revivingUUID != null) {
-                Player target = player.level().getPlayerByUUID(revivingUUID);
-                ReviveAttachments attachments = player.getData(ReviveAttachments.REVIVE_DATA.get());
-                attachments.increaseTimeFallen();
+        //     if (revivingUUID != null) {
+        //         Player target = player.level().getPlayerByUUID(revivingUUID);
+        //         ReviveAttachments attachments = player.getData(ReviveAttachments.REVIVE_DATA.get());
+        //         attachments.increaseTimeFallen();
 
-                if (attachments.getTimeFallen() >= ReviveAttachments.MAX_FALLEN_TICK) {
-                    player.kill();
-                    Revive.revivePlayer(player, target);
-                }
+        //         if (attachments.getTimeFallen() >= ReviveAttachments.MAX_FALLEN_TICK) {
+        //             player.kill();
+        //             Revive.revivePlayer(player, target);
+        //         }
+        //     }
+        // }
+    }
+
+    @SubscribeEvent
+    public static void onFallenTick(PlayerTickEvent.Post event) {
+        Player player = event.getEntity();
+
+        if (player.level().isClientSide) return;
+
+        ReviveAttachments attachment = player.getData(ReviveAttachments.REVIVE_DATA.get());
+
+        if (Revive.isPlayerFallen(player) && attachment.canRevive()) {
+            if (attachment.getTimeFallen() >= ReviveAttachments.MAX_FALLEN_TICK) {
+                player.kill();
             }
         }
     }
