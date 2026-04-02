@@ -100,6 +100,7 @@ import com.THproject.tharidia_things.item.DirtyStrawItem;
 import com.THproject.tharidia_things.item.ShelterUpgradeKitItem;
 import com.THproject.tharidia_things.item.StationCrystalRepairerItem;
 import com.THproject.tharidia_things.item.alchemist_potion.AlchemistPotions;
+import com.THproject.tharidia_things.item.alchemist_potion.PotionComponents;
 import com.THproject.tharidia_things.item.crusher_hammers.IronCrusherHammer;
 import com.THproject.tharidia_things.registry.BabyMobRegistry;
 import com.THproject.tharidia_things.client.ClientPacketHandler;
@@ -134,6 +135,7 @@ import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.loading.FMLEnvironment;
+import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -199,6 +201,9 @@ public class TharidiaThings {
     public static final DeferredRegister<net.minecraft.world.inventory.MenuType<?>> MENU_TYPES = DeferredRegister
             .create(BuiltInRegistries.MENU, MODID);
 
+    public static final DeferredRegister<DataComponentType<?>> DATA_COMPONENT_TYPES = DeferredRegister
+            .create(Registries.DATA_COMPONENT_TYPE, MODID);
+            
     // Recipes
     public static final DeferredRegister<RecipeType<?>> RECIPE_TYPES = DeferredRegister.create(Registries.RECIPE_TYPE,
             MODID);
@@ -824,6 +829,9 @@ public class TharidiaThings {
         StaminaAttachments.ATTACHMENT_TYPES.register(modEventBus);
         AnimalWellnessAttachments.ATTACHMENT_TYPES.register(modEventBus);
 
+        // Register Data Components
+        DATA_COMPONENT_TYPES.register(modEventBus);
+
         // Register custom stats
         ModStats.register(modEventBus);
 
@@ -882,6 +890,7 @@ public class TharidiaThings {
         VeinSediments.init();
 
         // Register Alchemist Potions
+        PotionComponents.register();
         AlchemistPotions.register();
 
         // Register Seed Extraction
