@@ -20,13 +20,17 @@ public class PoisonAttachments implements INBTSerializable<CompoundTag> {
     private long hardPoisonTime = -1L;
 
     public void setSoftPoisoned() {
-        this.isSoftPoisoned = true;
-        this.softPoisonTime = System.currentTimeMillis();
+        if (!this.isSoftPoisoned) {
+            this.isSoftPoisoned = true;
+            this.softPoisonTime = System.currentTimeMillis();
+        }
     }
 
     public void setHardPoisoned() {
-        this.isHardPoisoned = true;
-        this.hardPoisonTime = System.currentTimeMillis();
+        if (!this.isHardPoisoned) {
+            this.isHardPoisoned = true;
+            this.hardPoisonTime = System.currentTimeMillis();
+        }
     }
 
     public void removeSoftPoison() {

@@ -63,7 +63,6 @@ public class RenderPoisonScreen implements LayeredDraw.Layer {
             float currentRadius = alpha * maxBlurRadius;
 
             for (PostPass pass : passes) {
-                // pass.getEffect() is usually public
                 Uniform uniform = pass.getEffect().getUniform("Radius");
                 if (uniform != null) {
                     uniform.set(currentRadius);

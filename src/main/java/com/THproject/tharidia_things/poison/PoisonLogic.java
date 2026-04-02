@@ -26,9 +26,10 @@ public class PoisonLogic {
     }
 
     @SubscribeEvent
-    public static void onFoodEat(LivingEntityUseItemEvent.Finish event) {
+    public static void onPoisonedFoodEat(LivingEntityUseItemEvent.Start event) {
         if (event.getEntity().level().isClientSide || !(event.getEntity() instanceof Player player))
             return;
+
         PoisonAttachments attachment = PoisonHelper.getAttachment(player);
         if (attachment == null)
             return;
