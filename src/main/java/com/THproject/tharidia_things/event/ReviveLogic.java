@@ -3,8 +3,8 @@ package com.THproject.tharidia_things.event;
 import java.util.UUID;
 import com.THproject.tharidia_things.TharidiaThings;
 import com.THproject.tharidia_things.compoundTag.ReviveAttachments;
-import com.THproject.tharidia_things.config.ReviveConfig;
 import com.THproject.tharidia_things.features.Revive;
+import com.THproject.tharidia_things.features.Revive.FallState;
 import com.THproject.tharidia_things.network.RightClickReleasePayload;
 import com.THproject.tharidia_things.network.revive.ReviveSyncPayload;
 
@@ -62,7 +62,7 @@ public class ReviveLogic {
                 ReviveAttachments playerAttachments = player.getData(ReviveAttachments.REVIVE_DATA.get());
                 if (playerAttachments.canFall()) {
                     ReviveTracker.onPlayerFallen(player, event.getSource());
-                    Revive.fallPlayer(player, true);
+                    Revive.fallPlayer(player, FallState.DEATH);
                     event.setCanceled(true);
                     event.getEntity().setHealth(1);
                 }
@@ -80,16 +80,17 @@ public class ReviveLogic {
      * based on the player's race
      * Remember to call player.refreshDimensions() (both on client and server)
      * to refresh the player dimension.
-     * N.B: The method Revive.fallPlayer() is called only on server, so maybe a packet
+     * N.B: The method Revive.fallPlayer() is called only on server, so maybe a
+     * packet
      * is necessary to don't use PlayerTickEvent
      */
     // @SubscribeEvent
     // public static void changeFallenHitbox(EntityEvent.Size event) {
-    //     if (event.getEntity() instanceof LocalPlayer player) {
-    //         if (Revive.isPlayerFallen(player)) {
-    //             event.setNewSize(EntityDimensions.scalable(1, 1));
-    //         }
-    //     }
+    // if (event.getEntity() instanceof LocalPlayer player) {
+    // if (Revive.isPlayerFallen(player)) {
+    // event.setNewSize(EntityDimensions.scalable(1, 1));
+    // }
+    // }
     // }
 
     @SubscribeEvent
@@ -137,19 +138,10 @@ public class ReviveLogic {
             boolean selfIsFallen = playerReviveAttachments.isFallen();
 
             if (targetIsFallen && !selfIsFallen) {
-                if (interractReviveAttachments.canRevive()) {
-                    // Check item config on server side
-                    String item_to_revive = "";
-                    try {
-                        item_to_revive = ReviveConfig.config.REVIVE_ITEM.get("Value").toString();
-                    } catch (Exception e) {
-                        item_to_revive = "";
-                    }
-                    if (item_to_revive == null)
-                        item_to_revive = "";
-
-                    boolean hasItem = item_to_revive.equals("") ||
-                            event.getEntity().getMainHandItem().getItem().toString().equals(item_to_revive);
+                FallState fallState = interractReviveAttachments.getFallState();
+                if (fallState.canRevive) {
+                    boolean hasItem = event.getEntity().getMainHandItem()
+                            .getItem() == fallState.itemToRevive;
 
                     if (hasItem) {
                         // Start reviving state
@@ -208,17 +200,9 @@ public class ReviveLogic {
                     ReviveAttachments targetAttachments = target.getData(ReviveAttachments.REVIVE_DATA.get());
 
                     // Check Item Requirement again (in case they switched item)
-                    String item_to_revive = "";
-                    try {
-                        item_to_revive = ReviveConfig.config.REVIVE_ITEM.get("Value").toString();
-                    } catch (Exception e) {
-                        item_to_revive = "";
-                    }
-                    if (item_to_revive == null)
-                        item_to_revive = "";
-
-                    boolean hasItem = item_to_revive.equals("") ||
-                            player.getMainHandItem().getItem().toString().equals(item_to_revive);
+                    FallState fallState = targetAttachments.getFallState();
+                    boolean hasItem = event.getEntity().getMainHandItem()
+                            .getItem() == fallState.itemToRevive;
 
                     if (hasItem) {
                         // Progress revival
@@ -236,7 +220,7 @@ public class ReviveLogic {
                             ReviveSyncPayload.sync(target);
                             ReviveSyncPayload.syncSelf(player);
 
-                            if (!item_to_revive.equals("")) {
+                            if (hasItem) {
                                 player.getMainHandItem().shrink(1);
                             }
                         }
@@ -261,36 +245,21 @@ public class ReviveLogic {
         }
 
         ReviveAttachments clientAttachments = player.getData(ReviveAttachments.REVIVE_DATA.get());
-        if (clientAttachments.isFallen() && clientAttachments.canRevive()) {
+        if (clientAttachments.isFallen() && clientAttachments.getFallState().canRevive) {
             clientAttachments.increaseTimeFallen();
         }
-
-        // if (Revive.isPlayerFallen(player)) {
-        //     ReviveAttachments reviverAttachments = player.getData(ReviveAttachments.REVIVE_DATA.get());
-        //     UUID revivingUUID = reviverAttachments.getRevivingPlayer();
-
-        //     if (revivingUUID != null) {
-        //         Player target = player.level().getPlayerByUUID(revivingUUID);
-        //         ReviveAttachments attachments = player.getData(ReviveAttachments.REVIVE_DATA.get());
-        //         attachments.increaseTimeFallen();
-
-        //         if (attachments.getTimeFallen() >= ReviveAttachments.MAX_FALLEN_TICK) {
-        //             player.kill();
-        //             Revive.revivePlayer(player, target);
-        //         }
-        //     }
-        // }
     }
 
     @SubscribeEvent
     public static void onFallenTick(PlayerTickEvent.Post event) {
         Player player = event.getEntity();
 
-        if (player.level().isClientSide) return;
+        if (player.level().isClientSide)
+            return;
 
         ReviveAttachments attachment = player.getData(ReviveAttachments.REVIVE_DATA.get());
 
-        if (Revive.isPlayerFallen(player) && attachment.canRevive()) {
+        if (Revive.isPlayerFallen(player) && attachment.getFallState().canRevive) {
             if (attachment.getTimeFallen() >= ReviveAttachments.MAX_FALLEN_TICK) {
                 player.kill();
             }

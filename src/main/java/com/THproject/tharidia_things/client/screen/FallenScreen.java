@@ -1,7 +1,5 @@
 package com.THproject.tharidia_things.client.screen;
 
-import java.security.Permission;
-
 import com.THproject.tharidia_things.compoundTag.ReviveAttachments;
 import com.THproject.tharidia_things.network.revive.ReviveGiveUpPacket;
 import net.minecraft.client.Minecraft;
@@ -26,7 +24,8 @@ public class FallenScreen extends Screen {
         int buttonHeight = 20;
         int barY = this.height / 2 + 10;
         if (Minecraft.getInstance().player != null
-                && Minecraft.getInstance().player.getData(ReviveAttachments.REVIVE_DATA.get()).canRevive()) {
+                && Minecraft.getInstance().player.getData(ReviveAttachments.REVIVE_DATA.get())
+                        .getFallState().canRevive) {
             this.addRenderableWidget(
                     Button.builder(Component.translatable("gui.tharidia_things.revive.fallen.give_up"), button -> {
                         PacketDistributor.sendToServer(new ReviveGiveUpPacket());
@@ -45,7 +44,8 @@ public class FallenScreen extends Screen {
         super.render(guiGraphics, mouseX, mouseY, partialTick);
 
         if (Minecraft.getInstance().player != null
-                && !Minecraft.getInstance().player.getData(ReviveAttachments.REVIVE_DATA.get()).canRevive()) {
+                && !Minecraft.getInstance().player.getData(ReviveAttachments.REVIVE_DATA.get())
+                        .getFallState().canRevive) {
             return;
         }
 

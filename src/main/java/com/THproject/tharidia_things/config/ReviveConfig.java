@@ -29,14 +29,6 @@ public class ReviveConfig {
     }
 
     @Expose
-    public Map<String, Object> REVIVE_ITEM = new HashMap<String, Object>() {
-        {
-            put("//", "Item to use to revive players");
-            put("Value", new String());
-        }
-    };
-
-    @Expose
     public Map<String, Object> TIME_TO_RES = new HashMap<String, Object>() {
         {
             put("//", "Time to revive a player");

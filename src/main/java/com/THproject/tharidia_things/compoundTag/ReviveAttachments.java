@@ -4,6 +4,7 @@ import java.util.UUID;
 import java.util.function.Supplier;
 
 import com.THproject.tharidia_things.TharidiaThings;
+import com.THproject.tharidia_things.features.Revive.FallState;
 
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.nbt.CompoundTag;
@@ -31,7 +32,7 @@ public class ReviveAttachments implements INBTSerializable<CompoundTag> {
     private boolean can_fall = true;
 
     // Determine if player can be revived when fallen
-    private boolean can_revive = false;
+    private FallState fallState = FallState.NONE;
 
     // Check if player is fallen
     private boolean is_fallen = false;
@@ -88,16 +89,16 @@ public class ReviveAttachments implements INBTSerializable<CompoundTag> {
         this.fallen_time--;
     }
 
-    public void setCanRevive(boolean val) {
-        this.can_revive = val;
+    public void setFallState(FallState state) {
+        this.fallState = state;
     }
 
     public void setCanFall(boolean val) {
         this.can_fall = val;
     }
 
-    public boolean canRevive() {
-        return can_revive;
+    public FallState getFallState() {
+        return fallState;
     }
 
     public boolean canFall() {
@@ -109,7 +110,7 @@ public class ReviveAttachments implements INBTSerializable<CompoundTag> {
         CompoundTag nbt = new CompoundTag();
         nbt.putInt("res_time", this.res_time);
         nbt.putInt("time_fallen", this.fallen_time);
-        nbt.putBoolean("can_revive", this.can_revive);
+        nbt.putString("fall_state", this.fallState.toString());
         nbt.putBoolean("is_fallen", this.is_fallen);
         nbt.putBoolean("can_fall", this.can_fall);
         if (revivingPlayer != null)
@@ -121,7 +122,7 @@ public class ReviveAttachments implements INBTSerializable<CompoundTag> {
     public void deserializeNBT(Provider provider, CompoundTag nbt) {
         this.res_time = nbt.getInt("res_time");
         this.fallen_time = nbt.getInt("time_fallen");
-        this.can_revive = nbt.getBoolean("can_revive");
+        this.fallState = FallState.valueOf(nbt.getString("fall_state"));
         this.can_fall = nbt.getBoolean("can_fall");
         this.is_fallen = nbt.getBoolean("is_fallen");
         if (nbt.hasUUID("reviving_player"))
