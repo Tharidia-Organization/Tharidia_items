@@ -126,8 +126,6 @@ public final class DietEffectApplier {
     private static void setMobEffect(Player player, Holder<MobEffect> effect, int amplifier, boolean enable) {
         if (enable) {
             player.addEffect(new MobEffectInstance(effect, EFFECT_DURATION, amplifier, true, false, true));
-        } else if (player.hasEffect(effect)) {
-            player.removeEffect(effect);
         }
     }
 

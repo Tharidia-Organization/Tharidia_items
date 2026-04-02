@@ -25,9 +25,7 @@ public class RenderPoisonScreen implements LayeredDraw.Layer {
             return;
 
         PoisonAttachments attachment = PoisonHelper.getAttachment(player);
-        float alpha = (attachment != null)
-                ? (attachment.isHardPoisoned() ? attachment.getHardProgress() : attachment.getSoftProgress())
-                : 0;
+        float alpha = (attachment != null) ? (attachment.getProgress()) : 0;
 
         // 1. Manage the Loading/Unloading of the shader
         PostChain currentEffect = mc.gameRenderer.currentEffect();

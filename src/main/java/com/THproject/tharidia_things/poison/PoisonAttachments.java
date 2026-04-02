@@ -6,12 +6,10 @@ import com.THproject.tharidia_things.TharidiaThings;
 
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.attachment.AttachmentType;
 import net.neoforged.neoforge.common.util.INBTSerializable;
 
 public class PoisonAttachments implements INBTSerializable<CompoundTag> {
-
     // Handle screen effects on client
     private float softProgress = 0.0f;
     private float hardProgress = 0.0f;
@@ -50,11 +48,11 @@ public class PoisonAttachments implements INBTSerializable<CompoundTag> {
     }
 
     public void setSoftProgress(float progress) {
-        this.softProgress = progress;
+        this.softProgress = Math.min(progress, 1.0f);
     }
 
     public void setHardProgress(float progress) {
-        this.hardProgress = progress;
+        this.hardProgress = Math.min(progress, 1.0f);
     }
 
     public long getSoftPoisonTime() {
@@ -66,11 +64,25 @@ public class PoisonAttachments implements INBTSerializable<CompoundTag> {
     }
 
     public float getSoftProgress() {
-        return this.softProgress;
+        return Math.min(this.softProgress, 1.0f);
     }
 
     public float getHardProgress() {
-        return this.hardProgress;
+        return Math.min(this.hardProgress, 1.0f);
+    }
+
+    public float getProgress() {
+        if (this.isHardPoisoned()) {
+            return this.getHardProgress();
+        } else if (this.isSoftPoisoned()) {
+            return this.getSoftProgress();
+        }
+        return 0.0f;
+    }
+
+    public void cure() {
+        this.removeHardPoison();
+        this.removeSoftPoison();
     }
 
     public void copyFrom(PoisonAttachments other) {

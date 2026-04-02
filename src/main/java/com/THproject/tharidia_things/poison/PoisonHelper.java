@@ -1,7 +1,7 @@
 package com.THproject.tharidia_things.poison;
 
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
+import com.THproject.tharidia_things.features.Revive;
+
 import net.minecraft.world.entity.player.Player;
 
 public class PoisonHelper {
@@ -14,23 +14,6 @@ public class PoisonHelper {
         return null;
     }
 
-    public static void applyNauseaEffect(Player player) {
-        PoisonAttachments attachments = getAttachment(player);
-        if (attachments == null)
-            return;
-
-        float progress = 0.0f;
-        if (attachments.isHardPoisoned()) {
-            progress = attachments.getHardProgress();
-        } else if (attachments.isSoftPoisoned()) {
-            progress = attachments.getSoftProgress();
-        }
-
-        if (progress >= 0.66f) {
-            player.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 200, 0, false, false));
-        }
-    }
-
     public static void calcPoisonProgress(Player player) {
         long currentTime = System.currentTimeMillis();
         PoisonAttachments attachment = getAttachment(player);
@@ -38,36 +21,27 @@ public class PoisonHelper {
             return;
 
         if (attachment.isSoftPoisoned()) {
-            attachment.setSoftProgress(
-                    Math.min(1.0f, (float) (currentTime - attachment.getSoftPoisonTime()) / SOFT_POISON_DURATION));
+            attachment.setSoftProgress((float) (currentTime - attachment.getSoftPoisonTime()) / SOFT_POISON_DURATION);
         } else {
             attachment.setSoftProgress(0.0f);
         }
 
         if (attachment.isHardPoisoned()) {
-            attachment.setHardProgress(
-                    Math.min(1.0f, (float) (currentTime - attachment.getHardPoisonTime()) / HARD_POISON_DURATION));
+            attachment.setHardProgress((float) (currentTime - attachment.getHardPoisonTime()) / HARD_POISON_DURATION);
         } else {
             attachment.setHardProgress(0.0f);
         }
     }
 
     /**
-     * Remove poison stat if the duration has exceeded. This should be called every
-     * tick to ensure timely removal of poison effects.
+     * Fall the player if the duration has exceeded.
      */
-    public static void removeIfTimeExceed(Player player) {
-        long currentTime = System.currentTimeMillis();
+    public static void fallIfTimeExceed(Player player) {
         PoisonAttachments attachment = getAttachment(player);
         if (attachment == null)
             return;
 
-        if (attachment.isSoftPoisoned() && currentTime - attachment.getSoftPoisonTime() >= SOFT_POISON_DURATION) {
-            attachment.removeSoftPoison();
-        }
-        if (attachment.isHardPoisoned() && currentTime - attachment.getHardPoisonTime() >= HARD_POISON_DURATION) {
-            attachment.removeHardPoison();
-        }
-
+        if (attachment.getProgress() >= 1.0f && !Revive.isPlayerFallen(player))
+            Revive.fallPlayer(player, true);
     }
 }
