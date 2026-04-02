@@ -30,7 +30,7 @@ public class ReviveClientHandler {
 
         Screen currentScreen = mc.screen;
 
-        if (reviveData.isFallen() && reviveData.canRevive()) {
+        if (reviveData.isFallen() && reviveData.getFallState().canRevive) {
             if (!(currentScreen instanceof FallenScreen) && !(currentScreen instanceof ChatScreen)) {
                 mc.setScreen(new FallenScreen());
             }
