@@ -1,6 +1,7 @@
 package com.THproject.tharidia_things.poison;
 
 import com.THproject.tharidia_things.features.Revive;
+import com.THproject.tharidia_things.features.Revive.FallState;
 
 import net.minecraft.world.entity.player.Player;
 
@@ -42,6 +43,14 @@ public class PoisonHelper {
             return;
 
         if (attachment.getProgress() >= 1.0f && !Revive.isPlayerFallen(player))
-            Revive.fallPlayer(player, true);
+            Revive.fallPlayer(player, FallState.POISON);
+    }
+
+    public static void cure(Player player) {
+        PoisonAttachments attachment = getAttachment(player);
+        if (attachment == null)
+            return;
+
+        attachment.cure();
     }
 }

@@ -8,6 +8,7 @@ import javax.annotation.Nullable;
 
 import com.THproject.tharidia_things.compoundTag.ReviveAttachments;
 import com.THproject.tharidia_things.network.revive.ReviveSyncPayload;
+import com.THproject.tharidia_things.poison.PoisonHelper;
 
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -61,6 +62,10 @@ public class Revive {
         fallenPlayers.remove(player.getUUID());
 
         ReviveAttachments reviveAttachments = player.getData(ReviveAttachments.REVIVE_DATA.get());
+        if(reviveAttachments.getFallState() == FallState.POISON){
+            PoisonHelper.cure(player);
+        }
+        
         reviveAttachments.setFallState(FallState.NONE);
         reviveAttachments.setIsFallen(false);
 
