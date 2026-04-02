@@ -6,6 +6,12 @@ import com.THproject.tharidia_things.features.Revive.FallState;
 import net.minecraft.world.entity.player.Player;
 
 public class PoisonHelper {
+    public enum PoisonType {
+        NONE,
+        SOFT,
+        HARD
+    }
+    
     public static final long SOFT_POISON_DURATION = 1000L * 40; // 40 seconds
     public static final long HARD_POISON_DURATION = 1000L * 20; // 20 seconds
 
@@ -21,16 +27,19 @@ public class PoisonHelper {
         if (attachment == null)
             return;
 
-        if (attachment.isSoftPoisoned()) {
-            attachment.setSoftProgress((float) (currentTime - attachment.getSoftPoisonTime()) / SOFT_POISON_DURATION);
-        } else {
-            attachment.setSoftProgress(0.0f);
-        }
-
-        if (attachment.isHardPoisoned()) {
-            attachment.setHardProgress((float) (currentTime - attachment.getHardPoisonTime()) / HARD_POISON_DURATION);
-        } else {
-            attachment.setHardProgress(0.0f);
+        switch (attachment.getPoisonType()) {
+            case HARD:
+                attachment.setProgress((float) (currentTime - attachment.getPoisonTime()) / HARD_POISON_DURATION);
+                break;
+            case SOFT:
+                attachment.setProgress((float) (currentTime - attachment.getPoisonTime()) / SOFT_POISON_DURATION);
+                break;
+            case NONE:
+                attachment.setProgress(0.0f);
+                break;
+            default:
+                attachment.setProgress(0.0f);
+                break;
         }
     }
 
@@ -51,6 +60,6 @@ public class PoisonHelper {
         if (attachment == null)
             return;
 
-        attachment.cure();
+        attachment.removePoison();
     }
 }

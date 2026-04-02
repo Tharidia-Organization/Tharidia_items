@@ -1,6 +1,7 @@
 package com.THproject.tharidia_things.poison;
 
 import com.THproject.tharidia_things.TharidiaThings;
+import com.THproject.tharidia_things.poison.PoisonHelper.PoisonType;
 
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -34,6 +35,6 @@ public class PoisonLogic {
         if (attachment == null)
             return;
 
-        attachment.setSoftPoisoned();
+        attachment.setPoisoned(PoisonType.SOFT);
     }
 }

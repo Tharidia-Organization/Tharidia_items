@@ -1,6 +1,7 @@
 package com.THproject.tharidia_things.poison;
 
 import com.THproject.tharidia_things.TharidiaThings;
+import com.THproject.tharidia_things.poison.PoisonHelper.PoisonType;
 
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -24,20 +25,14 @@ public record PoisonSyncPacket(int entityId, PoisonAttachments attachments) impl
     public static final StreamCodec<RegistryFriendlyByteBuf, PoisonSyncPacket> STREAM_CODEC = StreamCodec.of(
             (buf, packet) -> {
                 buf.writeVarInt(packet.entityId);
-                buf.writeFloat(packet.attachments.getSoftProgress());
-                buf.writeFloat(packet.attachments.getHardProgress());
-                buf.writeBoolean(packet.attachments.isSoftPoisoned());
-                buf.writeBoolean(packet.attachments.isHardPoisoned());
+                buf.writeFloat(packet.attachments.getProgress());
+                buf.writeUtf(packet.attachments.getPoisonType().toString());
             },
             buf -> {
                 int id = buf.readVarInt();
                 PoisonAttachments attachments = new PoisonAttachments();
-                attachments.setSoftProgress(buf.readFloat());
-                attachments.setHardProgress(buf.readFloat());
-                if (buf.readBoolean())
-                    attachments.setSoftPoisoned();
-                if (buf.readBoolean())
-                    attachments.setHardPoisoned();
+                attachments.setProgress(buf.readFloat());
+                attachments.setPoisoned(PoisonType.valueOf(buf.readUtf()));
                 return new PoisonSyncPacket(id, attachments);
             });
 

@@ -3,6 +3,7 @@ package com.THproject.tharidia_things.poison;
 import java.util.function.Supplier;
 
 import com.THproject.tharidia_things.TharidiaThings;
+import com.THproject.tharidia_things.poison.PoisonHelper.PoisonType;
 
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.nbt.CompoundTag;
@@ -10,114 +11,70 @@ import net.neoforged.neoforge.attachment.AttachmentType;
 import net.neoforged.neoforge.common.util.INBTSerializable;
 
 public class PoisonAttachments implements INBTSerializable<CompoundTag> {
+    
+
     // Handle screen effects on client
-    private float softProgress = 0.0f;
-    private float hardProgress = 0.0f;
+    private float poisonProgress = 0.0f;
 
-    private boolean isSoftPoisoned = false;
-    private boolean isHardPoisoned = false;
-    private long softPoisonTime = -1L;
-    private long hardPoisonTime = -1L;
+    private PoisonType poisonType = PoisonType.NONE;
+    private long poisonTime = -1L;
 
-    public void setSoftPoisoned() {
-        if (!this.isSoftPoisoned) {
-            this.isSoftPoisoned = true;
-            this.softPoisonTime = System.currentTimeMillis();
+    public void setPoisoned(PoisonType type) {
+        if (isPoisoned(PoisonType.SOFT) && type == PoisonType.HARD) {
+            this.poisonType = type;
+            this.poisonTime = System.currentTimeMillis();
+        } else if (!isPoisoned()) {
+            this.poisonType = type;
+            this.poisonTime = System.currentTimeMillis();
         }
     }
 
-    public void setHardPoisoned() {
-        if (!this.isHardPoisoned) {
-            this.isHardPoisoned = true;
-            this.hardPoisonTime = System.currentTimeMillis();
-        }
+    public PoisonType getPoisonType() {
+        return this.poisonType;
     }
 
-    public void removeSoftPoison() {
-        this.isSoftPoisoned = false;
-        this.softPoisonTime = -1L;
+    public boolean isPoisoned(PoisonType type) {
+        return this.poisonType == type;
     }
 
-    public void removeHardPoison() {
-        this.isHardPoisoned = false;
-        this.hardPoisonTime = -1L;
+    public boolean isPoisoned() {
+        return this.poisonType != PoisonType.NONE;
     }
 
-    public boolean isSoftPoisoned() {
-        return this.isSoftPoisoned;
+    public void removePoison() {
+        this.poisonType = PoisonType.NONE;
+        this.poisonTime = -1L;
     }
 
-    public boolean isHardPoisoned() {
-        return this.isHardPoisoned;
+    public void setProgress(float progress) {
+        this.poisonProgress = Math.min(progress, 1.0f);
     }
 
-    public void setSoftProgress(float progress) {
-        this.softProgress = Math.min(progress, 1.0f);
-    }
-
-    public void setHardProgress(float progress) {
-        this.hardProgress = Math.min(progress, 1.0f);
-    }
-
-    public long getSoftPoisonTime() {
-        return this.softPoisonTime;
-    }
-
-    public long getHardPoisonTime() {
-        return this.hardPoisonTime;
-    }
-
-    public float getSoftProgress() {
-        return Math.min(this.softProgress, 1.0f);
-    }
-
-    public float getHardProgress() {
-        return Math.min(this.hardProgress, 1.0f);
+    public long getPoisonTime() {
+        return this.poisonTime;
     }
 
     public float getProgress() {
-        if (this.isHardPoisoned()) {
-            return this.getHardProgress();
-        } else if (this.isSoftPoisoned()) {
-            return this.getSoftProgress();
-        }
-        return 0.0f;
-    }
-
-    public void cure() {
-        this.removeHardPoison();
-        this.removeSoftPoison();
+        return Math.min(this.poisonProgress, 1.0f);
     }
 
     public void copyFrom(PoisonAttachments other) {
-        this.softProgress = other.softProgress;
-        this.hardProgress = other.hardProgress;
-        this.isSoftPoisoned = other.isSoftPoisoned;
-        this.isHardPoisoned = other.isHardPoisoned;
-        this.softPoisonTime = other.softPoisonTime;
-        this.hardPoisonTime = other.hardPoisonTime;
+        this.poisonProgress = other.getProgress();
+        this.poisonTime = other.getPoisonTime();
     }
 
     @Override
     public CompoundTag serializeNBT(Provider provider) {
         CompoundTag nbt = new CompoundTag();
-        nbt.putFloat("softProgress", this.softProgress);
-        nbt.putFloat("hardProgress", this.hardProgress);
-        nbt.putBoolean("isSoftPoisoned", this.isSoftPoisoned);
-        nbt.putBoolean("isHardPoisoned", this.isHardPoisoned);
-        nbt.putLong("softPoisonTime", this.softPoisonTime);
-        nbt.putLong("hardPoisonTime", this.hardPoisonTime);
+        nbt.putFloat("PoisonProgress", this.getProgress());
+        nbt.putString("PoisonType", getPoisonType().toString());
         return nbt;
     }
 
     @Override
     public void deserializeNBT(Provider provider, CompoundTag nbt) {
-        this.softProgress = nbt.getFloat("softProgress");
-        this.hardProgress = nbt.getFloat("hardProgress");
-        this.isSoftPoisoned = nbt.getBoolean("isSoftPoisoned");
-        this.isHardPoisoned = nbt.getBoolean("isHardPoisoned");
-        this.softPoisonTime = nbt.getLong("softPoisonTime");
-        this.hardPoisonTime = nbt.getLong("hardPoisonTime");
+        this.setProgress(nbt.getFloat("PoisonProgress"));
+        this.setPoisoned(PoisonType.valueOf(nbt.getString("PoisonType")));
     }
 
     public static final Supplier<AttachmentType<PoisonAttachments>> POISON = TharidiaThings.ATTACHMENT_TYPES
