@@ -221,26 +221,26 @@ public class AnimalWellnessHandler {
      * Process production if animal is ready.
      */
     private static void processProduction(LivingEntity entity, AnimalWellnessData data) {
-        if (!data.shouldProduce()) {
-            return;
-        }
+        // if (!data.shouldProduce()) {
+        //     return;
+        // }
 
-        AnimalProductionConfig config = AnimalConfigRegistry.getConfig(data.getEntityTypeId()).orElse(null);
-        if (config == null || config.production() == null) {
-            return;
-        }
+        // AnimalProductionConfig config = AnimalConfigRegistry.getConfig(data.getEntityTypeId()).orElse(null);
+        // if (config == null || config.production() == null) {
+        //     return;
+        // }
 
-        // Produce items
-        for (AnimalProductionConfig.ProductItem product : config.production().products()) {
-            var item = BuiltInRegistries.ITEM.get(product.item());
-            if (item != null) {
-                ItemStack stack = new ItemStack(item, product.count());
-                entity.spawnAtLocation(stack);
-                LOGGER.debug("{} produced {}", EntityType.getKey(entity.getType()), product.item());
-            }
-        }
+        // // Produce items
+        // for (AnimalProductionConfig.ProductItem product : config.production().products()) {
+        //     var item = BuiltInRegistries.ITEM.get(product.item());
+        //     if (item != null) {
+        //         ItemStack stack = new ItemStack(item, product.count());
+        //         entity.spawnAtLocation(stack);
+        //         LOGGER.debug("{} produced {}", EntityType.getKey(entity.getType()), product.item());
+        //     }
+        // }
 
-        data.setLastProductionTimestamp(System.currentTimeMillis());
+        // data.setLastProductionTimestamp(System.currentTimeMillis());
     }
 
     /**
