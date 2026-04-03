@@ -32,12 +32,12 @@ public class AlchemistPotions {
             () -> new Item(new Item.Properties()) {
                 @Override
                 public int getUseDuration(ItemStack stack, LivingEntity entity) {
-                    return 10; // faster than normal (vanilla = 32, previous = 20)
+                    return 32; // faster than normal (vanilla = 32, previous = 20)
                 };
 
                 @Override
                 public UseAnim getUseAnimation(ItemStack stack) {
-                    return UseAnim.BOW;
+                    return UseAnim.DRINK;
                 }
 
                 @Override
@@ -110,12 +110,12 @@ public class AlchemistPotions {
             "drop_potion", () -> new Item(new Item.Properties()) {
                 @Override
                 public int getUseDuration(ItemStack stack, LivingEntity entity) {
-                    return 32; // normal vanilla drink speed
+                    return 10; // normal vanilla drink speed
                 };
 
                 @Override
                 public UseAnim getUseAnimation(ItemStack stack) {
-                    return UseAnim.DRINK;
+                    return UseAnim.BOW;
                 }
 
                 @Override

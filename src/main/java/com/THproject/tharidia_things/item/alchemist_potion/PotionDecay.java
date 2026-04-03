@@ -52,6 +52,9 @@ public class PotionDecay {
         if (!AlchemistPotions.isPotion(carried) || !AlchemistPotions.isPotion(stackedOn))
             return;
 
+        if(carried.getItem() != stackedOn.getItem())
+            return;
+
         long mouseTime = carried.getOrDefault(PotionComponents.CRAFTED_TIME.get(), -1L);
         long inventoryTime = stackedOn.getOrDefault(PotionComponents.CRAFTED_TIME.get(), -1L);
 
@@ -59,6 +62,7 @@ public class PotionDecay {
             return;
 
         // 2. Logic Check
+        long minTime = Math.min(mouseTime, inventoryTime);
         long diffTime = Math.abs(mouseTime - inventoryTime);
 
         if (diffTime < AlchemistPotions.DECAY_TOLERANCE) {
@@ -71,8 +75,8 @@ public class PotionDecay {
                 stackedOn.grow(transfer);
                 carried.shrink(transfer);
 
-                // Update time (perhaps take the average or keep the oldest?)
-                stackedOn.set(PotionComponents.CRAFTED_TIME, inventoryTime);
+                // Update time (take the minimum of the two)
+                stackedOn.set(PotionComponents.CRAFTED_TIME, minTime);
 
                 event.setCanceled(true); // Prevent vanilla behavior
             }
