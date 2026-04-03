@@ -25,8 +25,11 @@ import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.registries.DeferredItem;
 
 public class AlchemistPotions {
-    public static final DeferredItem<Item> BALL_POTION = TharidiaThings.ITEMS.register(
-            "ball_potion", () -> new Item(new Item.Properties()) {
+    public static final long POTION_DECAY_TIME = 1000L * 20L;
+    public static final long DECAY_TOLERANCE = 1000L * 10L;
+
+    public static final DeferredItem<Item> BALL_POTION = TharidiaThings.ITEMS.register("ball_potion",
+            () -> new Item(new Item.Properties()) {
                 @Override
                 public int getUseDuration(ItemStack stack, LivingEntity entity) {
                     return 10; // faster than normal (vanilla = 32, previous = 20)
@@ -40,12 +43,16 @@ public class AlchemistPotions {
                 @Override
                 public ItemStack finishUsingItem(ItemStack stack, Level level, LivingEntity livingEntity) {
                     PotionContents potionContents = stack.get(DataComponents.POTION_CONTENTS);
-                    if (potionContents != null) {
+                    long time = stack.getOrDefault(PotionComponents.CRAFTED_TIME.get(), -1L);
+                    if (time > -1L && (System.currentTimeMillis() - time) < POTION_DECAY_TIME
+                            && potionContents != null) {
                         potionContents.getAllEffects().forEach(effect -> {
                             livingEntity.addEffect(effect);
                         });
                     }
-                    return stack;
+                    if (livingEntity instanceof Player player && player.isCreative())
+                        return stack; // don't consume potion for creative players
+                    return ItemStack.EMPTY;
                 }
 
                 @Override
@@ -57,29 +64,7 @@ public class AlchemistPotions {
                 @Override
                 public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip,
                         TooltipFlag flag) {
-                    PotionContents potionContents = stack.get(DataComponents.POTION_CONTENTS);
-                    if (potionContents != null) {
-                        List<Holder<MobEffect>> effects = StreamSupport
-                                .stream(potionContents.getAllEffects().spliterator(), false)
-                                .map(effectInstance -> effectInstance.getEffect())
-                                .toList();
-                        if (!effects.isEmpty()) {
-                            tooltip.add(Component.literal("Potions contained:"));
-                            potionContents.getAllEffects().forEach(effect -> {
-                                MutableComponent text = Component.empty();
-                                text.append(Component
-                                        .literal("  " + effect.getEffect().value().getDisplayName().getString()));
-
-                                int duration = effect.getDuration();
-                                if (duration > 1) {
-                                    String time = String.format("%d:%02d", (duration / 20) / 60, (duration / 20) % 60);
-                                    text.append(Component.literal(" - " + time));
-                                }
-                                text.withColor(effect.getEffect().value().getColor());
-                                tooltip.add(text);
-                            });
-                        }
-                    }
+                    setPotionTooltip(stack, tooltip);
                 }
             });
 
@@ -94,8 +79,13 @@ public class AlchemistPotions {
                         // behaviour
                         ItemStack thrownStack = new ItemStack(Items.SPLASH_POTION);
                         PotionContents contents = stack.get(DataComponents.POTION_CONTENTS);
-                        if (contents != null)
-                            thrownStack.set(DataComponents.POTION_CONTENTS, contents);
+                        long time = stack.getOrDefault(PotionComponents.CRAFTED_TIME.get(), -1L);
+                        if (time > -1L && (System.currentTimeMillis() - time) < POTION_DECAY_TIME
+                                && contents != null) {
+                            contents.getAllEffects().forEach(effect -> {
+                                thrownStack.set(DataComponents.POTION_CONTENTS, contents);
+                            });
+                        }
 
                         ThrownPotion entity = new ThrownPotion(level, player);
                         entity.setItem(thrownStack);
@@ -111,28 +101,7 @@ public class AlchemistPotions {
                 @Override
                 public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip,
                         TooltipFlag flag) {
-                    PotionContents potionContents = stack.get(DataComponents.POTION_CONTENTS);
-                    if (potionContents != null) {
-                        List<Holder<MobEffect>> effects = StreamSupport
-                                .stream(potionContents.getAllEffects().spliterator(), false)
-                                .map(effectInstance -> effectInstance.getEffect())
-                                .toList();
-                        if (!effects.isEmpty()) {
-                            tooltip.add(Component.literal("Potions contained:"));
-                            potionContents.getAllEffects().forEach(effect -> {
-                                MutableComponent text = Component.empty();
-                                text.append(Component
-                                        .literal("  " + effect.getEffect().value().getDisplayName().getString()));
-                                int duration = effect.getDuration();
-                                if (duration > 1) {
-                                    String time = String.format("%d:%02d", (duration / 20) / 60, (duration / 20) % 60);
-                                    text.append(Component.literal(" - " + time));
-                                }
-                                text.withColor(effect.getEffect().value().getColor());
-                                tooltip.add(text);
-                            });
-                        }
-                    }
+                    setPotionTooltip(stack, tooltip);
                 }
             });
 
@@ -152,12 +121,16 @@ public class AlchemistPotions {
                 @Override
                 public ItemStack finishUsingItem(ItemStack stack, Level level, LivingEntity livingEntity) {
                     PotionContents potionContents = stack.get(DataComponents.POTION_CONTENTS);
-                    if (potionContents != null) {
+                    long time = stack.getOrDefault(PotionComponents.CRAFTED_TIME.get(), -1L);
+                    if (time > -1L && (System.currentTimeMillis() - time) < POTION_DECAY_TIME
+                            && potionContents != null) {
                         potionContents.getAllEffects().forEach(effect -> {
                             livingEntity.addEffect(effect);
                         });
                     }
-                    return stack;
+                    if(livingEntity instanceof Player player && player.isCreative())
+                        return stack; // don't consume potion for creative players
+                    return ItemStack.EMPTY;
                 }
 
                 @Override
@@ -169,28 +142,7 @@ public class AlchemistPotions {
                 @Override
                 public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip,
                         TooltipFlag flag) {
-                    PotionContents potionContents = stack.get(DataComponents.POTION_CONTENTS);
-                    if (potionContents != null) {
-                        List<Holder<MobEffect>> effects = StreamSupport
-                                .stream(potionContents.getAllEffects().spliterator(), false)
-                                .map(effectInstance -> effectInstance.getEffect())
-                                .toList();
-                        if (!effects.isEmpty()) {
-                            tooltip.add(Component.literal("Potions contained:"));
-                            potionContents.getAllEffects().forEach(effect -> {
-                                MutableComponent text = Component.empty();
-                                text.append(Component
-                                        .literal("  " + effect.getEffect().value().getDisplayName().getString()));
-                                int duration = effect.getDuration();
-                                if (duration > 1) {
-                                    String time = String.format("%d:%02d", (duration / 20) / 60, (duration / 20) % 60);
-                                    text.append(Component.literal(" - " + time));
-                                }
-                                text.withColor(effect.getEffect().value().getColor());
-                                tooltip.add(text);
-                            });
-                        }
-                    }
+                    setPotionTooltip(stack, tooltip);
                 }
             });
 
@@ -205,8 +157,13 @@ public class AlchemistPotions {
                         // AreaEffectCloud
                         ItemStack thrownStack = new ItemStack(Items.LINGERING_POTION);
                         PotionContents contents = stack.get(DataComponents.POTION_CONTENTS);
-                        if (contents != null)
-                            thrownStack.set(DataComponents.POTION_CONTENTS, contents);
+                        long time = stack.getOrDefault(PotionComponents.CRAFTED_TIME.get(), -1L);
+                        if (time > -1L && (System.currentTimeMillis() - time) < POTION_DECAY_TIME
+                                && contents != null) {
+                            contents.getAllEffects().forEach(effect -> {
+                                thrownStack.set(DataComponents.POTION_CONTENTS, contents);
+                            });
+                        }
 
                         ThrownPotion entity = new ThrownPotion(level, player);
                         entity.setItem(thrownStack);
@@ -222,36 +179,64 @@ public class AlchemistPotions {
                 @Override
                 public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip,
                         TooltipFlag flag) {
-                    PotionContents potionContents = stack.get(DataComponents.POTION_CONTENTS);
-                    if (potionContents != null) {
-                        List<Holder<MobEffect>> effects = StreamSupport
-                                .stream(potionContents.getAllEffects().spliterator(), false)
-                                .map(effectInstance -> effectInstance.getEffect())
-                                .toList();
-                        if (!effects.isEmpty()) {
-                            tooltip.add(Component.literal("Potions contained:"));
-                            potionContents.getAllEffects().forEach(effect -> {
-                                MutableComponent text = Component.empty();
-                                text.append(Component
-                                        .literal("  " + effect.getEffect().value().getDisplayName().getString()));
-                                int duration = effect.getDuration();
-                                if (duration > 1) {
-                                    String time = String.format("%d:%02d", (duration / 20) / 60, (duration / 20) % 60);
-                                    text.append(Component.literal(" - " + time));
-                                }
-                                text.withColor(effect.getEffect().value().getColor());
-                                tooltip.add(text);
-                            });
-                        }
-                    }
+                    setPotionTooltip(stack, tooltip);
                 }
             });
 
-    /**
-     * Called from TharidiaThings to trigger static initialization of all
-     * DeferredItem fields.
-     */
-    public static void register() {
+    private static void setPotionTooltip(ItemStack stack, List<Component> tooltip) {
+        // Display Potion Decay
+        long craftedTime = stack.getOrDefault(PotionComponents.CRAFTED_TIME.get(), -1L);
+        if(craftedTime > -1L){
+            long passedTime = System.currentTimeMillis() - craftedTime;
+            if (passedTime > POTION_DECAY_TIME){
+                tooltip.add(Component.translatable("tharidiathings.potion_expired").withColor(0xFF0000));
+            } else {
+                // Calculate the percentage of time remaining (0.0 to 1.0)
+                double remainingPercent = 1.0 - ((double) passedTime / POTION_DECAY_TIME);
+                MutableComponent statusReq;
+
+                if (remainingPercent > 0.75) {
+                    // 100% to 75%
+                    statusReq = Component.translatable("tooltip.tharidiathings.potion_decay_1");
+                } else if (remainingPercent > 0.50) {
+                    // 75% to 50%
+                    statusReq = Component.translatable("tooltip.tharidiathings.potion_decay_2");
+                } else if (remainingPercent > 0.25) {
+                    // 50% to 25%
+                    statusReq = Component.translatable("tooltip.tharidiathings.potion_decay_3");
+                } else {
+                    // 25% to 0%
+                    statusReq = Component.translatable("tooltip.tharidiathings.potion_decay_4");
+                }
+
+                tooltip.add(statusReq);
+            }
+        }
+        
+        // Display Potion Content
+        PotionContents potionContents = stack.get(DataComponents.POTION_CONTENTS);
+        if (potionContents != null) {
+            List<Holder<MobEffect>> effects = StreamSupport
+                    .stream(potionContents.getAllEffects().spliterator(), false)
+                    .map(effectInstance -> effectInstance.getEffect())
+                    .toList();
+            if (!effects.isEmpty()) {
+                tooltip.add(Component.literal("Potions contained:"));
+                potionContents.getAllEffects().forEach(effect -> {
+                    MutableComponent text = Component.empty();
+                    text.append(Component
+                            .literal("  " + effect.getEffect().value().getDisplayName().getString()));
+
+                    int duration = effect.getDuration();
+                    if (duration > 1) {
+                        String effectTime = String.format("%d:%02d", (duration / 20) / 60, (duration / 20) % 60);
+                        text.append(Component.literal(" - " + effectTime));
+                    }
+                    text.withColor(effect.getEffect().value().getColor());
+                    tooltip.add(text);
+                });
+            }
+        }
     }
 
     public static List<ItemStack> getAllPotions() {
@@ -268,5 +253,12 @@ public class AlchemistPotions {
                 return true;
         }
         return false;
+    }
+
+    /**
+     * Called from TharidiaThings to trigger static initialization of all
+     * DeferredItem fields.
+     */
+    public static void register() {
     }
 }

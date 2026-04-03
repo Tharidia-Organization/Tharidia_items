@@ -490,5 +490,10 @@
   "item.tharidiathings.ball_potion": "Sip Potion",
   "item.tharidiathings.triangle_potion": "Splash Potion",
   "item.tharidiathings.drop_potion": "Drink Potion",
-  "item.tharidiathings.fantasy_potion": "Lingering Potion"
+  "item.tharidiathings.fantasy_potion": "Lingering Potion",
+  "tooltip.tharidiathings.potion_decay_1":"Condition: §2Tasty",
+  "tooltip.tharidiathings.potion_decay_2":"Condition: §eFine",
+  "tooltip.tharidiathings.potion_decay_3":"Condition: §6Bitter",
+  "tooltip.tharidiathings.potion_decay_4":"Condition: §4Smelly",
+  "tharidiathings.potion_expired": "Potion expired"
 }
