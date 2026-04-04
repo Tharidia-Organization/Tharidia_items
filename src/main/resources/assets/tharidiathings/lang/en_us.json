@@ -480,6 +480,8 @@
   "gui.tharidiathings.herbalist_tree.hint.dead": "The tree is dead.",
   "gui.tharidiathings.herbalist_tree.hint.place_pots": "Place 8 pots to start.",
 
+  "tooltip.tharidiathings.cook_hat.owner": "Owner: %s",
+
   "jei.tharidiathings.pulverizer_recipe": "Pulverizer",
 
   "item.tharidiathings.coca": "Coca",

@@ -73,7 +73,8 @@ public class CookCommand {
         UUID playerUUID = player.getUUID();
 
         ItemStack hat = new ItemStack(BuiltInRegistries.ITEM.get(ResourceLocation.parse("age_of_fight:cook_hat_" + givenHatLevel + "_helmet")));
-        hat.set(CookHatData.PLAYER_UUID.get(), playerUUID);
+        hat.set(CookHatData.PLAYER_UUID, playerUUID);
+        hat.set(CookHatData.PLAYER_NAME, player.getName().getString());
         sourcePlayer.getInventory().add(hat);
 
         source.sendSuccess(() -> Component.literal(String.format("Give %s's hat", player.getName().getString())), false);

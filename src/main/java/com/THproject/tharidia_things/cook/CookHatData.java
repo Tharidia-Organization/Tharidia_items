@@ -4,6 +4,7 @@ import java.util.UUID;
 import java.util.function.UnaryOperator;
 
 import com.THproject.tharidia_things.TharidiaThings;
+import com.mojang.serialization.Codec;
 
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.core.component.DataComponentType;
@@ -12,6 +13,10 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 public class CookHatData {
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<UUID>> PLAYER_UUID = register(
         "player_uuid", builder -> builder.persistent(UUIDUtil.CODEC)
+    );
+
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<String>> PLAYER_NAME = register(
+        "player_name", builder -> builder.persistent(Codec.STRING)
     );
 
     private static <T> DeferredHolder<DataComponentType<?>, DataComponentType<T>> register(String name,
