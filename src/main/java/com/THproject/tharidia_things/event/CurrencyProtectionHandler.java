@@ -162,17 +162,27 @@ public class CurrencyProtectionHandler {
         }
     }
     
+    private static final ResourceLocation COOK_TABLE_DUMMY_ID =
+            ResourceLocation.fromNamespaceAndPath("tharidiathings", "cook_table_dummy");
+
     /**
-     * Block right-click interactions with blocks while holding currency items
+     * Block right-click interactions with blocks while holding currency items.
+     * Exception: the cook table cassa (offset_x=3) accepts currency deposits from any player.
      */
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
         ItemStack heldItem = event.getItemStack();
-        
+
         if (isCurrencyItem(heldItem) || isNumismaticCoin(heldItem)) {
+            // Allow depositing currency into the cook table cassa
+            var state = event.getLevel().getBlockState(event.getPos());
+            if (COOK_TABLE_DUMMY_ID.equals(BuiltInRegistries.BLOCK.getKey(state.getBlock()))) {
+                return;
+            }
+
             event.setCanceled(true);
             event.setCancellationResult(net.minecraft.world.InteractionResult.FAIL);
-            
+
             if (!event.getEntity().level().isClientSide()) {
                 event.getEntity().sendSystemMessage(Component.literal("§cNon puoi interagire con blocchi mentre tieni item di valuta!"));
             }
