@@ -53,10 +53,8 @@ public class CookHudOverlay {
         if (mc.screen != null)
             return;
 
-        System.out.println("1");
         if (!CookHelper.hasCookHat(player))
             return;
-        System.out.println("2");
         
         // Find player being looked at within 3 blocks and within 5 degrees of center
         Player targetedPlayer = getTargetedPlayer(mc, player);

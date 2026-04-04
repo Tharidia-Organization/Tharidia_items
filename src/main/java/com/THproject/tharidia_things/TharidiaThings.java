@@ -13,6 +13,7 @@ import com.THproject.tharidia_things.command.*;
 import com.THproject.tharidia_things.config.CropProtectionConfig;
 import com.THproject.tharidia_things.config.FatigueConfig;
 import com.THproject.tharidia_things.config.StaminaConfig;
+import com.THproject.tharidia_things.cook.CookHatData;
 import com.THproject.tharidia_things.database.DatabaseManager;
 import com.THproject.tharidia_things.diet.DietAttachments;
 import com.THproject.tharidia_things.diet.DietDataLoader;
@@ -136,6 +137,7 @@ import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.item.crafting.SimpleCraftingRecipeSerializer;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.loading.FMLEnvironment;
+import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -200,6 +202,9 @@ public class TharidiaThings {
     // under the "tharidiathings" namespace
     public static final DeferredRegister<net.minecraft.world.inventory.MenuType<?>> MENU_TYPES = DeferredRegister
             .create(BuiltInRegistries.MENU, MODID);
+
+    public static final DeferredRegister<DataComponentType<?>> DATA_COMPONENT_TYPES = DeferredRegister
+            .create(Registries.DATA_COMPONENT_TYPE, MODID);
 
     // Recipes
     public static final DeferredRegister<RecipeType<?>> RECIPE_TYPES = DeferredRegister.create(Registries.RECIPE_TYPE,
@@ -831,6 +836,10 @@ public class TharidiaThings {
         AnimalWellnessAttachments.ATTACHMENT_TYPES.register(modEventBus);
         SpiceAttachments.ATTACHMENT_TYPES.register(modEventBus);
         SpiceDataComponents.DATA_COMPONENT_TYPES.register(modEventBus);
+
+        // Register Data Components
+        DATA_COMPONENT_TYPES.register(modEventBus);
+        CookHatData.register();
 
         // Register custom stats
         ModStats.register(modEventBus);
@@ -1685,6 +1694,7 @@ public class TharidiaThings {
         ReviveCommands.register(event.getDispatcher());
         StableDebugCommand.register(event.getDispatcher());
         EquipCommand.register(event.getDispatcher());
+        CookCommand.register(event.getDispatcher());
     }
 
     /**

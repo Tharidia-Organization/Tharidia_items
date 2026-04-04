@@ -17,7 +17,7 @@ public class BattleCommands {
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(
                 Commands.literal("battle")
-                        .requires(source -> source.hasPermission(2))
+                        .requires(source -> source.hasPermission(4))
                         .then(Commands.literal("start")
                                 .then(Commands.argument("player1", EntityArgument.player())
                                         .then(Commands.argument("player2", EntityArgument.player())
